@@ -58,6 +58,7 @@
 #endif
 
 #include <cassert>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #define CXXOPTS_VECTOR_DELIMITER '\0'
@@ -535,6 +536,20 @@ void Engine::handleMouseMove(BackendEvent& event) {
 }
 
 void Engine::handleMouseButton(BackendEvent& event) {
+	// C1/C2: wheel and two-finger touchpad scrolling pan the world view in any
+	// direction (their scripts have no use for the wheel). Directions follow
+	// the system's natural-scrolling setting, as SDL reports them.
+	if (version <= 2 && event.type == eventmousebuttondown && (event.wheel_x != 0 || event.wheel_y != 0)) {
+		const float speed = 51.0f; // pixels per wheel unit (owner-tuned)
+		int dx = (int)std::lround(event.wheel_x * speed);
+		int dy = (int)std::lround(-event.wheel_y * speed);
+		if (dx != 0 || dy != 0) {
+			camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+			camera->moveTo((int)camera->getX() + dx, (int)camera->getY() + dy);
+		}
+		return;
+	}
+
 	// notify agents
 	for (auto& agent : world.agents) {
 		if (!agent)

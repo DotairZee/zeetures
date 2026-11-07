@@ -193,11 +193,16 @@ retry:
 		case SDL_EVENT_MOUSE_WHEEL:
 			e.window_id = event.wheel.windowID;
 			e.type = eventmousebuttondown;
+			e.wheel_x = event.wheel.x;
+			e.wheel_y = event.wheel.y;
 			if (event.wheel.y > 0) {
 				e.button = buttonwheeldown;
 				break;
 			} else if (event.wheel.y < 0) {
 				e.button = buttonwheelup;
+				break;
+			} else if (event.wheel.x != 0) {
+				e.button = 0; // horizontal-only scroll (touchpad)
 				break;
 			} else {
 				goto retry;

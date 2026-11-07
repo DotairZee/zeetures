@@ -26,5 +26,6 @@ struct BackendEvent {
 	int xrel, yrel;
 	int key;
 	unsigned int button;
+	float wheel_x = 0, wheel_y = 0; // precise scroll amounts (touchpad two-finger scrolling)
 	std::string text;
 };
