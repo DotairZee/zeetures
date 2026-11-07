@@ -62,9 +62,11 @@ void c_DBG_OUTS(caosVM* vm) {
  Outputs a decimal value to the debug log.
 */
 /**
- DBGV (command) val (integer)
+ DBGV (command) val (anything)
  %status maybe
  %variants c1 c2
+
+ C2 world scripts pass agents here too (e.g. "dbgv _it_").
 */
 void c_DBG_OUTV(caosVM* vm) {
 	VM_VERIFY_SIZE(1)
@@ -77,6 +79,9 @@ void c_DBG_OUTV(caosVM* vm) {
 	} else if (val.hasVector()) {
 		const Vector<float>& v = val.getVector();
 		fmt::print("({:0.6f}, {:0.6f})", v.x, v.y);
+	} else if (val.hasAgent()) {
+		std::shared_ptr<Agent> a = val.getAgent();
+		fmt::print("{}", a ? fmt::format("agent {} {} {}", (int)a->family, (int)a->genus, a->species) : std::string("null agent"));
 	} else
 		throw badParamException();
 	fmt::print("\n");

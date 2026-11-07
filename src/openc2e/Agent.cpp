@@ -259,7 +259,11 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 		return false;
 
 	CreatureAgent* c = 0;
-	if (event <= 3 || event == 4 || event == 12 || event == 13 || event == 14)
+	// The cr_can_* creature permissions come from BHVR, which only exists in
+	// C3/DS. C1/C2 objects have no such permissions, so do not enforce them
+	// there (otherwise C1/C2 creatures can never push, pull, hit, eat or pick
+	// anything up).
+	if (engine.version >= 3 && (event <= 3 || event == 4 || event == 12 || event == 13 || event == 14))
 		c = dynamic_cast<CreatureAgent*>(from);
 
 	switch (event) {
