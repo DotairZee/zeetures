@@ -93,6 +93,9 @@ class CreatureMind {
 	virtual MindOutput tick(const MindPerception&) = 0;
 	virtual void died(const MindPerception&) {}
 	virtual std::string debugState() const { return {}; }
+	// World saving: the mind's learned state as text, and restoring it.
+	virtual std::string saveState() const { return {}; }
+	virtual void loadState(const std::string&) {}
 };
 
 // Returns nullptr for an empty or unknown name.

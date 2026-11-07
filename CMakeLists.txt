@@ -341,6 +341,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/Vehicle.cpp
 	src/openc2e/VoiceData.cpp
 	src/openc2e/World.cpp
+	src/openc2e/WorldSave.cpp
 	src/openc2e/openc2eimgui/AgentInjector.cpp
 	src/openc2e/openc2eimgui/BrainViewer.cpp
 	src/openc2e/openc2eimgui/C1ToolBar.cpp

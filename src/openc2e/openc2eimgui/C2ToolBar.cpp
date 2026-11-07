@@ -3,6 +3,8 @@
 #include "AgentInjector.h"
 #include "C2EyeView.h"
 #include "WorldChooser.h"
+#include "common/backend/Backend.h"
+#include "WorldSave.h"
 #include "MusicManager.h"
 #include "C2StatusBar.h"
 #include "C2ScrollBars.h"
@@ -90,6 +92,9 @@ static const char* GenusName(int genus) {
 static void DrawC2MenuBar() {
 	static bool s_open_add_place = false;
 	static bool s_open_new_world = false;
+	static bool s_open_save_as = false;
+	static bool s_open_save_message = false;
+	static std::string s_save_message;
 
 	if (ImGui::BeginMenu("File")) {
 		// worlds (C2 used a separate World Switcher; openc2e restarts into the chosen world)
@@ -104,10 +109,15 @@ static void DrawC2MenuBar() {
 			}
 			ImGui::EndMenu();
 		}
-		ImGui::MenuItem("Save World", nullptr, false, false);
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-			ImGui::SetTooltip("Saving is coming next: creatures first, then the whole world.");
-		ImGui::MenuItem("Save World As...", nullptr, false, false);
+		if (ImGui::MenuItem("Save World", nullptr, false, !engine.currentworlddir.empty())) {
+			std::string err;
+			s_save_message = WorldSave::SaveWorldState(engine.currentworlddir, err) ? "World saved." : err;
+			s_open_save_message = true;
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Saves your creatures (bodies and minds) and eggs. Other objects still start as in the world's original file.");
+		if (ImGui::MenuItem("Save World As...", nullptr, false, !engine.currentworlddir.empty()))
+			s_open_save_as = true;
 		ImGui::Separator();
 		ImGui::MenuItem("Export Current Creature...", nullptr, false, false);
 		ImGui::MenuItem("Import Creature...", nullptr, false, false);
@@ -219,6 +229,53 @@ static void DrawC2MenuBar() {
 		ImGui::Separator();
 		ImGui::MenuItem("About Creatures 2...", nullptr, false, false);
 		ImGui::EndMenu();
+	}
+
+	// Save World As: a new world folder from the same starting world file,
+	// with the current state saved into it; the session continues there
+	if (s_open_save_as) {
+		ImGui::OpenPopup("Save World As");
+		s_open_save_as = false;
+	}
+	if (ImGui::BeginPopupModal("Save World As", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		static char s_name[64] = "";
+		static std::string s_error;
+		ImGui::Text("Name for the new world:");
+		if (ImGui::IsWindowAppearing()) {
+			ImGui::SetKeyboardFocusHere();
+			s_error.clear();
+		}
+		bool enter = ImGui::InputText("##saveasname", s_name, sizeof(s_name), ImGuiInputTextFlags_EnterReturnsTrue);
+		if (!s_error.empty())
+			ImGui::TextColored(ImVec4(0.8f, 0.2f, 0.2f, 1.0f), "%s", s_error.c_str());
+		if (ImGui::Button("Save") || enter) {
+			if (CreateWorld(s_name, WorldFile(engine.currentworlddir), s_error)) {
+				auto w = FindWorld(s_name);
+				if (w && WorldSave::SaveWorldState(w->dir, s_error)) {
+					engine.currentworld = w->name;
+					engine.currentworlddir = w->dir;
+					get_backend()->setWindowTitle(w->name + " - Creatures 2");
+					s_name[0] = 0;
+					ImGui::CloseCurrentPopup();
+				}
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel")) {
+			s_name[0] = 0;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+	if (s_open_save_message) {
+		ImGui::OpenPopup("Save World##message");
+		s_open_save_message = false;
+	}
+	if (ImGui::BeginPopupModal("Save World##message", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		ImGui::TextUnformatted(s_save_message.c_str());
+		if (ImGui::Button("OK"))
+			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
 	}
 
 	// New World: create one, then restart into it

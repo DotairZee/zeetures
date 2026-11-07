@@ -50,6 +50,7 @@
 #include "openc2eimgui/ImGuiUtils.h"
 #include "openc2eimgui/Openc2eImGui.h"
 #include "Scriptorium.h"
+#include "WorldSave.h"
 #include "openc2eimgui/WorldChooser.h"
 #include "creatures/CreatureMind.h"
 #include "prayManager.h"
@@ -371,6 +372,17 @@ void Engine::update() {
 }
 
 bool Engine::tick() {
+	// developer aid: OPENC2E_TEST_SAVE_AFTER_TICKS=N saves the world after N
+	// ticks and quits (for testing world saving without the UI)
+	static long test_save_after = getenv("OPENC2E_TEST_SAVE_AFTER_TICKS") ? atol(getenv("OPENC2E_TEST_SAVE_AFTER_TICKS")) : -1;
+	if (test_save_after >= 0 && (long)world.tickcount >= test_save_after) {
+		std::string err;
+		if (!WorldSave::SaveWorldState(currentworlddir, err))
+			fmt::print("* Test save failed: {}\n", err);
+		test_save_after = -1;
+		done = true;
+	}
+
 	assert(get_backend());
 
 	// tick if necessary
@@ -1228,6 +1240,10 @@ bool Engine::initialSetup() {
 		shutdown();
 		throw Exception("No metarooms found in given bootstrap directories or files");
 	}
+
+	// C1/C2 worlds: apply the world folder's saved state, if any
+	if (version < 3 && !currentworlddir.empty())
+		WorldSave::LoadWorldState(currentworlddir);
 
 	if (const char* dumppath = getenv("OPENC2E_DUMP_SCRIPTS")) {
 		std::ofstream dump(dumppath);

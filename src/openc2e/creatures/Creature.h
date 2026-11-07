@@ -93,6 +93,13 @@ class Creature {
 	void setZombie(bool z) { zombie = z; }
 	bool isZombie() { return zombie; }
 	unsigned int getAge() { return age; }
+	// world saving (openc2e)
+	unsigned int getTicks() const { return ticks; }
+	bool isAgeing() const { return tickage; }
+	void restoreLifeCounters(unsigned int ticks_, unsigned int age_) {
+		ticks = ticks_;
+		age = age_;
+	}
 	std::shared_ptr<genomeFile> getGenome() { return genome; }
 
 	unsigned short getGenus() { return genus; }

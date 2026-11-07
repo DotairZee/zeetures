@@ -76,6 +76,9 @@ class oldCreature : public Creature {
 	void addChemical(unsigned char id, unsigned char val);
 	void subChemical(unsigned char id, unsigned char val);
 	unsigned char getChemical(unsigned char id) { return chemicals[id]; }
+	void setChemicalLevel(unsigned char id, unsigned char v) { chemicals[id] = v; } // world loading
+	virtual std::vector<float> getOrganState() { return {}; }
+	virtual void setOrganState(const std::vector<float>&) {}
 
 	// TODO: is it really worth having drives outside oldCreature?
 	virtual unsigned char getDrive(unsigned int id) = 0;
@@ -218,6 +221,10 @@ class c2Organ {
 	size_t getReactionCount() { return reactions.size(); }
 
 	void applyInjury(float);
+	void restoreLifeforce(float shortterm, float longterm) {
+		shorttermlifeforce = shortterm;
+		longtermlifeforce = longterm;
+	}
 
 	std::vector<gene*> genes;
 };
@@ -248,6 +255,19 @@ class c2Creature : public oldCreature {
 	}
 
 	unsigned char* getLocusPointer(bool receptor, unsigned char o, unsigned char t, unsigned char l);
+
+	std::vector<float> getOrganState() override {
+		std::vector<float> v;
+		for (auto& o : organs) {
+			v.push_back(o->getShortTermLifeforce());
+			v.push_back(o->getLongTermLifeforce());
+		}
+		return v;
+	}
+	void setOrganState(const std::vector<float>& v) override {
+		for (size_t i = 0; i < organs.size() && 2 * i + 1 < v.size(); i++)
+			organs[i]->restoreLifeforce(v[2 * i], v[2 * i + 1]);
+	}
 
 	unsigned int getGait();
 };

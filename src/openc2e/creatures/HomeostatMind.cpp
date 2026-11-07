@@ -43,6 +43,8 @@
 #include <fmt/core.h>
 #include <map>
 #include <random>
+#include <sstream>
+#include <string>
 #include <vector>
 
 namespace {
@@ -244,6 +246,59 @@ class HomeostatMind : public CreatureMind {
 			out.attentionCategory = choice.category;
 		out.decision = choice.decision;
 		return out;
+	}
+
+	// World saving: one fact per line, readable and hand-editable.
+	std::string saveState() const override {
+		std::string s = fmt::format("valence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
+		s += "drift";
+		for (float f : drift)
+			s += fmt::format(" {}", f);
+		s += "\nhabituation";
+		for (float f : habituation)
+			s += fmt::format(" {}", f);
+		s += "\n";
+		for (auto& [key, e] : expectations) {
+			// key = (category + 1) * 64 + decision
+			s += fmt::format("expect {} {} {}", key / 64 - 1, key % 64, e.count);
+			for (float f : e.delta)
+				s += fmt::format(" {}", f);
+			s += "\n";
+		}
+		return s;
+	}
+
+	void loadState(const std::string& state) override {
+		std::istringstream in(state);
+		std::string line;
+		while (std::getline(in, line)) {
+			std::istringstream l(line);
+			std::string what;
+			l >> what;
+			if (what == "valence")
+				l >> valence;
+			else if (what == "mood")
+				l >> mood;
+			else if (what == "episodes")
+				l >> episodes;
+			else if (what == "stimuli")
+				l >> stimuliSeen;
+			else if (what == "drift")
+				for (float& f : drift)
+					l >> f;
+			else if (what == "habituation")
+				for (float& f : habituation)
+					l >> f;
+			else if (what == "expect") {
+				int category, decision;
+				Expectation e;
+				l >> category >> decision >> e.count;
+				for (float& f : e.delta)
+					l >> f;
+				if (l)
+					expectations[(category + 1) * 64 + decision] = e;
+			}
+		}
 	}
 
 	std::string debugState() const override {
