@@ -960,12 +960,14 @@ bool Engine::parseCommandLine(int argc, char* argv[]) {
 	desc.add_options()("a,autokill", "Enable autokill");
 	desc.add_options()("autostop", "Enable autostop (or disable it, for CV)");
 	desc.add_options()("world", "C1/C2: open the named world from the Worlds folder (skips the world chooser)", cxxopts::value<std::string>(cmdline_world));
+	desc.add_options()("no-autosave", "C1/C2: don't save the world automatically on quit or when switching worlds");
 	desc.add_options()("no-world-chooser", "C1/C2: don't show the world chooser; load the game's Eden.sfc as before");
 	desc.add_options()("mind", "Use a pluggable creature mind for C1/C2 creatures (options: " + availableCreatureMinds() + "); default is the original brain code", cxxopts::value<std::string>(mindname));
 	for (int i = 0; i < argc; i++)
 		cmdline_args.push_back(argv[i]);
 	auto vm = desc.parse(argc, argv);
 	cmdline_no_world_chooser = vm.count("no-world-chooser");
+	autosave = !vm.count("no-autosave");
 	cmdline_enable_sound = !vm.count("silent");
 	cmdline_norun = vm.count("norun");
 
@@ -1242,8 +1244,10 @@ bool Engine::initialSetup() {
 	}
 
 	// C1/C2 worlds: apply the world folder's saved state, if any
-	if (version < 3 && !currentworlddir.empty())
+	if (version < 3 && !currentworlddir.empty()) {
 		WorldSave::LoadWorldState(currentworlddir);
+		worldready = true;
+	}
 
 	if (const char* dumppath = getenv("OPENC2E_DUMP_SCRIPTS")) {
 		std::ofstream dump(dumppath);
@@ -1268,6 +1272,15 @@ bool Engine::initialSetup() {
 }
 
 void Engine::shutdown() {
+	// C1/C2: auto-save the open world (on quit and when switching worlds)
+	if (version < 3 && worldready && autosave && !currentworlddir.empty()) {
+		std::string err;
+		fmt::print("* Auto-saving world '{}'\n", currentworld);
+		if (!WorldSave::SaveWorldState(currentworlddir, err))
+			fmt::print(stderr, "Auto-save failed: {}\n", err);
+	}
+	worldready = false;
+
 	// first kill all world state, then start killing backend components
 	world.shutdown();
 
