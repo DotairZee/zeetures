@@ -80,12 +80,16 @@ class NullMind : public CreatureMind {
 
 } // namespace
 
+std::unique_ptr<CreatureMind> createHomeostatMind(); // HomeostatMind.cpp
+
 std::unique_ptr<CreatureMind> createCreatureMind(const std::string& name) {
 	if (name == "null")
 		return std::make_unique<NullMind>();
+	if (name == "homeostat")
+		return createHomeostatMind();
 	return nullptr;
 }
 
 std::string availableCreatureMinds() {
-	return "null";
+	return "null, homeostat";
 }
