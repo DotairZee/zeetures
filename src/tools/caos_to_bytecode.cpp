@@ -2,16 +2,22 @@
 #include "openc2e/caosScript.h"
 
 #include <fmt/core.h>
+#include <string>
 
 int main(int argc, char** argv) {
-	if (argc != 2) {
-		fmt::print(stderr, "USAGE: {} FILE\n", argv[0]);
+	std::string dialect = "c3";
+	int arg = 1;
+	if (argc == 4 && std::string(argv[1]) == "--dialect") {
+		dialect = argv[2];
+		arg = 3;
+	} else if (argc != 2) {
+		fmt::print(stderr, "USAGE: {} [--dialect c1|c2|cv|c3|sm] FILE\n", argv[0]);
 		return 1;
 	}
 
-	auto filename = argv[1];
+	auto filename = argv[arg];
 
-	caosScript script("c3", filename);
+	caosScript script(dialect, filename);
 	script.parse(readfile(filename));
 
 	if (script.installer) {

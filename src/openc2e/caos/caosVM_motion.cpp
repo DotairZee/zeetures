@@ -22,10 +22,12 @@
 #include "Camera.h" // FLTX/FLTY
 #include "Engine.h" // version
 #include "Map.h"
+#include "Room.h"
 #include "World.h"
 #include "caosVM.h"
 #include "common/throw_ifnot.h"
 
+#include <algorithm>
 #include <climits>
 #include <fmt/core.h>
 #include <memory>
@@ -225,6 +227,45 @@ void v_OBST_c2(caosVM* vm) {
 		vm->result.setInt(INT_MAX);
 	else
 		vm->result.setInt(abs(deltapt.x + deltapt.y)); // only one will be set
+}
+
+/**
+ OBDT (integer) direction (integer)
+ %status maybe
+ %variants c2
+
+ Obstacle distance: the distance from the centre of the TARG agent to the edge
+ of the room containing it, in the given direction (0 = left, 1 = right,
+ 2 = up, 3 = down), regardless of the agent's size, floor values or door
+ values (C2 CAOS Language Guide). Returns INT_MAX if TARG is not in a room.
+*/
+void v_OBDT(caosVM* vm) {
+	VM_PARAM_INTEGER(direction)
+
+	valid_agent(vm->targ);
+	float cx = vm->targ->x + vm->targ->getWidth() / 2.0f;
+	float cy = vm->targ->y + vm->targ->getHeight() / 2.0f;
+	std::shared_ptr<Room> r = world.map->roomAt(cx, cy);
+	if (!r) {
+		vm->result.setInt(INT_MAX);
+		return;
+	}
+
+	float distance = 0;
+	switch (direction) {
+		case 0: distance = cx - r->x_left; break;
+		case 1: distance = r->x_right - cx; break;
+		case 2: {
+			float span = (float)r->x_right - (float)r->x_left;
+			float t = span > 0 ? (cx - r->x_left) / span : 0.0f;
+			float ceiling = r->y_left_ceiling + ((float)r->y_right_ceiling - (float)r->y_left_ceiling) * t;
+			distance = cy - ceiling;
+			break;
+		}
+		case 3: distance = r->floorYatX(cx) - cy; break;
+		default: THROW_IFNOT(false);
+	}
+	vm->result.setInt(std::max(0, (int)distance));
 }
 
 /**

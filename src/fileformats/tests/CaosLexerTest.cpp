@@ -236,3 +236,23 @@ TEST(lexcaos, error_token) {
 			{caostoken::TOK_EOI, 1},
 		});
 }
+TEST(lexcaos, word_starting_with_digit) {
+	// C1/C2 scripts use labels like this, e.g. "gsub 2bed"
+	assert_lexcaos("gsub 2bed",
+		{
+			{caostoken::TOK_WORD, "gsub", 1},
+			{caostoken::TOK_WHITESPACE, " ", 1},
+			{caostoken::TOK_WORD, "2bed", 1},
+			{caostoken::TOK_EOI, 1},
+		});
+}
+
+TEST(lexcaos, integer_is_still_an_integer) {
+	assert_lexcaos("42 7",
+		{
+			{caostoken::TOK_INT, "42", 1},
+			{caostoken::TOK_WHITESPACE, " ", 1},
+			{caostoken::TOK_INT, "7", 1},
+			{caostoken::TOK_EOI, 1},
+		});
+}

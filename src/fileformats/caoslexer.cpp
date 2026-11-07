@@ -152,7 +152,8 @@ start:
 		push_value(caostoken::TOK_WORD);
 	}
 	// bareword. this seems a little over-permissive, which characters exactly should we allow?
-	else if (is_ascii_alpha(p[0]) || (p[0] == '_' && is_ascii_alpha(p[1]))) {
+	// (C1/C2 scripts also use labels that start with a digit, e.g. "gsub 2bed")
+	else if (is_ascii_alpha(p[0]) || (p[0] == '_' && is_ascii_alpha(p[1])) || (is_ascii_digit(p[0]) && is_ascii_alpha(p[1]))) {
 		p++;
 		while (is_ascii_alnum(p[0]) || p[0] == '_' || p[0] == '-' || p[0] == ':' || p[0] == '+' || p[0] == '#' || p[0] == '!' || p[0] == '*') {
 			p++;

@@ -337,6 +337,7 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 	}
 
 	bool ranscript = false;
+	static const bool trace_events = getenv("OPENC2E_TRACE_EVENTS") != nullptr;
 
 	std::shared_ptr<script> s = findScript(event);
 	if (s) {
@@ -388,6 +389,10 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 			break;
 	}
 
+	if (trace_events && family != 4 && event != 9)
+		fmt::print("[event] {} {} {} event {} from {} -> {}\n", (int)family, (int)genus, species, event,
+			from ? fmt::format("{} {} {}", (int)from->family, (int)from->genus, from->species) : std::string("none"),
+			ranscript ? "ran" : (findScript(event) ? "refused or failed" : "no script"));
 	return ranscript;
 }
 
