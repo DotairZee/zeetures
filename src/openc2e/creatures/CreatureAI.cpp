@@ -18,6 +18,9 @@
  */
 
 #include "CreatureAgent.h"
+#include "SkeletalCreature.h"
+#include "caosScript.h"
+#include "Engine.h"
 #include "World.h"
 #include "c2eBrain.h"
 #include "c2eCreature.h"
@@ -25,10 +28,18 @@
 #include "oldBrain.h"
 #include "oldCreature.h"
 
+#include <algorithm>
+#include <cctype>
+#include <cmath>
 #include <memory>
 #include <stdint.h>
 
 void oldCreature::tickBrain() {
+	if (mind) {
+		tickMind();
+		return;
+	}
+
 	if (asleep) {
 		attn = -1;
 		decn = -1;
@@ -414,8 +425,151 @@ int c2eCreature::reverseMapVerbToNeuron(unsigned int verb) {
 }
 
 void oldCreature::handleStimulus(unsigned int id) {
-	// TODO
-	(void)id;
+	StimulusEvent s;
+	s.numbered = true;
+	s.id = id;
+	handleStimulus(s);
+}
+
+void oldCreature::handleStimulus(const StimulusEvent& s) {
+	// Only active with a pluggable mind; the original brain path still
+	// ignores stimuli, as before.
+	if (!mind)
+		return;
+	if (!alive)
+		return;
+	applyStimulusChemistry(s);
+	if (pendingstimuli.size() < 64)
+		pendingstimuli.push_back(s);
+}
+
+// The body side of a stimulus: add the chemicals the world (full form) or
+// the creature's own genome (numbered form, via stimulus genes) specifies.
+// Only the chemical part is used; brain-related gene fields are ignored.
+// Not implemented: the 'modulate' and 'addoffset' gene flags.
+void oldCreature::applyStimulusChemistry(const StimulusEvent& s) {
+	if (s.numbered) {
+		creatureStimulusGene* g = nullptr;
+		for (auto& gene : genome->genes) {
+			if (auto* x = dynamic_cast<creatureStimulusGene*>(gene.get())) {
+				if (x->stim == s.id && shouldProcessGene(x))
+					g = x; // the last expressed gene for this stimulus wins
+			}
+		}
+		if (!g)
+			return;
+		if (asleep && !g->whenasleep)
+			return;
+		for (unsigned int i = 0; i < 4; i++) {
+			if (g->drives[i] != 0 && g->drives[i] != 255 && g->amounts[i] > 0)
+				addChemical(g->drives[i], g->amounts[i]);
+		}
+	} else {
+		for (unsigned int i = 0; i < 4; i++) {
+			int chem = s.chem[i], amount = s.amount[i];
+			if (chem > 0 && chem < 255 && amount > 0)
+				addChemical((unsigned char)chem, (unsigned char)std::min(amount, 255));
+		}
+	}
+}
+
+// Lists the decision scripts (events 16-47) the world defines for this
+// creature, and whether each acts on the attended object.
+void oldCreature::buildMindActions() {
+	mindactions.clear();
+	for (int n = 0; n < 32; n++) {
+		std::shared_ptr<script> s = parentagent->findScript(16 + n);
+		if (!s)
+			continue;
+		std::string code = s->code;
+		std::transform(code.begin(), code.end(), code.begin(), [](unsigned char ch) { return std::tolower(ch); });
+		bool needsObject = code.find("_it_") != std::string::npos || code.find("appr") != std::string::npos || code.find("aim:") != std::string::npos;
+		mindactions.push_back({n, needsObject});
+	}
+}
+
+MindPerception oldCreature::buildPerception() {
+	MindPerception p;
+	p.creatureId = parentagent->getUNID();
+	p.tick = ticks / 4;
+	p.stage = stage;
+	p.asleep = asleep;
+	p.dreaming = dreaming;
+	p.female = female;
+	unsigned int ndrives = (engine.version == 1) ? 16 : 17;
+	for (unsigned int i = 0; i < ndrives; i++)
+		p.drives[i] = getDrive(i);
+	p.chemicals = chemicals;
+
+	float cx = parentagent->x + parentagent->getWidth() / 2.0f;
+	float cy = parentagent->y + parentagent->getHeight() / 2.0f;
+	for (unsigned int i = 0; i < chosenagents.size(); i++) {
+		AgentRef a = chosenagents[i];
+		if (!a)
+			continue;
+		float ax = a->x + a->getWidth() / 2.0f;
+		float ay = a->y + a->getHeight() / 2.0f;
+		p.visible.push_back({(int)i, a, std::hypot(ax - cx, ay - cy)});
+	}
+
+	p.stimuli = pendingstimuli;
+	p.actions = &mindactions;
+	p.actionFinished = parentagent->vmStopped();
+	p.currentAttention = attn;
+	p.currentDecision = decn;
+	return p;
+}
+
+void oldCreature::tickMind() {
+	// same cadence as the original brain path
+	if ((ticks % 4) != 0)
+		return;
+
+	chooseAgents();
+	if (!mindborn)
+		buildMindActions();
+	MindPerception p = buildPerception();
+	pendingstimuli.clear();
+
+	if (!mindborn) {
+		mindborn = true;
+		mind->born(p);
+	}
+	MindOutput out = mind->tick(p);
+
+	if (out.expression >= 0 && out.expression < 6) {
+		if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent))
+			sc->setFacialExpression((unsigned int)out.expression);
+	}
+
+	if (out.sleep == 1 && !asleep)
+		setAsleep(true);
+	else if (out.sleep == 0 && asleep)
+		setAsleep(false);
+
+	AgentRef oldattn = attention;
+	int olddecn = decn;
+	if (out.attentionCategory >= 0 && out.attentionCategory < (int)chosenagents.size())
+		attn = out.attentionCategory;
+	if (out.decision >= 0)
+		decn = out.decision;
+	if (attn >= 0 && attn < (int)chosenagents.size())
+		attention = chosenagents[attn];
+
+	if (zombie)
+		return;
+
+	// Run the world's script for the chosen action when the choice changes,
+	// or when the mind asks again after the previous action finished.
+	if (decn >= 0 && (oldattn != attention || olddecn != decn || (out.decision >= 0 && p.actionFinished)))
+		parentagent->queueScript(decn + 16);
+}
+
+void oldCreature::notifyMindOfDeath() {
+	if (!mind || !mindborn || minddied)
+		return;
+	minddied = true;
+	mind->died(buildPerception());
 }
 
 void c2eCreature::handleStimulus(c2eStim& stim) {

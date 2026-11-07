@@ -217,6 +217,12 @@ void Creature::tick() {
  */
 oldCreature::oldCreature(std::shared_ptr<genomeFile> g, bool is_female, unsigned char _variant, CreatureAgent* a)
 	: Creature(g, is_female, _variant, a) {
+	if (!engine.mindname.empty()) {
+		mind = createCreatureMind(engine.mindname);
+		// C1/C2 agents fall into categories 0-39 (see World::findCategory)
+		chosenagents.resize(40);
+	}
+
 	biochemticks = 0;
 	halflives = 0;
 
@@ -353,8 +359,10 @@ unsigned int c2eCreature::getGait() {
 
 void c1Creature::tick() {
 	// TODO: should we tick some things even if dead?
-	if (!alive)
+	if (!alive) {
+		notifyMindOfDeath();
 		return;
+	}
 
 	senses[0] = 255; // always-on
 	senses[1] = (asleep ? 255 : 0); // asleep
@@ -380,8 +388,10 @@ void c1Creature::tick() {
 
 void c2Creature::tick() {
 	// TODO: should we tick some things even if dead?
-	if (!alive)
+	if (!alive) {
+		notifyMindOfDeath();
 		return;
+	}
 
 	senses[0] = 255; // always-on
 	senses[1] = (asleep ? 255 : 0); // asleep

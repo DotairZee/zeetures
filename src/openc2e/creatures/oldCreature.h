@@ -21,6 +21,7 @@
 #define __OLDCREATURE_H
 
 #include "Creature.h"
+#include "CreatureMind.h"
 
 #include <cassert>
 #include <memory>
@@ -50,6 +51,17 @@ class oldCreature : public Creature {
 	void tickBrain();
 	virtual void tickBiochemistry();
 
+	// pluggable mind (--mind); null means the original oldBrain path
+	std::unique_ptr<CreatureMind> mind;
+	std::vector<StimulusEvent> pendingstimuli;
+	bool mindborn = false, minddied = false;
+	std::vector<MindAction> mindactions; // built on the first mind tick
+	void buildMindActions();
+	void tickMind();
+	MindPerception buildPerception();
+	void notifyMindOfDeath();
+	void applyStimulusChemistry(const StimulusEvent& s);
+
 	oldCreature(std::shared_ptr<genomeFile> g, bool is_female, unsigned char _variant, CreatureAgent* a);
 
 	void processGenes();
@@ -69,6 +81,8 @@ class oldCreature : public Creature {
 	virtual unsigned char getDrive(unsigned int id) = 0;
 
 	void handleStimulus(unsigned int id);
+	void handleStimulus(const StimulusEvent& s);
+	CreatureMind* getMind() { return mind.get(); }
 
 	oldBrain* getBrain() { return brain; }
 

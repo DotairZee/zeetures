@@ -20,6 +20,8 @@
 
 #include "Scriptorium.h"
 
+#include "caosScript.h"
+
 #include <memory>
 
 inline unsigned int Scriptorium::calculateValue(unsigned char family, unsigned char genus, unsigned short species) {
@@ -71,3 +73,17 @@ std::shared_ptr<script> Scriptorium::getScript(unsigned char family, unsigned ch
 }
 
 /* vim: set noet: */
+
+void Scriptorium::dumpScripts(std::ostream& out) {
+	for (auto& [value, events] : scripts) {
+		unsigned int family = value & 0xff;
+		unsigned int genus = (value >> 8) & 0xff;
+		unsigned int species = value >> 16;
+		for (auto& [event, s] : events) {
+			if (!s)
+				continue;
+			out << "=== scrp " << family << " " << genus << " " << species << " " << event << "\n";
+			out << s->code << "\n";
+		}
+	}
+}

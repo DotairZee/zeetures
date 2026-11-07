@@ -18,6 +18,9 @@
  */
 
 #include "Engine.h"
+#include "MetaRoom.h"
+#include "Map.h"
+#include "AgentHelpers.h"
 #include "World.h"
 #include "caosVM.h"
 #include "common/Random.h"
@@ -29,6 +32,7 @@
 #include "historyManager.h"
 
 #include <cassert>
+#include <cmath>
 #include <memory>
 
 CreatureAgent* caosVM::getTargCreatureAgent() {
@@ -52,6 +56,46 @@ oldCreature* getoldCreature(Agent* a) {
 	return c;
 }
 
+// Delivers a C1/C2 stimulus from OWNR to every creature in range.
+// SIGN: creatures that can see OWNR. TACT: creatures touching OWNR.
+// SHOU: creatures in the same metaroom within 500 pixels, an engine
+// approximation of "can hear" (openc2e has no hearing model yet).
+enum class OldStimRange { Shout, Sign, Tact };
+static void broadcastOldStimulus(caosVM* vm, StimulusEvent s, OldStimRange range, const char* command) {
+	std::shared_ptr<Agent> src = vm->owner.lock();
+	if (!src)
+		return;
+	s.source = vm->owner;
+	s.command = command;
+	float sx = src->x + src->getWidth() / 2.0f;
+	float sy = src->y + src->getHeight() / 2.0f;
+	MetaRoom* smeta = world.map->metaRoomAt(sx, sy);
+	for (auto& a : world.agents) {
+		if (!a || a == src)
+			continue;
+		oldCreature* c = getoldCreature(a.get());
+		if (!c)
+			continue;
+		bool inrange = false;
+		switch (range) {
+			case OldStimRange::Sign:
+				inrange = agentIsVisible(a.get(), src.get());
+				break;
+			case OldStimRange::Tact:
+				inrange = agentsTouching(a.get(), src.get());
+				break;
+			case OldStimRange::Shout: {
+				float cx = a->x + a->getWidth() / 2.0f;
+				float cy = a->y + a->getHeight() / 2.0f;
+				inrange = smeta && world.map->metaRoomAt(cx, cy) == smeta && std::hypot(cx - sx, cy - sy) <= 500.0f;
+				break;
+			}
+		}
+		if (inrange)
+			c->handleStimulus(s);
+	}
+}
+
 c2eCreature* getc2eCreature(Agent* a) {
 	if (!a)
 		return 0;
@@ -64,40 +108,49 @@ c2eCreature* getc2eCreature(Agent* a) {
 
 /**
  STM# SHOU (command) stimulusno (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 */
 void c_STM_SHOU(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(stimulusno)
+	VM_PARAM_INTEGER(stimulusno)
 
-	// TODO
+	StimulusEvent s;
+	s.numbered = true;
+	s.id = stimulusno;
+	broadcastOldStimulus(vm, s, OldStimRange::Shout, "STM# SHOU");
 }
 
 /**
  STM# SIGN (command) stimulusno (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 */
 void c_STM_SIGN(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(stimulusno)
+	VM_PARAM_INTEGER(stimulusno)
 
-	// TODO
+	StimulusEvent s;
+	s.numbered = true;
+	s.id = stimulusno;
+	broadcastOldStimulus(vm, s, OldStimRange::Sign, "STM# SIGN");
 }
 
 /**
  STM# TACT (command) stimulusno (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 */
 void c_STM_TACT(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(stimulusno)
+	VM_PARAM_INTEGER(stimulusno)
 
-	// TODO
+	StimulusEvent s;
+	s.numbered = true;
+	s.id = stimulusno;
+	broadcastOldStimulus(vm, s, OldStimRange::Tact, "STM# TACT");
 }
 
 /**
  STM# WRIT (command) object (agent) stimulusno (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 */
 void c_STM_WRIT(caosVM* vm) {
@@ -108,8 +161,12 @@ void c_STM_WRIT(caosVM* vm) {
 	if (!c)
 		return; // ignored on non-creatures
 
-	// TODO: ownr?
-	c->handleStimulus(stimulusno);
+	StimulusEvent s;
+	s.numbered = true;
+	s.id = stimulusno;
+	s.source = vm->owner;
+	s.command = "STM# WRIT";
+	c->handleStimulus(s);
 }
 
 /**
@@ -176,118 +233,161 @@ void c_STIM_WRIT(caosVM* vm) {
 
 /**
  STIM SHOU (command) significance (integer) input (integer) intensity (integer) features (integer) chem0 (integer) amount0 (integer) chem1 (integer) amount1 (integer) chem2 (integer) amount2 (integer) chem3 (integer) amount3 (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 */
 void c_STIM_SHOU_c2(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(amount3)
-	VM_PARAM_INTEGER_UNUSED(chem3)
-	VM_PARAM_INTEGER_UNUSED(amount2)
-	VM_PARAM_INTEGER_UNUSED(chem2)
-	VM_PARAM_INTEGER_UNUSED(amount1)
-	VM_PARAM_INTEGER_UNUSED(chem1)
-	VM_PARAM_INTEGER_UNUSED(amount0)
-	VM_PARAM_INTEGER_UNUSED(chem0)
-	VM_PARAM_INTEGER_UNUSED(features)
-	VM_PARAM_INTEGER_UNUSED(intensity)
-	VM_PARAM_INTEGER_UNUSED(input)
-	VM_PARAM_INTEGER_UNUSED(significance)
+	VM_PARAM_INTEGER(amount3)
+	VM_PARAM_INTEGER(chem3)
+	VM_PARAM_INTEGER(amount2)
+	VM_PARAM_INTEGER(chem2)
+	VM_PARAM_INTEGER(amount1)
+	VM_PARAM_INTEGER(chem1)
+	VM_PARAM_INTEGER(amount0)
+	VM_PARAM_INTEGER(chem0)
+	VM_PARAM_INTEGER(features)
+	VM_PARAM_INTEGER(intensity)
+	VM_PARAM_INTEGER(input)
+	VM_PARAM_INTEGER(significance)
 
-	// TODO
+	StimulusEvent s;
+	s.significance = significance;
+	s.input = input;
+	s.intensity = intensity;
+	s.features = features;
+	s.chem = {chem0, chem1, chem2, chem3};
+	s.amount = {amount0, amount1, amount2, amount3};
+	broadcastOldStimulus(vm, s, OldStimRange::Shout, "STIM SHOU");
 }
 
 /**
  STIM SIGN (command) significance (integer) input (integer) intensity (integer) features (integer) chem0 (integer) amount0 (integer) chem1 (integer) amount1 (integer) chem2 (integer) amount2 (integer) chem3 (integer) amount3 (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 */
 void c_STIM_SIGN_c2(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(amount3)
-	VM_PARAM_INTEGER_UNUSED(chem3)
-	VM_PARAM_INTEGER_UNUSED(amount2)
-	VM_PARAM_INTEGER_UNUSED(chem2)
-	VM_PARAM_INTEGER_UNUSED(amount1)
-	VM_PARAM_INTEGER_UNUSED(chem1)
-	VM_PARAM_INTEGER_UNUSED(amount0)
-	VM_PARAM_INTEGER_UNUSED(chem0)
-	VM_PARAM_INTEGER_UNUSED(features)
-	VM_PARAM_INTEGER_UNUSED(intensity)
-	VM_PARAM_INTEGER_UNUSED(input)
-	VM_PARAM_INTEGER_UNUSED(significance)
+	VM_PARAM_INTEGER(amount3)
+	VM_PARAM_INTEGER(chem3)
+	VM_PARAM_INTEGER(amount2)
+	VM_PARAM_INTEGER(chem2)
+	VM_PARAM_INTEGER(amount1)
+	VM_PARAM_INTEGER(chem1)
+	VM_PARAM_INTEGER(amount0)
+	VM_PARAM_INTEGER(chem0)
+	VM_PARAM_INTEGER(features)
+	VM_PARAM_INTEGER(intensity)
+	VM_PARAM_INTEGER(input)
+	VM_PARAM_INTEGER(significance)
 
-	// TODO
+	StimulusEvent s;
+	s.significance = significance;
+	s.input = input;
+	s.intensity = intensity;
+	s.features = features;
+	s.chem = {chem0, chem1, chem2, chem3};
+	s.amount = {amount0, amount1, amount2, amount3};
+	broadcastOldStimulus(vm, s, OldStimRange::Sign, "STIM SIGN");
 }
 
 /**
  STIM TACT (command) significance (integer) input (integer) intensity (integer) features (integer) chem0 (integer) amount0 (integer) chem1 (integer) amount1 (integer) chem2 (integer) amount2 (integer) chem3 (integer) amount3 (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 */
 void c_STIM_TACT_c2(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(amount3)
-	VM_PARAM_INTEGER_UNUSED(chem3)
-	VM_PARAM_INTEGER_UNUSED(amount2)
-	VM_PARAM_INTEGER_UNUSED(chem2)
-	VM_PARAM_INTEGER_UNUSED(amount1)
-	VM_PARAM_INTEGER_UNUSED(chem1)
-	VM_PARAM_INTEGER_UNUSED(amount0)
-	VM_PARAM_INTEGER_UNUSED(chem0)
-	VM_PARAM_INTEGER_UNUSED(features)
-	VM_PARAM_INTEGER_UNUSED(intensity)
-	VM_PARAM_INTEGER_UNUSED(input)
-	VM_PARAM_INTEGER_UNUSED(significance)
+	VM_PARAM_INTEGER(amount3)
+	VM_PARAM_INTEGER(chem3)
+	VM_PARAM_INTEGER(amount2)
+	VM_PARAM_INTEGER(chem2)
+	VM_PARAM_INTEGER(amount1)
+	VM_PARAM_INTEGER(chem1)
+	VM_PARAM_INTEGER(amount0)
+	VM_PARAM_INTEGER(chem0)
+	VM_PARAM_INTEGER(features)
+	VM_PARAM_INTEGER(intensity)
+	VM_PARAM_INTEGER(input)
+	VM_PARAM_INTEGER(significance)
 
-	// TODO
+	StimulusEvent s;
+	s.significance = significance;
+	s.input = input;
+	s.intensity = intensity;
+	s.features = features;
+	s.chem = {chem0, chem1, chem2, chem3};
+	s.amount = {amount0, amount1, amount2, amount3};
+	broadcastOldStimulus(vm, s, OldStimRange::Tact, "STIM TACT");
 }
 
 /**
  STIM WRIT (command) creature (agent) significance (integer) input (integer) intensity (integer) features (integer) chem0 (integer) amount0 (integer) chem1 (integer) amount1 (integer) chem2 (integer) amount2 (integer) chem3 (integer) amount3 (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 */
 void c_STIM_WRIT_c2(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(amount3)
-	VM_PARAM_INTEGER_UNUSED(chem3)
-	VM_PARAM_INTEGER_UNUSED(amount2)
-	VM_PARAM_INTEGER_UNUSED(chem2)
-	VM_PARAM_INTEGER_UNUSED(amount1)
-	VM_PARAM_INTEGER_UNUSED(chem1)
-	VM_PARAM_INTEGER_UNUSED(amount0)
-	VM_PARAM_INTEGER_UNUSED(chem0)
-	VM_PARAM_INTEGER_UNUSED(features)
-	VM_PARAM_INTEGER_UNUSED(intensity)
-	VM_PARAM_INTEGER_UNUSED(input)
-	VM_PARAM_INTEGER_UNUSED(significance)
-	VM_PARAM_AGENT_UNUSED(creature)
+	VM_PARAM_INTEGER(amount3)
+	VM_PARAM_INTEGER(chem3)
+	VM_PARAM_INTEGER(amount2)
+	VM_PARAM_INTEGER(chem2)
+	VM_PARAM_INTEGER(amount1)
+	VM_PARAM_INTEGER(chem1)
+	VM_PARAM_INTEGER(amount0)
+	VM_PARAM_INTEGER(chem0)
+	VM_PARAM_INTEGER(features)
+	VM_PARAM_INTEGER(intensity)
+	VM_PARAM_INTEGER(input)
+	VM_PARAM_INTEGER(significance)
+	VM_PARAM_AGENT(creature)
 
-	// TODO
-	//oldCreature *c = getoldCreature(creature.get());
-	//if (!c) return; // ignored on non-creatures
+	oldCreature* c = getoldCreature(creature.get());
+	if (!c)
+		return; // ignored on non-creatures
 
-	// TODO
+	StimulusEvent s;
+	s.significance = significance;
+	s.input = input;
+	s.intensity = intensity;
+	s.features = features;
+	s.chem = {chem0, chem1, chem2, chem3};
+	s.amount = {amount0, amount1, amount2, amount3};
+	s.source = vm->owner;
+	s.command = "STIM WRIT";
+	c->handleStimulus(s);
 }
 
 /**
  STIM FROM (command) significance (integer) input (integer) intensity (integer) features (integer) chem0 (integer) amount0 (integer) chem1 (integer) amount1 (integer) chem2 (integer) amount2 (integer) chem3 (integer) amount3 (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 */
 void c_STIM_FROM_c1(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(amount3)
-	VM_PARAM_INTEGER_UNUSED(chem3)
-	VM_PARAM_INTEGER_UNUSED(amount2)
-	VM_PARAM_INTEGER_UNUSED(chem2)
-	VM_PARAM_INTEGER_UNUSED(amount1)
-	VM_PARAM_INTEGER_UNUSED(chem1)
-	VM_PARAM_INTEGER_UNUSED(amount0)
-	VM_PARAM_INTEGER_UNUSED(chem0)
-	VM_PARAM_INTEGER_UNUSED(features)
-	VM_PARAM_INTEGER_UNUSED(intensity)
-	VM_PARAM_INTEGER_UNUSED(input)
-	VM_PARAM_INTEGER_UNUSED(significance)
+	VM_PARAM_INTEGER(amount3)
+	VM_PARAM_INTEGER(chem3)
+	VM_PARAM_INTEGER(amount2)
+	VM_PARAM_INTEGER(chem2)
+	VM_PARAM_INTEGER(amount1)
+	VM_PARAM_INTEGER(chem1)
+	VM_PARAM_INTEGER(amount0)
+	VM_PARAM_INTEGER(chem0)
+	VM_PARAM_INTEGER(features)
+	VM_PARAM_INTEGER(intensity)
+	VM_PARAM_INTEGER(input)
+	VM_PARAM_INTEGER(significance)
 
 	valid_agent(vm->from.getAgent());
-	// TODO
+	oldCreature* c = getoldCreature(vm->from.getAgent().get());
+	if (!c)
+		return; // ignored when FROM is not a creature
+
+	StimulusEvent s;
+	s.significance = significance;
+	s.input = input;
+	s.intensity = intensity;
+	s.features = features;
+	s.chem = {chem0, chem1, chem2, chem3};
+	s.amount = {amount0, amount1, amount2, amount3};
+	s.source = vm->owner;
+	s.command = "STIM FROM";
+	c->handleStimulus(s);
 }
 
 /**

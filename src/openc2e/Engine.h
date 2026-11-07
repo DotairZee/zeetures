@@ -89,6 +89,7 @@ class Engine {
 	std::string gametype;
 	bool bmprenderer;
 	std::string language;
+	std::string mindname; // --mind: pluggable C1/C2 creature mind (empty = original brain)
 
 	Engine();
 	~Engine();

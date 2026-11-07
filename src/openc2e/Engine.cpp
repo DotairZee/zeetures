@@ -49,6 +49,8 @@
 #include "imageManager.h"
 #include "openc2eimgui/ImGuiUtils.h"
 #include "openc2eimgui/Openc2eImGui.h"
+#include "Scriptorium.h"
+#include "creatures/CreatureMind.h"
 #include "prayManager.h"
 
 #ifdef _WIN32
@@ -57,6 +59,7 @@
 
 #include <cassert>
 #include <filesystem>
+#include <fstream>
 #define CXXOPTS_VECTOR_DELIMITER '\0'
 #include <cxxopts.hpp>
 #include <fmt/core.h>
@@ -928,6 +931,7 @@ bool Engine::parseCommandLine(int argc, char* argv[]) {
 	desc.add_options()("n,norun", "Don't run the game, just execute scripts");
 	desc.add_options()("a,autokill", "Enable autokill");
 	desc.add_options()("autostop", "Enable autostop (or disable it, for CV)");
+	desc.add_options()("mind", "Use a pluggable creature mind for C1/C2 creatures (options: " + availableCreatureMinds() + "); default is the original brain code", cxxopts::value<std::string>(mindname));
 	auto vm = desc.parse(argc, argv);
 	cmdline_enable_sound = !vm.count("silent");
 	cmdline_norun = vm.count("norun");
@@ -948,6 +952,14 @@ bool Engine::parseCommandLine(int argc, char* argv[]) {
 
 	if (vm.count("autostop")) {
 		world.autostop = true;
+	}
+
+	if (!mindname.empty()) {
+		if (!createCreatureMind(mindname)) {
+			fmt::print(stderr, "Unknown creature mind '{}' (options: {})\n", mindname, availableCreatureMinds());
+			return false;
+		}
+		fmt::print("* Creature mind: {}\n", mindname);
 	}
 
 #ifdef _WIN32
@@ -1175,6 +1187,11 @@ bool Engine::initialSetup() {
 		throw Exception("No metarooms found in given bootstrap directories or files");
 	}
 
+	if (const char* dumppath = getenv("OPENC2E_DUMP_SCRIPTS")) {
+		std::ofstream dump(dumppath);
+		world.scriptorium->dumpScripts(dump);
+		fmt::print("* Dumped world scripts to {}\n", dumppath);
+	}
 	fmt::print("* Done startup.\n");
 
 	if (cmdline_norun) {

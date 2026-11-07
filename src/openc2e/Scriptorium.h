@@ -24,6 +24,7 @@
 #include "serfwd.h"
 
 #include <map>
+#include <ostream>
 #include <memory>
 
 class script;
@@ -42,6 +43,9 @@ class Scriptorium {
 	void addScript(unsigned char family, unsigned char genus, unsigned short species, unsigned short event, std::shared_ptr<script> s);
 	void delScript(unsigned char family, unsigned char genus, unsigned short species, unsigned short event);
 	std::shared_ptr<script> getScript(unsigned char family, unsigned char genus, unsigned short species, unsigned short event);
+
+	// Developer aid: write every script's classifier, event and source text.
+	void dumpScripts(std::ostream& out);
 };
 
 #endif
