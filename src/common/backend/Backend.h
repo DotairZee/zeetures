@@ -88,6 +88,7 @@ class Backend {
 	}
 
 	virtual void run(std::function<bool()> render_callback) = 0;
+	virtual void setWindowTitle(const std::string&) {}
 
 	virtual ~Backend() {}
 };

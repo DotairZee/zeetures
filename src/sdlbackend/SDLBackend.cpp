@@ -624,6 +624,11 @@ bool sdl_event_watcher(void* userdata, SDL_Event* event) {
 	return true;
 }
 
+void SDLBackend::setWindowTitle(const std::string& title) {
+	if (window)
+		SDL_SetWindowTitle(window, title.c_str());
+}
+
 void SDLBackend::run(std::function<bool()> update_callback) {
 	SDL_AddEventWatch(sdl_event_watcher, nullptr);
 

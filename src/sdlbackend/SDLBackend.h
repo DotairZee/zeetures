@@ -77,6 +77,7 @@ class SDLBackend : public Backend {
 	int translateScancode(int key);
 
   public:
+	void setWindowTitle(const std::string& title) override;
 	SDL_Window* window = nullptr;
 
 	static Backend* get_instance();

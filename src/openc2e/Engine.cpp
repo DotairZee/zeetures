@@ -1186,6 +1186,7 @@ bool Engine::initialSetup() {
 		currentworlddir = w->dir;
 		cmdline_bootstrap = {Openc2eImgui::WorldFile(w->dir).string()};
 		fmt::print("* World: {}\n", currentworld);
+		get_backend()->setWindowTitle(currentworld + " - " + (version == 1 ? "Creatures" : "Creatures 2"));
 	}
 
 	fmt::print("* Executing initial scripts...\n");
