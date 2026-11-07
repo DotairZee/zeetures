@@ -11,6 +11,7 @@
 #include <SDL3_native_midi/SDL_native_midi.h>
 #include <filesystem>
 #include <mutex>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -33,12 +34,33 @@ struct ChannelInfo {
 
 static std::mutex s_channels_mutex;
 static DenseSlotMap<ChannelInfo> s_channels;
+
+// Keys of tracks whose "stopped" callback has fired. The callback runs on
+// SDL's audio thread while SDL_mixer holds its stream lock, so it must not
+// take s_channels_mutex: the main thread holds that while calling MIX_*
+// functions, which take the stream lock (lock-order inversion, deadlock).
+// s_stopped_mutex is a leaf lock, never held while taking another lock.
+static std::mutex s_stopped_mutex;
+static std::vector<SlotMapKey> s_stopped_channels;
+
+// Call with s_channels_mutex held, on the main thread.
+static void erase_stopped_channels_locked() {
+	std::vector<SlotMapKey> stopped;
+	{
+		std::lock_guard<std::mutex> lock(s_stopped_mutex);
+		stopped.swap(s_stopped_channels);
+	}
+	for (auto key : stopped) {
+		s_channels.erase(key);
+	}
+}
 static std::unique_ptr<NativeMidi_Song, NativeMidiSongDeleter> s_midi;
 static std::unique_ptr<MIX_Mixer, MIXMixerDeleter> s_mixer;
 
 template <typename F>
 static void audio_channel_to_track(AudioChannel source, F&& f) {
 	std::lock_guard<std::mutex> lock(s_channels_mutex);
+	erase_stopped_channels_locked();
 	ChannelInfo* channel_p = s_channels.try_get(SlotMapKey::from_integral(source.handle));
 	if (!channel_p) {
 		return;
@@ -56,14 +78,16 @@ static AudioChannel track_to_audio_channel(std::unique_ptr<MIX_Track, MIXTrackDe
 	SlotMapKey key;
 	{
 		std::lock_guard<std::mutex> lock(s_channels_mutex);
+		erase_stopped_channels_locked();
 		key = s_channels.insert(ChannelInfo{std::move(track)});
 	}
 
 	MIX_SetTrackStoppedCallback(
 		trackp, [](void* key_, MIX_Track*) {
 			auto key = SlotMapKey::from_integral(numeric_cast<KeyIntegerType>(reinterpret_cast<uintptr_t>(key_)));
-			std::lock_guard<std::mutex> lock(s_channels_mutex);
-			s_channels.erase(key);
+			// deferred: see s_stopped_mutex
+			std::lock_guard<std::mutex> lock(s_stopped_mutex);
+			s_stopped_channels.push_back(key);
 		},
 		reinterpret_cast<void*>(numeric_cast<uintptr_t>(key.to_integral())));
 
@@ -146,6 +170,10 @@ void SDLMixerBackend::shutdown() {
 	{
 		std::lock_guard<std::mutex> lock(s_channels_mutex);
 		s_channels = {};
+	}
+	{
+		std::lock_guard<std::mutex> lock(s_stopped_mutex);
+		s_stopped_channels.clear();
 	}
 	s_mixer.reset();
 	MIX_Quit();
