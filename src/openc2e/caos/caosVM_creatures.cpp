@@ -1281,6 +1281,11 @@ void c_NEW_CREA_c1(caosVM* vm) {
 	world.newMoniker(genome, realmoniker, a);
 	world.history->getMoniker(world.history->findMoniker(genome)).moveToCreature(a);
 
+	// C1/C2 hatching scripts don't call BORN, so select a new creature here
+	// if nothing is selected (see also Creature::born)
+	if (!world.selectedcreature)
+		world.selectCreature(AgentRef(a).lock());
+
 	vm->setTarg(a);
 }
 
