@@ -62,6 +62,9 @@ class RenderTarget {
 	virtual void renderClear() = 0;
 	virtual void setViewportOffsetTop(int offset_top) = 0;
 	virtual void setViewportOffsetBottom(int offset_bottom) = 0;
+	virtual void setViewportOffsetRight(int) {}
+	// the backend texture behind an off-screen target, for showing it in the UI
+	virtual void* getNativeTexture() const { return nullptr; }
 	virtual ~RenderTarget() {}
 };
 

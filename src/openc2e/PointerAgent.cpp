@@ -27,6 +27,7 @@
 #include "Room.h"
 #include "World.h"
 #include "caosVM.h"
+#include "creatures/CreatureAgent.h"
 #include "creatures/SkeletalCreature.h"
 
 #include <cassert>
@@ -229,6 +230,11 @@ void PointerAgent::handleEvent(BackendEvent& event) {
 			CompoundPart* a = world.partAt(x, y, true, false, true);
 			if (a) {
 				Agent* parent = a->getParent();
+
+				// C1/C2: clicking a creature selects it (the click still goes
+				// on to tickle/slap as usual). C3/DS selection is script-driven.
+				if (engine.version < 3 && dynamic_cast<CreatureAgent*>(parent))
+					world.selectCreature(AgentRef(parent).lock());
 
 				int eve = -1;
 

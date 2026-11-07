@@ -88,6 +88,14 @@ class World {
 	std::vector<unsigned int> groundlevels;
 
 	AgentRef selectedcreature;
+
+	// C1/C2 favorite places (camera bookmarks) from the world file; six slots,
+	// unused ones have empty names
+	struct FavoritePlace {
+		std::string name;
+		int x, y;
+	};
+	std::vector<FavoritePlace> favoriteplaces;
 	void selectCreature(std::shared_ptr<Agent> c);
 	AgentRef focusagent;
 	unsigned int focuspart;

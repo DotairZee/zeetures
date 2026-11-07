@@ -39,11 +39,23 @@ static std::optional<int> getTemperatureAtCenterOfCamera() {
 
 static int s_last_c2statusbar_height = 0;
 
+static bool s_show_c2statusbar = true;
+
+bool IsC2StatusBarShown() {
+	return s_show_c2statusbar;
+}
+
+void SetC2StatusBarShown(bool shown) {
+	s_show_c2statusbar = shown;
+}
+
 int GetC2StatusBarHeight() {
-	return s_last_c2statusbar_height;
+	return s_show_c2statusbar ? s_last_c2statusbar_height : 0;
 }
 
 void DrawC2StatusBar() {
+	if (!s_show_c2statusbar)
+		return;
 	ImGuiIO& io = ImGui::GetIO();
 
 	ImGui::SetNextWindowPos(ImVec2(0, io.DisplaySize.y - s_last_c2statusbar_height));

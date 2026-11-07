@@ -325,6 +325,7 @@ void Engine::drawWorld() {
 	Openc2eImGui::Update();
 	get_backend()->getMainRenderTarget()->setViewportOffsetTop(Openc2eImGui::GetViewportOffsetTop());
 	get_backend()->getMainRenderTarget()->setViewportOffsetBottom(Openc2eImGui::GetViewportOffsetBottom());
+	get_backend()->getMainRenderTarget()->setViewportOffsetRight(Openc2eImGui::GetViewportOffsetRight());
 
 	if (dorendering || refreshdisplay) {
 		refreshdisplay = false;

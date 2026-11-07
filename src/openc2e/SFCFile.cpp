@@ -116,14 +116,21 @@ void SFCFile::read(Reader* i) {
 	scrolly = read32();
 
 	sfccheck(read16() == 0); // TODO
-	favplacename = readstring();
-	favplacex = read16();
-	favplacey = read16();
 
-	if (version() == 0)
-		readBytes(25); // TODO
-	else
-		readBytes(29); // TODO
+	// six favorite places (name, x, y); unused slots have empty names
+	for (unsigned int i = 0; i < 6; i++) {
+		std::string name = readstring();
+		uint16_t px = read16();
+		uint16_t py = read16();
+		if (i == 0) {
+			favplacename = name;
+			favplacex = px;
+			favplacey = py;
+		}
+		favplaces.push_back({name, px, py});
+	}
+	if (version() != 0)
+		readBytes(4); // TODO: C2 has four more bytes here
 
 	uint16_t numspeech = read16();
 	for (unsigned int i = 0; i < numspeech; i++) {
@@ -814,6 +821,10 @@ void SFCFile::copyToWorld() {
 
 	// move the camera to the correct position
 	engine.camera->moveTo(scrollx, scrolly, jump);
+
+	world.favoriteplaces.clear();
+	for (auto& f : favplaces)
+		world.favoriteplaces.push_back({f.name, f.x, f.y});
 
 	// patch agents
 	// TODO: do we really need to do this, and if so, should it be done here?

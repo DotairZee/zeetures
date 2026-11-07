@@ -1,0 +1,142 @@
+#include "C2ScrollBars.h"
+
+#include "C2StatusBar.h"
+#include "C2ToolBar.h"
+#include "Camera.h"
+#include "Engine.h"
+#include "MetaRoom.h"
+
+#include <algorithm>
+#include <imgui.h>
+
+namespace Openc2eImgui {
+
+static bool s_show_scrollbars = true;
+static constexpr float BAR = 16.0f; // scroll bar thickness, in pixels
+static constexpr int ARROW_STEP = 64; // pixels per arrow click
+
+bool AreC2ScrollBarsShown() {
+	return s_show_scrollbars;
+}
+
+void SetC2ScrollBarsShown(bool shown) {
+	s_show_scrollbars = shown;
+}
+
+int GetC2ScrollBarThickness() {
+	return s_show_scrollbars ? (int)BAR : 0;
+}
+
+// One scroll bar. 'pos' is the camera's left/top edge in world coordinates,
+// 'view' its width/height, and [lo, lo + range) the metaroom's extent.
+// Returns the new camera position, or -1 if unchanged.
+static int ScrollBar(const char* id, bool vertical, ImVec2 origin, float length, int pos, int view, int lo, int range) {
+	int result = -1;
+	ImGui::PushID(id);
+	ImGui::PushItemFlag(ImGuiItemFlags_ButtonRepeat, true);
+
+	// first arrow
+	ImGui::SetCursorScreenPos(origin);
+	if (ImGui::ArrowButton("##less", vertical ? ImGuiDir_Up : ImGuiDir_Left))
+		result = pos - ARROW_STEP;
+
+	// track
+	ImVec2 trackpos = vertical ? ImVec2(origin.x, origin.y + BAR) : ImVec2(origin.x + BAR, origin.y);
+	float tracklen = std::max(length - 2 * BAR, 1.0f);
+	ImVec2 tracksize = vertical ? ImVec2(BAR, tracklen) : ImVec2(tracklen, BAR);
+	ImGui::SetCursorScreenPos(trackpos);
+	ImGui::InvisibleButton("##track", tracksize);
+	bool trackheld = ImGui::IsItemActive();
+	bool trackclicked = ImGui::IsItemClicked();
+
+	float frac_view = range > 0 ? std::min(1.0f, (float)view / range) : 1.0f;
+	float thumblen = std::max(tracklen * frac_view, 12.0f);
+	float scrollable = std::max(range - view, 1);
+	float frac_pos = std::clamp((float)(pos - lo) / scrollable, 0.0f, 1.0f);
+	float thumbstart = (tracklen - thumblen) * frac_pos;
+
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	ImU32 trackcol = ImGui::GetColorU32(ImGuiCol_ScrollbarBg);
+	ImU32 thumbcol = ImGui::GetColorU32(trackheld ? ImGuiCol_ScrollbarGrabActive : ImGuiCol_ScrollbarGrab);
+	dl->AddRectFilled(trackpos, ImVec2(trackpos.x + tracksize.x, trackpos.y + tracksize.y), trackcol);
+	ImVec2 t0 = vertical ? ImVec2(trackpos.x + 1, trackpos.y + thumbstart) : ImVec2(trackpos.x + thumbstart, trackpos.y + 1);
+	ImVec2 t1 = vertical ? ImVec2(trackpos.x + BAR - 1, t0.y + thumblen) : ImVec2(t0.x + thumblen, trackpos.y + BAR - 1);
+	dl->AddRectFilled(t0, t1, thumbcol);
+
+	// interaction: drag the thumb, or click the track to page
+	static float s_grab_offset = 0;
+	static const char* s_dragging = nullptr;
+	float mouse = vertical ? ImGui::GetIO().MousePos.y - trackpos.y : ImGui::GetIO().MousePos.x - trackpos.x;
+	if (trackclicked) {
+		if (mouse >= thumbstart && mouse <= thumbstart + thumblen) {
+			s_dragging = id;
+			s_grab_offset = mouse - thumbstart;
+		} else {
+			s_dragging = nullptr;
+			result = pos + (mouse < thumbstart ? -view : view); // page
+		}
+	}
+	if (trackheld && s_dragging == id && tracklen > thumblen) {
+		float f = std::clamp((mouse - s_grab_offset) / (tracklen - thumblen), 0.0f, 1.0f);
+		result = lo + (int)(f * scrollable);
+	}
+	if (!trackheld && s_dragging == id)
+		s_dragging = nullptr;
+
+	// second arrow
+	ImGui::SetCursorScreenPos(vertical ? ImVec2(origin.x, origin.y + length - BAR) : ImVec2(origin.x + length - BAR, origin.y));
+	if (ImGui::ArrowButton("##more", vertical ? ImGuiDir_Down : ImGuiDir_Right))
+		result = pos + ARROW_STEP;
+
+	ImGui::PopItemFlag();
+	ImGui::PopID();
+	return result;
+}
+
+void DrawC2ScrollBars() {
+	if (!s_show_scrollbars || !engine.camera)
+		return;
+	MetaRoom* m = engine.camera->getMetaRoom();
+	if (!m)
+		return;
+
+	ImGuiIO& io = ImGui::GetIO();
+	float top = (float)GetC2ToolBarHeight();
+	float bottom = io.DisplaySize.y - (float)GetC2StatusBarHeight(); // horizontal bar sits just above the status bar
+	float right = io.DisplaySize.x;
+
+	int camx = (int)engine.camera->getX(), camy = (int)engine.camera->getY();
+	int camw = (int)engine.camera->getWidth(), camh = (int)engine.camera->getHeight();
+	int newx = -1, newy = -1;
+
+	ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoFocusOnAppearing;
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
+
+	// vertical, along the right edge of the world view
+	ImGui::SetNextWindowPos(ImVec2(right - BAR, top));
+	ImGui::SetNextWindowSize(ImVec2(BAR, bottom - BAR - top));
+	if (ImGui::Begin("##c2vscroll", nullptr, flags)) {
+		newy = ScrollBar("v", true, ImVec2(right - BAR, top), bottom - BAR - top, camy, camh, (int)m->y(), (int)m->height());
+	}
+	ImGui::End();
+
+	// horizontal, along the bottom of the world view (corner square left empty)
+	ImGui::SetNextWindowPos(ImVec2(0, bottom - BAR));
+	ImGui::SetNextWindowSize(ImVec2(right, BAR));
+	if (ImGui::Begin("##c2hscroll", nullptr, flags)) {
+		newx = ScrollBar("h", false, ImVec2(0, bottom - BAR), right - BAR, camx, camw, (int)m->x(), (int)m->width());
+	}
+	ImGui::End();
+
+	ImGui::PopStyleVar(3);
+
+	if (newx != -1 || newy != -1) {
+		// scrolling by hand stops following a creature
+		engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+		engine.camera->moveTo(newx != -1 ? newx : camx, newy != -1 ? newy : camy);
+	}
+}
+
+} // namespace Openc2eImgui

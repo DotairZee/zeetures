@@ -376,7 +376,7 @@ int32_t SDLRenderTarget::getWidth() const {
 		int width;
 		SDL_GetWindowSizeInPixels(parent->window, &width, nullptr);
 		width = width / SDL_GetWindowDisplayScale(parent->window);
-		return numeric_cast<int32_t>(width);
+		return numeric_cast<int32_t>(width - viewport_offset_right);
 	}
 }
 
@@ -409,6 +409,10 @@ void SDLRenderTarget::setClip(Rect2f dest) {
 
 void SDLRenderTarget::setViewportOffsetTop(int offset_top) {
 	viewport_offset_top = offset_top;
+}
+
+void SDLRenderTarget::setViewportOffsetRight(int offset_right) {
+	viewport_offset_right = offset_right;
 }
 
 void SDLRenderTarget::setViewportOffsetBottom(int offset_bottom) {

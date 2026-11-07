@@ -35,6 +35,7 @@ class SDLRenderTarget : public RenderTarget {
 	SDL_Texture* texture = nullptr;
 	int viewport_offset_top = 0;
 	int viewport_offset_bottom = 0;
+	int viewport_offset_right = 0;
 
 	SDLRenderTarget(SDLBackend* parent);
 	SDLRenderTarget(const SDLRenderTarget&) = delete;
@@ -56,6 +57,8 @@ class SDLRenderTarget : public RenderTarget {
 	void renderClear() override;
 	void setViewportOffsetTop(int offset_top) override;
 	void setViewportOffsetBottom(int offset_bottom) override;
+	void setViewportOffsetRight(int offset_right) override;
+	void* getNativeTexture() const override { return texture; }
 };
 
 class SDLBackend : public Backend {

@@ -3,6 +3,8 @@
 #include "AgentInjector.h"
 #include "BrainViewer.h"
 #include "C1ToolBar.h"
+#include "C2EyeView.h"
+#include "C2ScrollBars.h"
 #include "C2StatusBar.h"
 #include "C2ToolBar.h"
 #include "CreatureGrapher.h"
@@ -45,6 +47,8 @@ void Update() {
 	} else if (engine.version == 2) {
 		Openc2eImgui::DrawC2Toolbar();
 		Openc2eImgui::DrawC2StatusBar();
+		Openc2eImgui::DrawC2ScrollBars();
+		Openc2eImgui::DrawEyeView();
 	}
 	if (ImGui::GetIO().MouseClicked[0] && ImGui::IsKeyDown(ImGuiMod_Shortcut)) {
 		ImGui::OpenPopup("Menu");
@@ -71,7 +75,15 @@ int GetViewportOffsetTop() {
 
 int GetViewportOffsetBottom() {
 	if (engine.version == 2) {
-		return Openc2eImgui::GetC2StatusBarHeight();
+		return Openc2eImgui::GetC2StatusBarHeight() + Openc2eImgui::GetC2ScrollBarThickness();
+	} else {
+		return 0;
+	}
+}
+
+int GetViewportOffsetRight() {
+	if (engine.version == 2) {
+		return Openc2eImgui::GetC2ScrollBarThickness();
 	} else {
 		return 0;
 	}

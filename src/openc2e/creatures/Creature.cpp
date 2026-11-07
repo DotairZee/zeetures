@@ -20,6 +20,7 @@
 #include "Creature.h"
 
 #include "Catalogue.h"
+#include "Engine.h"
 #include "CreatureAgent.h"
 #include "World.h"
 #include "c2eBrain.h"
@@ -168,6 +169,10 @@ void Creature::setDreaming(bool d) {
 }
 
 void Creature::born() {
+	// C1/C2: a newborn becomes the selected creature if none is selected.
+	if (engine.version < 3 && !world.selectedcreature)
+		world.selectCreature(AgentRef(parentagent).lock());
+
 	parent->creatureBorn();
 
 	// TODO: life event?

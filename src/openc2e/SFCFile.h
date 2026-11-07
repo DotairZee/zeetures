@@ -69,6 +69,11 @@ class SFCFile {
 	uint32_t scrollx, scrolly;
 	std::string favplacename;
 	uint32_t favplacex, favplacey;
+	struct FavPlace {
+		std::string name;
+		uint16_t x, y;
+	};
+	std::vector<FavPlace> favplaces;
 	std::vector<std::string> speech_history;
 
 	SFCFile() {}

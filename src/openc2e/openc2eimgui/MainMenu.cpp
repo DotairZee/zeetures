@@ -1,4 +1,5 @@
 #include "MainMenu.h"
+#include "C2ScrollBars.h"
 
 #include "AgentInjector.h"
 #include "BrainViewer.h"
@@ -158,7 +159,9 @@ void DrawMainMenu() {
 		ImGui::EndMenu();
 	}
 	if (ImGui::BeginMenu("View")) {
-		ImGui::MenuItem("Show Scrollbars", nullptr, false, false);
+		bool scrollbars = AreC2ScrollBarsShown();
+		if (ImGui::MenuItem("Show Scrollbars", nullptr, &scrollbars, engine.version == 2))
+			SetC2ScrollBarsShown(scrollbars);
 		ImGui::EndMenu();
 	}
 	if (ImGui::BeginMenu("Control")) {

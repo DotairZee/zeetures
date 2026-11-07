@@ -1,6 +1,13 @@
 #include "C2ToolBar.h"
 
 #include "AgentInjector.h"
+#include "C2EyeView.h"
+#include "MusicManager.h"
+#include "C2StatusBar.h"
+#include "C2ScrollBars.h"
+#include "creatures/CreatureAgent.h"
+#include "creatures/Creature.h"
+#include "Camera.h"
 #include "Engine.h"
 #include "Hatchery.h"
 #include "ImGuiUtils.h"
@@ -9,7 +16,9 @@
 #include "fileformats/ImageUtils.h"
 #include "fileformats/peFile.h"
 
+#include <fmt/core.h>
 #include <imgui.h>
+#include <vector>
 #include <imgui_internal.h>
 
 using namespace ImGuiUtils;
@@ -18,8 +27,213 @@ namespace Openc2eImgui {
 
 static int s_last_c2toolbar_height = 0;
 
+// View > Toolbars, as in Creatures 2
+static bool s_show_standard = true;
+static bool s_show_pointer = true;
+static bool s_show_applets = true;
+static bool s_show_favourites = true;
+
 int GetC2ToolBarHeight() {
 	return s_last_c2toolbar_height;
+}
+
+
+// Moves the camera to a favorite place (stops following a creature). Places
+// store the camera's top-left scroll position, like the world file's own
+// starting scroll position.
+static void GoToFavoritePlace(int i) {
+	if (i < 0 || i >= (int)world.favoriteplaces.size())
+		return;
+	auto& f = world.favoriteplaces[i];
+	engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+	engine.camera->moveToGlobal(f.x, f.y, jump);
+}
+
+// Selects the next living creature after the current selection and centres
+// the camera on it.
+static void SelectNextCreature() {
+	std::vector<std::shared_ptr<Agent>> creatures;
+	for (auto& a : world.agents) {
+		if (!a)
+			continue;
+		CreatureAgent* ca = dynamic_cast<CreatureAgent*>(a.get());
+		if (ca && ca->getCreature() && ca->getCreature()->isAlive())
+			creatures.push_back(a);
+	}
+	if (creatures.empty())
+		return;
+	size_t next = 0;
+	std::shared_ptr<Agent> current = world.selectedcreature.lock();
+	for (size_t i = 0; i < creatures.size(); i++) {
+		if (creatures[i] == current)
+			next = (i + 1) % creatures.size();
+	}
+	std::shared_ptr<Agent> c = creatures[next];
+	world.selectCreature(c);
+	int cx = (int)(c->x + c->getWidth() / 2.0f) - (int)engine.camera->getWidth() / 2;
+	int cy = (int)(c->y + c->getHeight() / 2.0f) - (int)engine.camera->getHeight() / 2;
+	engine.camera->moveToGlobal(cx, cy, jump);
+}
+
+static const char* GenusName(int genus) {
+	switch (genus) {
+		case 1: return "Norn";
+		case 2: return "Grendel";
+		case 3: return "Ettin";
+		default: return "Creature";
+	}
+}
+
+// The Creatures 2 menu bar (layout read from the game's own menu resource).
+// Items that openc2e can't do yet are shown greyed out, as C2 itself does.
+static void DrawC2MenuBar() {
+	static bool s_open_add_place = false;
+
+	if (ImGui::BeginMenu("File")) {
+		ImGui::MenuItem("Export Current Creature...", nullptr, false, false);
+		ImGui::MenuItem("Import Creature...", nullptr, false, false);
+		ImGui::Separator();
+		bool music = !engine.musicmanager->isMuted();
+		if (ImGui::MenuItem("Ambient Music", nullptr, music)) {
+			engine.musicmanager->setMuted(music);
+			engine.musicmanager->setMIDIMuted(music);
+		}
+		if (ImGui::BeginMenu("Send To", false))
+			ImGui::EndMenu();
+		ImGui::Separator();
+		if (ImGui::MenuItem("Exit"))
+			world.quitting = true;
+		ImGui::EndMenu();
+	}
+	if (ImGui::BeginMenu("View")) {
+		if (ImGui::MenuItem("Creature's View", nullptr, IsEyeViewOpen(), (bool)world.selectedcreature))
+			SetEyeViewOpen(!IsEyeViewOpen());
+		ImGui::Separator();
+		if (ImGui::BeginMenu("Toolbars")) {
+			ImGui::MenuItem("Standard", nullptr, &s_show_standard);
+			ImGui::MenuItem("Pointer", nullptr, &s_show_pointer);
+			ImGui::MenuItem("Applets", nullptr, &s_show_applets);
+			ImGui::MenuItem("Favourites", nullptr, &s_show_favourites);
+			ImGui::Separator();
+			ImGui::MenuItem("Text Labels", nullptr, false, false);
+			ImGui::EndMenu();
+		}
+		bool statusbar = IsC2StatusBarShown();
+		if (ImGui::MenuItem("Status Bar", nullptr, &statusbar))
+			SetC2StatusBarShown(statusbar);
+		ImGui::MenuItem("ToolTips for Objects", nullptr, false, false);
+		bool scrollbars = AreC2ScrollBarsShown();
+		if (ImGui::MenuItem("Scroll Bars", nullptr, &scrollbars)) // not in C2's menu; openc2e addition
+			SetC2ScrollBarsShown(scrollbars);
+		ImGui::Separator();
+		ImGui::MenuItem("Full Screen", "F12", false, false);
+		ImGui::EndMenu();
+	}
+	if (ImGui::BeginMenu("Camera")) {
+		bool tracking = world.selectedcreature && engine.camera->trackedAgent() == world.selectedcreature;
+		if (ImGui::MenuItem("Track Norn", nullptr, tracking, (bool)world.selectedcreature)) {
+			if (tracking)
+				engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+			else
+				engine.camera->trackAgent(world.selectedcreature, 0, 0, flexible, none);
+		}
+		ImGui::MenuItem("Norn Indicator", nullptr, false, false);
+		ImGui::MenuItem("Smooth Scrolling", nullptr, false, false);
+		ImGui::Separator();
+		bool hasfree = false, hasnamed = false;
+		for (auto& f : world.favoriteplaces) {
+			if (f.name.empty())
+				hasfree = true;
+			else
+				hasnamed = true;
+		}
+		if (world.favoriteplaces.size() < 6)
+			hasfree = true;
+		if (ImGui::MenuItem("Add Favourite Place...", nullptr, false, hasfree))
+			s_open_add_place = true;
+		if (ImGui::BeginMenu("Remove Favourite Place...", hasnamed)) {
+			for (auto& f : world.favoriteplaces) {
+				if (!f.name.empty() && ImGui::MenuItem(f.name.c_str())) {
+					f.name.clear();
+					f.x = f.y = 0;
+				}
+			}
+			ImGui::EndMenu();
+		}
+		ImGui::EndMenu();
+	}
+	if (ImGui::BeginMenu("Tools")) {
+		if (ImGui::MenuItem("The Hatchery", nullptr, false, IsHatcheryEnabled()))
+			SetHatcheryOpen(true);
+		if (ImGui::MenuItem("Agent Injector", nullptr, false, IsAgentInjectorEnabled())) // openc2e's
+			SetAgentInjectorOpen(true);
+		ImGui::EndMenu();
+	}
+	if (ImGui::BeginMenu("Creatures")) {
+		int n = 0;
+		std::shared_ptr<Agent> current = world.selectedcreature.lock();
+		for (auto& a : world.agents) {
+			if (!a)
+				continue;
+			CreatureAgent* ca = dynamic_cast<CreatureAgent*>(a.get());
+			if (!ca || !ca->getCreature() || !ca->getCreature()->isAlive())
+				continue;
+			n++;
+			std::string label = fmt::format("{} {} ({})", GenusName(a->genus), n, ca->getCreature()->isFemale() ? "female" : "male");
+			if (ImGui::MenuItem(label.c_str(), nullptr, a == current)) {
+				world.selectCreature(a);
+				int cx = (int)(a->x + a->getWidth() / 2.0f) - (int)engine.camera->getWidth() / 2;
+				int cy = (int)(a->y + a->getHeight() / 2.0f) - (int)engine.camera->getHeight() / 2;
+				engine.camera->moveToGlobal(cx, cy, jump);
+			}
+		}
+		if (n == 0)
+			ImGui::MenuItem("None Available", nullptr, false, false);
+		ImGui::EndMenu();
+	}
+	if (ImGui::BeginMenu("Help")) {
+		ImGui::MenuItem("Help Topics", nullptr, false, false);
+		ImGui::MenuItem("Tip of the Day...", nullptr, false, false);
+		if (ImGui::BeginMenu("Creatures on the Web", false))
+			ImGui::EndMenu();
+		ImGui::MenuItem("Life Kit #1 Help", nullptr, false, false);
+		ImGui::Separator();
+		ImGui::MenuItem("About Creatures 2...", nullptr, false, false);
+		ImGui::EndMenu();
+	}
+
+	// Add Favourite Place: name the current camera position
+	if (s_open_add_place) {
+		ImGui::OpenPopup("Add Favourite Place");
+		s_open_add_place = false;
+	}
+	if (ImGui::BeginPopupModal("Add Favourite Place", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		static char s_name[64] = "";
+		ImGui::Text("Name for this place:");
+		if (ImGui::IsWindowAppearing())
+			ImGui::SetKeyboardFocusHere();
+		bool enter = ImGui::InputText("##placename", s_name, sizeof(s_name), ImGuiInputTextFlags_EnterReturnsTrue);
+		if ((ImGui::Button("OK") || enter) && s_name[0]) {
+			while (world.favoriteplaces.size() < 6)
+				world.favoriteplaces.push_back({"", 0, 0});
+			for (auto& f : world.favoriteplaces) {
+				if (f.name.empty()) {
+					f.name = s_name;
+					f.x = (int)engine.camera->getX();
+					f.y = (int)engine.camera->getY();
+					break;
+				}
+			}
+			s_name[0] = 0;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel")) {
+			s_name[0] = 0;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
 }
 
 void DrawC2Toolbar() {
@@ -29,7 +243,7 @@ void DrawC2Toolbar() {
 
 	if (ImGui::Begin("MainMenuBar", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBringToFrontOnFocus)) {
 		if (ImGui::BeginMenuBar()) {
-			DrawMainMenu();
+			DrawC2MenuBar();
 			ImGui::EndMenuBar();
 		}
 
@@ -58,9 +272,25 @@ void DrawC2Toolbar() {
 
 		ImGui::GetCurrentWindow()->DC.LayoutType = ImGuiLayoutType_Horizontal;
 
-		ImageButton(icon_next, false);
-		ImageButton(icon_eyeview, false);
-		ImageButton(icon_track, false);
+		if (s_show_standard) {
+		if (ImageButton(icon_next, true)) {
+			SelectNextCreature();
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Next creature");
+		if (ImageButton(icon_eyeview, (bool)world.selectedcreature))
+			SetEyeViewOpen(!IsEyeViewOpen());
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Creature's eye view");
+		if (ImageButton(icon_track, (bool)world.selectedcreature)) {
+			// toggle: follow the selected creature, or stop following
+			if (engine.camera->trackedAgent() == world.selectedcreature)
+				engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+			else
+				engine.camera->trackAgent(world.selectedcreature, 0, 0, flexible, none);
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip(engine.camera->trackedAgent() && engine.camera->trackedAgent() == world.selectedcreature ? "Stop following" : "Follow selected creature");
 		ImageButton(icon_halo, false);
 		ImGui::Separator();
 		if (ImageButton(icon_play, world.paused)) {
@@ -73,11 +303,13 @@ void DrawC2Toolbar() {
 		ImageButton(icon_help, false);
 		ImageButton(icon_web, false);
 		ImGui::Separator();
+		}
+		if (s_show_pointer) {
 		ImageButton(icon_invisible, false);
 		ImageButton(icon_teach, false);
 		ImageButton(icon_push, false);
-
 		ImGui::Separator();
+		}
 
 		static Texture s_appleticons_tex;
 		if (!s_appleticons_tex) {
@@ -98,6 +330,7 @@ void DrawC2Toolbar() {
 		TextureRect icon_unknown_magnifyingglass{s_appleticons_tex, 242, 0, 22, 21};
 		TextureRect icon_unknown_maybe_neurosciencekit{s_appleticons_tex, 264, 0, 22, 21};
 
+		if (s_show_applets) {
 		if (ImageButton(icon_hatchery, IsHatcheryEnabled())) {
 			SetHatcheryOpen(true);
 		};
@@ -115,7 +348,9 @@ void DrawC2Toolbar() {
 		}
 		ImageButton(icon_unknown_maybe_historykit, false);
 		ImageButton(icon_unknown_maybe_ecologykit, false);
+		}
 
+		if (s_show_favourites) {
 		ImGui::NewLine();
 
 		static Texture s_favtoolbaricons_tex;
@@ -136,10 +371,26 @@ void DrawC2Toolbar() {
 
 		ImGui::Text("Places:");
 		ImGui::SetNextItemWidth(150);
-		if (ImGui::BeginCombo("##Places:", "The Incubator")) {
+		static int s_place = 0;
+		std::vector<int> places; // indexes of named slots
+		for (size_t i = 0; i < world.favoriteplaces.size(); i++)
+			if (!world.favoriteplaces[i].name.empty())
+				places.push_back((int)i);
+		if (s_place >= (int)world.favoriteplaces.size() || (s_place < (int)world.favoriteplaces.size() && world.favoriteplaces[s_place].name.empty()))
+			s_place = places.empty() ? 0 : places[0];
+		const char* preview = places.empty() ? "" : world.favoriteplaces[s_place].name.c_str();
+		if (ImGui::BeginCombo("##Places:", preview)) {
+			for (int i : places) {
+				if (ImGui::Selectable(world.favoriteplaces[i].name.c_str(), i == s_place)) {
+					s_place = i;
+					GoToFavoritePlace(i);
+				}
+			}
 			ImGui::EndCombo();
 		}
-		ImageButton(icon_go);
+		if (ImageButton(icon_go, !places.empty()))
+			GoToFavoritePlace(s_place);
+		}
 
 		s_last_c2toolbar_height = ImGui::GetWindowSize().y;
 		ImGui::End();
