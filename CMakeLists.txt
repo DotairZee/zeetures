@@ -347,6 +347,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/openc2eimgui/C2EyeView.cpp
 	src/openc2e/openc2eimgui/C2ScrollBars.cpp
 	src/openc2e/openc2eimgui/C2StatusBar.cpp
+	src/openc2e/openc2eimgui/WorldChooser.cpp
 	src/openc2e/openc2eimgui/C2ToolBar.cpp
 	src/openc2e/openc2eimgui/CreatureGrapher.cpp
 	src/openc2e/openc2eimgui/Hatchery.cpp

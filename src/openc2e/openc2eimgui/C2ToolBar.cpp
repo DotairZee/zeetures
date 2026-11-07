@@ -2,6 +2,7 @@
 
 #include "AgentInjector.h"
 #include "C2EyeView.h"
+#include "WorldChooser.h"
 #include "MusicManager.h"
 #include "C2StatusBar.h"
 #include "C2ScrollBars.h"
@@ -88,8 +89,26 @@ static const char* GenusName(int genus) {
 // Items that openc2e can't do yet are shown greyed out, as C2 itself does.
 static void DrawC2MenuBar() {
 	static bool s_open_add_place = false;
+	static bool s_open_new_world = false;
 
 	if (ImGui::BeginMenu("File")) {
+		// worlds (C2 used a separate World Switcher; openc2e restarts into the chosen world)
+		if (ImGui::MenuItem("New World..."))
+			s_open_new_world = true;
+		auto worlds = ListWorlds();
+		if (ImGui::BeginMenu("Open World", worlds.size() > 1 || (worlds.size() == 1 && worlds[0].name != engine.currentworld))) {
+			for (auto& w : worlds) {
+				bool current = w.name == engine.currentworld;
+				if (ImGui::MenuItem(w.name.c_str(), nullptr, current, !current))
+					RelaunchIntoWorld(w.name);
+			}
+			ImGui::EndMenu();
+		}
+		ImGui::MenuItem("Save World", nullptr, false, false);
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			ImGui::SetTooltip("Saving is coming next: creatures first, then the whole world.");
+		ImGui::MenuItem("Save World As...", nullptr, false, false);
+		ImGui::Separator();
 		ImGui::MenuItem("Export Current Creature...", nullptr, false, false);
 		ImGui::MenuItem("Import Creature...", nullptr, false, false);
 		ImGui::Separator();
@@ -200,6 +219,25 @@ static void DrawC2MenuBar() {
 		ImGui::Separator();
 		ImGui::MenuItem("About Creatures 2...", nullptr, false, false);
 		ImGui::EndMenu();
+	}
+
+	// New World: create one, then restart into it
+	if (s_open_new_world) {
+		ImGui::OpenPopup("New World");
+		DrawNewWorldForm(true);
+		s_open_new_world = false;
+	}
+	if (ImGui::BeginPopupModal("New World", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		std::string created = DrawNewWorldForm(false);
+		ImGui::SameLine();
+		bool cancel = ImGui::Button("Cancel");
+		if (!created.empty()) {
+			ImGui::CloseCurrentPopup();
+			RelaunchIntoWorld(created);
+		} else if (cancel) {
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
 	}
 
 	// Add Favourite Place: name the current camera position

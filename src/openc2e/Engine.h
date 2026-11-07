@@ -46,6 +46,9 @@ class Engine {
 	bool cmdline_enable_sound;
 	bool cmdline_norun;
 	std::vector<std::string> cmdline_bootstrap;
+	std::vector<std::string> cmdline_args;
+	std::string cmdline_world;
+	bool cmdline_no_world_chooser = false;
 
 	std::string gamename;
 
@@ -90,6 +93,9 @@ class Engine {
 	bool bmprenderer;
 	std::string language;
 	std::string mindname; // --mind: pluggable C1/C2 creature mind (empty = original brain)
+	std::string currentworld; // C1/C2: name of the world folder in use, if any
+	std::filesystem::path currentworlddir;
+	const std::vector<std::string>& getCommandLineArgs() const { return cmdline_args; }
 
 	Engine();
 	~Engine();

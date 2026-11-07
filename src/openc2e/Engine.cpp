@@ -50,6 +50,7 @@
 #include "openc2eimgui/ImGuiUtils.h"
 #include "openc2eimgui/Openc2eImGui.h"
 #include "Scriptorium.h"
+#include "openc2eimgui/WorldChooser.h"
 #include "creatures/CreatureMind.h"
 #include "prayManager.h"
 
@@ -946,8 +947,13 @@ bool Engine::parseCommandLine(int argc, char* argv[]) {
 	desc.add_options()("n,norun", "Don't run the game, just execute scripts");
 	desc.add_options()("a,autokill", "Enable autokill");
 	desc.add_options()("autostop", "Enable autostop (or disable it, for CV)");
+	desc.add_options()("world", "C1/C2: open the named world from the Worlds folder (skips the world chooser)", cxxopts::value<std::string>(cmdline_world));
+	desc.add_options()("no-world-chooser", "C1/C2: don't show the world chooser; load the game's Eden.sfc as before");
 	desc.add_options()("mind", "Use a pluggable creature mind for C1/C2 creatures (options: " + availableCreatureMinds() + "); default is the original brain code", cxxopts::value<std::string>(mindname));
+	for (int i = 0; i < argc; i++)
+		cmdline_args.push_back(argv[i]);
 	auto vm = desc.parse(argc, argv);
+	cmdline_no_world_chooser = vm.count("no-world-chooser");
 	cmdline_enable_sound = !vm.count("silent");
 	cmdline_norun = vm.count("norun");
 
@@ -1162,6 +1168,26 @@ bool Engine::initialSetup() {
 	loadGameData();
 
 	// execute the initial scripts!
+	// C1/C2 worlds: open the requested world, or let the player choose one
+	// (unless a world file was given with -b, or the chooser is turned off)
+	if (version < 3 && cmdline_bootstrap.empty() && (!cmdline_world.empty() || !cmdline_no_world_chooser)) {
+		std::string name = cmdline_world.empty() ? Openc2eImgui::RunWorldChooser() : cmdline_world;
+		if (name.empty()) {
+			shutdown();
+			return false;
+		}
+		auto w = Openc2eImgui::FindWorld(name);
+		if (!w) {
+			fmt::print(stderr, "No world named '{}' in {}\n", name, Openc2eImgui::GetWorldsDirectory().string());
+			shutdown();
+			return false;
+		}
+		currentworld = w->name;
+		currentworlddir = w->dir;
+		cmdline_bootstrap = {Openc2eImgui::WorldFile(w->dir).string()};
+		fmt::print("* World: {}\n", currentworld);
+	}
+
 	fmt::print("* Executing initial scripts...\n");
 	if (cmdline_bootstrap.size() == 0) {
 		world.executeBootstrap(false);
