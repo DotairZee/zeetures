@@ -22,6 +22,10 @@
 
 
 #include "Engine.h"
+#include "common/io/FileWriter.h"
+#include "common/Ascii.h"
+#include "PathResolver.h"
+#include "Camera.h"
 #include "ImGuiUtils.h"
 #include "World.h"
 #include "common/Random.h"
@@ -29,6 +33,12 @@
 #include "fileformats/c16Image.h"
 
 #include <array>
+#include <vector>
+#include <fmt/core.h>
+#include <fstream>
+#include <filesystem>
+#include <cstring>
+#include <algorithm>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -59,13 +69,101 @@ std::array<C1EggInfo, 6> s_c1eggs = {{
 	{"hatchery/EGG5.bmp", {}, 200, 150},
 }};
 
+// A C2 egg from the Eggs folder. File layout (read from the eggs themselves):
+// "eggf", gender (1 male, 2 female, 0 unspecified), egg picture index
+// (frame in Omelette.s16 and, x8, in the world's eggs.s16), 8 unused bytes,
+// two 4-character monikers, 4 unused bytes, then one or two genomes, each
+// as a 32-bit length followed by the genome file data ("dna2...").
 struct C2EggInfo {
-	int frame;
-	int x;
-	int y;
+	std::filesystem::path file;
+	int gender = 0;
+	int frame = 0;
+	std::string moniker;
+	std::vector<std::vector<uint8_t>> genomes;
+	int x = 0;
+	int y = 0;
+	bool taken = false;
 };
 
-std::array<C2EggInfo, 10> s_c2eggs;
+static std::vector<C2EggInfo> s_c2eggs;
+
+static std::vector<std::filesystem::path> findC2EggFiles() {
+	std::vector<std::filesystem::path> result;
+	for (auto& dir : getMainDirectories()) {
+		std::error_code ec;
+		for (auto& sub : std::filesystem::directory_iterator(dir, ec)) {
+			std::string name = to_ascii_lowercase(sub.path().filename().string());
+			if (name != "eggs" || !sub.is_directory())
+				continue;
+			for (auto& f : std::filesystem::directory_iterator(sub.path(), ec)) {
+				if (to_ascii_lowercase(f.path().extension().string()) == ".egg")
+					result.push_back(f.path());
+			}
+		}
+	}
+	std::sort(result.begin(), result.end());
+	return result;
+}
+
+static bool readC2Egg(const std::filesystem::path& file, C2EggInfo& egg) {
+	std::ifstream in(file, std::ios::binary);
+	std::vector<uint8_t> d((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	if (d.size() < 30 || std::memcmp(d.data(), "eggf", 4) != 0)
+		return false;
+	egg.file = file;
+	egg.gender = d[4];
+	egg.frame = d[5];
+	egg.moniker = std::string(reinterpret_cast<const char*>(&d[14]), 4);
+	egg.moniker.erase(std::find(egg.moniker.begin(), egg.moniker.end(), '\0'), egg.moniker.end());
+	size_t pos = 26;
+	while (pos + 4 <= d.size() && egg.genomes.size() < 2) {
+		uint32_t len = d[pos] | (d[pos + 1] << 8) | (d[pos + 2] << 16) | ((uint32_t)d[pos + 3] << 24);
+		pos += 4;
+		if (len < 4 || pos + len > d.size() || std::memcmp(&d[pos], "dna", 3) != 0)
+			break;
+		egg.genomes.emplace_back(d.begin() + pos, d.begin() + pos + len);
+		pos += len;
+	}
+	return !egg.genomes.empty();
+}
+
+// Sends a Hatchery egg into the world near the incubator: the world's own egg
+// object (2 5 2), whose scripts develop and hatch it. The egg's genomes are
+// written to the user data folder under short unique tokens for NEW: GENE.
+static void TakeC2Egg(size_t index) {
+	C2EggInfo& egg = s_c2eggs[index];
+	if (egg.taken)
+		return;
+	std::string mum = fmt::format("qh{:02d}", (int)index);
+	std::string dad = egg.genomes.size() > 1 ? fmt::format("qi{:02d}", (int)index) : mum;
+	{
+		FileWriter w = createUserGeneticsFile(mum + ".gen");
+		w.write(egg.genomes[0].data(), egg.genomes[0].size());
+	}
+	if (egg.genomes.size() > 1) {
+		FileWriter w = createUserGeneticsFile(dad + ".gen");
+		w.write(egg.genomes[1].data(), egg.genomes[1].size());
+	}
+
+	int frame = std::clamp(egg.frame, 0, 16);
+	int x = rand_int32(5000, 5200);
+	std::string script = fmt::format("new: simp eggs 8 {} 2000 0\n", frame * 8);
+	script += "pose 0\n"; // start of development; the egg's timer script advances it
+	script += "setv cls2 2 5 2\nsetv attr 195\n";
+	script += fmt::format("new: gene tokn {} tokn {} obv0\n", mum, dad);
+	script += fmt::format("setv obv1 {}\n", egg.gender);
+	script += "tick 2400\n";
+	script += fmt::format("mvto {} 750\n", x);
+	script += "setv grav 1\n";
+	std::string err = engine.executeNetwork(script);
+	if (!err.empty()) {
+		fmt::print("Couldn't hatch egg {}: {}\n", egg.file.filename().string(), err);
+		return;
+	}
+	egg.taken = true;
+	engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+	engine.camera->moveToGlobal(x - (int)engine.camera->getWidth() / 2, 750 - (int)engine.camera->getHeight() / 2, jump);
+}
 
 void LoadHatchery() {
 	if (engine.version == 1) {
@@ -79,12 +177,22 @@ void LoadHatchery() {
 		s_hatcherybackground = LoadImageWithTransparentTopLeft("Applet Data/Hatchery.bmp")[0];
 		s_omelette = LoadImageWithTransparentTopLeft("Applet Data/Omelette.s16");
 
-		for (size_t i = 0; i < 10; i++) {
+		s_c2eggs.clear();
+		for (auto& f : findC2EggFiles()) {
+			C2EggInfo egg;
+			if (readC2Egg(f, egg))
+				s_c2eggs.push_back(egg);
+			if (s_c2eggs.size() == 10)
+				break; // the hatchery holds ten
+		}
+		fmt::print("* Hatchery: {} eggs from the Eggs folder\n", s_c2eggs.size());
+		for (size_t i = 0; i < s_c2eggs.size(); i++) {
+			int frame = std::clamp(s_c2eggs[i].frame, 0, 16);
 			// Place eggs from 80-240 horizontally, 110-230 vertically
 			int x = 0, y = 0, tries = 0;
 			while (x == 0 && tries < 50) {
-				x = rand_int32(80, 240 - s_omelette[i].width);
-				y = rand_int32(110, 230 - s_omelette[i].height);
+				x = rand_int32(80, 240 - s_omelette[frame].width);
+				y = rand_int32(110, 230 - s_omelette[frame].height);
 				for (unsigned int j = 0; j < i; j++) {
 					float xdist = x - s_c2eggs[j].x;
 					xdist = xdist * xdist;
@@ -98,7 +206,6 @@ void LoadHatchery() {
 				}
 				tries++; // give up after 50 attempts at placement..
 			}
-			s_c2eggs[i].frame = i;
 			s_c2eggs[i].x = x;
 			s_c2eggs[i].y = y;
 		}
@@ -172,10 +279,24 @@ void DrawHatchery() {
 			DrawTexture(s_hatcherybackground, p);
 			ImGui::Dummy(ImVec2(320, 275));
 
-			// eggs
-			for (int i = 0; i < 10; ++i) {
-				DrawTexture(s_omelette[s_c2eggs[i].frame], p + ImVec2(s_c2eggs[i].x, s_c2eggs[i].y));
+			// eggs: click one to send it into the world
+			for (size_t i = 0; i < s_c2eggs.size(); ++i) {
+				auto& egg = s_c2eggs[i];
+				if (egg.taken)
+					continue;
+				auto& tex = s_omelette[std::clamp(egg.frame, 0, 16)];
+				DrawTexture(tex, p + ImVec2(egg.x, egg.y));
+				ImGui::SetCursorScreenPos(p + ImVec2(egg.x, egg.y));
+				ImGui::PushID((int)i);
+				if (ImGui::InvisibleButton("egg", ImVec2(tex.width, tex.height)))
+					TakeC2Egg(i);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s egg (%s)\nClick to place it in the world, then put it in the incubator to hatch.",
+						egg.gender == 2 ? "Female" : egg.gender == 1 ? "Male" : "Unknown-sex", egg.moniker.c_str());
+				ImGui::PopID();
 			}
+			ImGui::SetCursorScreenPos(p + ImVec2(0, 275));
+			ImGui::Dummy(ImVec2(0, 0));
 			// TODO: gender markers and animation
 			// TODO: place shadows
 
