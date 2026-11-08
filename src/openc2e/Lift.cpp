@@ -42,8 +42,12 @@ bool Lift::fireScript(unsigned short event, Agent* from, caosValue one, caosValu
 			return false; // TODO: hack to make sure the lifts aren't activated when not ready
 	}
 
-	// if we need to select a new callbutton.. TODO: this is hacky
-	if (from == (Agent*)world.hand()) {
+	// select the next call button in the requested direction (1 down, 2 up).
+	// Not only for the hand: a creature activating the lift must choose a
+	// destination too, or the lift stops at once on the floor it is already
+	// on and drops its passengers (creatures could never ride). The lift's own
+	// activations (from tick(), answering a call button) already chose one.
+	if (from != this) {
 		if (event == 1) {
 			if (currentbutton + 1 == callbuttony.size())
 				return false;
