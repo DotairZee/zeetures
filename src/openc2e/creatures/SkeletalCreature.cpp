@@ -849,6 +849,13 @@ void SkeletalCreature::gaitTick() {
 }
 
 CompoundPart* SkeletalCreature::part(unsigned int part_id) {
+	// A C1/C2 creature is a single part; scripts that set PART for their own
+	// object and then target a creature (C2's boats fling passengers ashore
+	// with POSE 128 after PART 3) mean the creature itself. Throwing here
+	// stopped the boat's script mid-trip with the boat still moving, so it
+	// sailed round the world for ever.
+	if (engine.version < 3)
+		return skeleton;
 	THROW_IFNOT(part_id == 0);
 	return skeleton;
 }

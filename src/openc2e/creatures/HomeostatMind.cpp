@@ -254,6 +254,8 @@ struct Params {
 	int boatCategory = 31;
 	float boatShare = 0.9f; // a boat crossing: this share of the trip's worth
 	float boatRide = 200.0f; // a ride carrying the creature this far counts
+	unsigned int boatNoRide = 60; // pressed a boat, no ride this many ticks later: try the other action
+	unsigned int boatFlip = 300; // ...for this long
 
 	float blockedMove = 3.0f; // moved less than this in a walking episode (walking covers about 10)
 	float blockedNear = 40.0f; // still this close to where it got stuck
@@ -435,6 +437,12 @@ class HomeostatMind : public CreatureMind {
 			bl.rides++;
 			fmt::print("[homeostat] creature {} t{}: boat ride with {} took it {:.0f} px\n", p.creatureId, p.tick, actionName(rideDecision), p.x - rideStartX);
 		}
+		if (p.riding)
+			boatTryDecision = -1; // the press worked
+		else if (boatTryDecision >= 0 && p.tick > boatTryTick + prm.boatNoRide) {
+			boatFlipUntil = p.tick + prm.boatFlip; // nothing happened: try the other one
+			boatTryDecision = -1;
+		}
 		wasRiding = p.riding;
 		bool foodInSight = false;
 		for (auto& s : p.visible)
@@ -586,6 +594,10 @@ class HomeostatMind : public CreatureMind {
 			for (auto& s : p.visible)
 				if (s.category == choice.category)
 					episodeAgent = s.agent;
+		if (choice.category == prm.boatCategory && boatTryDecision < 0) {
+			boatTryDecision = choice.decision;
+			boatTryTick = p.tick;
+		}
 		if (choice.category >= 0 && std::find(prm.escapeDevices.begin(), prm.escapeDevices.end(), choice.category) != prm.escapeDevices.end()) {
 			// (only devices can be exits: leaving the water just after hitting a
 			// norn taught one creature that hitting norns is a way out)
@@ -775,6 +787,9 @@ class HomeostatMind : public CreatureMind {
 	bool wasRiding = false;
 	float rideStartX = 0;
 	int rideDecision = -1;
+	int boatTryDecision = -1; // last boat action pressed, and when
+	unsigned int boatTryTick = 0;
+	unsigned int boatFlipUntil = 0; // until then, use the other action than learned/guessed
 	bool wasInWater = false;
 	ExitLink lastObjectUse; // the most recent object action, for exit learning
 	unsigned int lastObjectUseTick = 0;
@@ -1199,12 +1214,17 @@ class HomeostatMind : public CreatureMind {
 	}
 
 	// Which boat action goes east (dir 11) or west (10): learned rides first,
-	// then the innate guess (activate 1 east, activate 2 west).
-	int boatDecisionFor(int dir) const {
+	// then the innate guess (activate 1 east, activate 2 west; C2 decisions 1 and 2).
+	int boatDecisionFor(int dir, unsigned int tick) const {
+		int d = dir == 11 ? 1 : 2; // decisions: 1 activate 1, 2 activate 2
 		for (auto& [decision, bl] : boatLinks)
-			if (bl.rides > 0 && ((dir == 11 && bl.dx > 0) || (dir == 10 && bl.dx < 0)))
-				return decision;
-		return dir == 11 ? 0 : 1;
+			if (bl.rides > 0 && ((dir == 11 && bl.dx > 0) || (dir == 10 && bl.dx < 0))) {
+				d = decision;
+				break;
+			}
+		// a boat already moored on the far side ignores "that way": after a
+		// press that gave no ride, try the other action for a while
+		return tick < boatFlipUntil ? 3 - d : d;
 	}
 
 	// A trip walking dir would go into water: if a boat is in view, offer
@@ -1213,9 +1233,13 @@ class HomeostatMind : public CreatureMind {
 		return !p.inWater && ((dir == 10 && p.waterWest) || (dir == 11 && p.waterEast));
 	}
 	void addBoatInstead(const MindPerception& p, int dir, float want, Candidate tmpl, std::vector<Candidate>& out) {
-		if (!isVisible(p, prm.boatCategory))
+		bool reachableBoat = false; // seen from below or above, a boat cannot be boarded
+		for (auto& sa : p.visible)
+			if (sa.category == prm.boatCategory && sa.reachable)
+				reachableBoat = true;
+		if (!reachableBoat)
 			return;
-		Candidate c{prm.boatCategory, boatDecisionFor(dir), 0, want * prm.boatShare, 0, want * prm.boatShare};
+		Candidate c{prm.boatCategory, boatDecisionFor(dir, p.tick), 0, want * prm.boatShare, 0, want * prm.boatShare};
 		c.chain = true;
 		c.food = tmpl.food;
 		c.forage = tmpl.forage;
@@ -1262,7 +1286,7 @@ class HomeostatMind : public CreatureMind {
 		// ones that do nothing)
 		for (auto& s : p.visible) {
 			if (std::find(prm.escapeDevices.begin(), prm.escapeDevices.end(), s.category) != prm.escapeDevices.end()) {
-				for (int decision : {0, 1}) { // activate 1 and 2
+				for (int decision : {1, 2}) { // activate 1 and 2
 					bool can = false;
 					for (auto& a : *p.actions)
 						if (a.needsObject && a.decision == decision)
