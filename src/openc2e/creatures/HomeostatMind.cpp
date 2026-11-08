@@ -266,6 +266,12 @@ struct Params {
 	float linkShare = 0.95f; // a known link: this share of the trip's worth
 	float boatShare = 0.9f; // a boat crossing: this share of the trip's worth
 	float boatCallShare = 0.8f; // calling a boat over with a switch: this share of the crossing's
+	// Learning what a switch does: a button pressed to call a boat, then a
+	// boat within reach within boatCallWait ticks, is a known boat switch
+	// (saved); a button that brought no boat counts against itself, and one
+	// with more failures than successes is not pressed for boats again.
+	unsigned int boatCallWait = 200;
+	float boatCallKnownBonus = 1.2f; // a known boat switch: worth this much more
 	float boatRide = 200.0f; // a ride carrying the creature this far counts
 	unsigned int boatNoRide = 60; // pressed a boat, no ride this many ticks later: try the other action
 	unsigned int boatFlip = 300; // ...for this long
@@ -364,6 +370,12 @@ struct Candidate {
 	bool food = false; // heading for a remembered food place
 	bool forage = false; // searching for food
 	bool escape = false; // getting out of water
+	bool boatCall = false; // pressing a button to call a boat
+};
+
+struct CallButton {
+	float x = 0, y = 0; // where it was pressed from
+	int worked = 0, failed = 0;
 };
 
 struct BoatLink {
@@ -487,6 +499,29 @@ class HomeostatMind : public CreatureMind {
 				pendingLink.category = -1;
 			} else if (p.tick >= pendingLinkTick + prm.linkWindow)
 				pendingLink.category = -1;
+		}
+		if (callPending) {
+			bool boatHere = false;
+			for (auto& sa : p.visible)
+				if (sa.category == prm.boatCategory && sa.reachable)
+					boatHere = true;
+			bool done = boatHere || p.tick > callPressTick + prm.boatCallWait;
+			if (done) {
+				CallButton* cb = nullptr;
+				for (auto& c : callButtons)
+					if (std::fabs(c.x - callPressX) < 200.0f && std::fabs(c.y - callPressY) < prm.sameLevel)
+						cb = &c;
+				if (!cb) {
+					if (callButtons.size() >= 16)
+						callButtons.erase(callButtons.begin());
+					callButtons.push_back({callPressX, callPressY, 0, 0});
+					cb = &callButtons.back();
+				}
+				(boatHere ? cb->worked : cb->failed)++;
+				fmt::print("[homeostat] creature {} t{}: pressed a button at {:.0f},{:.0f} to call a boat: {}\n", p.creatureId, p.tick, callPressX, callPressY,
+					boatHere ? "the boat came (a boat switch)" : "no boat came");
+				callPending = false;
+			}
 		}
 		if (p.riding)
 			boatTryDecision = -1; // the press worked
@@ -650,6 +685,12 @@ class HomeostatMind : public CreatureMind {
 			pendingLinkTick = p.tick;
 			pendingRode = false;
 		}
+		if (choice.boatCall) {
+			callPressX = p.x;
+			callPressY = p.y;
+			callPressTick = p.tick;
+			callPending = true;
+		}
 		if (choice.category == prm.boatCategory && boatTryDecision < 0) {
 			boatTryDecision = choice.decision;
 			boatTryTick = p.tick;
@@ -718,6 +759,8 @@ class HomeostatMind : public CreatureMind {
 			s += fmt::format("boat {} {} {}\n", decision, bl.dx, bl.rides);
 		for (auto& tl : travelLinks)
 			s += fmt::format("tlink {} {} {} {} {} {} {}\n", tl.fromX, tl.fromY, tl.toX, tl.toY, tl.category, tl.decision, tl.uses);
+		for (auto& cb : callButtons)
+			s += fmt::format("callbtn {} {} {} {}\n", cb.x, cb.y, cb.worked, cb.failed);
 		return s;
 	}
 
@@ -751,6 +794,11 @@ class HomeostatMind : public CreatureMind {
 				l >> category >> edible;
 				if (l)
 					scents[category] = edible;
+			} else if (what == "callbtn") {
+				CallButton cb;
+				l >> cb.x >> cb.y >> cb.worked >> cb.failed;
+				if (l && callButtons.size() < 16)
+					callButtons.push_back(cb);
 			} else if (what == "tlink") {
 				TravelLink tl;
 				l >> tl.fromX >> tl.fromY >> tl.toX >> tl.toY >> tl.category >> tl.decision >> tl.uses;
@@ -848,6 +896,10 @@ class HomeostatMind : public CreatureMind {
 	std::vector<ExitLink> exits; // objects that got the creature out of water
 	std::map<int, BoatLink> boatLinks; // decision -> learned ride
 	std::vector<TravelLink> travelLinks;
+	std::vector<CallButton> callButtons; // buttons tried for calling boats
+	float callPressX = 0, callPressY = 0; // a boat-call press waiting for a boat
+	unsigned int callPressTick = 0;
+	bool callPending = false;
 	TravelLink pendingLink; // the latest device use, while it may still turn into a link
 	unsigned int pendingLinkTick = 0;
 	bool pendingRode = false;
@@ -1340,8 +1392,16 @@ class HomeostatMind : public CreatureMind {
 		if (!reachableBoat) {
 			// no boat on this side: a button within reach may call one over
 			// (the boat call switches; lift buttons too, harmlessly)
+			const CallButton* known = nullptr;
+			for (auto& cb : callButtons)
+				if (std::fabs(cb.x - p.x) < 300.0f && std::fabs(cb.y - p.y) < prm.sameLevel)
+					known = &cb;
+			if (known && known->failed > known->worked)
+				reachableButton = false; // this button does not call boats
 			if (reachableButton) {
-				Candidate c{prm.buttonCategory, 1, 0, want * prm.boatShare * prm.boatCallShare, 0, want * prm.boatShare * prm.boatCallShare};
+				float w = want * prm.boatShare * prm.boatCallShare * (known && known->worked > 0 ? prm.boatCallKnownBonus : 1.0f);
+				Candidate c{prm.buttonCategory, 1, 0, w, 0, w};
+				c.boatCall = true;
 				c.chain = true;
 				c.food = tmpl.food;
 				c.forage = tmpl.forage;
@@ -1858,7 +1918,7 @@ class HomeostatMind : public CreatureMind {
 			if (p.drives[i] >= 64)
 				needs += fmt::format(" {} {}", DRIVE_NAMES[i], (int)p.drives[i]);
 		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f} | at {:.0f},{:.0f} | restless {:.2f} | food map {}\n",
-			p.creatureId, p.tick, choice.escape ? fmt::format("escape:{}", actionName(choice.decision)) : choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
+			p.creatureId, p.tick, choice.boatCall ? fmt::format("callboat:{}", actionName(choice.decision)) : choice.escape ? fmt::format("escape:{}", actionName(choice.decision)) : choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
 			choice.category, choice.want, choice.novelty,
 			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown, p.x, p.y, std::clamp(hungryTicks / prm.restlessRamp, 0.0f, 1.0f),
 			[&] { std::string m; for (auto& fp : foodPlaces) m += fmt::format(" {:.0f},{:.0f}x{:.2f}", fp.x, fp.y, fp.confidence); return m.empty() ? std::string(" none") : m; }());

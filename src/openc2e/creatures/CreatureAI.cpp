@@ -571,10 +571,15 @@ MindPerception oldCreature::buildPerception() {
 		std::shared_ptr<Room> here = world.map->roomAt(cx, cy);
 		if (here) {
 			p.scentHere = here->foodscent;
+			// only doorways the creature fits through count for its senses of
+			// direction (smell spreads through narrower gaps, but following it
+			// there walked creatures into walls: the middle lift's lower stop
+			// smells strongly of food to the west through a gap no norn passes)
+			const int fit = std::max(1, parentagent->size);
 			unsigned int floor = std::max(here->y_left_floor, here->y_right_floor);
 			unsigned int ceiling = std::min(here->y_left_ceiling, here->y_right_ceiling);
 			for (auto& [n, door] : here->getDoors()) {
-				if (door.perm <= 0)
+				if (door.perm < fit)
 					continue;
 				float* side;
 				if (n->x_right <= here->x_left + 2)
@@ -591,7 +596,7 @@ MindPerception oldCreature::buildPerception() {
 			}
 			// water ahead on either side (to stay out of seas when walking)
 			for (auto& [n, door] : here->getDoors()) {
-				if (door.perm <= 0 || n->type != 2)
+				if (door.perm < fit || n->type != 2)
 					continue;
 				if (n->x_right <= here->x_left + 2)
 					p.waterWest = true;
@@ -609,7 +614,7 @@ MindPerception oldCreature::buildPerception() {
 				std::vector<Step> queue;
 				std::vector<Room*> seen{here.get()};
 				for (auto& [n, door] : here->getDoors()) {
-					if (door.perm <= 0)
+					if (door.perm < fit)
 						continue;
 					int way = 0;
 					if (n->x_right <= here->x_left + 2)
@@ -636,7 +641,7 @@ MindPerception oldCreature::buildPerception() {
 					if (st.depth >= 8)
 						continue;
 					for (auto& [n, door] : st.room->getDoors()) {
-						if (door.perm <= 0)
+						if (door.perm < fit)
 							continue;
 						// on foot only sideways or down: a room above (such as
 						// the surface over the sea) cannot be climbed up to
