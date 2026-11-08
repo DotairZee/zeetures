@@ -103,6 +103,13 @@ struct Params {
 	float driveExpM = 2.0f;
 	std::array<float, NUM_DRIVES> weights;
 	float learningRate = 0.3f; // delta rule
+	// Felt effects: stimuli tell the body directly what an interaction did
+	// (C2 chemicals 18-34 raise drive 1-17, 35-51 lower it), like a taste.
+	// A drive an action's stimuli touched is learned from what was felt; the
+	// others from the change observed beyond drift, more slowly, since that
+	// mixes in whatever else was going on.
+	int driveIncreaseChem = 18, driveDecreaseChem = 35;
+	float unfeltLearningShare = 0.25f;
 	float curiosity = 0.02f; // novelty bonus scale
 	float boredomCuriosityGain = 2.0f; // Boredom raises curiosity
 	float temperature = 0.015f; // softmax base temperature
@@ -110,6 +117,14 @@ struct Params {
 	float commitment = 0.01f; // bonus for repeating the current choice
 	float distanceCost = 0.00002f; // per pixel to the object
 	int maxEpisodeTicks = 12; // looping actions are evaluated this often
+	// Sleep: the world's sleep script keeps the creature asleep and resting
+	// until it is rested, then wakes it. The mind lets it run, and wakes the
+	// creature early only when another need rises sharply while it sleeps.
+	int sleepDecision = 25;
+	int maxSleepTicks = 3000;
+	float wakeRise = 0.25f; // another drive has risen this much since falling asleep...
+	float wakeLevel = 0.6f; // ...and is at least this high
+	int noSleepAfterWaking = 100; // ticks before sleeping again after an urgent waking
 	int maxObjectEpisodeTicks = 150; // actions on an object (walk there, then act): at most this long
 	int stallTicks = 25; // ...and given up if not getting closer for this long
 	float habituationRate = 0.7f; // multiplier after an uneventful interaction
@@ -146,6 +161,7 @@ struct Params {
 	int eatDecision = 12;
 	float scentHungerRelief = 0.4f;
 	float scentWeight = 6.0f;
+	float unscentedEatShare = 0.2f; // eating an unscented one of a food-smelling kind
 
 	// Following food smell through the rooms (World::tickFoodScent): when no
 	// reachable food is in view, walk or ride toward stronger smell. Valued
@@ -157,6 +173,12 @@ struct Params {
 	float atPlace = 50.0f; // close enough to a lift's position to use it
 	float sameLevel = 120.0f; // heights this close count as the same floor
 	float minRide = 60.0f; // a ride shorter than this did not change floors
+
+	// Blocked ways: walking west or east toward something that got the
+	// creature nowhere means that way is blocked from here, for a while.
+	float blockedMove = 3.0f; // moved less than this in a walking episode (walking covers about 10)
+	float blockedNear = 40.0f; // still this close to where it got stuck
+	unsigned int blockedTicks = 600;
 
 	// 7. Facial expression from affect. Slots refer to the head sprites'
 	// expression rows (in the owner's norn heads: 0 neutral, 1 happy,
@@ -277,6 +299,17 @@ class HomeostatMind : public CreatureMind {
 
 		for (auto& s : p.stimuli) {
 			stimuliSeen++;
+			for (int k = 0; k < 4; k++) {
+				int c = s.feltChem[k];
+				float amt = s.feltAmount[k] / 255.0f;
+				if (c >= prm.driveIncreaseChem && c < prm.driveIncreaseChem + NUM_DRIVES) {
+					felt[c - prm.driveIncreaseChem] += amt;
+					feltAny[c - prm.driveIncreaseChem] = true;
+				} else if (c >= prm.driveDecreaseChem && c < prm.driveDecreaseChem + NUM_DRIVES) {
+					felt[c - prm.driveDecreaseChem] -= amt;
+					feltAny[c - prm.driveDecreaseChem] = true;
+				}
+			}
 			if (s.numbered)
 				fmt::print("[homeostat] creature {} stimulus {} #{}\n", p.creatureId, s.command, s.id);
 			else
@@ -286,6 +319,31 @@ class HomeostatMind : public CreatureMind {
 
 		if (!p.actions || p.actions->empty())
 			return out;
+
+		// The body's drives read all zero until its chemistry has run once
+		// (just born or just loaded): nothing to decide or learn from yet.
+		if (!drivesSeen) {
+			bool any = false;
+			for (auto v : p.drives)
+				any = any || v != 0;
+			if (!any)
+				return out;
+			drivesSeen = true;
+		}
+
+		// Asleep: let the sleep script run unless something urgent wakes us.
+		if (inEpisode && current.category < 0 && current.decision == prm.sleepDecision) {
+			episodeTicks++;
+			int urgent = wakeReason(d);
+			bool done = p.actionFinished && episodeTicks > 1;
+			if (!done && urgent < 0 && episodeTicks < prm.maxSleepTicks)
+				return out;
+			endEpisode(p, d, D, done ? "finished" : urgent >= 0 ? DRIVE_NAMES[urgent] : "time");
+			if (urgent >= 0) {
+				fmt::print("[homeostat] creature {} t{}: woken by {}\n", p.creatureId, p.tick, DRIVE_NAMES[urgent]);
+				noSleepUntil = p.tick + prm.noSleepAfterWaking;
+			}
+		}
 
 		// Is the current episode over?
 		if (inEpisode) {
@@ -330,9 +388,18 @@ class HomeostatMind : public CreatureMind {
 
 		// Choose the next action.
 		std::vector<Candidate> candidates = evaluate(p, d, D);
+		if (p.tick < noSleepUntil)
+			candidates.erase(std::remove_if(candidates.begin(), candidates.end(),
+								 [&](const Candidate& c) { return c.category < 0 && c.decision == prm.sleepDecision; }),
+				candidates.end());
 		if (candidates.empty())
 			return out;
 		Candidate choice = pick(candidates, D);
+		// Asleep but not choosing to sleep (an interrupted sleep script, or
+		// a world saved mid-sleep): wake up first, or no other action can run.
+		bool chooseSleep = choice.category < 0 && choice.decision == prm.sleepDecision;
+		if (p.asleep && !chooseSleep)
+			out.sleep = 0;
 		logChoice(p, choice, candidates, D);
 
 		if (choice.category == prm.liftCategory)
@@ -344,6 +411,11 @@ class HomeostatMind : public CreatureMind {
 		lastProgress = 0;
 		startDrives = d;
 		startD = D;
+		startX = p.x;
+		felt.fill(0.0f);
+		feltAny.fill(false);
+		if (chooseSleep)
+			sleepStartDrives = d;
 
 		if (choice.category >= 0)
 			out.attentionCategory = choice.category;
@@ -353,7 +425,7 @@ class HomeostatMind : public CreatureMind {
 
 	// World saving: one fact per line, readable and hand-editable.
 	std::string saveState() const override {
-		std::string s = fmt::format("statever 2\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
+		std::string s = fmt::format("statever 4\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
 		s += "drift";
 		for (float f : drift)
 			s += fmt::format(" {}", f);
@@ -388,13 +460,13 @@ class HomeostatMind : public CreatureMind {
 	void loadState(const std::string& state) override {
 		std::istringstream in(state);
 		std::string line;
-		bool current_version = false;
+		int version = 0;
 		while (std::getline(in, line)) {
 			std::istringstream l(line);
 			std::string what;
 			l >> what;
 			if (what == "statever")
-				current_version = true;
+				l >> version;
 			else if (what == "prior") {
 				int category, decision;
 				float prior;
@@ -451,7 +523,18 @@ class HomeostatMind : public CreatureMind {
 				}
 			}
 		}
-		if (!current_version) {
+		if (version == 2 || version == 3) {
+			// Learned before felt effects (from drive changes alone, which mix
+			// in everything else going on) and, before version 3, while sleep
+			// was broken. Mostly noise: start learning again from the instincts
+			// (they are applied again) and smells; rides between floors are kept.
+			expectations.clear();
+			innateDefaults.clear();
+			appliedInstincts.clear();
+			scents.clear();
+			fmt::print("[homeostat] relearning from scratch (expectations saved before felt effects)\n");
+		}
+		if (version < 2) {
 			// Saved before body chemistry ran (frozen bodies: every action seemed
 			// to do nothing). That experience misleads, so start learning afresh.
 			expectations.clear();
@@ -491,8 +574,35 @@ class HomeostatMind : public CreatureMind {
 	float startD = 0.0f;
 	unsigned int episodes = 0, stimuliSeen = 0;
 	std::array<float, NUM_DRIVES> drift{}; // baseline drive change per tick
+	std::array<float, NUM_DRIVES> sleepStartDrives{};
+	unsigned int noSleepUntil = 0;
+	bool drivesSeen = false;
+	std::array<float, NUM_DRIVES> felt{}; // drive changes this episode's stimuli delivered
+	std::array<bool, NUM_DRIVES> feltAny{};
+	float startX = 0;
+	struct Blocked {
+		float x = 0;
+		unsigned int until = 0;
+	};
+	Blocked blocked[2]; // [0] west, [1] east
+
+	bool isBlocked(const MindPerception& p, int decision) const {
+		const Blocked& b = blocked[decision == 10 ? 0 : 1];
+		return p.tick < b.until && std::fabs(p.x - b.x) < prm.blockedNear;
+	}
 	float mood = 0.0f; // short-term affect: fast-following, decaying average of reward
 	int lastFace = -1;
+
+	// A bodily need that has risen sharply since falling asleep (hunger,
+	// cold, pain from a slap...), or -1. Boredom or loneliness do not wake.
+	int wakeReason(const std::array<float, NUM_DRIVES>& d) const {
+		int worst = -1;
+		for (int i : {PAIN, HUNGER, COLD, HOT, FEAR, INJURY, SUFFOCATE, THIRST}) {
+			if (d[i] >= prm.wakeLevel && d[i] - sleepStartDrives[i] >= prm.wakeRise && (worst < 0 || d[i] > d[worst]))
+				worst = i;
+		}
+		return worst;
+	}
 
 	int chooseFace(const std::array<float, NUM_DRIVES>& d, float D) const {
 		float distress = std::max({d[PAIN], d[FEAR], d[LONELY]});
@@ -572,10 +682,17 @@ class HomeostatMind : public CreatureMind {
 		std::vector<Candidate> out;
 		// 5. Affect: negative valence dampens curiosity; Boredom raises it.
 		float curiosity = prm.curiosity * (1.0f + prm.boredomCuriosityGain * d[BORED]) * std::clamp(1.0f + 10.0f * valence, 0.2f, 1.5f);
-		auto add = [&](int category, int decision, float distance) {
+		auto add = [&](int category, int decision, float distance, float edible) {
 			Expectation& e = expectation(category, decision);
 			Candidate c{category, decision, distance, 0, 0, 0};
 			c.want = predictedRelief(d, D, e);
+			// this one does not smell like food, though its kind often does
+			// (a seed among fruit): eating it is not expected to help
+			if (decision == prm.eatDecision && edible < 0.05f) {
+				auto sc = scents.find(category);
+				if (sc != scents.end() && sc->second >= 0.2f && c.want > 0.0f)
+					c.want *= prm.unscentedEatShare;
+			}
 			c.novelty = curiosity / std::sqrt(1.0f + e.count);
 			c.score = c.want + c.novelty - prm.distanceCost * distance;
 			if (category >= 0 && category < (int)habituation.size()) {
@@ -591,9 +708,9 @@ class HomeostatMind : public CreatureMind {
 			if (a.needsObject) {
 				for (auto& s : p.visible)
 					if (s.reachable)
-						add(s.category, a.decision, s.distance);
+						add(s.category, a.decision, s.distance, s.edible);
 			} else {
-				add(-1, a.decision, 0.0f);
+				add(-1, a.decision, 0.0f, 0.0f);
 			}
 		}
 		addSeekCandidates(p, d, D, out);
@@ -650,7 +767,7 @@ class HomeostatMind : public CreatureMind {
 			if (want < prm.seekMinWant)
 				continue;
 			int decision = dx < 0 ? 10 : 11;
-			if ((decision == 10 && !canWest) || (decision == 11 && !canEast))
+			if ((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision))
 				continue;
 			Candidate c{-1, decision, std::fabs(dx), want, 0, 0};
 			c.score = want - prm.seekDistanceCost * std::fabs(dx);
@@ -701,7 +818,7 @@ class HomeostatMind : public CreatureMind {
 		if (!best)
 			return;
 		if (best->kind == 10 || best->kind == 11) {
-			if ((best->kind == 10 && !canWest) || (best->kind == 11 && !canEast))
+			if ((best->kind == 10 && !canWest) || (best->kind == 11 && !canEast) || isBlocked(p, best->kind))
 				return;
 			Candidate c{-1, best->kind, 0, want, 0, want};
 			c.chain = true;
@@ -719,7 +836,7 @@ class HomeostatMind : public CreatureMind {
 		float direction = targetY > p.y ? 1.0f : -1.0f; // +1 down, -1 up
 		auto walkTo = [&](float x) {
 			int decision = x < p.x ? 10 : 11;
-			if ((decision == 10 && !canWest) || (decision == 11 && !canEast))
+			if ((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision))
 				return;
 			Candidate c{-1, decision, std::fabs(x - p.x), want, 0, 0};
 			c.score = want - prm.seekDistanceCost * std::fabs(x - p.x);
@@ -912,8 +1029,17 @@ class HomeostatMind : public CreatureMind {
 		int ticks = std::max(episodeTicks, 1);
 		std::array<float, NUM_DRIVES> effect{};
 		for (int i = 0; i < NUM_DRIVES; i++) {
-			effect[i] = change[i] - drift[i] * ticks;
+			// (the passage of time cannot take a drive past its limits)
+			float passiveChange = std::clamp(startDrives[i] + drift[i] * ticks, 0.0f, 1.0f) - startDrives[i];
+			effect[i] = change[i] - passiveChange;
 			drift[i] += prm.driftRate * (change[i] / ticks - drift[i]);
+		}
+
+		if ((current.decision == 10 || current.decision == 11) && current.category < 0 && (current.seekCategory >= 0 || current.chain) &&
+			std::fabs(p.x - startX) < prm.blockedMove) {
+			blocked[current.decision == 10 ? 0 : 1] = {p.x, p.tick + prm.blockedTicks};
+			fmt::print("[homeostat] creature {} t{}: the way {} is blocked at x {:.0f}\n", p.creatureId, p.tick,
+				current.decision == 10 ? "west" : "east", p.x);
 		}
 
 		if (current.seekCategory < 0 && !current.chain) {
@@ -921,8 +1047,15 @@ class HomeostatMind : public CreatureMind {
 			// an innate prior counts as remembered experience: learning is slow
 			// while it outweighs real experience and speeds up as that grows
 			float rate = prm.learningRate * (e.count + 1.0f) / (e.count + 1.0f + e.prior);
-			for (int i = 0; i < NUM_DRIVES; i++)
-				e.delta[i] += rate * (effect[i] - e.delta[i]);
+			for (int i = 0; i < NUM_DRIVES; i++) {
+				if (feltAny[i]) {
+					// a drive cannot go below empty or above full
+					float target = std::clamp(startDrives[i] + felt[i], 0.0f, 1.0f) - startDrives[i];
+					e.delta[i] += rate * (target - e.delta[i]);
+				} else {
+					e.delta[i] += rate * prm.unfeltLearningShare * (effect[i] - e.delta[i]);
+				}
+			}
 			e.count++;
 		}
 
@@ -961,10 +1094,14 @@ class HomeostatMind : public CreatureMind {
 				break;
 			effects += fmt::format(" {} {:+.2f}", DRIVE_NAMES[idx[k]], effect[idx[k]]);
 		}
-		fmt::print("[homeostat] creature {} t{}: {}@{} ended ({}, {} ticks): reward {:+.3f}{} | beyond drift:{} | D {:.2f} valence {:+.3f}\n",
+		std::string feltText;
+		for (int i = 0; i < NUM_DRIVES; i++)
+			if (feltAny[i])
+				feltText += fmt::format(" {} {:+.2f}", DRIVE_NAMES[i], felt[i]);
+		fmt::print("[homeostat] creature {} t{}: {}@{} ended ({}, {} ticks): reward {:+.3f}{} | beyond drift:{} | felt:{} | D {:.2f} valence {:+.3f}\n",
 			p.creatureId, p.tick, current.seekCategory >= 0 ? fmt::format("seek{}:{}", current.seekCategory, actionName(current.decision)) : actionName(current.decision),
 			current.category, why, episodeTicks, reward,
-			changes.empty() ? " (no drive change)" : changes, effects.empty() ? " nothing" : effects, D, valence);
+			changes.empty() ? " (no drive change)" : changes, effects.empty() ? " nothing" : effects, feltText.empty() ? " nothing" : feltText, D, valence);
 	}
 
 	void logChoice(const MindPerception& p, const Candidate& choice, std::vector<Candidate> cands, float D) {
