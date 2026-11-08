@@ -205,6 +205,17 @@ struct Params {
 	// ways stuck: another floor); a food trip that has not come foodTripGain
 	// pixels closer in foodTripTicks makes that place "out of reach from
 	// here": its confidence halves and it is not tried for foodCooldown ticks.
+	// Restlessness (owner's idea): the longer a creature stays hungry without
+	// a meal that eases it, the sooner and harder it searches, and the more
+	// readily it leaves its own floor. It builds over restlessRamp mind ticks
+	// spent at hunger restlessHunger or more, and resets with a good meal.
+	float restlessHunger = 0.3f;
+	float restlessRamp = 1500.0f; // about 10 game minutes
+	float forageHungerRestless = 0.25f; // forage threshold at full restlessness
+	float restlessBoost = 2.0f; // forage worth up to (1 + boost) times as much
+	float restlessLeaveFloor = 0.6f; // chance per new heading of trying another floor, at full restlessness
+	unsigned int floorSearched = 1500; // both ways visited this recently: the floor counts as searched
+
 	float foragePass = 80.0f;
 	unsigned int forageStuckTicks = 60;
 	float foodTripGain = 100.0f;
@@ -337,6 +348,13 @@ class HomeostatMind : public CreatureMind {
 		for (auto& inst : p.newInstincts)
 			applyInstinct(p, inst);
 		visited[{(int)std::floor(p.x / prm.visitBinWidth), (int)std::floor(p.y / prm.visitBinHeight)}] = p.tick;
+		if (lastTick != 0 && p.tick > lastTick) {
+			if (d[HUNGER] >= prm.restlessHunger)
+				hungryTicks += (float)(p.tick - lastTick);
+			else if (d[HUNGER] < prm.restlessHunger * 0.5f)
+				hungryTicks = 0; // fed
+		}
+		lastTick = p.tick;
 		bool foodInSight = false;
 		for (auto& s : p.visible)
 			if (s.edible >= prm.foodSeeEdible) {
@@ -532,6 +550,7 @@ class HomeostatMind : public CreatureMind {
 			s += fmt::format("scent {} {}\n", category, edible);
 		for (auto& fp : foodPlaces)
 			s += fmt::format("food {} {} {} {} {}\n", fp.x, fp.y, fp.tick, fp.confidence, fp.meals);
+		s += fmt::format("restless {}\n", hungryTicks);
 		return s;
 	}
 
@@ -565,6 +584,8 @@ class HomeostatMind : public CreatureMind {
 				l >> category >> edible;
 				if (l)
 					scents[category] = edible;
+			} else if (what == "restless") {
+				l >> hungryTicks;
 			} else if (what == "food") {
 				FoodPlace fp;
 				l >> fp.x >> fp.y >> fp.tick >> fp.confidence >> fp.meals;
@@ -647,6 +668,9 @@ class HomeostatMind : public CreatureMind {
 	float forageStartX = 0, forageStartY = 0;
 	unsigned int forageStartTick = 0;
 	int forageStuckFlips = 0; // turnarounds in a row without progress
+	int forageVertical = 1; // which way to try another floor: -1 up, 1 down
+	float hungryTicks = 0; // time hungry without a meal that eased it (restlessness)
+	unsigned int lastTick = 0;
 	int foodTrip = -1; // index in foodPlaces of the place being headed for
 	float foodTripBest = 0;
 	unsigned int foodTripSince = 0;
@@ -943,7 +967,9 @@ class HomeostatMind : public CreatureMind {
 
 	// Foraging: searching when nothing better is known.
 	void addForage(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
-		if (d[HUNGER] < prm.forageHunger)
+		float restless = std::clamp(hungryTicks / prm.restlessRamp, 0.0f, 1.0f);
+		float threshold = prm.forageHunger - (prm.forageHunger - prm.forageHungerRestless) * restless;
+		if (d[HUNGER] < threshold)
 			return;
 		for (auto& c : out)
 			if (c.food || c.scent)
@@ -951,7 +977,7 @@ class HomeostatMind : public CreatureMind {
 		for (auto& s : p.visible)
 			if (s.edible > 0.1f)
 				return;
-		float want = expectedMealRelief(d, D) * prm.forageShare * (d[HUNGER] - prm.forageHunger) / (1.0f - prm.forageHunger);
+		float want = expectedMealRelief(d, D) * prm.forageShare * (1.0f + prm.restlessBoost * restless) * (d[HUNGER] - threshold) / (1.0f - threshold);
 		if (want < prm.seekMinWant)
 			return;
 		auto open = [&](int dir) { return ((dir == 10 && canWest) || (dir == 11 && canEast)) && !isBlocked(p, dir); };
@@ -970,7 +996,7 @@ class HomeostatMind : public CreatureMind {
 		if (forageStuckFlips >= 2) {
 			// both ways stuck on this floor: look for food on another one
 			size_t before = out.size();
-			addFloorChange(p, want, p.y + ((p.tick / prm.forageCommit) % 2 ? -1.0f : 1.0f) * prm.scentFloorStep, -1, canWest, canEast, out);
+			addFloorChange(p, want, p.y + forageVertical * prm.scentFloorStep, -1, canWest, canEast, out);
 			for (size_t i = before; i < out.size(); i++)
 				out[i].forage = true;
 			if (std::fabs(p.y - forageStartY) > prm.minRide) {
@@ -993,6 +1019,28 @@ class HomeostatMind : public CreatureMind {
 				}
 				return total;
 			};
+			// another floor? the less recently visited of the floors above and
+			// below; more likely the longer the creature has gone hungry, and
+			// certain once this floor has been searched both ways
+			auto staleRow = [&](int dy) {
+				float total = 0.0f;
+				for (int k = -prm.forageLookBins; k <= prm.forageLookBins; k++) {
+					auto it = visited.find({bx + k, by + dy});
+					total += it == visited.end() ? 10000.0f : (float)(p.tick - it->second);
+				}
+				return total;
+			};
+			forageVertical = staleRow(-1) >= staleRow(1) ? -1 : 1;
+			float searched = (float)prm.floorSearched * prm.forageLookBins;
+			bool floorDone = stale(10) < searched && stale(11) < searched;
+			float roll = (float)((p.tick * 2654435761u) % 1000u) / 1000.0f;
+			if (floorDone || roll < prm.restlessLeaveFloor * restless) {
+				forageStuckFlips = 2; // look on another floor (handled next tick)
+				forageStartY = p.y;
+				forageHeading = 0;
+				forageUntil = p.tick + prm.forageCommit;
+				return;
+			}
 			int choice = 0;
 			if (open(10) && open(11))
 				choice = stale(10) >= stale(11) ? 10 : 11;
@@ -1011,7 +1059,7 @@ class HomeostatMind : public CreatureMind {
 		} else {
 			// both ways blocked: try another floor
 			size_t before = out.size();
-			addFloorChange(p, want, p.y + ((p.tick / prm.forageCommit) % 2 ? -1.0f : 1.0f) * prm.scentFloorStep, -1, canWest, canEast, out);
+			addFloorChange(p, want, p.y + forageVertical * prm.scentFloorStep, -1, canWest, canEast, out);
 			for (size_t i = before; i < out.size(); i++)
 				out[i].forage = true;
 		}
@@ -1302,7 +1350,10 @@ class HomeostatMind : public CreatureMind {
 	// 1 and 2: reward and learning at the end of an episode.
 	void endEpisode(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, const char* why) {
 		if (current.decision == prm.eatDecision && current.category >= 0 && felt[HUNGER] < -0.05f)
+		{
 			rememberFood(p.x, p.y, p.tick, 1.0f, true); // a meal here eased hunger
+			hungryTicks = 0;
+		}
 		inEpisode = false;
 		inEpisodeJustEnded = true;
 		episodes++;
@@ -1404,10 +1455,10 @@ class HomeostatMind : public CreatureMind {
 		for (int i = 0; i < NUM_DRIVES; i++)
 			if (p.drives[i] >= 64)
 				needs += fmt::format(" {} {}", DRIVE_NAMES[i], (int)p.drives[i]);
-		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f} | at {:.0f},{:.0f} | food map {}\n",
+		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f} | at {:.0f},{:.0f} | restless {:.2f} | food map {}\n",
 			p.creatureId, p.tick, choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
 			choice.category, choice.want, choice.novelty,
-			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown, p.x, p.y,
+			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown, p.x, p.y, std::clamp(hungryTicks / prm.restlessRamp, 0.0f, 1.0f),
 			[&] { std::string m; for (auto& fp : foodPlaces) m += fmt::format(" {:.0f},{:.0f}x{:.2f}", fp.x, fp.y, fp.confidence); return m.empty() ? std::string(" none") : m; }());
 	}
 };
