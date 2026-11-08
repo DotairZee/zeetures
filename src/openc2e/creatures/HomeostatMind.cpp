@@ -221,6 +221,12 @@ struct Params {
 	float foodTripGain = 100.0f;
 	unsigned int foodTripTicks = 300, foodCooldown = 600;
 
+	// Moving attention on: an object used this many times in a row with no
+	// benefit (no drop in overall drive, no ride to another floor) is passed
+	// over for a while, so the next object of its kind gets noticed.
+	int passOverAfter = 2;
+	float passOverReward = 0.005f;
+
 	float blockedMove = 3.0f; // moved less than this in a walking episode (walking covers about 10)
 	float blockedNear = 40.0f; // still this close to where it got stuck
 	unsigned int blockedTicks = 600;
@@ -339,6 +345,10 @@ class HomeostatMind : public CreatureMind {
 
 	MindOutput tick(const MindPerception& p) override {
 		MindOutput out;
+		if (pendingPassOver) {
+			out.passOver = pendingPassOver;
+			pendingPassOver = AgentRef();
+		}
 		std::array<float, NUM_DRIVES> d = normalize(p.drives);
 		float D = overallDrive(d);
 
@@ -500,12 +510,18 @@ class HomeostatMind : public CreatureMind {
 			lastLiftDecision = choice.decision;
 		current = choice;
 		inEpisode = true;
+		episodeAgent = AgentRef();
+		if (choice.category >= 0)
+			for (auto& s : p.visible)
+				if (s.category == choice.category)
+					episodeAgent = s.agent;
 		episodeTicks = 0;
 		closest = 1e9f;
 		lastProgress = 0;
 		startDrives = d;
 		startD = D;
 		startX = p.x;
+		startY = p.y;
 		felt.fill(0.0f);
 		feltAny.fill(false);
 		if (chooseSleep)
@@ -663,6 +679,10 @@ class HomeostatMind : public CreatureMind {
 	std::vector<Link> links; // learned rides between floors
 	std::vector<FoodPlace> foodPlaces; // the food map
 	std::map<std::pair<int, int>, unsigned int> visited; // (x bin, y bin) -> last mind tick there
+	AgentRef episodeAgent; // the object this episode acts on
+	AgentRef lastUselessAgent;
+	int uselessInARow = 0;
+	AgentRef pendingPassOver;
 	int forageHeading = 0; // 10 west, 11 east, 0 none
 	unsigned int forageUntil = 0;
 	float forageStartX = 0, forageStartY = 0;
@@ -697,6 +717,7 @@ class HomeostatMind : public CreatureMind {
 	std::array<float, NUM_DRIVES> felt{}; // drive changes this episode's stimuli delivered
 	std::array<bool, NUM_DRIVES> feltAny{};
 	float startX = 0;
+	float startY = 0; // where the episode began (height)
 	struct Blocked {
 		float x = 0;
 		unsigned int until = 0;
@@ -1364,6 +1385,22 @@ class HomeostatMind : public CreatureMind {
 			total += std::fabs(change[i]);
 		}
 		float reward = startD - D;
+
+		// an object that keeps doing nothing: notice another of its kind
+		// (not for steps toward a destination, such as pressing a lift's call
+		// button: their benefit comes later, from the ride)
+		if (current.category >= 0 && episodeAgent && !current.chain && !current.food && !current.forage && !current.scent) {
+			bool moved = std::fabs(p.y - startY) > prm.minRide || std::fabs(p.x - startX) > 300.0f;
+			if (reward < prm.passOverReward && !moved) {
+				uselessInARow = (episodeAgent == lastUselessAgent) ? uselessInARow + 1 : 1;
+				lastUselessAgent = episodeAgent;
+				if (uselessInARow >= prm.passOverAfter) {
+					pendingPassOver = episodeAgent;
+					uselessInARow = 0;
+				}
+			} else
+				uselessInARow = 0;
+		}
 
 		// Learn what the action did beyond the passage of time: subtract the
 		// baseline drift expected over this many ticks, then update the

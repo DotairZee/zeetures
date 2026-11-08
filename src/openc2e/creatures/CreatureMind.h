@@ -111,6 +111,11 @@ struct MindOutput {
 	int decision = -1; // -1 = no change; otherwise run creature event 16 + decision
 	int sleep = -1; // -1 = no change, 0 = wake, 1 = fall asleep
 	int expression = -1; // -1 = no change; else facial expression slot 0-5 in the head sprites
+	// An object whose use keeps doing nothing for the creature: for a while,
+	// notice others of its kind first (the engine notices one object per
+	// category; without this a creature in the airlock only ever saw the sea
+	// door, never the land door that lets it out).
+	AgentRef passOver;
 };
 
 class CreatureMind {

@@ -30,6 +30,7 @@ class Room;
 
 bool agentIsVisible(Agent* seeing, Agent* a, float ownerx, float ownery, MetaRoom* ownermeta, std::shared_ptr<Room> ownerroom);
 bool agentIsVisible(Agent* seeing, Agent* dest);
+bool agentPartlyVisible(Agent* seeing, Agent* dest); // any part of it, not only its centre
 std::vector<std::shared_ptr<Agent> > getVisibleList(Agent* seeing, unsigned char family, unsigned char genus, unsigned short species);
 
 bool agentsTouching(Agent* first, Agent* second);

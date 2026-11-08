@@ -72,6 +72,35 @@ bool agentIsVisible(Agent* seeing, Agent* a, float ownerx, float ownery, MetaRoo
 	return true;
 }
 
+// Whether any part of an object can be seen, not only its centre: tries the
+// centre, then the nearest point of its bounding box. Creatures use this (a
+// door object straddling a wall, such as the airlock's land door, centred on
+// the far side, is still seen from inside).
+bool agentPartlyVisible(Agent* seeing, Agent* dest) {
+	if (agentIsVisible(seeing, dest))
+		return true;
+	float ownerx = (seeing->x + (seeing->getWidth() / 2.0f));
+	float ownery = (seeing->y + (seeing->getHeight() / 2.0f));
+	MetaRoom* ownermeta = world.map->metaRoomAt(ownerx, ownery);
+	std::shared_ptr<Room> ownerroom = world.map->roomAt(ownerx, ownery);
+	if (!ownermeta || !ownerroom || seeing == dest)
+		return false;
+	float nx = std::clamp(ownerx, dest->x, dest->x + dest->getWidth() - 1.0f);
+	float ny = std::clamp(ownery, dest->y, dest->y + dest->getHeight() - 1.0f);
+	if (world.map->metaRoomAt(nx, ny) != ownermeta || !world.map->roomAt(nx, ny))
+		return false;
+	double dx = nx - ownerx, dy = ny - ownery;
+	if (dx * dx + dy * dy > (double)seeing->range * seeing->range)
+		return false;
+	Point src(ownerx, ownery), dst(nx, ny);
+	Line dummywall;
+	unsigned int dummydir;
+	std::shared_ptr<Room> newroom = ownerroom;
+	Point where = src;
+	bool collision = world.map->collideLineWithRoomSystem(src, dst, newroom, where, dummywall, dummydir, seeing->perm);
+	return !collision || where == dst;
+}
+
 bool agentIsVisible(Agent* seeing, Agent* dest) {
 	float ownerx = (seeing->x + (seeing->getWidth() / 2.0f));
 	float ownery = (seeing->y + (seeing->getHeight() / 2.0f));

@@ -358,7 +358,7 @@ bool Creature::agentInSight(AgentRef a) {
 
 	// TODO: specify x/y location for eyes
 	// TODO: check open cabin?
-	return agentIsVisible(parentagent, a);
+	return agentPartlyVisible(parentagent, a.get());
 #else
 	return false;
 #endif
@@ -423,6 +423,10 @@ AgentRef oldCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> 
 	for (auto& a : possibles) {
 		float ax = a->x + a->getWidth() / 2.0f, ay = a->y + a->getHeight() / 2.0f;
 		float cost = std::fabs(ax - cx) + 4.0f * std::fabs(ay - cy);
+		// passed over by the mind (its use kept doing nothing): notice others first
+		for (auto& po : passedover)
+			if (po.first == a && ticks < po.second)
+				cost = cost * 6.0f + 500.0f;
 		// The smell of food draws attention: in a category that mixes food
 		// with things that are not (a fruit and its seed), the food is
 		// noticed first unless it is much farther away.
@@ -651,6 +655,13 @@ void oldCreature::tickMind() {
 	}
 	wasriding = p.riding;
 	MindOutput out = mind->tick(p);
+	if (out.passOver) {
+		passedover.erase(std::remove_if(passedover.begin(), passedover.end(), [&](auto& po) { return !po.first || ticks >= po.second || po.first == out.passOver; }), passedover.end());
+		passedover.push_back({out.passOver, ticks + 2000}); // about 3 minutes
+		if (getenv("OPENC2E_WATCH_CREATURES"))
+			fmt::print("[homeostat] creature {} passes over {} {} {} at ({:.0f}, {:.0f})\n", p.creatureId, (int)out.passOver->family,
+				(int)out.passOver->genus, out.passOver->species, out.passOver->x, out.passOver->y);
+	}
 
 	if (out.expression >= 0 && out.expression < 6) {
 		if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent))

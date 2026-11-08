@@ -30,6 +30,9 @@
 
 class oldCreature : public Creature {
   protected:
+	std::vector<std::pair<AgentRef, unsigned int>> passedover; // objects to notice last, until the tick given (see MindOutput::passOver)
+
+  protected:
 	// biochemistry
 	unsigned char chemicals[256];
 
