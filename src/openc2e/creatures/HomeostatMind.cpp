@@ -265,6 +265,10 @@ struct Params {
 	size_t linkMax = 16;
 	float linkShare = 0.95f; // a known link: this share of the trip's worth
 	float boatShare = 0.9f; // a boat crossing: this share of the trip's worth
+	// Drops: walking off a ledge or dock more than cliffDrop px high is
+	// avoided when searching or following smell, unless the trip is headed
+	// that much lower anyway.
+	float cliffDrop = 150.0f;
 	float boatCallShare = 0.8f; // calling a boat over with a switch: this share of the crossing's
 	// Learning what a switch does: a button pressed to call a boat, then a
 	// boat within reach within boatCallWait ticks, is a known boat switch
@@ -1217,7 +1221,7 @@ class HomeostatMind : public CreatureMind {
 				addBoatInstead(p, decision, wantSame, t, out);
 				return;
 			}
-			if (!((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision))) {
+			if (!((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision) || cliffAhead(p, decision, bestSame->y))) {
 				Candidate c{-1, decision, std::fabs(bestSame->x - p.x), wantSame, 0, wantSame};
 				c.chain = true;
 				c.food = true;
@@ -1249,7 +1253,7 @@ class HomeostatMind : public CreatureMind {
 		float want = expectedMealRelief(d, D) * prm.forageShare * (1.0f + prm.restlessBoost * restless) * (d[HUNGER] - threshold) / (1.0f - threshold);
 		if (want < prm.seekMinWant)
 			return;
-		auto open = [&](int dir) { return ((dir == 10 && canWest) || (dir == 11 && canEast)) && !isBlocked(p, dir) && !waterAhead(p, dir); };
+		auto open = [&](int dir) { return ((dir == 10 && canWest) || (dir == 11 && canEast)) && !isBlocked(p, dir) && !waterAhead(p, dir) && !cliffAhead(p, dir); };
 		// a known link to somewhere not visited lately: a way to search further
 		{
 			const TravelLink* bestLink = nullptr;
@@ -1377,6 +1381,12 @@ class HomeostatMind : public CreatureMind {
 
 	// A trip walking dir would go into water: if a boat is in view, offer
 	// rowing that way instead (and do not offer the walk).
+	bool cliffAhead(const MindPerception& p, int dir, float targetY = -1e9f) const {
+		float drop = dir == 10 ? p.dropWest : dir == 11 ? p.dropEast : 0.0f;
+		if (drop <= prm.cliffDrop)
+			return false;
+		return !(targetY > p.y + drop * 0.5f); // a trip going that much lower may take the drop
+	}
 	bool waterAhead(const MindPerception& p, int dir) const {
 		return !p.inWater && ((dir == 10 && p.waterWest) || (dir == 11 && p.waterEast));
 	}
@@ -1601,7 +1611,7 @@ class HomeostatMind : public CreatureMind {
 				addBoatInstead(p, best->kind, want, t, out);
 				return;
 			}
-			if ((best->kind == 10 && !canWest) || (best->kind == 11 && !canEast) || isBlocked(p, best->kind))
+			if ((best->kind == 10 && !canWest) || (best->kind == 11 && !canEast) || isBlocked(p, best->kind) || cliffAhead(p, best->kind))
 				return;
 			Candidate c{-1, best->kind, 0, want, 0, want};
 			c.chain = true;

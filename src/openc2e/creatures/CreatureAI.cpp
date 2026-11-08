@@ -603,6 +603,35 @@ MindPerception oldCreature::buildPerception() {
 				else if (n->x_left + 2 >= here->x_right)
 					p.waterEast = true;
 			}
+			// drops ahead: stepping through a side where the floor beyond is
+			// much lower is a fall (off a dock or a ledge); a fall that lands in
+			// water counts as water ahead
+			for (auto& [n, door] : here->getDoors()) {
+				if (door.perm < fit || n->type == 2)
+					continue;
+				bool west = n->x_right <= here->x_left + 2, east = n->x_left + 2 >= here->x_right;
+				if (!west && !east)
+					continue;
+				float bx = west ? (float)here->x_left : (float)here->x_right;
+				float drop = n->floorYatX(bx) - here->floorYatX(bx);
+				if (drop <= 60.0f)
+					continue;
+				(west ? p.dropWest : p.dropEast) = std::max(west ? p.dropWest : p.dropEast, drop);
+				// where would the fall end? follow open floors down a few rooms
+				std::shared_ptr<Room> r = n;
+				for (int depth = 0; r && depth < 3; depth++) {
+					if (r->type == 2) {
+						(west ? p.waterWest : p.waterEast) = true;
+						break;
+					}
+					std::shared_ptr<Room> below;
+					float rfloor = std::max(r->y_left_floor, r->y_right_floor);
+					for (auto& [m, d2] : r->getDoors())
+						if (d2.perm >= fit && std::min(m->y_left_ceiling, m->y_right_ceiling) + 2 >= rfloor)
+							below = m;
+					r = below;
+				}
+			}
 			// water: the way to the nearest dry room through open doors
 			p.inWater = here->type == 2;
 			p.breath = breathLeft();
