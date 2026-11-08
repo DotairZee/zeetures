@@ -733,21 +733,23 @@ void c2Organ::processReaction(c2Reaction& d) {
 
 	bioReactionGene& g = *d.data;
 
-	// C2 reaction speed: the reaction's half-life is H0 * B^(rate / 8) organ
-	// activations (rate byte: higher is slower), and each activation that share
-	// of the possible amount (the scarcer reactant) reacts; fractions carry over
-	// so slow reactions still happen in whole units. B = 1.9, H0 = 0.25 is
-	// fitted to reactions timed in a real C2 norn over DDE (2026-11-08):
-	// per organ step, rate 0 reacted fully, rate 16 55%, rate 32 20%, rate 40
-	// 10-12%; organ step intervals there (0.8-2.5 s) match openc2e's organ
-	// clocks. An earlier fit (B 2.2, H0 1, 2026-11-07) rested on injections
-	// that never arrived (the probe did not request after poking) and ran
-	// mid-rate reactions 4-9 times too slowly: newborns could not burn sugar
-	// fast enough and froze at ATP 0. Not yet measured: rates above 48.
-	// OPENC2E_C2RATE_B=0 restores the C1 table, for comparison.
-	static const float curveB = getenv("OPENC2E_C2RATE_B") ? (float)atof(getenv("OPENC2E_C2RATE_B")) : 1.9f;
-	static const float curveH0 = getenv("OPENC2E_C2RATE_H0") ? (float)atof(getenv("OPENC2E_C2RATE_H0")) : 0.25f;
-	if (curveB > 0.0f) {
+	// C2 reaction speed: the reaction's half-life is (rate / K)^P organ
+	// activations (rate byte: higher is slower; rate 0 reacts fully), and each
+	// activation that share of the possible amount (the scarcer reactant)
+	// reacts; fractions carry over so slow reactions still happen in whole
+	// units. K = 17.5, P = 2.09 is fitted to reactions timed in a real C2 norn
+	// over DDE (2026-11-08), per organ step: rate 0 reacted fully, rate 16
+	// 55%, rate 32 20%, rate 40 11%, rate 80 2.8% (rms error about 7%; an
+	// exponential in rate fits no better than 30%). Organ step intervals there
+	// (0.8-6.5 s) match openc2e's organ clocks. Earlier fits: 2.2^(rate / 8)
+	// (2026-11-07, from injections that never arrived; mid rates 4-9x too
+	// slow, so newborns froze at ATP 0) and 0.25 * 1.9^(rate / 8) (morning of
+	// 2026-11-08, before the rate-80 point; slow reactions 6x too slow).
+	// OPENC2E_C2RATE_K / _P override; OPENC2E_C2RATE_B=0 restores the C1 table.
+	static const bool c1table = getenv("OPENC2E_C2RATE_B") && atof(getenv("OPENC2E_C2RATE_B")) == 0.0;
+	static const float curveK = getenv("OPENC2E_C2RATE_K") ? (float)atof(getenv("OPENC2E_C2RATE_K")) : 17.5f;
+	static const float curveP = getenv("OPENC2E_C2RATE_P") ? (float)atof(getenv("OPENC2E_C2RATE_P")) : 2.09f;
+	if (!c1table) {
 		float avail = 255.0f;
 		if (g.reactant[0] != 0)
 			avail = std::min(avail, (float)parent->getChemical(g.reactant[0]) / g.quantity[0]);
@@ -755,8 +757,8 @@ void c2Organ::processReaction(c2Reaction& d) {
 			avail = std::min(avail, (float)parent->getChemical(g.reactant[1]) / g.quantity[1]);
 		if (avail <= 0.0f)
 			return;
-		float half = curveH0 * powf(curveB, g.rate / 8.0f);
-		float share = 1.0f - powf(0.5f, 1.0f / half);
+		float half = powf(g.rate / curveK, curveP);
+		float share = half > 0.0f ? 1.0f - powf(0.5f, 1.0f / half) : 1.0f;
 		float amount = avail * share + d.carry;
 		int n = (int)amount;
 		d.carry = amount - n;
