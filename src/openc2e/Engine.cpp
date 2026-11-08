@@ -391,6 +391,35 @@ bool Engine::tick() {
 		}
 		return v;
 	}();
+	// developer aid: OPENC2E_DUMP_ROOMS="x0,y0,x1,y1" prints the rooms overlapping
+	// that area with their floors, C2 floor values and doors (with permeability);
+	// OPENC2E_SHOW_ROOMS draws room outlines (as View > Show Map does)
+	static bool rooms_dumped = false;
+	if (!rooms_dumped && world.map) {
+		rooms_dumped = true;
+		if (getenv("OPENC2E_SHOW_ROOMS"))
+			world.showrooms = true;
+		int x0, y0, x1, y1;
+		if (const char* s = getenv("OPENC2E_DUMP_ROOMS"); s && sscanf(s, "%d,%d,%d,%d", &x0, &y0, &x1, &y1) == 4) {
+			for (unsigned int id = 0, found = 0; found < world.map->getRoomCount() && id < 100000; id++) {
+				{
+					auto r = world.map->getRoom(id);
+					if (!r)
+						continue;
+					found++;
+					if ((int)r->x_right < x0 || (int)r->x_left > x1 || (int)std::max(r->y_left_floor, r->y_right_floor) < y0 || (int)std::min(r->y_left_ceiling, r->y_right_ceiling) > y1)
+						continue;
+					fmt::print("* Room {} type {}: x {}-{}, ceiling {}/{}, floor {}/{}, floorvalue {}, dropstatus {}, floorpoints {}\n",
+						r->id, r->type, r->x_left, r->x_right, r->y_left_ceiling, r->y_right_ceiling,
+						r->y_left_floor, r->y_right_floor, r->floorvalue, r->dropstatus, r->floorpoints.size());
+					for (auto& d : r->getDoors())
+						fmt::print("    door to room {} (x {}-{}, floor {}/{}): perm {}\n", d.first->id,
+							d.first->x_left, d.first->x_right, d.first->y_left_floor, d.first->y_right_floor, d.second.perm);
+				}
+			}
+		}
+	}
+
 	static size_t snapshot_index = 0;
 	static unsigned int snapshot_wait = 0;
 	if (snapshot_index < snapshots.size() && ++snapshot_wait % 40 == 0) {
