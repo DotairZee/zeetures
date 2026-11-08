@@ -146,6 +146,13 @@ struct Params {
 	int eatDecision = 12;
 	float scentHungerRelief = 0.4f;
 	float scentWeight = 6.0f;
+
+	// Following food smell through the rooms (World::tickFoodScent): when no
+	// reachable food is in view, walk or ride toward stronger smell. Valued
+	// as this share of the relief eating smelled food is expected to bring.
+	float scentFollowShare = 0.5f;
+	float scentStronger = 1.1f; // a side must smell this much stronger than here
+	float scentFloorStep = 300.0f; // how far up or down a floor change aims
 	float floorChangeDiscount = 0.5f; // share of the target's value for each step toward it
 	float atPlace = 50.0f; // close enough to a lift's position to use it
 	float sameLevel = 120.0f; // heights this close count as the same floor
@@ -215,6 +222,7 @@ struct Candidate {
 	float score;
 	int seekCategory = -1; // >= 0: travelling toward where this category was last seen
 	bool chain = false; // a step toward something else (changing floors): no drive learning
+	bool scent = false; // following food smell
 };
 
 class HomeostatMind : public CreatureMind {
@@ -665,6 +673,46 @@ class HomeostatMind : public CreatureMind {
 		}
 		if (bestCategory >= 0 && bestWant * prm.floorChangeDiscount >= prm.seekMinWant)
 			addFloorChange(p, bestWant * prm.floorChangeDiscount, places[bestCategory].y, bestCategory, canWest, canEast, out);
+
+		addScentFollow(p, d, D, canWest, canEast, out);
+	}
+
+	void addScentFollow(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		// food already within reach: no need to follow a smell
+		for (auto& s : p.visible)
+			if (s.reachable && s.edible > 0.1f)
+				return;
+		// what eating smelled food is expected to do, at a typical scent
+		Expectation typical;
+		typical.delta[HUNGER] = -prm.scentHungerRelief * 0.6f;
+		float want = predictedRelief(d, D, typical) * prm.scentFollowShare;
+		if (want < prm.seekMinWant)
+			return;
+		float threshold = p.scentHere * prm.scentStronger + 0.01f;
+		struct Side {
+			float scent;
+			int kind; // 10 west, 11 east, -1 up, 1 down
+		};
+		Side sides[4] = {{p.scentWest, 10}, {p.scentEast, 11}, {p.scentUp, -1}, {p.scentDown, 1}};
+		const Side* best = nullptr;
+		for (auto& side : sides)
+			if (side.scent > threshold && (!best || side.scent > best->scent))
+				best = &side;
+		if (!best)
+			return;
+		if (best->kind == 10 || best->kind == 11) {
+			if ((best->kind == 10 && !canWest) || (best->kind == 11 && !canEast))
+				return;
+			Candidate c{-1, best->kind, 0, want, 0, want};
+			c.chain = true;
+			c.scent = true;
+			out.push_back(c);
+		} else {
+			size_t before = out.size();
+			addFloorChange(p, want, p.y + best->kind * prm.scentFloorStep, -1, canWest, canEast, out);
+			for (size_t i = before; i < out.size(); i++)
+				out[i].scent = true;
+		}
 	}
 
 	void addFloorChange(const MindPerception& p, float want, float targetY, int target, bool canWest, bool canEast, std::vector<Candidate>& out) {
@@ -929,7 +977,7 @@ class HomeostatMind : public CreatureMind {
 			if (p.drives[i] >= 64)
 				needs += fmt::format(" {} {}", DRIVE_NAMES[i], (int)p.drives[i]);
 		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f}\n",
-			p.creatureId, p.tick, choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
+			p.creatureId, p.tick, choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
 			choice.category, choice.want, choice.novelty,
 			top, needs.empty() ? " none high" : needs, D);
 	}

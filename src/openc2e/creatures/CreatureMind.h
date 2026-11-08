@@ -96,6 +96,9 @@ struct MindPerception {
 	int currentDecision = -1; // decision index, or -1
 	float x = 0, y = 0; // the creature's centre, in world pixels
 	bool riding = false; // carried by a vehicle (a lift, a boat)
+	// food smell (C2, World::tickFoodScent): in this room, and the strongest
+	// through the doors on each side
+	float scentHere = 0, scentWest = 0, scentEast = 0, scentUp = 0, scentDown = 0;
 	std::vector<InnateInstinct> newInstincts; // genome instincts expressed since the last tick
 };
 

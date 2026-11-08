@@ -18,6 +18,7 @@
  */
 
 #include "World.h"
+#include "AgentHelpers.h"
 
 #include "Camera.h"
 #include "Catalogue.h"
@@ -294,6 +295,8 @@ void World::tick() {
 	}
 
 	world.map->tick();
+	if (engine.version == 2)
+		tickFoodScent();
 
 	// TODO: correct behaviour? hrm :/
 	world.hand()->velx = world.hand()->velx / 2.0f;
@@ -684,3 +687,58 @@ int World::findCategory(unsigned char family, unsigned char genus, unsigned shor
 }
 
 /* vim: set noet: */
+
+// Food scent (an addition to C2, owner's idea): a room with edible objects
+// smells at least as strong as the most edible of them (AgentHelpers'
+// edibleScent, read from eat scripts; 0-1). Every 5 ticks the smell spreads to
+// neighbouring rooms through doors, in proportion to how open each door is
+// (permeability / 255; walls pass nothing), and slowly fades. Creatures can
+// follow it toward food out of sight.
+void World::tickFoodScent() {
+	static unsigned int counter = 0;
+	if (++counter % 5 != 0 || !map)
+		return;
+	const float spread = 0.12f; // share of the difference exchanged through a fully open door per step
+	const float fade = 0.03f; // lost per step
+	const auto& rooms = map->getRooms();
+	for (auto& r : rooms)
+		r->foodscentnext = r->foodscent * (1.0f - fade);
+	for (auto& r : rooms) {
+		for (auto& [n, door] : r->getDoors()) {
+			if (door.perm <= 0)
+				continue;
+			r->foodscentnext += spread * (door.perm / 255.0f) * (n->foodscent - r->foodscent);
+		}
+	}
+	for (auto& a : agents) {
+		if (!a || a->family != 2 || a->isDying() || a->carriedby)
+			continue;
+		float edible = edibleScent(a.get());
+		if (edible <= 0.0f)
+			continue;
+		// a room with food smells at least as strong as its most edible item
+		// (not the sum: many fruits must not flood the whole map)
+		std::shared_ptr<Room> r = map->roomAt(a->x + a->getWidth() / 2.0f, a->y + a->getHeight() / 2.0f);
+		if (!r)
+			continue;
+		// only food a creature could reach: resting near the floor (fruit
+		// still high on a plant smells of nothing a creature can get)
+		float gap = r->floorYatX(a->x + a->getWidth() / 2.0f) - (a->y + a->getHeight());
+		if (gap > 60.0f)
+			continue;
+		r->foodscentnext = std::max(r->foodscentnext, edible);
+	}
+	for (auto& r : rooms)
+		r->foodscent = std::clamp(r->foodscentnext, 0.0f, 1.0f);
+	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	if (watch && counter % 1000 == 0) {
+		int some = 0, strong = 0;
+		float top = 0;
+		for (auto& r : rooms) {
+			some += r->foodscent > 0.1f;
+			strong += r->foodscent > 1.0f;
+			top = std::max(top, r->foodscent);
+		}
+		fmt::print("* WATCH SCENTMAP rooms {} with smell {} strong {} strongest {:.2f}\n", rooms.size(), some, strong, top);
+	}
+}

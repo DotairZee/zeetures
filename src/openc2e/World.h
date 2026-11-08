@@ -128,6 +128,7 @@ class World {
 	int findCategory(unsigned char family, unsigned char genus, unsigned short species);
 
 	void tick();
+	void tickFoodScent(); // C2: food smell spreading through the room system
 	void drawWorld(class Camera* cam, RenderTarget* surface);
 
 	int newUNID(Agent* whofor);

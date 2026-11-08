@@ -40,6 +40,7 @@ class Map {
 	friend class MetaRoom;
 
   public:
+	const std::vector<std::shared_ptr<Room>>& getRooms() const { return rooms; }
 	/* Get a room, any room.
 	 *
 	 * For those times when you really, really need a room.

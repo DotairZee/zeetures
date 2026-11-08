@@ -35,6 +35,9 @@ std::vector<std::shared_ptr<Agent> > getVisibleList(Agent* seeing, unsigned char
 bool agentsTouching(Agent* first, Agent* second);
 std::shared_ptr<Room> roomContainingAgent(AgentRef agent);
 
+// how nourishing an object's eat script makes it smell, 0-1
+float edibleScent(Agent* a);
+
 #endif
 
 /* vim: set noet: */

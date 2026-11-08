@@ -63,6 +63,9 @@ class Room {
 
 	float ca[CA_COUNT], catemp[CA_COUNT];
 
+	// C2: smell of food spreading through the room system (World::tickFoodScent)
+	float foodscent = 0, foodscentnext = 0;
+
 	bool containsPoint(float x, float y);
 	bool containsPoint(Point p);
 
