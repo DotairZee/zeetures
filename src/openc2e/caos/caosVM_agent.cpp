@@ -1637,6 +1637,7 @@ void c_GALL(caosVM* vm) {
 /**
  GALL (string)
  %status maybe
+ %variants c2 c3 cv sm openc2e
 
  Returns the name of the sprite file associated with the TARG agent or current PART, or a blank string if part# is invalid on a compound agent.
 */

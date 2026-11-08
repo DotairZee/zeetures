@@ -1360,6 +1360,29 @@ bool Engine::initialSetup() {
 		worldready = true;
 	}
 
+	// C1/C2: additions to the world, run after it has loaded (for example the
+	// boats' call switches): every .cos file in the user data folder's
+	// "Additions" folder (all worlds), then in the world folder's own.
+	// Objects they create are not saved, so they are made anew at each load.
+	if (version < 3) {
+		std::vector<fs::path> dirs{getUserDataDir() / "Additions"};
+		if (!currentworlddir.empty())
+			dirs.push_back(fs::path(currentworlddir) / "Additions");
+		for (auto& dir : dirs) {
+			if (!fs::is_directory(dir))
+				continue;
+			std::vector<fs::path> files;
+			for (auto& f : fs::directory_iterator(dir))
+				if (f.path().extension() == ".cos")
+					files.push_back(f.path());
+			std::sort(files.begin(), files.end());
+			for (auto& f : files) {
+				fmt::print("* Running world addition {}\n", f.filename().string());
+				world.executeInitScript(f);
+			}
+		}
+	}
+
 	if (const char* dumppath = getenv("OPENC2E_DUMP_SCRIPTS")) {
 		std::ofstream dump(dumppath);
 		world.scriptorium->dumpScripts(dump);

@@ -265,6 +265,7 @@ struct Params {
 	size_t linkMax = 16;
 	float linkShare = 0.95f; // a known link: this share of the trip's worth
 	float boatShare = 0.9f; // a boat crossing: this share of the trip's worth
+	float boatCallShare = 0.8f; // calling a boat over with a switch: this share of the crossing's
 	float boatRide = 200.0f; // a ride carrying the creature this far counts
 	unsigned int boatNoRide = 60; // pressed a boat, no ride this many ticks later: try the other action
 	unsigned int boatFlip = 300; // ...for this long
@@ -1329,11 +1330,26 @@ class HomeostatMind : public CreatureMind {
 	}
 	void addBoatInstead(const MindPerception& p, int dir, float want, Candidate tmpl, std::vector<Candidate>& out) {
 		bool reachableBoat = false; // seen from below or above, a boat cannot be boarded
-		for (auto& sa : p.visible)
+		bool reachableButton = false;
+		for (auto& sa : p.visible) {
 			if (sa.category == prm.boatCategory && sa.reachable)
 				reachableBoat = true;
-		if (!reachableBoat)
+			if (sa.category == prm.buttonCategory && sa.reachable)
+				reachableButton = true;
+		}
+		if (!reachableBoat) {
+			// no boat on this side: a button within reach may call one over
+			// (the boat call switches; lift buttons too, harmlessly)
+			if (reachableButton) {
+				Candidate c{prm.buttonCategory, 1, 0, want * prm.boatShare * prm.boatCallShare, 0, want * prm.boatShare * prm.boatCallShare};
+				c.chain = true;
+				c.food = tmpl.food;
+				c.forage = tmpl.forage;
+				c.scent = tmpl.scent;
+				out.push_back(c);
+			}
 			return;
+		}
 		Candidate c{prm.boatCategory, boatDecisionFor(dir, p.tick), 0, want * prm.boatShare, 0, want * prm.boatShare};
 		c.chain = true;
 		c.food = tmpl.food;
