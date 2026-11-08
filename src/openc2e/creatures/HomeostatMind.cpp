@@ -161,7 +161,6 @@ struct Params {
 	int eatDecision = 12;
 	float scentHungerRelief = 0.4f;
 	float scentWeight = 6.0f;
-	float unscentedEatShare = 0.2f; // eating an unscented one of a food-smelling kind
 
 	// Following food smell through the rooms (World::tickFoodScent): when no
 	// reachable food is in view, walk or ride toward stronger smell. Valued
@@ -686,12 +685,13 @@ class HomeostatMind : public CreatureMind {
 			Expectation& e = expectation(category, decision);
 			Candidate c{category, decision, distance, 0, 0, 0};
 			c.want = predictedRelief(d, D, e);
-			// this one does not smell like food, though its kind often does
-			// (a seed among fruit): eating it is not expected to help
-			if (decision == prm.eatDecision && edible < 0.05f) {
-				auto sc = scents.find(category);
-				if (sc != scents.end() && sc->second >= 0.2f && c.want > 0.0f)
-					c.want *= prm.unscentedEatShare;
+			// What does not smell of food is not expected to ease hunger (a
+			// seed among fruit; the smell is read from what eating does), though
+			// eating it may still be pleasant.
+			if (decision == prm.eatDecision && edible < 0.05f && e.delta[HUNGER] < 0.0f) {
+				Expectation unscented = e;
+				unscented.delta[HUNGER] = 0.0f;
+				c.want = predictedRelief(d, D, unscented);
 			}
 			c.novelty = curiosity / std::sqrt(1.0f + e.count);
 			c.score = c.want + c.novelty - prm.distanceCost * distance;
@@ -799,9 +799,15 @@ class HomeostatMind : public CreatureMind {
 		for (auto& s : p.visible)
 			if (s.reachable && s.edible > 0.1f)
 				return;
-		// what eating smelled food is expected to do, at a typical scent
+		// what eating smelled food is expected to do: at a typical scent, or
+		// what the best food it has eaten so far did, if that was more
 		Expectation typical;
 		typical.delta[HUNGER] = -prm.scentHungerRelief * 0.6f;
+		for (auto& [key, e] : expectations) {
+			auto sc = scents.find(key / 64 - 1);
+			if (key % 64 == prm.eatDecision && e.count > 0 && sc != scents.end() && sc->second >= 0.2f)
+				typical.delta[HUNGER] = std::min(typical.delta[HUNGER], std::max(e.delta[HUNGER], -prm.scentHungerRelief * 1.5f));
+		}
 		float want = predictedRelief(d, D, typical) * prm.scentFollowShare;
 		if (want < prm.seekMinWant)
 			return;
@@ -1113,10 +1119,10 @@ class HomeostatMind : public CreatureMind {
 		for (int i = 0; i < NUM_DRIVES; i++)
 			if (p.drives[i] >= 64)
 				needs += fmt::format(" {} {}", DRIVE_NAMES[i], (int)p.drives[i]);
-		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f}\n",
+		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f}\n",
 			p.creatureId, p.tick, choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
 			choice.category, choice.want, choice.novelty,
-			top, needs.empty() ? " none high" : needs, D);
+			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown);
 	}
 };
 
