@@ -735,15 +735,18 @@ void c2Organ::processReaction(c2Reaction& d) {
 
 	// C2 reaction speed: the reaction's half-life is H0 * B^(rate / 8) organ
 	// activations (rate byte: higher is slower), and each activation that share
-	// of the possible amount reacts; fractions carry over so slow reactions
-	// still happen in whole units. B = 2.2, H0 = 1 is the curve openc2e uses
-	// for C3 (2.2^(rate * 32 / 255)), and fitted against a real C2 norn over DDE
-	// (2026-11-07) it reproduces the real steady levels: glycogen ~200 and
-	// stable, oxygen ~200-255, adrenaline 0, fat slowly rising. The C1 table
-	// openc2e used before (rate / 8 tick masks) drained glycogen and starved
-	// creatures of oxygen. OPENC2E_C2RATE_B=0 restores it, for comparison.
-	static const float curveB = getenv("OPENC2E_C2RATE_B") ? (float)atof(getenv("OPENC2E_C2RATE_B")) : 2.2f;
-	static const float curveH0 = getenv("OPENC2E_C2RATE_H0") ? (float)atof(getenv("OPENC2E_C2RATE_H0")) : 1.0f;
+	// of the possible amount (the scarcer reactant) reacts; fractions carry over
+	// so slow reactions still happen in whole units. B = 1.9, H0 = 0.25 is
+	// fitted to reactions timed in a real C2 norn over DDE (2026-11-08):
+	// per organ step, rate 0 reacted fully, rate 16 55%, rate 32 20%, rate 40
+	// 10-12%; organ step intervals there (0.8-2.5 s) match openc2e's organ
+	// clocks. An earlier fit (B 2.2, H0 1, 2026-11-07) rested on injections
+	// that never arrived (the probe did not request after poking) and ran
+	// mid-rate reactions 4-9 times too slowly: newborns could not burn sugar
+	// fast enough and froze at ATP 0. Not yet measured: rates above 48.
+	// OPENC2E_C2RATE_B=0 restores the C1 table, for comparison.
+	static const float curveB = getenv("OPENC2E_C2RATE_B") ? (float)atof(getenv("OPENC2E_C2RATE_B")) : 1.9f;
+	static const float curveH0 = getenv("OPENC2E_C2RATE_H0") ? (float)atof(getenv("OPENC2E_C2RATE_H0")) : 0.25f;
 	if (curveB > 0.0f) {
 		float avail = 255.0f;
 		if (g.reactant[0] != 0)

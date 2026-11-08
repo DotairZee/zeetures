@@ -1216,17 +1216,24 @@ bool oldLobe::isChemicalRelay() {
 }
 
 void oldLobe::tickChemicalRelay() {
+	// Settle toward rest with the lobe's leakage rate read as a half-life, the
+	// same way the regular lobe update (and chemical half-lives) do it. Real C2
+	// relay cells hold their value between receptor updates: an earlier guess
+	// here (leakagerate/256 of the gap every tick) emptied them within a second,
+	// so "signal present" cells read as absent between updates (for example
+	// adrenaline was emitted while fat stores were full).
 	unsigned char rest = ourGene->reststate;
+	bool leak = (parent->getRelayTicks() & parent->getParent()->calculateTickMask(leakagerate / 8)) == 0;
 	for (auto& cell : neurons) {
-		// fade toward rest: leakagerate/256 of the gap per tick, at least 1
-		int gap = (int)cell.state - (int)rest;
-		if (gap != 0) {
-			int step = (gap * (int)leakagerate) / 256;
-			if (step == 0)
-				step = gap > 0 ? 1 : -1;
-			cell.state = (unsigned char)((int)cell.state - step);
+		unsigned char out = cell.state;
+		if (leak) {
+			if (out > rest)
+				out = rest + ((out - rest) * parent->getParent()->calculateMultiplier(leakagerate / 8)) / 65536;
+			else
+				out = rest;
 		}
-		cell.output = cell.state >= threshold ? cell.state - threshold : 0;
+		cell.state = out;
+		cell.output = out >= threshold ? out - threshold : 0;
 	}
 }
 

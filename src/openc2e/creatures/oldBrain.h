@@ -142,6 +142,7 @@ class oldBrain {
 	oldLobe* getLobeByTissue(unsigned int id);
 	oldCreature* getParent() { return parent; }
 	unsigned int getTicks() { return ticks; }
+	unsigned int getRelayTicks() { return relay_ticks; } // relay updates (the brain itself does not tick under a mind)
 };
 
 #endif
