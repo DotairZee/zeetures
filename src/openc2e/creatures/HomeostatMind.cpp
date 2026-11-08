@@ -129,6 +129,7 @@ struct Params {
 	// Seeking: when something wanted is out of sight, head for where it was
 	// last seen (a first sense of place).
 	float seekDiscount = 0.6f; // remembered relief counts for this share of seen relief
+	float seekDistanceCost = 0.00015f; // per pixel to walk: something wanted 1000 px away loses 0.15
 	float seekMinWant = 0.01f;
 	float seekMaxHeight = 200.0f; // walking west/east cannot change floors
 	float seekArrived = 40.0f; // closer than this and still not seen: forget the place
@@ -137,6 +138,13 @@ struct Params {
 	// "lifts and up/down movers") and call buttons (2) are for changing floors;
 	// which action goes which way is learned from rides, as links.
 	int liftCategory = 27, buttonCategory = 2;
+
+	// Edible scent (perceived): smelling nourishing makes eating expected to
+	// relieve hunger, up to this much at full scent, weighted as this many
+	// remembered experiences; no food smell removes the vague hope of a hunch.
+	int eatDecision = 12;
+	float scentHungerRelief = 0.4f;
+	float scentWeight = 6.0f;
 	float floorChangeDiscount = 0.5f; // share of the target's value for each step toward it
 	float atPlace = 50.0f; // close enough to a lift's position to use it
 	float sameLevel = 120.0f; // heights this close count as the same floor
@@ -239,8 +247,14 @@ class HomeostatMind : public CreatureMind {
 
 		for (auto& inst : p.newInstincts)
 			applyInstinct(p, inst);
-		for (auto& s : p.visible)
+		for (auto& s : p.visible) {
 			places[s.category] = {s.x, s.y, p.tick};
+			auto sc = scents.find(s.category);
+			if (sc == scents.end() || s.edible > sc->second + 0.05f) {
+				scents[s.category] = s.edible;
+				applyScent(s.category, s.edible);
+			}
+		}
 
 		// 7. facial expression from current affect; only sent when it changes
 		mood *= prm.moodDecay;
@@ -342,6 +356,8 @@ class HomeostatMind : public CreatureMind {
 			s += fmt::format("instinct {}\n", sig);
 		for (auto& l : links)
 			s += fmt::format("link {} {} {} {} {}\n", l.x, l.fromY, l.toY, l.decision, l.uses);
+		for (auto& [category, edible] : scents)
+			s += fmt::format("scent {} {}\n", category, edible);
 		return s;
 	}
 
@@ -369,6 +385,12 @@ class HomeostatMind : public CreatureMind {
 					l >> f;
 				if (l)
 					innateDefaults[decision] = e;
+			} else if (what == "scent") {
+				int category;
+				float edible;
+				l >> category >> edible;
+				if (l)
+					scents[category] = edible;
 			} else if (what == "link") {
 				Link lk;
 				l >> lk.x >> lk.fromY >> lk.toY >> lk.decision >> lk.uses;
@@ -428,6 +450,7 @@ class HomeostatMind : public CreatureMind {
 	int activeInstincts = 0, dormantInstincts = 0;
 	std::map<int, Place> places; // where each category was last seen
 	std::vector<Link> links; // learned rides between floors
+	std::map<int, float> scents; // strongest edible scent smelled, by category
 	bool riding = false;
 	float rideFromX = 0, rideFromY = 0;
 	int lastLiftDecision = -1;
@@ -603,7 +626,7 @@ class HomeostatMind : public CreatureMind {
 			if ((decision == 10 && !canWest) || (decision == 11 && !canEast))
 				continue;
 			Candidate c{-1, decision, std::fabs(dx), want, 0, 0};
-			c.score = want - prm.distanceCost * std::fabs(dx);
+			c.score = want - prm.seekDistanceCost * std::fabs(dx);
 			c.seekCategory = category;
 			out.push_back(c);
 		}
@@ -632,7 +655,7 @@ class HomeostatMind : public CreatureMind {
 			if ((decision == 10 && !canWest) || (decision == 11 && !canEast))
 				return;
 			Candidate c{-1, decision, std::fabs(x - p.x), want, 0, 0};
-			c.score = want - prm.distanceCost * std::fabs(x - p.x);
+			c.score = want - prm.seekDistanceCost * std::fabs(x - p.x);
 			c.seekCategory = target;
 			c.chain = true;
 			out.push_back(c);
@@ -681,6 +704,19 @@ class HomeostatMind : public CreatureMind {
 		} else if (button) {
 			actOn(prm.buttonCategory, 1, 0.5f);
 		}
+	}
+
+	void applyScent(int category, float edible) {
+		Expectation& e = expectation(category, prm.eatDecision);
+		if (edible <= 0.0f) {
+			if (e.count == 0 && e.delta[HUNGER] < 0.0f)
+				e.delta[HUNGER] = 0.0f; // does not smell like food
+			return;
+		}
+		float target = -prm.scentHungerRelief * edible;
+		float old = e.count + e.prior;
+		e.delta[HUNGER] = (e.delta[HUNGER] * old + target * prm.scentWeight) / (old + prm.scentWeight);
+		e.prior += prm.scentWeight;
 	}
 
 	void learnRide(const MindPerception& p) {

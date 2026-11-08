@@ -27,6 +27,8 @@
 #include "common/Random.h"
 #include "oldBrain.h"
 #include "oldCreature.h"
+#include <map>
+#include <sstream>
 
 #include <algorithm>
 #include <cctype>
@@ -509,6 +511,60 @@ void oldCreature::buildMindActions() {
 	}
 }
 
+// Edible scent: how nourishing an object smells. Read from the object's own
+// eat script (event 12): the nutrients its stimulus gives the eater (glucose,
+// fatty acid, glycogen, starch, fat, protein, amino acid) plus the direct
+// "Hunger Decrease" chemical, summed and scaled to 0-1. Being read from the
+// scripts, it also works for add-on objects. Cached per script.
+static float edibleScent(Agent* a) {
+	static std::map<const script*, float> cache;
+	std::shared_ptr<script> sc = a->findScript(12);
+	if (!sc)
+		return 0.0f;
+	auto it = cache.find(sc.get());
+	if (it != cache.end())
+		return it->second;
+	std::istringstream in(sc->code);
+	std::vector<std::string> tok;
+	std::string t;
+	while (in >> t) {
+		std::transform(t.begin(), t.end(), t.begin(), [](unsigned char ch) { return std::tolower(ch); });
+		tok.push_back(t);
+	}
+	auto number = [](const std::string& w, int& v) {
+		if (w.empty() || !(std::isdigit((unsigned char)w[0]) || w[0] == '-'))
+			return false;
+		v = std::atoi(w.c_str());
+		return true;
+	};
+	int total = 0;
+	for (size_t i = 0; i + 1 < tok.size(); i++) {
+		if (tok[i] != "stim")
+			continue;
+		size_t j = i + 1;
+		if (tok[j] == "writ")
+			j += 2; // the receiving object
+		else if (tok[j] == "shou" || tok[j] == "sign" || tok[j] == "tact")
+			j += 1;
+		else
+			continue;
+		j += 4; // significance, input, intensity, features
+		for (int k = 0; k < 4 && j + 1 < tok.size(); k++, j += 2) {
+			int chem, amount;
+			if (!number(tok[j], chem) || !number(tok[j + 1], amount))
+				break;
+			if (chem == 37 || (chem >= 70 && chem <= 74) || chem == 79 || chem == 80)
+				total += amount;
+		}
+	}
+	float scent = std::clamp(total / 255.0f, 0.0f, 1.0f);
+	cache[sc.get()] = scent;
+	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	if (watch)
+		fmt::print("* WATCH SCENT {} {} {} category {} edible {:.2f}\n", (int)a->family, (int)a->genus, a->species, a->category, scent);
+	return scent;
+}
+
 MindPerception oldCreature::buildPerception() {
 	MindPerception p;
 	p.creatureId = parentagent->getUNID();
@@ -530,7 +586,7 @@ MindPerception oldCreature::buildPerception() {
 			continue;
 		float ax = a->x + a->getWidth() / 2.0f;
 		float ay = a->y + a->getHeight() / 2.0f;
-		p.visible.push_back({(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay});
+		p.visible.push_back({(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay, edibleScent(a.get())});
 	}
 
 	p.stimuli = pendingstimuli;

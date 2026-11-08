@@ -40,6 +40,7 @@ struct SeenAgent {
 	AgentRef agent;
 	float distance; // between centres, in world pixels
 	float x = 0, y = 0; // the agent's centre, in world pixels
+	float edible = 0; // scent: how nourishing its eat script is, 0-1 (see edibleScent)
 };
 
 // An instinct from the genome, translated into neutral terms (see
