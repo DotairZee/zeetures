@@ -234,6 +234,7 @@ struct Params {
 	// before first). Reaching dry land within exitWindow ticks of using an
 	// object makes that object, there, a remembered exit (saved).
 	float escapeUrgency = 0.06f;
+	float escapeBreathUrgency = 0.3f; // plus this times (1 - breath left)^2
 	float escapeDeviceShare = 0.7f; // trying a device: this share of the escape's worth
 	float exitBonus = 1.5f; // a remembered exit nearby: this many times the escape's worth
 	float exitNear = 400.0f;
@@ -1150,7 +1151,7 @@ class HomeostatMind : public CreatureMind {
 			return;
 		Expectation clear;
 		clear.delta[SUFFOCATE] = -d[SUFFOCATE];
-		float worth = predictedRelief(d, D, clear) + prm.escapeUrgency;
+		float worth = predictedRelief(d, D, clear) + prm.escapeUrgency + prm.escapeBreathUrgency * (1.0f - p.breath) * (1.0f - p.breath);
 		auto mark = [&](size_t from) {
 			for (size_t i = from; i < out.size(); i++) {
 				out[i].escape = true;

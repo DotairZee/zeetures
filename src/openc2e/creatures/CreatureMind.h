@@ -107,6 +107,7 @@ struct MindPerception {
 	// nearest dry room lies through open doors (10 west, 11 east, -1 up,
 	// 1 down, 0 none found) and how many rooms away
 	bool inWater = false;
+	float breath = 1.0f; // breath left while under water (1 full, 0 none: suffocating)
 	int dryWay = 0, dryRooms = 0;
 	std::vector<InnateInstinct> newInstincts; // genome instincts expressed since the last tick
 };

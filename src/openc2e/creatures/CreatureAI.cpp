@@ -591,6 +591,7 @@ MindPerception oldCreature::buildPerception() {
 			}
 			// water: the way to the nearest dry room through open doors
 			p.inWater = here->type == 2;
+			p.breath = breathLeft();
 			if (p.inWater) {
 				struct Step {
 					std::shared_ptr<Room> room;

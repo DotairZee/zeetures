@@ -81,6 +81,7 @@ class oldCreature : public Creature {
 	void subChemical(unsigned char id, unsigned char val);
 	unsigned char getChemical(unsigned char id) { return chemicals[id]; }
 	void setChemicalLevel(unsigned char id, unsigned char v) { chemicals[id] = v; } // world loading
+	virtual float breathLeft() const { return 1.0f; } // 1 = full breath, 0 = none left (under water)
 	virtual std::vector<float> getOrganState() { return {}; }
 	virtual void setOrganState(const std::vector<float>&) {}
 
@@ -244,6 +245,11 @@ class c2Creature : public oldCreature {
 	// loci
 	unsigned char senses[14];
 	int bubbletimer = 0;
+	// Breath-holding (owner's choice, 2026-11-08): under water a creature
+	// still gets air for breathTicks (5 minutes at C2's 10 ticks a second)
+	// before its air runs out; surfacing refills the breath in a few seconds.
+	unsigned int breathHeld = 0;
+	static const unsigned int breathTicks = 3000;
 	void updateUnderwater();
 	unsigned char gaitloci[16];
 	unsigned char drives[17];
@@ -263,6 +269,7 @@ class c2Creature : public oldCreature {
 		assert(id < 17);
 		return drives[id];
 	}
+	float breathLeft() const override { return 1.0f - std::min(breathHeld, breathTicks) / (float)breathTicks; }
 
 	unsigned char* getLocusPointer(bool receptor, unsigned char o, unsigned char t, unsigned char l);
 

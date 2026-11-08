@@ -449,9 +449,14 @@ void c2Creature::updateUnderwater() {
 	}
 	std::shared_ptr<Room> room = world.map->roomAt(headx, heady);
 	bool underwater = room && room->type == 2;
-	if (underwater)
-		senses[9] = 0;
+	if (underwater) {
+		if (breathHeld < breathTicks)
+			breathHeld++; // holding its breath: the air sense stays as it was
+		else
+			senses[9] = 0; // out of breath
+	}
 	if (!underwater) {
+		breathHeld = breathHeld > 100 ? breathHeld - 100 : 0; // breathing again
 		bubbletimer = 0;
 		return;
 	}
