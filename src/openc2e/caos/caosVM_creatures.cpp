@@ -523,6 +523,7 @@ void v_ZOMB(caosVM* vm) {
 /**
  DIRN (command) direction (integer)
  %status maybe
+ %variants c2 cv c3
 
  Changes the target Creature to face a different direction.
 */

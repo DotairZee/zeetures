@@ -448,8 +448,20 @@ void SkeletalCreature::snapDownFoot() {
 				newroom = downfootroom; // TODO, we're just forcing for now
 			} else {
 				float ydiff = 10000.0f; // TODO: big number
+				const float unwrappedfootx = footx;
 				for (auto& d : downfootroom->getDoors()) {
 					std::shared_ptr<Room> thisroom = d.first;
+					// A wrapping world (C2's Albia joins its east and west edges
+					// through doors) has rooms just past the seam at the other end:
+					// judge them with the foot's x wrapped to that end, or a creature
+					// walking off the edge finds no room and is pushed back.
+					footx = unwrappedfootx;
+					if (m->wraparound()) {
+						if (footx >= m->x() + (int)m->width() && thisroom->x_left < m->x() + (int)m->width() / 2)
+							footx -= m->width();
+						else if (footx < m->x() && thisroom->x_right > m->x() + (int)m->width() / 2)
+							footx += m->width();
+					}
 					if (engine.version == 2 && size > d.second.perm)
 						continue;
 					// A neighbouring floor far above the foot is a wall, not a step. Without
@@ -466,6 +478,14 @@ void SkeletalCreature::snapDownFoot() {
 							ydiff = thisydiff;
 						}
 					}
+				}
+				footx = unwrappedfootx;
+				if (newroom && m->wraparound() && !(newroom->x_left <= footx && newroom->x_right >= footx)) {
+					// crossing the seam: carry on from the other end of the world
+					float shift = footx >= m->x() + (int)m->width() ? -(float)m->width() : (float)m->width();
+					footx += shift;
+					moveTo(x + shift, y); // carries anything attached along
+					lastgoodfootx += shift;
 				}
 			}
 		}
