@@ -178,8 +178,10 @@ static void signalhandler(int) {
 			fprintf(stderr, "%-35s ", "???");
 		}
 
-		// memory address
+		// memory address, and its offset in the module (for addr2line)
 		fprintf(stderr, "0x%.*" PRIxPTR " ", (int)(sizeof(void*) * 2), (uintptr_t)callstack[i]);
+		if (info.dli_fbase)
+			fprintf(stderr, "[+0x%" PRIxPTR "] ", (uintptr_t)callstack[i] - (uintptr_t)info.dli_fbase);
 
 		// function name
 		if (info.dli_sname) {
@@ -215,11 +217,20 @@ void install_backtrace_printer() {
 #ifdef _WIN32
 	SetUnhandledExceptionFilter(TopLevelExceptionHandler);
 #else
-	signal(SIGABRT, signalhandler);
-	signal(SIGBUS, signalhandler);
-	signal(SIGFPE, signalhandler);
-	signal(SIGILL, signalhandler);
-	signal(SIGSEGV, signalhandler);
-	signal(SIGTRAP, signalhandler);
+	// Run the handler on its own stack, so a stack overflow (runaway recursion)
+	// still prints a backtrace instead of the process vanishing silently.
+	static char altstack[256 * 1024];
+	stack_t ss;
+	memset(&ss, 0, sizeof(ss));
+	ss.ss_sp = altstack;
+	ss.ss_size = sizeof(altstack);
+	sigaltstack(&ss, nullptr);
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = signalhandler;
+	sa.sa_flags = SA_ONSTACK | SA_RESETHAND;
+	sigemptyset(&sa.sa_mask);
+	for (int sig : {SIGABRT, SIGBUS, SIGFPE, SIGILL, SIGSEGV, SIGTRAP})
+		sigaction(sig, &sa, nullptr);
 #endif
 }
