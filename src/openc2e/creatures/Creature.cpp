@@ -25,6 +25,7 @@
 #include "World.h"
 #include "common/Random.h"
 #include "Room.h"
+#include "SkeletalCreature.h"
 #include "Map.h"
 #include "c2eBrain.h"
 #include "c2eCreature.h"
@@ -410,8 +411,14 @@ void c1Creature::tick() {
 void c2Creature::updateUnderwater() {
 	if (!parentagent || !world.map)
 		return;
+	// the mouth (point 1 of the head part's attachments), or near the top
+	// of the body if the creature has no skeleton
 	float headx = parentagent->x + parentagent->getWidth() / 2.0f;
-	float heady = parentagent->y + 10.0f; // near the top of the body, where the head is
+	float heady = parentagent->y + 10.0f;
+	if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent)) {
+		headx = parentagent->x + sc->attachmentX(1, 1);
+		heady = parentagent->y + sc->attachmentY(1, 1);
+	}
 	std::shared_ptr<Room> room = world.map->roomAt(headx, heady);
 	bool underwater = room && room->type == 2;
 	if (underwater)
@@ -426,7 +433,7 @@ void c2Creature::updateUnderwater() {
 	}
 	bubbletimer = rand_int32(12, 40);
 	std::string caos = fmt::format("inst new: simp bubs 10 0 8000 0 setv cls2 2 1 27 mvto {} {} mesg writ targ 8",
-		(int)headx - 10, (int)heady - 30);
+		(int)headx - 6, (int)heady - 12);
 	std::string result = engine.executeNetwork(caos);
 	if (!result.empty())
 		fmt::print("* Couldn't make a bubble: {}\n", result);
