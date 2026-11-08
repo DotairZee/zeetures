@@ -761,6 +761,11 @@ void c2Organ::processReaction(c2Reaction& d) {
 	// calculate the actual adjustment (can't go out of bounds)
 	ratio = ratio - ((ratio * parent->calculateMultiplier(rate)) / 65536);
 
+	static const bool watchreact = getenv("OPENC2E_WATCH_REACTIONS") != nullptr;
+	if (watchreact && (g.reactant[0] == 72 || g.reactant[1] == 72))
+		fmt::print("* REACT {}*{} + {}*{} -> {}*{} + {}*{} rate {} amount {} (glycogen was {})\n", (int)g.quantity[0], (int)g.reactant[0],
+			(int)g.quantity[1], (int)g.reactant[1], (int)g.quantity[2], (int)g.reactant[2], (int)g.quantity[3], (int)g.reactant[3],
+			(int)g.rate, (int)ratio, (int)parent->getChemical(72));
 	// change chemical levels
 	parent->subChemical(g.reactant[0], ratio * g.quantity[0]);
 	parent->subChemical(g.reactant[1], ratio * g.quantity[1]);
