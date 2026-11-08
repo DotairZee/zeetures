@@ -227,6 +227,23 @@ struct Params {
 	int passOverAfter = 2;
 	float passOverReward = 0.005f;
 
+	// Escaping water (owner request): in water, getting out is worth the
+	// relief of clearing Suffocate plus escapeUrgency (so it leaves before
+	// suffocating). With a dry room reachable through open doors it heads
+	// that way; without one it tries the devices in view (exits that worked
+	// before first). Reaching dry land within exitWindow ticks of using an
+	// object makes that object, there, a remembered exit (saved).
+	float escapeUrgency = 0.06f;
+	float escapeDeviceShare = 0.7f; // trying a device: this share of the escape's worth
+	float exitBonus = 1.5f; // a remembered exit nearby: this many times the escape's worth
+	float exitNear = 400.0f;
+	unsigned int exitWindow = 400;
+	size_t exitMax = 8;
+	// devices worth trying to get out (C2 categories are genus numbers):
+	// call buttons (2), machines such as the airlock pump (3), doors such as
+	// the airlock's (9), lifts (27)
+	std::vector<int> escapeDevices{2, 3, 9, 27};
+
 	float blockedMove = 3.0f; // moved less than this in a walking episode (walking covers about 10)
 	float blockedNear = 40.0f; // still this close to where it got stuck
 	unsigned int blockedTicks = 600;
@@ -320,6 +337,13 @@ struct Candidate {
 	bool scent = false; // following food smell
 	bool food = false; // heading for a remembered food place
 	bool forage = false; // searching for food
+	bool escape = false; // getting out of water
+};
+
+struct ExitLink {
+	float x = 0, y = 0; // where the object was used
+	int category = -1, decision = -1;
+	int uses = 0;
 };
 
 class HomeostatMind : public CreatureMind {
@@ -365,6 +389,24 @@ class HomeostatMind : public CreatureMind {
 				hungryTicks = 0; // fed
 		}
 		lastTick = p.tick;
+		if (wasInWater && !p.inWater && lastObjectUse.category >= 0 && p.tick < lastObjectUseTick + prm.exitWindow) {
+			bool known = false;
+			for (auto& e : exits)
+				if (e.category == lastObjectUse.category && e.decision == lastObjectUse.decision && std::fabs(e.x - lastObjectUse.x) < 200.0f && std::fabs(e.y - lastObjectUse.y) < prm.sameLevel) {
+					e.uses++;
+					known = true;
+				}
+			if (!known) {
+				if (exits.size() >= prm.exitMax)
+					exits.erase(exits.begin());
+				ExitLink e = lastObjectUse;
+				e.uses = 1;
+				exits.push_back(e);
+			}
+			fmt::print("[homeostat] creature {} t{}: out of the water; remembers {}@{} at {:.0f},{:.0f} as an exit\n", p.creatureId, p.tick,
+				actionName(lastObjectUse.decision), lastObjectUse.category, lastObjectUse.x, lastObjectUse.y);
+		}
+		wasInWater = p.inWater;
 		bool foodInSight = false;
 		for (auto& s : p.visible)
 			if (s.edible >= prm.foodSeeEdible) {
@@ -515,6 +557,12 @@ class HomeostatMind : public CreatureMind {
 			for (auto& s : p.visible)
 				if (s.category == choice.category)
 					episodeAgent = s.agent;
+		if (choice.category >= 0 && std::find(prm.escapeDevices.begin(), prm.escapeDevices.end(), choice.category) != prm.escapeDevices.end()) {
+			// (only devices can be exits: leaving the water just after hitting a
+			// norn taught one creature that hitting norns is a way out)
+			lastObjectUse = {p.x, p.y, choice.category, choice.decision, 0};
+			lastObjectUseTick = p.tick;
+		}
 		episodeTicks = 0;
 		closest = 1e9f;
 		lastProgress = 0;
@@ -567,6 +615,8 @@ class HomeostatMind : public CreatureMind {
 		for (auto& fp : foodPlaces)
 			s += fmt::format("food {} {} {} {} {}\n", fp.x, fp.y, fp.tick, fp.confidence, fp.meals);
 		s += fmt::format("restless {}\n", hungryTicks);
+		for (auto& e : exits)
+			s += fmt::format("exit {} {} {} {} {}\n", e.x, e.y, e.category, e.decision, e.uses);
 		return s;
 	}
 
@@ -600,6 +650,11 @@ class HomeostatMind : public CreatureMind {
 				l >> category >> edible;
 				if (l)
 					scents[category] = edible;
+			} else if (what == "exit") {
+				ExitLink e;
+				l >> e.x >> e.y >> e.category >> e.decision >> e.uses;
+				if (l && exits.size() < prm.exitMax)
+					exits.push_back(e);
 			} else if (what == "restless") {
 				l >> hungryTicks;
 			} else if (what == "food") {
@@ -679,6 +734,10 @@ class HomeostatMind : public CreatureMind {
 	std::vector<Link> links; // learned rides between floors
 	std::vector<FoodPlace> foodPlaces; // the food map
 	std::map<std::pair<int, int>, unsigned int> visited; // (x bin, y bin) -> last mind tick there
+	std::vector<ExitLink> exits; // objects that got the creature out of water
+	bool wasInWater = false;
+	ExitLink lastObjectUse; // the most recent object action, for exit learning
+	unsigned int lastObjectUseTick = 0;
 	AgentRef episodeAgent; // the object this episode acts on
 	AgentRef lastUselessAgent;
 	int uselessInARow = 0;
@@ -1086,6 +1145,60 @@ class HomeostatMind : public CreatureMind {
 		}
 	}
 
+	void addEscape(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		if (!p.inWater)
+			return;
+		Expectation clear;
+		clear.delta[SUFFOCATE] = -d[SUFFOCATE];
+		float worth = predictedRelief(d, D, clear) + prm.escapeUrgency;
+		auto mark = [&](size_t from) {
+			for (size_t i = from; i < out.size(); i++) {
+				out[i].escape = true;
+				out[i].chain = true; // no drive learning from the steps themselves
+			}
+		};
+		// a remembered exit in view and near
+		for (auto& e : exits) {
+			if (std::fabs(e.x - p.x) > prm.exitNear || std::fabs(e.y - p.y) > prm.sameLevel || !isVisible(p, e.category))
+				continue;
+			Candidate c{e.category, e.decision, 0, worth * prm.exitBonus, 0, worth * prm.exitBonus};
+			c.escape = true;
+			out.push_back(c);
+			return;
+		}
+		if (p.dryWay == 10 || p.dryWay == 11) {
+			if (!((p.dryWay == 10 && !canWest) || (p.dryWay == 11 && !canEast) || isBlocked(p, p.dryWay))) {
+				Candidate c{-1, p.dryWay, 0, worth, 0, worth};
+				out.push_back(c);
+				mark(out.size() - 1);
+				return;
+			}
+		} else if (p.dryWay == -1 || p.dryWay == 1) {
+			size_t before = out.size();
+			addFloorChange(p, worth, p.y + p.dryWay * prm.scentFloorStep, -1, canWest, canEast, out);
+			mark(before);
+			if (out.size() > before)
+				return;
+		}
+		// no open way out: try the devices in view (passing over handles the
+		// ones that do nothing)
+		for (auto& s : p.visible) {
+			if (std::find(prm.escapeDevices.begin(), prm.escapeDevices.end(), s.category) != prm.escapeDevices.end()) {
+				for (int decision : {0, 1}) { // activate 1 and 2
+					bool can = false;
+					for (auto& a : *p.actions)
+						if (a.needsObject && a.decision == decision)
+							can = true;
+					if (!can)
+						continue;
+					Candidate c{s.category, decision, s.distance, worth * prm.escapeDeviceShare, 0, worth * prm.escapeDeviceShare};
+					c.escape = true;
+					out.push_back(c);
+				}
+			}
+		}
+	}
+
 	// Seeking: for each remembered place whose category is out of sight, how
 	// much would the best action on it help? If enough, offer walking toward
 	// it (C2 decisions 10 and 11: travel west and east).
@@ -1141,6 +1254,7 @@ class HomeostatMind : public CreatureMind {
 		if (bestCategory >= 0 && bestWant * prm.floorChangeDiscount >= prm.seekMinWant)
 			addFloorChange(p, bestWant * prm.floorChangeDiscount, places[bestCategory].y, bestCategory, canWest, canEast, out);
 
+		addEscape(p, d, D, canWest, canEast, out);
 		addFoodSeek(p, d, D, canWest, canEast, out);
 		addScentFollow(p, d, D, canWest, canEast, out);
 		addForage(p, d, D, canWest, canEast, out);
@@ -1493,7 +1607,7 @@ class HomeostatMind : public CreatureMind {
 			if (p.drives[i] >= 64)
 				needs += fmt::format(" {} {}", DRIVE_NAMES[i], (int)p.drives[i]);
 		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f} | at {:.0f},{:.0f} | restless {:.2f} | food map {}\n",
-			p.creatureId, p.tick, choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
+			p.creatureId, p.tick, choice.escape ? fmt::format("escape:{}", actionName(choice.decision)) : choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
 			choice.category, choice.want, choice.novelty,
 			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown, p.x, p.y, std::clamp(hungryTicks / prm.restlessRamp, 0.0f, 1.0f),
 			[&] { std::string m; for (auto& fp : foodPlaces) m += fmt::format(" {:.0f},{:.0f}x{:.2f}", fp.x, fp.y, fp.confidence); return m.empty() ? std::string(" none") : m; }());

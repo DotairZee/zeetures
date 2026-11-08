@@ -589,6 +589,55 @@ MindPerception oldCreature::buildPerception() {
 					continue;
 				*side = std::max(*side, n->foodscent);
 			}
+			// water: the way to the nearest dry room through open doors
+			p.inWater = here->type == 2;
+			if (p.inWater) {
+				struct Step {
+					std::shared_ptr<Room> room;
+					int way, depth;
+				};
+				std::vector<Step> queue;
+				std::vector<Room*> seen{here.get()};
+				for (auto& [n, door] : here->getDoors()) {
+					if (door.perm <= 0)
+						continue;
+					int way = 0;
+					if (n->x_right <= here->x_left + 2)
+						way = 10;
+					else if (n->x_left + 2 >= here->x_right)
+						way = 11;
+					else if (std::max(n->y_left_floor, n->y_right_floor) <= ceiling + 2)
+						way = 0; // up: not on foot (lifts are handled by the mind)
+					else if (std::min(n->y_left_ceiling, n->y_right_ceiling) + 2 >= floor)
+						way = 1;
+					if (way)
+						queue.push_back({n, way, 1});
+				}
+				for (size_t i = 0; i < queue.size() && i < 200; i++) {
+					Step st = queue[i];
+					if (std::find(seen.begin(), seen.end(), st.room.get()) != seen.end())
+						continue;
+					seen.push_back(st.room.get());
+					if (st.room->type != 2) {
+						p.dryWay = st.way;
+						p.dryRooms = st.depth;
+						break;
+					}
+					if (st.depth >= 8)
+						continue;
+					for (auto& [n, door] : st.room->getDoors()) {
+						if (door.perm <= 0)
+							continue;
+						// on foot only sideways or down: a room above (such as
+						// the surface over the sea) cannot be climbed up to
+						unsigned int nfloor = std::max(n->y_left_floor, n->y_right_floor);
+						unsigned int rceiling = std::min(st.room->y_left_ceiling, st.room->y_right_ceiling);
+						if (nfloor <= rceiling + 2)
+							continue;
+						queue.push_back({n, st.way, st.depth + 1});
+					}
+				}
+			}
 		}
 	}
 	return p;

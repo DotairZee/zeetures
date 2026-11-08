@@ -103,6 +103,11 @@ struct MindPerception {
 	// food smell (C2, World::tickFoodScent): in this room, and the strongest
 	// through the doors on each side
 	float scentHere = 0, scentWest = 0, scentEast = 0, scentUp = 0, scentDown = 0;
+	// water (C2 room type 2): whether the creature is in it, and which way the
+	// nearest dry room lies through open doors (10 west, 11 east, -1 up,
+	// 1 down, 0 none found) and how many rooms away
+	bool inWater = false;
+	int dryWay = 0, dryRooms = 0;
 	std::vector<InnateInstinct> newInstincts; // genome instincts expressed since the last tick
 };
 
