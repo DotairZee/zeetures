@@ -175,6 +175,41 @@ struct Params {
 
 	// Blocked ways: walking west or east toward something that got the
 	// creature nowhere means that way is blocked from here, for a while.
+	// Food finding (2026-11-08). A food map: places where food was seen or a
+	// meal eased hunger, kept with a confidence that falls when the creature
+	// arrives and finds nothing (food regrows, so places are not forgotten
+	// at once), and saved with the creature.
+	float foodSeeEdible = 0.3f; // a visible object smelling this nourishing marks a food place
+	float foodMerge = 200.0f; // places this close (same floor) are one place
+	size_t foodPlaceMax = 8;
+	float foodArrived = 60.0f; // this close to a place: look whether food is there
+	unsigned int foodRecheckTicks = 200; // a place is judged empty at most this often
+	// Travel is valued by time (owner's idea), with walking speed taken as
+	// constant: a remembered meal keeps half its value per travelHalf pixels
+	// of walking (a floor change counts as floorChangeDistance pixels), and
+	// hunger makes the creature more patient: travelHalf * (1 + hungerPatience
+	// * hunger^2), so a starving creature will cross the world for food.
+	float travelHalf = 700.0f;
+	float hungerPatience = 6.0f;
+	float floorChangeDistance = 400.0f;
+	// Foraging: hungry, nothing in sight, nothing remembered worth the trip,
+	// no smell to follow: search, heading for the part of this floor visited
+	// least recently, keeping the heading for a while.
+	float forageHunger = 0.45f;
+	float forageShare = 0.35f; // worth this share of an expected meal
+	unsigned int forageCommit = 150; // mind ticks to keep a heading
+	float visitBinWidth = 400.0f, visitBinHeight = 300.0f;
+	int forageLookBins = 4; // how far ahead (in bins) staleness is judged
+	// Noticing lack of progress: a search heading that has not carried the
+	// creature foragePass pixels after forageStuckTicks is turned around (both
+	// ways stuck: another floor); a food trip that has not come foodTripGain
+	// pixels closer in foodTripTicks makes that place "out of reach from
+	// here": its confidence halves and it is not tried for foodCooldown ticks.
+	float foragePass = 80.0f;
+	unsigned int forageStuckTicks = 60;
+	float foodTripGain = 100.0f;
+	unsigned int foodTripTicks = 300, foodCooldown = 600;
+
 	float blockedMove = 3.0f; // moved less than this in a walking episode (walking covers about 10)
 	float blockedNear = 40.0f; // still this close to where it got stuck
 	unsigned int blockedTicks = 600;
@@ -247,6 +282,15 @@ struct Link {
 	int uses = 0;
 };
 
+struct FoodPlace {
+	float x = 0, y = 0;
+	unsigned int tick = 0; // last seen or eaten there
+	float confidence = 0.5f;
+	int meals = 0;
+	unsigned int checked = 0; // last time arriving there was judged
+	unsigned int cooldownUntil = 0; // out of reach from here: not tried until then
+};
+
 struct Candidate {
 	int category; // -1 for actions that need no object
 	int decision;
@@ -257,6 +301,8 @@ struct Candidate {
 	int seekCategory = -1; // >= 0: travelling toward where this category was last seen
 	bool chain = false; // a step toward something else (changing floors): no drive learning
 	bool scent = false; // following food smell
+	bool food = false; // heading for a remembered food place
+	bool forage = false; // searching for food
 };
 
 class HomeostatMind : public CreatureMind {
@@ -290,6 +336,24 @@ class HomeostatMind : public CreatureMind {
 
 		for (auto& inst : p.newInstincts)
 			applyInstinct(p, inst);
+		visited[{(int)std::floor(p.x / prm.visitBinWidth), (int)std::floor(p.y / prm.visitBinHeight)}] = p.tick;
+		bool foodInSight = false;
+		for (auto& s : p.visible)
+			if (s.edible >= prm.foodSeeEdible) {
+				rememberFood(s.x, s.y, p.tick, 0.6f, false);
+				foodInSight = true;
+			}
+		for (auto& fp : foodPlaces) {
+			if (std::fabs(fp.x - p.x) < prm.foodArrived && std::fabs(fp.y - p.y) < prm.sameLevel && !foodInSight &&
+				p.tick >= fp.checked + prm.foodRecheckTicks) {
+				fp.confidence *= 0.5f; // came here and found nothing (for now)
+				fp.checked = p.tick;
+			}
+		}
+		size_t foodBefore = foodPlaces.size();
+		foodPlaces.erase(std::remove_if(foodPlaces.begin(), foodPlaces.end(), [](const FoodPlace& f) { return f.confidence < 0.05f; }), foodPlaces.end());
+		if (foodPlaces.size() != foodBefore)
+			foodTrip = -1; // indices moved
 		for (auto& s : p.visible) {
 			places[s.category] = {s.x, s.y, p.tick};
 			auto sc = scents.find(s.category);
@@ -466,6 +530,8 @@ class HomeostatMind : public CreatureMind {
 			s += fmt::format("link {} {} {} {} {}\n", l.x, l.fromY, l.toY, l.decision, l.uses);
 		for (auto& [category, edible] : scents)
 			s += fmt::format("scent {} {}\n", category, edible);
+		for (auto& fp : foodPlaces)
+			s += fmt::format("food {} {} {} {} {}\n", fp.x, fp.y, fp.tick, fp.confidence, fp.meals);
 		return s;
 	}
 
@@ -499,6 +565,11 @@ class HomeostatMind : public CreatureMind {
 				l >> category >> edible;
 				if (l)
 					scents[category] = edible;
+			} else if (what == "food") {
+				FoodPlace fp;
+				l >> fp.x >> fp.y >> fp.tick >> fp.confidence >> fp.meals;
+				if (l && foodPlaces.size() < prm.foodPlaceMax)
+					foodPlaces.push_back(fp);
 			} else if (what == "link") {
 				Link lk;
 				l >> lk.x >> lk.fromY >> lk.toY >> lk.decision >> lk.uses;
@@ -569,6 +640,16 @@ class HomeostatMind : public CreatureMind {
 	int activeInstincts = 0, dormantInstincts = 0;
 	std::map<int, Place> places; // where each category was last seen
 	std::vector<Link> links; // learned rides between floors
+	std::vector<FoodPlace> foodPlaces; // the food map
+	std::map<std::pair<int, int>, unsigned int> visited; // (x bin, y bin) -> last mind tick there
+	int forageHeading = 0; // 10 west, 11 east, 0 none
+	unsigned int forageUntil = 0;
+	float forageStartX = 0, forageStartY = 0;
+	unsigned int forageStartTick = 0;
+	int forageStuckFlips = 0; // turnarounds in a row without progress
+	int foodTrip = -1; // index in foodPlaces of the place being headed for
+	float foodTripBest = 0;
+	unsigned int foodTripSince = 0;
 	std::map<int, float> scents; // strongest edible scent smelled, by category
 	bool riding = false;
 	float rideFromX = 0, rideFromY = 0;
@@ -752,6 +833,190 @@ class HomeostatMind : public CreatureMind {
 		return best;
 	}
 
+	void rememberFood(float x, float y, unsigned int tick, float confidence, bool meal) {
+		for (auto& fp : foodPlaces)
+			if (std::fabs(fp.x - x) < prm.foodMerge && std::fabs(fp.y - y) < prm.sameLevel) {
+				fp.x = (fp.x * 3.0f + x) / 4.0f;
+				fp.tick = tick;
+				fp.confidence = std::max(fp.confidence, confidence);
+				fp.meals += meal ? 1 : 0;
+				return;
+			}
+		if (foodPlaces.size() >= prm.foodPlaceMax) {
+			// forget the least valuable: low confidence, few meals, long ago
+			auto worst = std::min_element(foodPlaces.begin(), foodPlaces.end(), [](const FoodPlace& a, const FoodPlace& b) {
+				return a.confidence * (1 + a.meals) < b.confidence * (1 + b.meals);
+			});
+			foodPlaces.erase(worst);
+			foodTrip = -1; // indices moved
+		}
+		foodPlaces.push_back({x, y, tick, confidence, meal ? 1 : 0, 0});
+	}
+
+	// What eating is expected to do for hunger: a typical meal, or the best
+	// meal of something food-smelling it has had, if that was more.
+	float expectedMealRelief(const std::array<float, NUM_DRIVES>& d, float D) {
+		Expectation typical;
+		typical.delta[HUNGER] = -prm.scentHungerRelief * 0.6f;
+		for (auto& [key, e] : expectations) {
+			auto sc = scents.find(key / 64 - 1);
+			if (key % 64 == prm.eatDecision && e.count > 0 && sc != scents.end() && sc->second >= 0.2f)
+				typical.delta[HUNGER] = std::min(typical.delta[HUNGER], std::max(e.delta[HUNGER], -prm.scentHungerRelief * 1.5f));
+		}
+		return predictedRelief(d, D, typical);
+	}
+
+	float travelDiscount(float distance, int floors, float hunger) const {
+		float half = prm.travelHalf * (1.0f + prm.hungerPatience * hunger * hunger);
+		return std::pow(0.5f, (distance + floors * prm.floorChangeDistance) / half);
+	}
+
+	// Heading for the best place on the food map (same floor: walk; another
+	// floor: steps toward changing floors).
+	void addFoodSeek(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		for (auto& s : p.visible)
+			if (s.reachable && s.edible > 0.1f)
+				return; // food at hand
+		float meal = expectedMealRelief(d, D);
+		if (meal < prm.seekMinWant)
+			return;
+		const FoodPlace* bestSame = nullptr;
+		const FoodPlace* bestOther = nullptr;
+		float wantSame = 0.0f, wantOther = 0.0f;
+		// progress on the current trip
+		if (foodTrip >= 0 && foodTrip < (int)foodPlaces.size()) {
+			FoodPlace& t = foodPlaces[foodTrip];
+			float dist = std::fabs(t.x - p.x) + std::fabs(t.y - p.y);
+			if (dist < foodTripBest - prm.foodTripGain) {
+				foodTripBest = dist;
+				foodTripSince = p.tick;
+			} else if (p.tick > foodTripSince + prm.foodTripTicks) {
+				t.confidence *= 0.5f; // out of reach from here, for now
+				t.cooldownUntil = p.tick + prm.foodCooldown;
+				foodTrip = -1;
+			}
+		}
+		for (auto& fp : foodPlaces) {
+			if (p.tick < fp.cooldownUntil)
+				continue;
+			float dx = std::fabs(fp.x - p.x), dy = std::fabs(fp.y - p.y);
+			bool same = dy < prm.sameLevel;
+			if (same && dx < prm.foodArrived)
+				continue; // here already
+			int floors = same ? 0 : std::max(1, (int)std::lround(dy / prm.scentFloorStep));
+			float want = meal * fp.confidence * travelDiscount(dx, floors, d[HUNGER]);
+			if (same && want > wantSame) {
+				wantSame = want;
+				bestSame = &fp;
+			} else if (!same && want > wantOther) {
+				wantOther = want;
+				bestOther = &fp;
+			}
+		}
+		auto startTrip = [&](const FoodPlace* fp) {
+			int idx = (int)(fp - foodPlaces.data());
+			if (idx != foodTrip) {
+				foodTrip = idx;
+				foodTripBest = std::fabs(fp->x - p.x) + std::fabs(fp->y - p.y);
+				foodTripSince = p.tick;
+			}
+		};
+		if (bestSame && wantSame >= prm.seekMinWant && wantSame >= wantOther) {
+			startTrip(bestSame);
+			int decision = bestSame->x < p.x ? 10 : 11;
+			if (!((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision))) {
+				Candidate c{-1, decision, std::fabs(bestSame->x - p.x), wantSame, 0, wantSame};
+				c.chain = true;
+				c.food = true;
+				out.push_back(c);
+				return;
+			}
+		}
+		if (bestOther && wantOther >= prm.seekMinWant) {
+			startTrip(bestOther);
+			size_t before = out.size();
+			addFloorChange(p, wantOther, bestOther->y, -1, canWest, canEast, out);
+			for (size_t i = before; i < out.size(); i++)
+				out[i].food = true;
+		}
+	}
+
+	// Foraging: searching when nothing better is known.
+	void addForage(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		if (d[HUNGER] < prm.forageHunger)
+			return;
+		for (auto& c : out)
+			if (c.food || c.scent)
+				return; // something better to go on
+		for (auto& s : p.visible)
+			if (s.edible > 0.1f)
+				return;
+		float want = expectedMealRelief(d, D) * prm.forageShare * (d[HUNGER] - prm.forageHunger) / (1.0f - prm.forageHunger);
+		if (want < prm.seekMinWant)
+			return;
+		auto open = [&](int dir) { return ((dir == 10 && canWest) || (dir == 11 && canEast)) && !isBlocked(p, dir); };
+		if (forageHeading != 0 && p.tick > forageStartTick + prm.forageStuckTicks) {
+			float progress = forageHeading == 10 ? forageStartX - p.x : p.x - forageStartX;
+			if (progress < prm.foragePass) {
+				forageStuckFlips++;
+				int other = forageHeading == 10 ? 11 : 10;
+				forageHeading = forageStuckFlips >= 2 || !open(other) ? 0 : other; // both ways stuck: another floor
+				forageUntil = p.tick + prm.forageCommit;
+			} else
+				forageStuckFlips = 0;
+			forageStartX = p.x;
+			forageStartTick = p.tick;
+		}
+		if (forageStuckFlips >= 2) {
+			// both ways stuck on this floor: look for food on another one
+			size_t before = out.size();
+			addFloorChange(p, want, p.y + ((p.tick / prm.forageCommit) % 2 ? -1.0f : 1.0f) * prm.scentFloorStep, -1, canWest, canEast, out);
+			for (size_t i = before; i < out.size(); i++)
+				out[i].forage = true;
+			if (std::fabs(p.y - forageStartY) > prm.minRide) {
+				forageStuckFlips = 0; // reached another floor
+				forageHeading = 0;
+			}
+			return;
+		}
+		if (forageHeading == 0 || p.tick >= forageUntil || !open(forageHeading)) {
+			forageStartX = p.x;
+			forageStartY = p.y;
+			forageStartTick = p.tick;
+			// staleness of the next few bins each way on this floor
+			int bx = (int)std::floor(p.x / prm.visitBinWidth), by = (int)std::floor(p.y / prm.visitBinHeight);
+			auto stale = [&](int dir) {
+				float total = 0.0f;
+				for (int k = 1; k <= prm.forageLookBins; k++) {
+					auto it = visited.find({bx + (dir == 10 ? -k : k), by});
+					total += it == visited.end() ? 10000.0f : (float)(p.tick - it->second);
+				}
+				return total;
+			};
+			int choice = 0;
+			if (open(10) && open(11))
+				choice = stale(10) >= stale(11) ? 10 : 11;
+			else if (open(10))
+				choice = 10;
+			else if (open(11))
+				choice = 11;
+			forageHeading = choice;
+			forageUntil = p.tick + prm.forageCommit;
+		}
+		if (forageHeading != 0) {
+			Candidate c{-1, forageHeading, 0, want, 0, want};
+			c.chain = true;
+			c.forage = true;
+			out.push_back(c);
+		} else {
+			// both ways blocked: try another floor
+			size_t before = out.size();
+			addFloorChange(p, want, p.y + ((p.tick / prm.forageCommit) % 2 ? -1.0f : 1.0f) * prm.scentFloorStep, -1, canWest, canEast, out);
+			for (size_t i = before; i < out.size(); i++)
+				out[i].forage = true;
+		}
+	}
+
 	// Seeking: for each remembered place whose category is out of sight, how
 	// much would the best action on it help? If enough, offer walking toward
 	// it (C2 decisions 10 and 11: travel west and east).
@@ -807,7 +1072,9 @@ class HomeostatMind : public CreatureMind {
 		if (bestCategory >= 0 && bestWant * prm.floorChangeDiscount >= prm.seekMinWant)
 			addFloorChange(p, bestWant * prm.floorChangeDiscount, places[bestCategory].y, bestCategory, canWest, canEast, out);
 
+		addFoodSeek(p, d, D, canWest, canEast, out);
 		addScentFollow(p, d, D, canWest, canEast, out);
+		addForage(p, d, D, canWest, canEast, out);
 	}
 
 	void addScentFollow(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
@@ -1034,6 +1301,8 @@ class HomeostatMind : public CreatureMind {
 
 	// 1 and 2: reward and learning at the end of an episode.
 	void endEpisode(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, const char* why) {
+		if (current.decision == prm.eatDecision && current.category >= 0 && felt[HUNGER] < -0.05f)
+			rememberFood(p.x, p.y, p.tick, 1.0f, true); // a meal here eased hunger
 		inEpisode = false;
 		inEpisodeJustEnded = true;
 		episodes++;
@@ -1135,10 +1404,11 @@ class HomeostatMind : public CreatureMind {
 		for (int i = 0; i < NUM_DRIVES; i++)
 			if (p.drives[i] >= 64)
 				needs += fmt::format(" {} {}", DRIVE_NAMES[i], (int)p.drives[i]);
-		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f}\n",
-			p.creatureId, p.tick, choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
+		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f} | at {:.0f},{:.0f} | food map {}\n",
+			p.creatureId, p.tick, choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
 			choice.category, choice.want, choice.novelty,
-			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown);
+			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown, p.x, p.y,
+			[&] { std::string m; for (auto& fp : foodPlaces) m += fmt::format(" {:.0f},{:.0f}x{:.2f}", fp.x, fp.y, fp.confidence); return m.empty() ? std::string(" none") : m; }());
 	}
 };
 
