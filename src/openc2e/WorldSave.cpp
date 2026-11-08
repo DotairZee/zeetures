@@ -97,6 +97,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	std::ofstream out(tmp / "state.txt");
 	out << MAGIC << "\n";
 	out << "saved " << timestamp() << "\n";
+	out << "chemical-relays 1\n"; // body chemistry relays were running when saved
 	out << "camera " << engine.camera->getX() << " " << engine.camera->getY() << "\n";
 
 	int ncreatures = 0, neggs = 0;
@@ -197,7 +198,20 @@ struct SavedEgg {
 	std::vector<std::string> vars; // "setv ovNN value" lines
 };
 
-static void restoreCreature(const fs::path& savedir, const SavedCreature& s) {
+// Saves made before chemical relay lobes ran (see oldBrain::tickChemicalRelays)
+// can hold creatures whose ATP ran out because of that missing relay. With no
+// ATP, C2 organs do nothing, and the relay alone cannot restart them (the
+// enzyme it releases is itself emitted by an organ). When loading such a save,
+// a living creature with no ATP gets its genome's starting ATP back, once.
+static unsigned char genomeInitialLevel(genomeFile& g, unsigned char chemical, unsigned char fallback) {
+	for (auto& gn : g.genes)
+		if (auto* ic = dynamic_cast<bioInitialConcentrationGene*>(gn.get()))
+			if (ic->chemical == chemical)
+				return ic->quantity;
+	return fallback;
+}
+
+static void restoreCreature(const fs::path& savedir, const SavedCreature& s, bool revive_atp) {
 	auto genome = std::make_shared<genomeFile>();
 	{
 		FileReader r(savedir / "genomes" / s.genome);
@@ -223,6 +237,11 @@ static void restoreCreature(const fs::path& savedir, const SavedCreature& s) {
 	for (size_t i = 0; i < s.chemicals.size() && i < 256; i++)
 		c->setChemicalLevel((unsigned char)i, (unsigned char)s.chemicals[i]);
 	c->setOrganState(s.organs);
+	if (revive_atp && engine.version == 2 && c->isAlive() && c->getChemical(99) == 0) { // 99 = ATP
+		unsigned char atp = genomeInitialLevel(*genome, 99, 200);
+		c->setChemicalLevel(99, atp);
+		fmt::print("* Restarted a creature's metabolism (ATP 0 -> {}) after loading an older save\n", (int)atp);
+	}
 	if (s.asleep)
 		c->setAsleep(true);
 	a->moveTo(s.x, s.y, true);
@@ -265,13 +284,16 @@ bool LoadWorldState(const fs::path& worlddir) {
 	std::vector<SavedCreature> creatures;
 	std::vector<SavedEgg> eggs;
 	int camx = -1, camy = -1;
+	bool relays_saved = false;
 	SavedCreature* c = nullptr;
 	SavedEgg* e = nullptr;
 	while (std::getline(in, line)) {
 		std::istringstream l(line);
 		std::string key;
 		l >> key;
-		if (key == "camera") {
+		if (key == "chemical-relays") {
+			relays_saved = true;
+		} else if (key == "camera") {
 			l >> camx >> camy;
 		} else if (key == "creature") {
 			creatures.emplace_back();
@@ -350,7 +372,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 
 	for (auto& s : creatures) {
 		try {
-			restoreCreature(savedir, s);
+			restoreCreature(savedir, s, !relays_saved);
 		} catch (std::exception& ex) {
 			fmt::print("* Couldn't restore a creature ({}): {}\n", s.genome, ex.what());
 		}
