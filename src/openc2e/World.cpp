@@ -18,6 +18,9 @@
  */
 
 #include "World.h"
+
+#include <algorithm>
+#include <cmath>
 #include "AgentHelpers.h"
 
 #include "Camera.h"
@@ -295,8 +298,10 @@ void World::tick() {
 	}
 
 	world.map->tick();
-	if (engine.version == 2)
+	if (engine.version == 2) {
 		tickFoodScent();
+		tickClimate();
+	}
 
 	// TODO: correct behaviour? hrm :/
 	world.hand()->velx = world.hand()->velx / 2.0f;
@@ -694,6 +699,50 @@ int World::findCategory(unsigned char family, unsigned char genus, unsigned shor
 // neighbouring rooms through doors, in proportion to how open each door is
 // (permeability / 255; walls pass nothing), and slowly fades. Creatures can
 // follow it toward food out of sight.
+// C2 room temperatures, about once a second (every 10 ticks).
+// Heat spreading is decoded from the real game (2026-11-08: a room raised to
+// 255 lost 1/8 of its gap to each fully open neighbour per step, about once a
+// second, total heat conserved): each door passes perm/255 * 1/8 of the
+// temperature difference. Heat sources are our own design (C2's barely act:
+// a cooled volcano room did not recover in minutes, and its +10 "desert" rooms
+// were cooler than the incubator): a room with a heat source is pulled toward
+// a climate target, 105 (the incubator area, comfortable) shifted by 30 *
+// sqrt(|source|) in the source's direction, so the volcano (+120) is very hot,
+// the desert (+10) hot (~200), the sea (-10, -120) cold; every room relaxes
+// slowly toward 105, or the heat sources would slowly heat the whole world.
+// Changes made by scripts (rain cools, lightning warms) are taken up and then
+// spread and settle. Temperatures stay within 0-255.
+void World::tickClimate() {
+	static unsigned int counter = 0;
+	if (++counter % 10 != 0 || !map)
+		return;
+	const float spread = 1.0f / 8.0f, sourcePull = 0.5f, ambient = 105.0f, ambientPull = 0.03f;
+	const auto& rooms = map->getRooms();
+	for (auto& r : rooms)
+		if (r->tempf < 0.0f || (int)std::lround(r->tempf) != r->temp)
+			r->tempf = (float)std::clamp(r->temp, 0, 255); // first step, or a script changed it
+	std::vector<float> next(rooms.size());
+	for (size_t i = 0; i < rooms.size(); i++) {
+		Room& r = *rooms[i];
+		float t = r.tempf;
+		for (auto& [n, door] : r.getDoors()) {
+			if (!n || door.perm <= 0 || n.get() == &r)
+				continue;
+			t += spread * (std::min(door.perm, 255) / 255.0f) * (n->tempf - r.tempf);
+		}
+		if (r.hsrc != 0) {
+			float target = ambient + (r.hsrc > 0 ? 30.0f : -30.0f) * std::sqrt((float)std::abs(r.hsrc));
+			t += sourcePull * (std::clamp(target, 0.0f, 255.0f) - r.tempf);
+		}
+		t += ambientPull * (ambient - r.tempf);
+		next[i] = std::clamp(t, 0.0f, 255.0f);
+	}
+	for (size_t i = 0; i < rooms.size(); i++) {
+		rooms[i]->tempf = next[i];
+		rooms[i]->temp = (int)std::lround(next[i]);
+	}
+}
+
 void World::tickFoodScent() {
 	static unsigned int counter = 0;
 	if (++counter % 5 != 0 || !map)

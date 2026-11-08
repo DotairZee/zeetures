@@ -129,6 +129,7 @@ class World {
 
 	void tick();
 	void tickFoodScent(); // C2: food smell spreading through the room system
+	void tickClimate(); // C2: room temperatures (heat spreading, heat sources)
 	void drawWorld(class Camera* cam, RenderTarget* surface);
 
 	int newUNID(Agent* whofor);

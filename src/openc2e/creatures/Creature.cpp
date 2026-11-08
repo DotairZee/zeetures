@@ -448,12 +448,20 @@ void c2Creature::tick() {
 
 	senses[0] = 255; // always-on
 	senses[1] = (asleep ? 255 : 0); // asleep
-	senses[2] = 0; // air coldness (TODO)
-	senses[3] = 0; // air hotness (TODO)
+	senses[2] = 0; // air coldness: below the comfort band, see below
+	senses[3] = 0; // air hotness: above it
 	senses[4] = 0; // light level: the room's (rooms keep the light level the world gives them)
 	if (parentagent && world.map) {
-		if (std::shared_ptr<Room> r = world.map->roomAt(parentagent->x + parentagent->getWidth() / 2.0f, parentagent->y + parentagent->getHeight() / 2.0f))
+		if (std::shared_ptr<Room> r = world.map->roomAt(parentagent->x + parentagent->getWidth() / 2.0f, parentagent->y + parentagent->getHeight() / 2.0f)) {
 			senses[4] = (unsigned char)std::clamp(r->lite, 0, 255);
+			// Room temperature (0-255) to the genome's air coldness/hotness
+			// senses (its emitters fire above 8). Comfortable from 50 to 140,
+			// three per degree beyond. The hot side agrees with real C2 (a
+			// newborn heated up in a ~170 room, not at 89-114); the cold side
+			// is our choice: real C2 creatures felt no cold even at 30.
+			senses[2] = (unsigned char)std::clamp((50 - r->temp) * 3, 0, 255);
+			senses[3] = (unsigned char)std::clamp((r->temp - 140) * 3, 0, 255);
+		}
 	}
 	senses[5] = 0; // crowdedness (TODO)
 	senses[6] = 0; // radiation (TODO)

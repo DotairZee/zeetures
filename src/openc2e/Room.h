@@ -54,6 +54,7 @@ class Room {
 
 	// Creatures 2
 	int temp = 0, lite = 0, radn = 0, ontr = 0, intr = 0, pres = 0, hsrc = 0, lsrc = 0, rsrc = 0, psrc = 0;
+	float tempf = -1.0f; // C2 climate (World::tickClimate): temperature with fractions; -1 until first step
 	int floorvalue = 0, dropstatus = 0;
 	int windx, windy;
 
