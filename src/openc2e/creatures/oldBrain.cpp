@@ -1189,3 +1189,68 @@ void oldBrain::processInstinct(creatureInstinctGene& instinct) {
 }
 
 /* vim: set noet: */
+
+// Chemical relays. C2 genomes route much of a creature's body regulation
+// through a brain lobe used purely as a relay: receptor genes write chemical
+// levels into its cells and emitter genes read the cells' outputs (in the stock
+// norn, lobe 9: lactate to suffocation, water to thirst, glucose to hunger and
+// insulin, starch, fat and protein to fullness, ADP to energy metabolism, and
+// hormones). A creature mind replaces the brain, so the brain does not tick,
+// but these relays are body chemistry, not thought, and the genome needs them.
+// A lobe counts as a relay only if receptor genes feed it, it has no
+// dendrites, and its state rule just keeps the state; thinking lobes never
+// qualify. The update is our own, reading the lobe gene's numbers: the state
+// fades toward the rest state at the leakage rate, and the output is the
+// state above the threshold.
+bool oldLobe::isChemicalRelay() {
+	if (!receptor_fed || !ourGene)
+		return false;
+	if (ourGene->dendrite1.max != 0 || ourGene->dendrite2.max != 0)
+		return false;
+	if (ourGene->staterule[0] != 9) // "state"
+		return false;
+	for (unsigned int i = 1; i < 12; i++)
+		if (ourGene->staterule[i] != 0)
+			return false;
+	return true;
+}
+
+void oldLobe::tickChemicalRelay() {
+	unsigned char rest = ourGene->reststate;
+	for (auto& cell : neurons) {
+		// fade toward rest: leakagerate/256 of the gap per tick, at least 1
+		int gap = (int)cell.state - (int)rest;
+		if (gap != 0) {
+			int step = (gap * (int)leakagerate) / 256;
+			if (step == 0)
+				step = gap > 0 ? 1 : -1;
+			cell.state = (unsigned char)((int)cell.state - step);
+		}
+		cell.output = cell.state >= threshold ? cell.state - threshold : 0;
+	}
+}
+
+void oldBrain::tickChemicalRelays() {
+	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	if (watch && !relays_reported)
+		fmt::print("* WATCH BRAIN lobes {}\n", lobes.size());
+	if (watch && !relays_reported)
+		for (unsigned int i = 0; i < lobes.size(); i++)
+			fmt::print("* WATCH LOBE {} neurons {} receptor_fed {} relay {} rule0 {} d1max {} d2max {}\n", i, lobes[i]->getNoNeurons(),
+				lobes[i]->receptor_fed, lobes[i]->isChemicalRelay(), (int)lobes[i]->getGene()->staterule[0],
+				(int)lobes[i]->getGene()->dendrite1.max, (int)lobes[i]->getGene()->dendrite2.max);
+	for (unsigned int i = 0; i < lobes.size(); i++) {
+		oldLobe* lobe = lobes[i];
+		if (!lobe || !lobe->isChemicalRelay())
+			continue;
+		lobe->tickChemicalRelay();
+		if (watch && relay_ticks % 400 == 0) {
+			std::string cells;
+			for (unsigned int n = 0; n < lobe->getNoNeurons(); n++)
+				cells += fmt::format(" {}/{}", (int)lobe->getNeuron(n)->state, (int)lobe->getNeuron(n)->output);
+			fmt::print("* WATCH RELAY lobe {} state/output:{}\n", i, cells);
+		}
+	}
+	relays_reported = true;
+	relay_ticks++;
+}

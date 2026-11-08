@@ -37,6 +37,10 @@
 void oldCreature::tickBrain() {
 	if (mind) {
 		tickMind();
+		// the brain is replaced, but its chemical relay lobes are body chemistry
+		static const bool norelay = getenv("OPENC2E_NO_RELAY") != nullptr; // for A/B testing
+		if (brain && !norelay)
+			brain->tickChemicalRelays();
 		return;
 	}
 

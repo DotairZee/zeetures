@@ -234,6 +234,7 @@ unsigned char* oldCreature::getLocusPointer(bool receptor, unsigned char o, unsi
 						}
 						if (cellid >= lobe->getNoNeurons())
 							return 0;
+						lobe->receptor_fed = true;
 						return &lobe->getNeuron(cellid)->state;
 				}
 			} else {

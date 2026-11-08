@@ -102,6 +102,11 @@ class oldLobe {
 	oldBrainLobeGene* getGene() { return ourGene; }
 
 	unsigned int getNoNeurons() { return neurons.size(); }
+	// Chemical relays (see oldBrain::tickChemicalRelays): genes write chemical
+	// levels into this lobe's cells
+	bool receptor_fed = false;
+	bool isChemicalRelay();
+	void tickChemicalRelay();
 	oldNeuron* getNeuron(unsigned int i) { return &neurons[i]; }
 	unsigned int getDendriteCount();
 	unsigned int getWidth() { return width; }
@@ -123,6 +128,9 @@ class oldBrain {
 
   public:
 	std::vector<oldLobe*> lobes;
+	void tickChemicalRelays();
+	bool relays_reported = false;
+	unsigned int relay_ticks = 0;
 
 	oldBrain(oldCreature* p);
 	void tick();
