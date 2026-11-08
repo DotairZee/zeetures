@@ -317,19 +317,36 @@ void c_TELE(caosVM* vm) {
 
 /**
  DPS2 (command) gravity (integer)
- %status stub
+ %status maybe
  %variants c2
 
  Drop passengers of targ vehicle, like DPAS. If gravity is zero, passengers do not get gravity activated.
 */
 void c_DPS2(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(gravity)
+	VM_PARAM_INTEGER(gravity)
 
 	valid_agent(vm->targ);
 	Vehicle* v = dynamic_cast<Vehicle*>(vm->targ.get());
 	THROW_IFNOT(v);
 
-	// TODO
+	// Drop the passengers (creatures), as DPAS does. This was a stub, so C2's
+	// boats never let anyone off at the far shore: passengers rode back and
+	// were dropped wherever the ride ended, often over the sea. With gravity
+	// non-zero the dropped passengers fall; zero leaves them where they are
+	// (the boats' own scripts then move them ashore and set gravity).
+	for (unsigned int i = 0; i < v->passengers.size(); i++) {
+		AgentRef a = v->passengers[i];
+		if (!a)
+			continue;
+		if (a.get() == v)
+			continue;
+		if (a->family != 4)
+			continue;
+		v->drop(a);
+		if (a && gravity)
+			a->falling = true;
+		i--; // since we dropped the last one out of the list
+	}
 }
 
 /* vim: set noet: */

@@ -18,6 +18,8 @@
  */
 
 #include "Vehicle.h"
+#include <fmt/core.h>
+#include <cstdlib>
 
 #include "Engine.h"
 
@@ -74,6 +76,8 @@ void Vehicle::carry(AgentRef passenger) {
 			return;
 	}
 
+	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	float beforex = passenger->x;
 	// push into our cabin
 	// TODO: should we use moveTo here?
 	if (passenger->x + passenger->getWidth() > (x + cabinright))
@@ -90,6 +94,9 @@ void Vehicle::carry(AgentRef passenger) {
 		passenger->y = y + cabinbottom - passenger->getHeight();
 	}
 
+	if (watch)
+		fmt::print("* WATCH VEHICLE {} {} {} at ({:.0f}, {:.0f}) cabin {}..{} x {}..{} y: passenger {} {} {} x {:.0f} -> {:.0f}\n", (int)family, (int)genus, species, x, y,
+			cabinleft, cabinright, cabintop, cabinbottom, (int)passenger->family, (int)passenger->genus, passenger->species, beforex, passenger->x);
 	passengers.push_back(passenger);
 	passenger->invehicle = this;
 
