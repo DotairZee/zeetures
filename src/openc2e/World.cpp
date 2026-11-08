@@ -18,6 +18,7 @@
  */
 
 #include "World.h"
+#include "WorldSave.h"
 
 #include <algorithm>
 #include <cmath>
@@ -302,6 +303,8 @@ void World::tick() {
 		tickFoodScent();
 		tickClimate();
 	}
+	if (engine.version < 3)
+		WorldSave::TickLifeStageChanges();
 
 	// TODO: correct behaviour? hrm :/
 	world.hand()->velx = world.hand()->velx / 2.0f;

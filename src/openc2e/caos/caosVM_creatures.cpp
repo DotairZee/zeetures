@@ -1435,6 +1435,21 @@ void c_AGES(caosVM* vm) {
 }
 
 /**
+ DBG: STAG (command) stage (integer)
+ %status maybe
+ %variants c1 c2
+
+ openc2e: move the target creature to life stage 0-6 (baby to senile) the
+ way the Creatures menu does: one stage at a time with a short pause, ageing
+ through the genome's own ageing receptors (younger: rebuilt stage by stage).
+*/
+void c_DBG_STAG(caosVM* vm) {
+	VM_PARAM_INTEGER(stage)
+	vm->getTargCreature();
+	WorldSave::RequestLifeStage(vm->targ.lock(), stage);
+}
+
+/**
  LOCI (command) type (integer) organ (integer) tissue (integer) id (integer) value (float)
  %status maybe
 

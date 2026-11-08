@@ -16,6 +16,10 @@ bool SaveWorldState(const std::filesystem::path& worlddir, std::string& error);
 bool LoadWorldState(const std::filesystem::path& worlddir);
 // Moves a living C1/C2 creature to life stage 0-6 (baby to senile), older or
 // younger, keeping its chemistry, organs and mind; false (with error) if not.
+// The same, one stage at a time with a short pause between stages, ageing
+// through the genome's own ageing receptors (Creatures menu); ticked by the world.
+void RequestLifeStage(std::shared_ptr<Agent> creature, int stage);
+void TickLifeStageChanges();
 bool SetCreatureLifeStage(std::shared_ptr<Agent>& creature, int stage, std::string& error); // creature is replaced when made younger
 
 } // namespace WorldSave

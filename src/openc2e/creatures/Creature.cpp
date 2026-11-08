@@ -119,8 +119,36 @@ void oldCreature::processGenes() {
 }
 
 void c2Creature::processGenes() {
-	oldCreature::processGenes();
+	// Biochemistry genes belong to the organ they follow in the genome. Walk
+	// the whole genome in order (genes of earlier stages included) so that a
+	// gene switching on at a later life stage joins that organ, not whichever
+	// organ happens to be last. Genes after the brain organ (not modelled)
+	// keep going to the organ before it, as before.
+	brain->processGenes();
+	std::shared_ptr<c2Organ> current;
+	for (auto& gp : genome->genes) {
+		gene* g = gp.get();
+		if (organGene* o = dynamic_cast<organGene*>(g)) {
+			if (!o->isBrain()) {
+				current = nullptr;
+				for (auto& org : organs)
+					if (org->getGene() == o)
+						current = org;
+			}
+		}
+		if (!shouldProcessGene(g))
+			continue;
+		addingorgan = current;
+		addGene(g);
+		if (organGene* o = dynamic_cast<organGene*>(g))
+			if (!o->isBrain() && !organs.empty() && organs.back()->getGene() == o)
+				current = organs.back();
+	}
+	addingorgan = nullptr;
 
+	// each organ turns only its new genes into reactions, emitters and
+	// receptors (it used to redo all of them at every life stage, so an adult
+	// ran every reaction five times over)
 	for (auto& organ : organs) {
 		organ->processGenes();
 	}
@@ -557,15 +585,10 @@ void c2Creature::addGene(gene* g) {
 		if (!o->isBrain()) { // TODO: handle brain organ
 			organs.push_back(std::shared_ptr<c2Organ>(new c2Organ(this, o)));
 		}
-	} else if (typeid(*g) == typeid(bioReactionGene)) {
-		THROW_IFNOT(organs.size() > 0);
-		organs.back()->genes.push_back(g);
-	} else if (typeid(*g) == typeid(bioEmitterGene)) {
-		THROW_IFNOT(organs.size() > 0);
-		organs.back()->genes.push_back(g);
-	} else if (typeid(*g) == typeid(bioReceptorGene)) {
-		THROW_IFNOT(organs.size() > 0);
-		organs.back()->genes.push_back(g);
+	} else if (typeid(*g) == typeid(bioReactionGene) || typeid(*g) == typeid(bioEmitterGene) || typeid(*g) == typeid(bioReceptorGene)) {
+		std::shared_ptr<c2Organ> organ = addingorgan ? addingorgan : (organs.empty() ? nullptr : organs.back());
+		THROW_IFNOT(organ);
+		organ->genes.push_back(g);
 	}
 }
 

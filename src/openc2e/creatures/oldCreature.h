@@ -195,6 +195,7 @@ class c2Organ {
 	unsigned int clockratereceptors, repairratereceptors, injuryreceptors;
 
 	unsigned int biotick, biochemticks;
+	size_t genesprocessed = 0; // genes[] entries already turned into reactions/emitters/receptors
 
 	void processReaction(c2Reaction&);
 	void processEmitter(c2Emitter&);
@@ -205,6 +206,7 @@ class c2Organ {
   public:
 	c2Organ(c2Creature* p, organGene* g);
 	void tick();
+	organGene* getGene() { return ourGene; }
 
 	void processGenes();
 
@@ -247,6 +249,7 @@ class c2Creature : public oldCreature {
 	void addGene(gene*);
 	void tickBiochemistry();
 	void processGenes();
+	std::shared_ptr<c2Organ> addingorgan; // organ the gene being added follows in the genome
 
   public:
 	c2Creature(std::shared_ptr<genomeFile> g, bool is_female, unsigned char _variant, CreatureAgent* a);

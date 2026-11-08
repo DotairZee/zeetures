@@ -495,7 +495,9 @@ void c2Organ::processGenes() {
 	// TODO: is genes.size() always the size we want?
 	energycost = 2 + (genes.size() / 10);
 
-	for (auto g : genes) {
+	// only the genes added since the last call (each life stage adds its own)
+	for (size_t i = genesprocessed; i < genes.size(); i++) {
+		gene* g = genes[i];
 		if (typeid(*g) == typeid(bioReactionGene)) {
 			reactions.push_back(std::shared_ptr<c2Reaction>(new c2Reaction((bioReactionGene*)g)));
 		} else if (typeid(*g) == typeid(bioEmitterGene)) {
@@ -504,6 +506,7 @@ void c2Organ::processGenes() {
 			receptors.push_back(c2Receptor((bioReceptorGene*)g, this));
 		}
 	}
+	genesprocessed = genes.size();
 }
 
 void c2eOrgan::processGenes() {
@@ -733,22 +736,20 @@ void c2Organ::processReaction(c2Reaction& d) {
 
 	bioReactionGene& g = *d.data;
 
-	// C2 reaction speed: the reaction's half-life is (rate / K)^P organ
-	// activations (rate byte: higher is slower; rate 0 reacts fully), and each
-	// activation that share of the possible amount (the scarcer reactant)
-	// reacts; fractions carry over so slow reactions still happen in whole
-	// units. K = 17.5, P = 2.09 is fitted to reactions timed in a real C2 norn
-	// over DDE (2026-11-08), per organ step: rate 0 reacted fully, rate 16
-	// 55%, rate 32 20%, rate 40 11%, rate 80 2.8% (rms error about 7%; an
-	// exponential in rate fits no better than 30%). Organ step intervals there
-	// (0.8-6.5 s) match openc2e's organ clocks. Earlier fits: 2.2^(rate / 8)
-	// (2026-11-07, from injections that never arrived; mid rates 4-9x too
-	// slow, so newborns froze at ATP 0) and 0.25 * 1.9^(rate / 8) (morning of
-	// 2026-11-08, before the rate-80 point; slow reactions 6x too slow).
-	// OPENC2E_C2RATE_K / _P override; OPENC2E_C2RATE_B=0 restores the C1 table.
-	static const bool c1table = getenv("OPENC2E_C2RATE_B") && atof(getenv("OPENC2E_C2RATE_B")) == 0.0;
-	static const float curveK = getenv("OPENC2E_C2RATE_K") ? (float)atof(getenv("OPENC2E_C2RATE_K")) : 17.5f;
-	static const float curveP = getenv("OPENC2E_C2RATE_P") ? (float)atof(getenv("OPENC2E_C2RATE_P")) : 2.09f;
+	// C2 reaction speed: openc2e's table "snaffled from real creatures" (also
+	// used for half-lives), on rate / 8: rates 0-6 react every organ step,
+	// higher ones every 2^(rate/8 - 7) steps, and the table gives the share
+	// left unreacted. Checked against reactions timed in a real C2 norn over
+	// DDE (2026-11-08): per step rate 0 reacted fully (table 100%), rate 16
+	// 55% (55.5%), rate 32 20% (18.3%), rate 40 10-12% (9.6%), rate 80 7 of 250
+	// muscle every 8 steps (exactly what the table gives). Half-lives at 48,
+	// 64, 72, 144 and 248 match it too. Fitted curves tried on 2026-11-07/08
+	// were artifacts: a DDE probe whose injections never arrived, and adults
+	// whose organs ran every reaction several times over (c2Organ::processGenes
+	// re-added all genes at each life stage). OPENC2E_C2RATE_CURVE=1 uses the
+	// last of those curves, half-life (rate / 17.5)^2.09 steps, for comparison.
+	static const bool c1table = !getenv("OPENC2E_C2RATE_CURVE");
+	static const float curveK = 17.5f, curveP = 2.09f;
 	if (!c1table) {
 		float avail = 255.0f;
 		if (g.reactant[0] != 0)

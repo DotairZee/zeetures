@@ -481,3 +481,83 @@ bool SetCreatureLifeStage(std::shared_ptr<Agent>& agent, int stage, std::string&
 
 } // namespace WorldSave
 
+// Changing life stage "naturally" (owner request): one stage at a time, with
+// a short pause between stages. Older: the life chemical is lowered to where
+// the current stage ends, so the genome's own ageing receptor fires and the
+// creature ages exactly as it would naturally (genes, body, life event); if
+// the genome has no such receptor, it is aged directly after a while.
+// Younger has no natural process; each stage back rebuilds the creature (see
+// SetCreatureLifeStage), at the same pace.
+namespace WorldSave {
+
+struct StageChange {
+	AgentRef creature;
+	int target = 0;
+	unsigned int wait = 0; // ticks before the next step
+	int stepFrom = -1; // stage when the current ageing step began (-1: none)
+	unsigned int stepTicks = 0;
+};
+static std::vector<StageChange> s_stagechanges;
+static const unsigned int stagePause = 20; // ticks between stages (2 s in C2)
+static const unsigned int stepTimeout = 60; // ticks to wait for the ageing receptor
+
+void RequestLifeStage(std::shared_ptr<Agent> creature, int stage) {
+	if (!creature || !oldCreatureOf(creature.get()))
+		return;
+	s_stagechanges.erase(std::remove_if(s_stagechanges.begin(), s_stagechanges.end(),
+							 [&](StageChange& sc) { return sc.creature.lock() == creature; }),
+		s_stagechanges.end());
+	StageChange sc;
+	sc.creature = AgentRef(creature);
+	sc.target = std::clamp(stage, 0, 6);
+	s_stagechanges.push_back(sc);
+}
+
+void TickLifeStageChanges() {
+	for (auto it = s_stagechanges.begin(); it != s_stagechanges.end();) {
+		std::shared_ptr<Agent> a = it->creature.lock();
+		oldCreature* c = a ? oldCreatureOf(a.get()) : nullptr;
+		if (!c || !c->isAlive() || (int)c->getStage() == it->target) {
+			it = s_stagechanges.erase(it);
+			continue;
+		}
+		int stage = (int)c->getStage();
+		if (it->stepFrom >= 0) {
+			// waiting for the body to age itself
+			if (stage != it->stepFrom) {
+				it->stepFrom = -1;
+				it->wait = stagePause;
+			} else if (++it->stepTicks >= stepTimeout) {
+				c->ageCreature();
+				it->stepFrom = -1;
+				it->wait = stagePause;
+			}
+			++it;
+			continue;
+		}
+		if (it->wait > 0) {
+			it->wait--;
+			++it;
+			continue;
+		}
+		if (it->target > stage) {
+			int life = lifeLevelForStage(c, stage + 1);
+			if (life >= 0 && c->getChemical((unsigned char)(life >> 8)) > (life & 255))
+				c->setChemicalLevel((unsigned char)(life >> 8), (unsigned char)(life & 255));
+			it->stepFrom = stage;
+			it->stepTicks = 0;
+		} else {
+			std::string err;
+			if (!SetCreatureLifeStage(a, stage - 1, err)) {
+				it = s_stagechanges.erase(it);
+				continue;
+			}
+			it->creature = AgentRef(a);
+			it->wait = stagePause;
+		}
+		++it;
+	}
+}
+
+} // namespace WorldSave
+

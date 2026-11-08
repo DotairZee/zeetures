@@ -226,11 +226,8 @@ static void DrawC2MenuBar() {
 			static const char* const stages[] = {"Baby", "Child", "Adolescent", "Youth", "Adult", "Old", "Senile"};
 			int stage = (int)sel->getCreature()->getStage();
 			for (int i = 0; i < 7; i++) {
-				if (ImGui::MenuItem(stages[i], nullptr, i == stage) && i != stage) {
-					std::string err;
-					if (!WorldSave::SetCreatureLifeStage(current, i, err))
-						fmt::print("Couldn't change life stage: {}\n", err);
-				}
+				if (ImGui::MenuItem(stages[i], nullptr, i == stage) && i != stage)
+					WorldSave::RequestLifeStage(current, i); // stage by stage, as natural ageing
 			}
 			ImGui::EndMenu();
 		}
