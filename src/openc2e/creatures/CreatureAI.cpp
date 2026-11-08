@@ -368,6 +368,10 @@ void Creature::chooseAgents() {
 		if (a) {
 			if (a->category != (int)i || !agentInSight(a))
 				chosenagents[i].clear();
+			// C1/C2: re-pick the nearest each time, except what the creature is
+			// acting on now (so it is not switched mid-action)
+			else if (engine.version < 3 && a != attention)
+				chosenagents[i].clear();
 		}
 	}
 
@@ -401,12 +405,25 @@ void Creature::chooseAgents() {
 }
 
 AgentRef oldCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> possibles) {
-	// TODO: proper selection method
+	// The nearest one, with height counting extra: an object on another floor
+	// is much harder to reach than one the same distance away on this floor.
+	// (openc2e picked one at random, often unreachable.)
 	(void)type;
-	if (possibles.size() > 0)
-		return rand_choice(possibles);
-	else
+	if (possibles.empty())
 		return AgentRef();
+	float cx = parentagent->x + parentagent->getWidth() / 2.0f;
+	float cy = parentagent->y + parentagent->getHeight() / 2.0f;
+	AgentRef best;
+	float bestcost = 0;
+	for (auto& a : possibles) {
+		float ax = a->x + a->getWidth() / 2.0f, ay = a->y + a->getHeight() / 2.0f;
+		float cost = std::fabs(ax - cx) + 4.0f * std::fabs(ay - cy);
+		if (!best || cost < bestcost) {
+			best = a;
+			bestcost = cost;
+		}
+	}
+	return best;
 }
 
 AgentRef c2eCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> possibles) {
