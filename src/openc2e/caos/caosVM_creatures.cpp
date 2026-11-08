@@ -927,8 +927,12 @@ class blockUntilApproached : public blockCond {
 		if (!it)
 			return false; // TODO: CAs
 
-		if (agentsTouching(parent, it))
+		if (agentsTouching(parent, it)) {
+			static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+			if (watch)
+				fmt::print("* WATCH REACHED unid {} {} {} {}\n", parent->getUNID(), (int)it->family, (int)it->genus, it->species);
 			return false;
+		}
 
 		// parentcreature is guaranteed to be valid if parent is
 
