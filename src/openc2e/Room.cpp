@@ -50,6 +50,13 @@ Room::Room() {
 
 Room::Room(unsigned int x_l, unsigned int x_r, unsigned int y_l_t, unsigned int y_r_t,
 	unsigned int y_l_b, unsigned int y_r_b) {
+	setBounds(x_l, x_r, y_l_t, y_r_t, y_l_b, y_r_b);
+	for (unsigned int i = 0; i < CA_COUNT; i++)
+		ca[i] = catemp[i] = 0.0f;
+}
+
+void Room::setBounds(unsigned int x_l, unsigned int x_r, unsigned int y_l_t, unsigned int y_r_t,
+	unsigned int y_l_b, unsigned int y_r_b) {
 	if (x_l > x_r)
 		std::swap(x_l, x_r);
 	x_left = x_l;
@@ -72,9 +79,6 @@ Room::Room(unsigned int x_l, unsigned int x_r, unsigned int y_l_t, unsigned int 
 	right = Line(ur, br);
 	top = Line(ul, ur);
 	bottom = Line(bl, br);
-
-	for (unsigned int i = 0; i < CA_COUNT; i++)
-		ca[i] = catemp[i] = 0.0f;
 }
 
 void Room::tick() {

@@ -1053,10 +1053,9 @@ void c_ROOM(caosVM* vm) {
 		//assert(roomid == (unsigned int)roomno); // TODO: this is fairly likely to fail, but is a major bug if it does, FIX ME!
 		r->id = roomno;
 	} else {
-		r->x_left = left;
-		r->x_right = right;
-		r->y_left_ceiling = r->y_right_ceiling = top;
-		r->y_left_floor = r->y_right_floor = bottom;
+		// resize fully: the wall lines too, or the room's containment and
+		// collisions would stay at its old size
+		r->setBounds(left, right, top, top, bottom, bottom);
 	}
 
 	r->type = type;
@@ -1092,10 +1091,9 @@ void c_ROOM_c2(caosVM* vm) {
 		r = std::shared_ptr<Room>(new Room(left, right, top, top, bottom, bottom));
 		r->id = roomno;
 	} else {
-		r->x_left = left;
-		r->x_right = right;
-		r->y_left_ceiling = r->y_right_ceiling = top;
-		r->y_left_floor = r->y_right_floor = bottom;
+		// resize fully: the wall lines too, or the room's containment and
+		// collisions would stay at its old size
+		r->setBounds(left, right, top, top, bottom, bottom);
 	}
 
 	r->type = type;
