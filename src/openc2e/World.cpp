@@ -306,6 +306,48 @@ void World::tick() {
 	if (engine.version < 3)
 		WorldSave::TickLifeStageChanges();
 
+	// developer aid: OPENC2E_DUMP_ROOMS="x0 y0 x1 y1" prints, once, every
+	// room overlapping that box with its C2 data, floor points and doors
+	static const char* dumpBox = getenv("OPENC2E_DUMP_ROOMS");
+	static bool dumped = false;
+	if (dumpBox && map && !dumped && tickcount > 5) {
+		dumped = true;
+		int bx0, by0, bx1, by1;
+		if (sscanf(dumpBox, "%d %d %d %d", &bx0, &by0, &bx1, &by1) == 4) {
+			for (auto& r : map->getRooms()) {
+				if ((int)r->x_right < bx0 || (int)r->x_left > bx1 || (int)r->y_left_floor < by0 || (int)r->y_left_ceiling > by1)
+					continue;
+				std::string fp;
+				for (auto& p : r->floorpoints)
+					fp += fmt::format(" ({},{})", p.first, p.second);
+				fmt::print("* ROOM {} x {}-{} y {}-{} type {} floorvalue {} drop {} temp {} hsrc {} floorpoints{}\n", r->id, r->x_left, r->x_right, r->y_left_ceiling, r->y_left_floor, r->type, r->floorvalue, r->dropstatus, r->temp, r->hsrc, fp);
+				for (auto& d : r->getDoors())
+					fmt::print("*   door to {} perm {}\n", d.first->id, d.second.perm);
+			}
+		}
+	}
+
+	// developer aid: OPENC2E_WATCH_SUNK=N lists, every N ticks, creatures
+	// and objects sunk into a solid floor (bottom more than 20 px below the
+	// floor of their room, where that floor is solid) or outside the rooms
+	static const int sunkEvery = getenv("OPENC2E_WATCH_SUNK") ? atoi(getenv("OPENC2E_WATCH_SUNK")) : 0;
+	if (sunkEvery > 0 && map && tickcount % sunkEvery == 0) {
+		for (auto& a : agents) {
+			if (!a || a->isDying() || a->carriedby || a->invehicle || a->family == 1)
+				continue;
+			float cx = a->x + a->getWidth() / 2.0f, bottom = a->y + a->getHeight();
+			std::shared_ptr<Room> r = map->roomAt(cx, a->y + a->getHeight() / 2.0f);
+			if (!r) {
+				fmt::print("* SUNK? {} {} {} at ({:.0f}, {:.0f}): outside every room\n", (int)a->family, (int)a->genus, a->species, cx, bottom);
+				continue;
+			}
+			float floor = r->floorYatX(cx);
+			bool solid = r->floorpoints.size() ? r->floorvalue == 0 : true;
+			if (solid && bottom > floor + 20.0f)
+				fmt::print("* SUNK? {} {} {} attr {} unid {} at ({:.0f}, {:.0f}) size {:.0f}x{:.0f}: room {} floor {:.0f}, {:.0f} px below it\n", (int)a->family, (int)a->genus, a->species, (int)a->attr, a->getUNID(), cx, bottom, (float)a->getWidth(), (float)a->getHeight(), r->id, floor, bottom - floor);
+		}
+	}
+
 	// TODO: correct behaviour? hrm :/
 	world.hand()->velx = world.hand()->velx / 2.0f;
 	world.hand()->vely = world.hand()->vely / 2.0f;
