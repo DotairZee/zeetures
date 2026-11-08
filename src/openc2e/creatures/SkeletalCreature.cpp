@@ -389,8 +389,20 @@ void SkeletalCreature::recalculateSkeleton() {
 	// TODO: muh, we should cooperate with physics system etc
 	if (!carriedby && !invehicle && calculated) {
 		int orig_footpart = (downfoot_left ? 11 : 12);
+		float oldbottom = y + height; // height is the lower foot's y, from the last calculation
 		// adjust location to match foot
 		moveTo(x - (attachmentX(orig_footpart, 1) - oldfootx), y - (attachmentY(orig_footpart, 1) - oldfooty));
+		if (engine.version == 2 && falling) {
+			// While physics is in charge (falling, landing, bouncing), nothing snaps the
+			// feet back to a floor, and keeping the previous down foot fixed lets the
+			// other foot reach lower in the new pose. That pushed the body's bottom edge
+			// through floors into the room below (e.g. through the pond bottom), where
+			// physics then let the creature keep falling. Never let a pose change move
+			// the lowest foot down while falling.
+			float newlowest = std::max(attachmentY(11, 1), attachmentY(12, 1));
+			if (y + newlowest > oldbottom)
+				moveTo(x, oldbottom - newlowest);
+		}
 	}
 
 	// work out which foot is down
