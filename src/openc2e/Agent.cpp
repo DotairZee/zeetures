@@ -1196,7 +1196,16 @@ void Agent::vmTick() {
 
 	// If we're out of timeslice, give ourselves some more (depending on the game type).
 	if (!vm->timeslice) {
-		vm->timeslice = (engine.version < 3) ? 1 : 5;
+		// 1 is known to be correct for C1. C2 inherited that value without evidence;
+		// at 1, C2 scripts that change several parts in a row (e.g. the incubator's
+		// two door halves, "part 0 anim [...] part 1 anim [...]") start them on
+		// different ticks and the parts drift visibly out of step. 5 (as in c2e)
+		// keeps such groups together. OPENC2E_C2_TIMESLICE overrides it for testing.
+		static const int c2_timeslice = [] {
+			const char* s = getenv("OPENC2E_C2_TIMESLICE");
+			return (s && atoi(s) > 0) ? atoi(s) : 5;
+		}();
+		vm->timeslice = (engine.version == 1) ? 1 : (engine.version == 2) ? c2_timeslice : 5;
 	}
 
 	// Keep trying to run VMs while we don't run out of timeslice, end up with a blocked VM, or a VM stops.
