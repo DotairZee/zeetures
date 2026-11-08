@@ -252,6 +252,18 @@ struct Params {
 	// learned (decision and how far east or west it carried the creature), so
 	// the innate guess gives way to experience.
 	int boatCategory = 31;
+	// Travel links (owner's idea: think of boats as the airlock exit is
+	// thought of): using a device, then soon being somewhere quite different
+	// (a ride ending linkMove px or more away, or on another floor), is
+	// remembered as "this object, used here, takes me there" (saved). A
+	// creature heading somewhere uses a link that starts within linkNear of
+	// it and ends at least linkGain px closer to where it wants to be.
+	float linkMove = 300.0f;
+	float linkNear = 350.0f;
+	float linkGain = 400.0f;
+	unsigned int linkWindow = 600;
+	size_t linkMax = 16;
+	float linkShare = 0.95f; // a known link: this share of the trip's worth
 	float boatShare = 0.9f; // a boat crossing: this share of the trip's worth
 	float boatRide = 200.0f; // a ride carrying the creature this far counts
 	unsigned int boatNoRide = 60; // pressed a boat, no ride this many ticks later: try the other action
@@ -359,6 +371,12 @@ struct BoatLink {
 	int rides = 0;
 };
 
+struct TravelLink {
+	float fromX = 0, fromY = 0, toX = 0, toY = 0;
+	int category = -1, decision = -1;
+	int uses = 0;
+};
+
 struct ExitLink {
 	float x = 0, y = 0; // where the object was used
 	int category = -1, decision = -1;
@@ -436,6 +454,38 @@ class HomeostatMind : public CreatureMind {
 			bl.dx = (bl.dx * bl.rides + (p.x - rideStartX)) / (bl.rides + 1);
 			bl.rides++;
 			fmt::print("[homeostat] creature {} t{}: boat ride with {} took it {:.0f} px\n", p.creatureId, p.tick, actionName(rideDecision), p.x - rideStartX);
+		}
+		// travel links: a device use followed by a ride (or a floor change)
+		// that ends somewhere quite different
+		if (pendingLink.category >= 0) {
+			if (p.riding)
+				pendingRode = true;
+			float moved = std::fabs(p.x - pendingLink.fromX) + std::fabs(p.y - pendingLink.fromY);
+			bool landed = pendingRode ? !p.riding : std::fabs(p.y - pendingLink.fromY) > prm.minRide;
+			if (landed && moved >= prm.linkMove && p.tick < pendingLinkTick + prm.linkWindow) {
+				bool known = false;
+				for (auto& tl : travelLinks)
+					if (tl.category == pendingLink.category && tl.decision == pendingLink.decision &&
+						std::fabs(tl.fromX - pendingLink.fromX) < 200.0f && std::fabs(tl.fromY - pendingLink.fromY) < prm.sameLevel) {
+						tl.toX = (tl.toX * tl.uses + p.x) / (tl.uses + 1);
+						tl.toY = (tl.toY * tl.uses + p.y) / (tl.uses + 1);
+						tl.uses++;
+						known = true;
+					}
+				if (!known) {
+					if (travelLinks.size() >= prm.linkMax)
+						travelLinks.erase(travelLinks.begin());
+					TravelLink tl = pendingLink;
+					tl.toX = p.x;
+					tl.toY = p.y;
+					tl.uses = 1;
+					travelLinks.push_back(tl);
+				}
+				fmt::print("[homeostat] creature {} t{}: learned travel link {}@{} from {:.0f},{:.0f} to {:.0f},{:.0f}\n", p.creatureId, p.tick,
+					actionName(pendingLink.decision), pendingLink.category, pendingLink.fromX, pendingLink.fromY, p.x, p.y);
+				pendingLink.category = -1;
+			} else if (p.tick >= pendingLinkTick + prm.linkWindow)
+				pendingLink.category = -1;
 		}
 		if (p.riding)
 			boatTryDecision = -1; // the press worked
@@ -594,6 +644,11 @@ class HomeostatMind : public CreatureMind {
 			for (auto& s : p.visible)
 				if (s.category == choice.category)
 					episodeAgent = s.agent;
+		if (choice.category == prm.boatCategory || std::find(prm.escapeDevices.begin(), prm.escapeDevices.end(), choice.category) != prm.escapeDevices.end()) {
+			pendingLink = {p.x, p.y, 0, 0, choice.category, choice.decision, 0};
+			pendingLinkTick = p.tick;
+			pendingRode = false;
+		}
 		if (choice.category == prm.boatCategory && boatTryDecision < 0) {
 			boatTryDecision = choice.decision;
 			boatTryTick = p.tick;
@@ -660,6 +715,8 @@ class HomeostatMind : public CreatureMind {
 			s += fmt::format("exit {} {} {} {} {}\n", e.x, e.y, e.category, e.decision, e.uses);
 		for (auto& [decision, bl] : boatLinks)
 			s += fmt::format("boat {} {} {}\n", decision, bl.dx, bl.rides);
+		for (auto& tl : travelLinks)
+			s += fmt::format("tlink {} {} {} {} {} {} {}\n", tl.fromX, tl.fromY, tl.toX, tl.toY, tl.category, tl.decision, tl.uses);
 		return s;
 	}
 
@@ -693,6 +750,11 @@ class HomeostatMind : public CreatureMind {
 				l >> category >> edible;
 				if (l)
 					scents[category] = edible;
+			} else if (what == "tlink") {
+				TravelLink tl;
+				l >> tl.fromX >> tl.fromY >> tl.toX >> tl.toY >> tl.category >> tl.decision >> tl.uses;
+				if (l && travelLinks.size() < prm.linkMax)
+					travelLinks.push_back(tl);
 			} else if (what == "boat") {
 				BoatLink bl;
 				l >> bl.decision >> bl.dx >> bl.rides;
@@ -784,6 +846,10 @@ class HomeostatMind : public CreatureMind {
 	std::map<std::pair<int, int>, unsigned int> visited; // (x bin, y bin) -> last mind tick there
 	std::vector<ExitLink> exits; // objects that got the creature out of water
 	std::map<int, BoatLink> boatLinks; // decision -> learned ride
+	std::vector<TravelLink> travelLinks;
+	TravelLink pendingLink; // the latest device use, while it may still turn into a link
+	unsigned int pendingLinkTick = 0;
+	bool pendingRode = false;
 	bool wasRiding = false;
 	float rideStartX = 0;
 	int rideDecision = -1;
@@ -1072,6 +1138,15 @@ class HomeostatMind : public CreatureMind {
 				bestOther = &fp;
 			}
 		}
+		// a known link toward the best place, if it saves a long way
+		{
+			const FoodPlace* target = (bestSame && wantSame >= wantOther) ? bestSame : bestOther;
+			float want = std::max(wantSame, wantOther);
+			Candidate t{};
+			t.food = true;
+			if (target && want >= prm.seekMinWant)
+				addLinkToward(p, target->x, target->y, want, t, out);
+		}
 		auto startTrip = [&](const FoodPlace* fp) {
 			int idx = (int)(fp - foodPlaces.data());
 			if (idx != foodTrip) {
@@ -1122,6 +1197,26 @@ class HomeostatMind : public CreatureMind {
 		if (want < prm.seekMinWant)
 			return;
 		auto open = [&](int dir) { return ((dir == 10 && canWest) || (dir == 11 && canEast)) && !isBlocked(p, dir) && !waterAhead(p, dir); };
+		// a known link to somewhere not visited lately: a way to search further
+		{
+			const TravelLink* bestLink = nullptr;
+			float bestStale = 3000.0f; // ticks since visited
+			for (auto& tl : travelLinks) {
+				if (std::fabs(tl.fromX - p.x) > prm.linkNear || std::fabs(tl.fromY - p.y) > prm.sameLevel)
+					continue;
+				auto it = visited.find({(int)std::floor(tl.toX / prm.visitBinWidth), (int)std::floor(tl.toY / prm.visitBinHeight)});
+				float stale = it == visited.end() ? 100000.0f : (float)(p.tick - it->second);
+				if (stale > bestStale) {
+					bestStale = stale;
+					bestLink = &tl;
+				}
+			}
+			if (bestLink) {
+				Candidate t{};
+				t.forage = true;
+				addLinkToward(p, bestLink->toX, bestLink->toY, want, t, out);
+			}
+		}
 		// water ahead with a boat in view: rowing across is a way to search further
 		for (int dir : {10, 11})
 			if (waterAhead(p, dir)) {
@@ -1245,6 +1340,38 @@ class HomeostatMind : public CreatureMind {
 		c.forage = tmpl.forage;
 		c.scent = tmpl.scent;
 		out.push_back(c);
+	}
+
+	// A known travel link that starts near here and ends much closer to the
+	// goal: go and use its object (seen and reachable). Returns whether one
+	// was offered.
+	bool addLinkToward(const MindPerception& p, float goalX, float goalY, float want, Candidate tmpl, std::vector<Candidate>& out) {
+		const TravelLink* best = nullptr;
+		float bestGain = prm.linkGain;
+		float here = std::fabs(goalX - p.x) + std::fabs(goalY - p.y) * 2.0f;
+		for (auto& tl : travelLinks) {
+			if (std::fabs(tl.fromX - p.x) > prm.linkNear || std::fabs(tl.fromY - p.y) > prm.sameLevel)
+				continue;
+			bool reachable = false;
+			for (auto& sa : p.visible)
+				if (sa.category == tl.category && sa.reachable)
+					reachable = true;
+			if (!reachable)
+				continue;
+			float gain = here - (std::fabs(goalX - tl.toX) + std::fabs(goalY - tl.toY) * 2.0f);
+			if (gain > bestGain) {
+				bestGain = gain;
+				best = &tl;
+			}
+		}
+		if (!best)
+			return false;
+		Candidate c{best->category, best->decision, 0, want * prm.linkShare, 0, want * prm.linkShare};
+		c.chain = true;
+		c.food = tmpl.food;
+		c.forage = tmpl.forage;
+		out.push_back(c);
+		return true;
 	}
 
 	void addEscape(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {

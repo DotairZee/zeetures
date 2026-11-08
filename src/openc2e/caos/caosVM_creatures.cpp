@@ -836,14 +836,17 @@ void c_CHEM_c1(caosVM* vm) {
 	VM_PARAM_INTEGER(chemical_id)
 	THROW_IFNOT(chemical_id >= 0 && chemical_id < 256);
 
-	// TODO: can adjust be negative?
-
 	valid_agent(vm->targ);
 	oldCreature* c = getoldCreature(vm->targ.get());
 	if (!c)
 		return; // ignored on non-creatures
 
-	c->addChemical(chemical_id, adjust);
+	// openc2e: a negative amount takes chemical away (it used to be cast to
+	// a byte and added: -255 added 1). Real C2 ignores negative amounts.
+	if (adjust >= 0)
+		c->addChemical(chemical_id, (unsigned char)std::min(adjust, 255));
+	else
+		c->subChemical(chemical_id, (unsigned char)std::min(-adjust, 255));
 }
 
 /**
