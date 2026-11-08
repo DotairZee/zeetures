@@ -1409,8 +1409,10 @@ bool Agent::beDropped() {
 	// TODO: no idea if this is right, it tries to re-enable gravity when dropping agents
 	falling = true;
 
-	/* if our carrying agent was in a vehicle, we stay in the vehicle */
-	if (wascarriedby && wascarriedby->invehicle) {
+	/* if our carrying agent was in a vehicle, we stay in the vehicle -- unless it
+	   is the vehicle itself dropping us (we were in it), or the vehicle would just
+	   take us straight back and Vehicle::drop's check fails (an abort) */
+	if (wascarriedby && wascarriedby->invehicle && !wasinvehicle) {
 		wascarriedby->invehicle->addCarried(this);
 		// TODO: how to handle not-invehicle case, where vehicle has failed to pick us up?
 		if (invehicle)
