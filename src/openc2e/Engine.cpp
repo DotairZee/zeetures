@@ -21,6 +21,7 @@
 
 #include "Bubble.h"
 #include "Camera.h"
+#include "CompoundAgent.h"
 #include "DullPart.h"
 #include "Map.h"
 #include "MetaRoom.h"
@@ -31,6 +32,7 @@
 #include "Room.h"
 #include "SFCFile.h"
 #include "SoundManager.h"
+#include "SpritePart.h"
 #include "World.h"
 #include "caosScript.h" // for executeNetwork()
 #include "caosVM.h"
@@ -348,11 +350,44 @@ uint32_t Engine::get_ticks_msec() const {
 	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - program_started).count();
 }
 
+// developer aid: OPENC2E_DUMP_AGENT="family,genus,species" prints each
+// matching agent's position and its parts (sprite, frames, offsets, depth)
+// on every snapshot (and every world tick with OPENC2E_DUMP_AGENT_EVERY_TICK),
+// so part changes can be compared frame by frame
+static void dumpAgents() {
+	int f, g, sp;
+	const char* s = getenv("OPENC2E_DUMP_AGENT");
+	if (!s || sscanf(s, "%d,%d,%d", &f, &g, &sp) != 3)
+		return;
+	for (auto& a : world.agents) {
+		if (!a || a->family != f || a->genus != g || a->species != sp)
+			continue;
+		fmt::print("* Agent {} {} {} at ({}, {}) zorder {}\n", f, g, sp, a->x, a->y, a->getZOrder());
+		auto* c = dynamic_cast<CompoundAgent*>(a.get());
+		if (!c)
+			continue;
+		for (unsigned int i = 0; i < c->partCount(); i++) {
+			CompoundPart* cp = c->part(i);
+			auto* p = dynamic_cast<SpritePart*>(cp);
+			if (!p)
+				continue;
+			fmt::print("    part {} at ({}, {}) z {} sprite {} first {} base {} pose {} frame {} size {}x{} transparent {}\n",
+				p->id, p->x, p->y, p->getZOrder(), p->getSprite() ? p->getSprite()->getName() : "-", p->getFirstImg(),
+				p->getBase(), p->getPose(), p->getCurrentSprite(), p->getWidth(), p->getHeight(), p->is_transparent);
+		}
+	}
+}
+
+
 void Engine::update() {
 	tickdata = get_ticks_msec();
 
 	// tick the world
 	world.tick();
+	if (getenv("OPENC2E_DUMP_AGENT_EVERY_TICK")) {
+		fmt::print("* Tick {}\n", world.tickcount);
+		dumpAgents();
+	}
 
 	// update sounds
 	soundmanager.tick();
@@ -431,6 +466,7 @@ bool Engine::tick() {
 			camera->moveToGlobal(sx, sy, jump);
 		} else {
 			get_backend()->requestScreenshot(sfile);
+			dumpAgents();
 			snapshot_index++;
 		}
 	}
