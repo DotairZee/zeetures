@@ -40,6 +40,7 @@
 #include "fileformats/genomeFile.h"
 #include "historyManager.h"
 
+#include <algorithm>
 #include <chrono>
 #include <ctime>
 #include <fmt/core.h>
@@ -211,12 +212,9 @@ static unsigned char genomeInitialLevel(genomeFile& g, unsigned char chemical, u
 	return fallback;
 }
 
-static void restoreCreature(const fs::path& savedir, const SavedCreature& s, bool revive_atp) {
-	auto genome = std::make_shared<genomeFile>();
-	{
-		FileReader r(savedir / "genomes" / s.genome);
-		r >> *genome;
-	}
+// Builds a creature from a genome and a saved state. With a moniker, the new
+// body takes over that existing moniker (and its history) instead of a new one.
+static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreature& s, bool revive_atp, const std::string& moniker = "") {
 	SkeletalCreature* a = new SkeletalCreature(4);
 	oldCreature* c;
 	if (engine.version == 1)
@@ -226,8 +224,12 @@ static void restoreCreature(const fs::path& savedir, const SavedCreature& s, boo
 	a->setCreature(c);
 	a->finishInit();
 	a->genome_slots[0] = genome;
-	world.newMoniker(genome, "saved", a);
-	world.history->getMoniker(world.history->findMoniker(genome)).moveToCreature(a);
+	if (moniker.empty()) {
+		world.newMoniker(genome, "saved", a);
+		world.history->getMoniker(world.history->findMoniker(genome)).moveToCreature(a);
+	} else {
+		world.history->getMoniker(moniker).transferCreature(a);
+	}
 
 	for (int i = 0; i < s.stage; i++)
 		c->ageCreature(); // also updates genes and appearance for each stage
@@ -253,6 +255,16 @@ static void restoreCreature(const fs::path& savedir, const SavedCreature& s, boo
 	}
 	if (s.selected)
 		world.selectCreature(AgentRef(a).lock());
+	return a;
+}
+
+static void restoreCreature(const fs::path& savedir, const SavedCreature& s, bool revive_atp) {
+	auto genome = std::make_shared<genomeFile>();
+	{
+		FileReader r(savedir / "genomes" / s.genome);
+		r >> *genome;
+	}
+	buildCreature(genome, s, revive_atp);
 }
 
 static void restoreEgg(const SavedEgg& e) {
@@ -386,3 +398,86 @@ bool LoadWorldState(const fs::path& worlddir) {
 }
 
 } // namespace WorldSave
+
+// Changing a creature's life stage at will (owner request, 2026-11-08). C1/C2
+// life stages follow a "life" chemical: the genome's ageing receptors (organ
+// 1, tissue 0, loci 0-6) each fire when it falls to their threshold, and the
+// one for the current stage moves the creature on. So besides the stage, the
+// chemical is set to where the new stage begins (the previous stage's
+// threshold; the starting level for a baby), or the creature would at once
+// age back or keep its old timing.
+static int lifeLevelForStage(oldCreature* c, int stage) {
+	std::shared_ptr<genomeFile> g = c->getGenome();
+	int chem = -1, threshold = -1;
+	for (auto& gn : g->genes) {
+		auto* r = dynamic_cast<bioReceptorGene*>(gn.get());
+		if (!r || r->organ != 1 || r->tissue != 0)
+			continue;
+		if (r->header.flags.notexpressed)
+			continue;
+		chem = r->chemical;
+		if (stage > 0 && r->locus == stage - 1)
+			threshold = r->threshold;
+	}
+	if (chem < 0)
+		return -1;
+	if (stage == 0)
+		threshold = WorldSave::genomeInitialLevel(*g, (unsigned char)chem, 255);
+	if (threshold < 0)
+		return -1;
+	return (chem << 8) | threshold;
+}
+
+namespace WorldSave {
+
+bool SetCreatureLifeStage(std::shared_ptr<Agent>& agent, int stage, std::string& error) {
+	oldCreature* c = agent ? oldCreatureOf(agent.get()) : nullptr;
+	if (!c || !c->isAlive()) {
+		error = "not a living C1/C2 creature";
+		return false;
+	}
+	stage = std::clamp(stage, 0, 6);
+	int current = (int)c->getStage();
+	if (stage == current)
+		return true;
+	if (stage > current) {
+		while ((int)c->getStage() < stage)
+			c->ageCreature(); // genes and appearance for each stage, as natural ageing
+	} else {
+		// genes that have switched on cannot be switched off: rebuild the
+		// creature at the younger stage with its chemistry, organs and mind
+		SavedCreature s;
+		s.female = c->isFemale();
+		s.variant = c->getVariant();
+		s.selected = world.selectedcreature.lock() == agent;
+		s.x = agent->x;
+		s.y = agent->y;
+		s.stage = stage;
+		s.age = c->getAge();
+		s.ticks = c->getTicks();
+		s.ageing = c->isAgeing();
+		s.asleep = c->isAsleep();
+		for (int i = 0; i < 256; i++)
+			s.chemicals.push_back(c->getChemical(i));
+		s.organs = c->getOrganState();
+		if (CreatureMind* m = c->getMind()) {
+			s.mind = m->name();
+			s.mindstate = m->saveState();
+		}
+		std::shared_ptr<genomeFile> genome = c->getGenome();
+		std::string moniker = world.history->findMoniker(genome);
+		agent->kill();
+		Agent* a = buildCreature(genome, s, false, moniker);
+		c = oldCreatureOf(a);
+		agent = AgentRef(a).lock();
+	}
+	int life = lifeLevelForStage(c, stage);
+	if (life >= 0)
+		c->setChemicalLevel((unsigned char)(life >> 8), (unsigned char)(life & 255));
+	fmt::print("* Creature life stage {} -> {}{}\n", current, (int)c->getStage(),
+		life >= 0 ? fmt::format(" (life chemical {} set to {})", life >> 8, life & 255) : "");
+	return true;
+}
+
+} // namespace WorldSave
+

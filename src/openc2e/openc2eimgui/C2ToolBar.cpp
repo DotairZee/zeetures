@@ -218,6 +218,22 @@ static void DrawC2MenuBar() {
 		}
 		if (n == 0)
 			ImGui::MenuItem("None Available", nullptr, false, false);
+		// openc2e: set the selected creature's life stage, older or younger
+		ImGui::Separator();
+		CreatureAgent* sel = current ? dynamic_cast<CreatureAgent*>(current.get()) : nullptr;
+		bool canstage = sel && sel->getCreature() && sel->getCreature()->isAlive();
+		if (ImGui::BeginMenu("Selected Creature's Life Stage", canstage)) {
+			static const char* const stages[] = {"Baby", "Child", "Adolescent", "Youth", "Adult", "Old", "Senile"};
+			int stage = (int)sel->getCreature()->getStage();
+			for (int i = 0; i < 7; i++) {
+				if (ImGui::MenuItem(stages[i], nullptr, i == stage) && i != stage) {
+					std::string err;
+					if (!WorldSave::SetCreatureLifeStage(current, i, err))
+						fmt::print("Couldn't change life stage: {}\n", err);
+				}
+			}
+			ImGui::EndMenu();
+		}
 		ImGui::EndMenu();
 	}
 	if (ImGui::BeginMenu("Help")) {

@@ -110,6 +110,12 @@ void monikerData::moveToCreature(AgentRef a) {
 	status = creature;
 }
 
+void monikerData::transferCreature(AgentRef a) {
+	THROW_IFNOT(status == creature || status == borncreature);
+	THROW_IFNOT(dynamic_cast<CreatureAgent*>(a.get()));
+	owner = a; // status (and history) unchanged
+}
+
 void monikerData::wasBorn() {
 	THROW_IFNOT(status == creature);
 	CreatureAgent* c = dynamic_cast<CreatureAgent*>(owner.get());

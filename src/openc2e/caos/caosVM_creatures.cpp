@@ -22,6 +22,7 @@
 #include "Map.h"
 #include "AgentHelpers.h"
 #include "World.h"
+#include "WorldSave.h"
 #include "caosVM.h"
 #include "common/Random.h"
 #include "common/throw_ifnot.h"
@@ -1406,11 +1407,25 @@ void v_IITT(caosVM* vm) {
 /**
  AGES (command) times (integer)
  %status maybe
+ %variants c1 c2 cv c3
 
  Age (ie, increase the life stage of) the target creature the specified number of times.
+ openc2e extension for C1/C2: a negative number makes the creature that many
+ stages younger (it keeps its chemistry, organs and mind; TARG becomes the new
+ body), and the creature's life chemical is set to where the new stage begins.
 */
 void c_AGES(caosVM* vm) {
 	VM_PARAM_INTEGER(times)
+
+	if (engine.version < 3) {
+		Creature* c = vm->getTargCreature();
+		std::shared_ptr<Agent> a = vm->targ.lock();
+		std::string err;
+		if (!WorldSave::SetCreatureLifeStage(a, (int)c->getStage() + times, err))
+			throw caosException(err);
+		vm->setTarg(a);
+		return;
+	}
 	THROW_IFNOT(times >= 0);
 
 	Creature* c = vm->getTargCreature();

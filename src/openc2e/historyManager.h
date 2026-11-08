@@ -75,6 +75,7 @@ class monikerData {
 	historyevent& addEvent(unsigned int event, std::string moniker1 = "", std::string moniker2 = "");
 	void moveToAgent(AgentRef a);
 	void moveToCreature(AgentRef c);
+	void transferCreature(AgentRef c); // same creature, new body (openc2e: life stage changed at will)
 	void wasBorn();
 	void hasDied();
 	monikerstatus getStatus();
