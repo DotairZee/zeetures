@@ -968,12 +968,14 @@ void c_DOCA(caosVM* vm) {
  %variants c2
 */
 void c_SETV_DOOR(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(value)
+	// Parameters arrive last first. The permeability is the last one; the
+	// first is the direction (which side of room1 the door is on), not used
+	// here. Reading the direction as the permeability (as before) made every
+	// scripted door 0-3 permeable: the airlock's land door "opened" to 1.
+	VM_PARAM_INTEGER(perm)
 	VM_PARAM_INTEGER(room2)
 	VM_PARAM_INTEGER(room1)
-	VM_PARAM_INTEGER(perm)
-
-	// TODO: what's direction for?
+	VM_PARAM_INTEGER_UNUSED(direction)
 
 	// code identical to c2e DOOR
 	std::shared_ptr<Room> r1 = world.map->getRoom(room1);
