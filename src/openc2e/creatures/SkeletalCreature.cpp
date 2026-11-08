@@ -581,7 +581,11 @@ void SkeletalCreature::snapDownFoot() {
 	lastgoodfootx = footx;
 	lastgoodfooty = footy;
 
-	if (engine.version > 2) {
+	// Falling through a floor a creature is light enough to pass (C2: its size
+	// against the floor value or the permeability of the door below). A 2008
+	// change meant to extend this to C3 wrote "> 2" instead of ">= 2", so C2
+	// creatures never fell through any floor: they stood on sea surfaces.
+	if (engine.version >= 2) {
 		if (engine.version == 2 && !belowfloor && downfootroom->floorpoints.size()) {
 			// TODO: hilar hack: same as above for floorvalue
 			if (size <= downfootroom->floorvalue) {
