@@ -452,6 +452,13 @@ void SkeletalCreature::snapDownFoot() {
 					std::shared_ptr<Room> thisroom = d.first;
 					if (engine.version == 2 && size > d.second.perm)
 						continue;
+					// A neighbouring floor far above the foot is a wall, not a step. Without
+					// this, a creature at an edge whose level exit is closed to it (e.g. the
+					// garden's left edge, where the door down to the watermill ramp is too
+					// small for creatures) was moved into the open-air room above and left
+					// to fall, dropping it into the pit below.
+					if (engine.version == 2 && thisroom->floorYatX(footx) < footy - 40)
+						continue;
 					if (thisroom->x_left <= footx && thisroom->x_right >= footx) {
 						float thisydiff = fabs(footy - thisroom->floorYatX(footx));
 						if (thisydiff < ydiff) {
@@ -765,6 +772,13 @@ void SkeletalCreature::physicsTick() {
 				fmt::print("* WATCH SINK t{} unid {} genus {} foot ({:.0f}, {:.0f}) room {} floor {:.0f} depth {:.0f}\n",
 					world.tickcount, unid, (int)genus, footx, footy, downfootroom->id, floory, footy - floory);
 		}
+		static std::map<int, int> lastroom;
+		int nowroom = downfootroom ? (int)downfootroom->id : -1;
+		auto lr = lastroom.find(unid);
+		if (lr != lastroom.end() && lr->second != nowroom)
+			fmt::print("* WATCH ROOM t{} unid {} {} -> {} foot ({:.0f}, {:.0f}) falling {} floor {:.0f}\n", world.tickcount, unid,
+				lr->second, nowroom, footx, footy, (bool)falling, downfootroom ? downfootroom->floorYatX(footx) : -1.0f);
+		lastroom[unid] = nowroom;
 		static std::map<int, float> lastfooty;
 		auto it = lastfooty.find(unid);
 		if (it != lastfooty.end() && !falling && it->second - footy > 20)
