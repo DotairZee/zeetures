@@ -306,27 +306,6 @@ void World::tick() {
 	if (engine.version < 3)
 		WorldSave::TickLifeStageChanges();
 
-	// developer aid: OPENC2E_DUMP_ROOMS="x0 y0 x1 y1" prints, once, every
-	// room overlapping that box with its C2 data, floor points and doors
-	static const char* dumpBox = getenv("OPENC2E_DUMP_ROOMS");
-	static bool dumped = false;
-	if (dumpBox && map && !dumped && tickcount > 5) {
-		dumped = true;
-		int bx0, by0, bx1, by1;
-		if (sscanf(dumpBox, "%d %d %d %d", &bx0, &by0, &bx1, &by1) == 4) {
-			for (auto& r : map->getRooms()) {
-				if ((int)r->x_right < bx0 || (int)r->x_left > bx1 || (int)r->y_left_floor < by0 || (int)r->y_left_ceiling > by1)
-					continue;
-				std::string fp;
-				for (auto& p : r->floorpoints)
-					fp += fmt::format(" ({},{})", p.first, p.second);
-				fmt::print("* ROOM {} x {}-{} y {}-{} type {} floorvalue {} drop {} temp {} hsrc {} floorpoints{}\n", r->id, r->x_left, r->x_right, r->y_left_ceiling, r->y_left_floor, r->type, r->floorvalue, r->dropstatus, r->temp, r->hsrc, fp);
-				for (auto& d : r->getDoors())
-					fmt::print("*   door to {} perm {}\n", d.first->id, d.second.perm);
-			}
-		}
-	}
-
 	// developer aid: OPENC2E_WATCH_SUNK=N lists, every N ticks, creatures
 	// and objects sunk into a solid floor (bottom more than 20 px below the
 	// floor of their room, where that floor is solid) or outside the rooms
