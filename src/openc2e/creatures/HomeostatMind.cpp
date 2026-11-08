@@ -191,9 +191,22 @@ struct Params {
 	float sadValence = -0.03f; // longer-term valence threshold
 	float contentValence = 0.01f, contentDrive = 0.3f; // calm and content
 
+	// Needs are not equal: what keeps the body alive outweighs comfort and
+	// company. With D's cube, weight 1.5 against 0.5 makes Hunger at 0.5
+	// count as much as Boredom at about 0.72.
+	float survivalWeight = 1.5f; // Pain, Hunger, Cold, Hot, Injury, Suffocate, Thirst
+	float comfortWeight = 0.5f; // Lonely, Crowded, Bored
+	// Pressing survival needs quiet curiosity: at the strongest survival need
+	// s, novelty is scaled by 1 - survivalCuriosityDamp * s.
+	float survivalCuriosityDamp = 0.8f;
+
 	Params() {
 		weights.fill(1.0f);
 		weights[SEX] = 0.3f;
+		for (int i : {PAIN, HUNGER, COLD, HOT, INJURY, SUFFOCATE, THIRST})
+			weights[i] = survivalWeight;
+		for (int i : {LONELY, CROWDED, BORED})
+			weights[i] = comfortWeight;
 	}
 };
 
@@ -679,8 +692,11 @@ class HomeostatMind : public CreatureMind {
 
 	std::vector<Candidate> evaluate(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D) {
 		std::vector<Candidate> out;
-		// 5. Affect: negative valence dampens curiosity; Boredom raises it.
-		float curiosity = prm.curiosity * (1.0f + prm.boredomCuriosityGain * d[BORED]) * std::clamp(1.0f + 10.0f * valence, 0.2f, 1.5f);
+		// 5. Affect: negative valence dampens curiosity; Boredom raises it;
+		// a pressing survival need quiets it.
+		float survival = std::max({d[PAIN], d[HUNGER], d[COLD], d[HOT], d[INJURY], d[SUFFOCATE], d[THIRST]});
+		float curiosity = prm.curiosity * (1.0f + prm.boredomCuriosityGain * d[BORED]) * std::clamp(1.0f + 10.0f * valence, 0.2f, 1.5f)
+			* (1.0f - prm.survivalCuriosityDamp * std::clamp(survival, 0.0f, 1.0f));
 		auto add = [&](int category, int decision, float distance, float edible) {
 			Expectation& e = expectation(category, decision);
 			Candidate c{category, decision, distance, 0, 0, 0};
