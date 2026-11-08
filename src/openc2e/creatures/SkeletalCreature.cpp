@@ -47,6 +47,7 @@
 #include <cassert>
 #include <stdint.h>
 #include <fmt/core.h>
+#include <map>
 #include <memory>
 #include <typeinfo> // TODO: remove when genome system is fixed
 
@@ -513,9 +514,18 @@ void SkeletalCreature::snapDownFoot() {
 
 	bool belowfloor = false;
 	float newy = downfootroom->floorYatX(footx);
-	if (engine.version == 2 && hadroom && y > newy) {
-		// TODO: hilar hack: cope with walking below floors
+	if (engine.version == 2 && hadroom && y > newy && downfootroom->floorvalue > 0) {
+		// TODO: hilar hack: cope with walking below floors.
+		// C2 rooms with floor points have a ground line inside the room. Where that
+		// ground is passable (a floor value above 0, e.g. a lift shaft whose bottom
+		// is the stop below the ground), creatures may walk along the room's real
+		// bottom beneath it. Where the floor value is 0 the ground is solid, nothing
+		// is meant to be beneath it, and pinning a creature to the bottom buried it
+		// in the scenery; there the creature stays on (or returns to) the ground line.
 		belowfloor = true;
+		if (getenv("OPENC2E_WATCH_CREATURES"))
+			fmt::print("* WATCH BELOWFLOOR t{} unid {} foot ({:.0f}, {:.0f}) room {} floor {:.0f} -> room bottom {:.0f}\n",
+				world.tickcount, unid, footx, footy, downfootroom->id, newy, downfootroom->bottom.pointAtX(footx).y);
 		newy = downfootroom->bottom.pointAtX(footx).y;
 	}
 
@@ -742,6 +752,29 @@ void SkeletalCreature::physicsTick() {
 		snapDownFoot();
 	else
 		downfootroom.reset();
+
+	// developer aid: OPENC2E_WATCH_CREATURES logs any standing creature whose
+	// foot is below the floor of its foot room, and its position every 200 ticks
+	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	if (watch && !carriedby && !invehicle) {
+		int fp = downfoot_left ? 11 : 12;
+		float footx = x + attachmentX(fp, 1), footy = y + attachmentY(fp, 1);
+		if (!falling && downfootroom && downfootroom->floorvalue == 0) {
+			float floory = downfootroom->floorYatX(footx);
+			if (footy > floory + 3)
+				fmt::print("* WATCH SINK t{} unid {} genus {} foot ({:.0f}, {:.0f}) room {} floor {:.0f} depth {:.0f}\n",
+					world.tickcount, unid, (int)genus, footx, footy, downfootroom->id, floory, footy - floory);
+		}
+		static std::map<int, float> lastfooty;
+		auto it = lastfooty.find(unid);
+		if (it != lastfooty.end() && !falling && it->second - footy > 20)
+			fmt::print("* WATCH JUMPUP t{} unid {} foot ({:.0f}, {:.0f}) up {:.0f} room {}\n", world.tickcount, unid, footx, footy,
+				it->second - footy, downfootroom ? (int)downfootroom->id : -1);
+		lastfooty[unid] = footy;
+		if (world.tickcount % 200 == 0)
+			fmt::print("* WATCH POS t{} unid {} genus {} foot ({:.0f}, {:.0f}) room {} falling {}\n",
+				world.tickcount, unid, (int)genus, footx, footy, downfootroom ? (int)downfootroom->id : -1, (bool)falling);
+	}
 }
 
 void SkeletalCreature::gaitTick() {

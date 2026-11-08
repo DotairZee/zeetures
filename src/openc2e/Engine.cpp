@@ -434,6 +434,8 @@ bool Engine::tick() {
 		rooms_dumped = true;
 		if (getenv("OPENC2E_SHOW_ROOMS"))
 			world.showrooms = true;
+		if (getenv("OPENC2E_FAST"))
+			fastticks = true; // run the world as fast as possible (headless tests)
 		int x0, y0, x1, y1;
 		if (const char* s = getenv("OPENC2E_DUMP_ROOMS"); s && sscanf(s, "%d,%d,%d,%d", &x0, &y0, &x1, &y1) == 4) {
 			for (unsigned int id = 0, found = 0; found < world.map->getRoomCount() && id < 100000; id++) {
@@ -447,6 +449,12 @@ bool Engine::tick() {
 					fmt::print("* Room {} type {}: x {}-{}, ceiling {}/{}, floor {}/{}, floorvalue {}, dropstatus {}, floorpoints {}\n",
 						r->id, r->type, r->x_left, r->x_right, r->y_left_ceiling, r->y_right_ceiling,
 						r->y_left_floor, r->y_right_floor, r->floorvalue, r->dropstatus, r->floorpoints.size());
+					if (r->floorpoints.size()) {
+						std::string fp;
+						for (auto& pt : r->floorpoints)
+							fp += fmt::format(" ({}, {})", pt.first, pt.second);
+						fmt::print("    floorpoints (x from left wall, height above room bottom):{}\n", fp);
+					}
 					for (auto& d : r->getDoors())
 						fmt::print("    door to room {} (x {}-{}, floor {}/{}): perm {}\n", d.first->id,
 							d.first->x_left, d.first->x_right, d.first->y_left_floor, d.first->y_right_floor, d.second.perm);
