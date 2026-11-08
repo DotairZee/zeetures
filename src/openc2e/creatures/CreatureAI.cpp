@@ -513,7 +513,7 @@ MindPerception oldCreature::buildPerception() {
 			continue;
 		float ax = a->x + a->getWidth() / 2.0f;
 		float ay = a->y + a->getHeight() / 2.0f;
-		p.visible.push_back({(int)i, a, std::hypot(ax - cx, ay - cy)});
+		p.visible.push_back({(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay});
 	}
 
 	p.stimuli = pendingstimuli;
@@ -521,7 +521,39 @@ MindPerception oldCreature::buildPerception() {
 	p.actionFinished = parentagent->vmStopped();
 	p.currentAttention = attn;
 	p.currentDecision = decn;
+	p.x = cx;
+	p.y = cy;
 	return p;
+}
+
+// Genome instincts, translated for a mind (gene-translation.md, section 3).
+// C2 instinct inputs name a lobe and a neuron; in the C2 genomes' standard
+// lobe layout (C2 CAOS guide: DRIVE_LOBE, SENSE_LOBE ...) lobe 1 holds the
+// drives, 2 the attention categories, 3 heard verbs, 5 senses and 7 heard
+// nouns. Lobe 0 neuron 0 marks an unused input. The reinforcer is chemical 52
+// (reward) or 53 (punishment).
+static bool translateInstinct(creatureInstinctGene* g, InnateInstinct& out) {
+	if (g->drive != 52 && g->drive != 53)
+		return false;
+	out.reward = (g->drive == 52);
+	out.decision = g->action;
+	out.strength = g->level / 255.0f;
+	out.signature = fmt::format("{}.{}.{}.{}.{}.{}-{}-{}-{}", g->lobes[0], g->neurons[0], g->lobes[1], g->neurons[1],
+		g->lobes[2], g->neurons[2], g->action, g->drive, g->level);
+	for (int i = 0; i < 3; i++) {
+		int lobe = g->lobes[i], neuron = g->neurons[i];
+		if (lobe == 0 && neuron == 0)
+			continue;
+		switch (lobe) {
+			case 1: out.conditions.push_back({InnateCondition::Drive, neuron}); break;
+			case 2: out.conditions.push_back({InnateCondition::Attention, neuron}); break;
+			case 3: out.conditions.push_back({InnateCondition::HeardVerb, neuron}); break;
+			case 5: out.conditions.push_back({InnateCondition::Sense, neuron}); break;
+			case 7: out.conditions.push_back({InnateCondition::HeardNoun, neuron}); break;
+			default: return false; // not a lobe these genomes use for instincts
+		}
+	}
+	return true;
 }
 
 void oldCreature::tickMind() {
@@ -534,6 +566,14 @@ void oldCreature::tickMind() {
 		buildMindActions();
 	MindPerception p = buildPerception();
 	pendingstimuli.clear();
+	if (engine.version == 2) {
+		while (!unprocessedinstincts.empty()) {
+			InnateInstinct inst;
+			if (translateInstinct(unprocessedinstincts.front(), inst))
+				p.newInstincts.push_back(inst);
+			unprocessedinstincts.pop_front();
+		}
+	}
 
 	if (!mindborn) {
 		mindborn = true;

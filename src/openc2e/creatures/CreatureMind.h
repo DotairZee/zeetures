@@ -39,6 +39,22 @@ struct SeenAgent {
 	int category; // world category index (0-39 for C1/C2)
 	AgentRef agent;
 	float distance; // between centres, in world pixels
+	float x = 0, y = 0; // the agent's centre, in world pixels
+};
+
+// An instinct from the genome, translated into neutral terms (see
+// gene-translation.md). For C2: "when these conditions hold, doing this action
+// is rewarded (or punished), this strongly".
+struct InnateCondition {
+	enum Kind { Drive, Attention, HeardVerb, HeardNoun, Sense } kind;
+	int index; // drive number, object category, word number or sense number
+};
+struct InnateInstinct {
+	std::vector<InnateCondition> conditions;
+	int decision = 0;
+	bool reward = true; // false: punishment
+	float strength = 0; // 0-1
+	std::string signature; // identifies the gene, so it is applied once
 };
 
 // A stimulus sent to the creature by a world script. Two forms exist in
@@ -76,6 +92,8 @@ struct MindPerception {
 	const std::vector<MindAction>* actions = nullptr; // read from the world's scripts
 	int currentAttention = -1; // category index, or -1
 	int currentDecision = -1; // decision index, or -1
+	float x = 0, y = 0; // the creature's centre, in world pixels
+	std::vector<InnateInstinct> newInstincts; // genome instincts expressed since the last tick
 };
 
 struct MindOutput {

@@ -43,6 +43,7 @@
 #include <fmt/core.h>
 #include <map>
 #include <random>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -109,12 +110,28 @@ struct Params {
 	float commitment = 0.01f; // bonus for repeating the current choice
 	float distanceCost = 0.00002f; // per pixel to the object
 	int maxEpisodeTicks = 12; // looping actions are evaluated this often
+	int maxObjectEpisodeTicks = 50; // actions on an object (walk there, then act) get longer to finish
 	float habituationRate = 0.7f; // multiplier after an uneventful interaction
 	float habituationRecovery = 0.01f; // per tick, back toward 1
 	float eventfulThreshold = 0.02f; // total |drive change| that counts as eventful
 	float valenceRate = 0.1f; // running average of reward
 	float driftRate = 0.1f; // running average of passive drive change per tick
 	size_t choiceSetSize = 5; // softmax over the top few candidates only
+
+	// Genome instincts (gene-translation.md): an instinct is an innate
+	// expectation. At full strength it predicts this much change in its drive,
+	// and counts as this many remembered experiences (resilience): learning
+	// starts slow and speeds up as real experience outweighs it.
+	float instinctDriveChange = 0.25f;
+	float legacyInstinctResilience = 12.0f; // legacy genes have one number; scaled by strength squared
+	float anyObjectInstinctWeight = 1.5f; // an instinct naming no object is a weak hunch about objects in general
+
+	// Seeking: when something wanted is out of sight, head for where it was
+	// last seen (a first sense of place).
+	float seekDiscount = 0.6f; // remembered relief counts for this share of seen relief
+	float seekMinWant = 0.01f;
+	float seekMaxHeight = 200.0f; // walking west/east cannot change floors
+	float seekArrived = 40.0f; // closer than this and still not seen: forget the place
 
 	// 7. Facial expression from affect. Slots refer to the head sprites'
 	// expression rows (in the owner's norn heads: 0 neutral, 1 happy,
@@ -155,6 +172,12 @@ std::array<float, NUM_DRIVES> instinctFor(int decision) {
 struct Expectation {
 	std::array<float, NUM_DRIVES> delta{}; // expected change in each drive
 	int count = 0; // times experienced
+	float prior = 0; // innate weight, in remembered experiences (from instincts)
+};
+
+struct Place {
+	float x = 0, y = 0;
+	unsigned int tick = 0;
 };
 
 struct Candidate {
@@ -164,6 +187,7 @@ struct Candidate {
 	float want; // predicted drop in D
 	float novelty;
 	float score;
+	int seekCategory = -1; // >= 0: travelling toward where this category was last seen
 };
 
 class HomeostatMind : public CreatureMind {
@@ -195,6 +219,11 @@ class HomeostatMind : public CreatureMind {
 		for (auto& h : habituation)
 			h += prm.habituationRecovery * (1.0f - h);
 
+		for (auto& inst : p.newInstincts)
+			applyInstinct(p, inst);
+		for (auto& s : p.visible)
+			places[s.category] = {s.x, s.y, p.tick};
+
 		// 7. facial expression from current affect; only sent when it changes
 		mood *= prm.moodDecay;
 		int face = chooseFace(d, D);
@@ -222,7 +251,8 @@ class HomeostatMind : public CreatureMind {
 			episodeTicks++;
 			bool objectGone = current.category >= 0 && !isVisible(p, current.category);
 			bool finished = p.actionFinished && episodeTicks > 1;
-			if (finished || objectGone || episodeTicks >= prm.maxEpisodeTicks) {
+			int limit = current.category >= 0 ? prm.maxObjectEpisodeTicks : prm.maxEpisodeTicks;
+			if (finished || objectGone || episodeTicks >= limit) {
 				endEpisode(p, d, D, finished ? "finished" : objectGone ? "object gone" : "time");
 			} else {
 				return out; // let the current action run
@@ -250,7 +280,7 @@ class HomeostatMind : public CreatureMind {
 
 	// World saving: one fact per line, readable and hand-editable.
 	std::string saveState() const override {
-		std::string s = fmt::format("valence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
+		std::string s = fmt::format("statever 2\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
 		s += "drift";
 		for (float f : drift)
 			s += fmt::format(" {}", f);
@@ -264,18 +294,49 @@ class HomeostatMind : public CreatureMind {
 			for (float f : e.delta)
 				s += fmt::format(" {}", f);
 			s += "\n";
+			if (e.prior > 0)
+				s += fmt::format("prior {} {} {}\n", key / 64 - 1, key % 64, e.prior);
 		}
+		for (auto& [decision, e] : innateDefaults) {
+			s += fmt::format("innate {} {}", decision, e.prior);
+			for (float f : e.delta)
+				s += fmt::format(" {}", f);
+			s += "\n";
+		}
+		for (auto& sig : appliedInstincts)
+			s += fmt::format("instinct {}\n", sig);
 		return s;
 	}
 
 	void loadState(const std::string& state) override {
 		std::istringstream in(state);
 		std::string line;
+		bool current_version = false;
 		while (std::getline(in, line)) {
 			std::istringstream l(line);
 			std::string what;
 			l >> what;
-			if (what == "valence")
+			if (what == "statever")
+				current_version = true;
+			else if (what == "prior") {
+				int category, decision;
+				float prior;
+				l >> category >> decision >> prior;
+				if (l)
+					expectations[(category + 1) * 64 + decision].prior = prior;
+			} else if (what == "innate") {
+				int decision;
+				Expectation e;
+				l >> decision >> e.prior;
+				for (float& f : e.delta)
+					l >> f;
+				if (l)
+					innateDefaults[decision] = e;
+			} else if (what == "instinct") {
+				std::string sig;
+				l >> sig;
+				appliedInstincts.insert(sig);
+			} else if (what == "valence")
 				l >> valence;
 			else if (what == "mood")
 				l >> mood;
@@ -295,20 +356,35 @@ class HomeostatMind : public CreatureMind {
 				l >> category >> decision >> e.count;
 				for (float& f : e.delta)
 					l >> f;
-				if (l)
+				if (l) {
+					float prior = expectations.count((category + 1) * 64 + decision) ? expectations[(category + 1) * 64 + decision].prior : 0.0f;
+					e.prior = prior;
 					expectations[(category + 1) * 64 + decision] = e;
+				}
 			}
+		}
+		if (!current_version) {
+			// Saved before body chemistry ran (frozen bodies: every action seemed
+			// to do nothing). That experience misleads, so start learning afresh.
+			expectations.clear();
+			drift.fill(0.0f);
+			habituation.fill(1.0f);
+			fmt::print("[homeostat] discarded learning saved before body chemistry worked\n");
 		}
 	}
 
 	std::string debugState() const override {
-		return fmt::format("homeostat: {} episodes, valence {:+.3f}, {} stimuli, {} expectations",
-			episodes, valence, stimuliSeen, expectations.size());
+		return fmt::format("homeostat: {} episodes, valence {:+.3f}, {} stimuli, {} expectations, instincts {} active {} dormant",
+			episodes, valence, stimuliSeen, expectations.size(), activeInstincts, dormantInstincts);
 	}
 
   private:
 	Params prm;
 	std::map<int, Expectation> expectations; // key: (category + 1) * 64 + decision
+	std::map<int, Expectation> innateDefaults; // by decision: instincts about any object
+	std::set<std::string> appliedInstincts;
+	int activeInstincts = 0, dormantInstincts = 0;
+	std::map<int, Place> places; // where each category was last seen
 	std::array<float, 40> habituation;
 	float valence = 0.0f;
 	std::mt19937 rng;
@@ -365,6 +441,11 @@ class HomeostatMind : public CreatureMind {
 			// experience with the action (6. instincts as starting points).
 			Expectation e;
 			e.delta = instinctFor(decision);
+			auto def = innateDefaults.find(decision);
+			if (def != innateDefaults.end()) {
+				e.delta = def->second.delta;
+				e.prior = def->second.prior;
+			}
 			int total = 0;
 			std::array<float, NUM_DRIVES> sum{};
 			for (auto& [k, other] : expectations) {
@@ -375,8 +456,9 @@ class HomeostatMind : public CreatureMind {
 				}
 			}
 			if (total > 0) {
+				float w = total + e.prior;
 				for (int i = 0; i < NUM_DRIVES; i++)
-					e.delta[i] = sum[i] / total;
+					e.delta[i] = (sum[i] + e.delta[i] * e.prior) / w;
 			}
 			it = expectations.emplace(key, e).first;
 		}
@@ -418,10 +500,115 @@ class HomeostatMind : public CreatureMind {
 				add(-1, a.decision, 0.0f);
 			}
 		}
+		addSeekCandidates(p, d, D, out);
 		inEpisodeJustEnded = false;
 		return out;
 	}
 	bool inEpisodeJustEnded = false;
+
+	// Seeking: for each remembered place whose category is out of sight, how
+	// much would the best action on it help? If enough, offer walking toward
+	// it (C2 decisions 10 and 11: travel west and east).
+	void addSeekCandidates(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, std::vector<Candidate>& out) {
+		bool canWest = false, canEast = false;
+		for (auto& a : *p.actions) {
+			if (!a.needsObject && a.decision == 10)
+				canWest = true;
+			if (!a.needsObject && a.decision == 11)
+				canEast = true;
+		}
+		if (!canWest && !canEast)
+			return;
+		std::vector<int> forget;
+		for (auto& [category, place] : places) {
+			if (isVisible(p, category))
+				continue;
+			float dx = place.x - p.x, dy = place.y - p.y;
+			if (std::fabs(dy) > prm.seekMaxHeight)
+				continue;
+			if (std::fabs(dx) < prm.seekArrived) {
+				forget.push_back(category); // here, and it is gone
+				continue;
+			}
+			float best = 0.0f;
+			for (auto& a : *p.actions) {
+				if (!a.needsObject)
+					continue;
+				best = std::max(best, predictedRelief(d, D, expectation(category, a.decision)));
+			}
+			float want = best * prm.seekDiscount;
+			if (want < prm.seekMinWant)
+				continue;
+			int decision = dx < 0 ? 10 : 11;
+			if ((decision == 10 && !canWest) || (decision == 11 && !canEast))
+				continue;
+			Candidate c{-1, decision, std::fabs(dx), want, 0, 0};
+			c.score = want - prm.distanceCost * std::fabs(dx);
+			c.seekCategory = category;
+			out.push_back(c);
+		}
+		for (int category : forget)
+			places.erase(category);
+	}
+
+	// 6. Genome instincts become innate expectations (gene-translation.md).
+	void applyInstinct(const MindPerception& p, const InnateInstinct& inst) {
+		if (appliedInstincts.count(inst.signature))
+			return;
+		appliedInstincts.insert(inst.signature);
+		std::vector<int> drives, categories;
+		bool dormant = false;
+		for (auto& c : inst.conditions) {
+			if (c.kind == InnateCondition::Drive && c.index >= 0 && c.index < NUM_DRIVES)
+				drives.push_back(c.index);
+			else if (c.kind == InnateCondition::Attention)
+				categories.push_back(c.index);
+			else
+				dormant = true; // heard words and senses: waiting for language and senses
+		}
+		if (drives.empty())
+			dormant = true; // reward with no drive: waiting for the approval feeling
+		if (dormant) {
+			dormantInstincts++;
+			return;
+		}
+		std::array<float, NUM_DRIVES> delta{};
+		for (int dr : drives)
+			delta[dr] = (inst.reward ? -1.0f : 1.0f) * prm.instinctDriveChange * inst.strength;
+		float weight = 1.0f + (prm.legacyInstinctResilience - 1.0f) * inst.strength * inst.strength;
+
+		bool needsObject = false;
+		for (auto& a : *p.actions)
+			if (a.decision == inst.decision)
+				needsObject = a.needsObject;
+		auto blend = [&](Expectation& e) {
+			float old = e.count + e.prior;
+			for (int i = 0; i < NUM_DRIVES; i++)
+				e.delta[i] = (e.delta[i] * old + delta[i] * weight) / (old + weight);
+			e.prior += weight;
+		};
+		if (!needsObject) {
+			blend(expectation(-1, inst.decision));
+		} else if (!categories.empty()) {
+			for (int c : categories)
+				blend(expectation(c, inst.decision));
+		} else {
+			// any object: a weak hunch, the starting point for categories not
+			// yet met and added to those already known; experience with each
+			// kind of object soon outweighs it
+			weight = std::min(weight, prm.anyObjectInstinctWeight);
+			Expectation& def = innateDefaults[inst.decision];
+			blend(def);
+			for (auto& [key, e] : expectations)
+				if (key % 64 == inst.decision && key / 64 - 1 >= 0)
+					blend(e);
+		}
+		activeInstincts++;
+		fmt::print("[homeostat] creature {} instinct: {} {} when{} (strength {:.2f}, weight {:.1f})\n", p.creatureId,
+			actionName(inst.decision), inst.reward ? "rewarded" : "punished",
+			[&] { std::string w; for (int dr : drives) w += std::string(" ") + DRIVE_NAMES[dr]; for (int c : categories) w += fmt::format(" seeing {}", c); return w; }(),
+			inst.strength, weight);
+	}
 
 	// Softmax choice; temperature falls as arousal (D) rises.
 	// Softmax over the top few candidates (an attention bottleneck, so many
@@ -472,10 +659,15 @@ class HomeostatMind : public CreatureMind {
 			drift[i] += prm.driftRate * (change[i] / ticks - drift[i]);
 		}
 
-		Expectation& e = expectation(current.category, current.decision);
-		for (int i = 0; i < NUM_DRIVES; i++)
-			e.delta[i] += prm.learningRate * (effect[i] - e.delta[i]);
-		e.count++;
+		if (current.seekCategory < 0) {
+			Expectation& e = expectation(current.category, current.decision);
+			// an innate prior counts as remembered experience: learning is slow
+			// while it outweighs real experience and speeds up as that grows
+			float rate = prm.learningRate * (e.count + 1.0f) / (e.count + 1.0f + e.prior);
+			for (int i = 0; i < NUM_DRIVES; i++)
+				e.delta[i] += rate * (effect[i] - e.delta[i]);
+			e.count++;
+		}
 
 		// Mood follows how much better or worse this went than just letting
 		// time pass (reward relative to the drift baseline).
@@ -513,7 +705,8 @@ class HomeostatMind : public CreatureMind {
 			effects += fmt::format(" {} {:+.2f}", DRIVE_NAMES[idx[k]], effect[idx[k]]);
 		}
 		fmt::print("[homeostat] creature {} t{}: {}@{} ended ({}, {} ticks): reward {:+.3f}{} | beyond drift:{} | D {:.2f} valence {:+.3f}\n",
-			p.creatureId, p.tick, actionName(current.decision), current.category, why, episodeTicks, reward,
+			p.creatureId, p.tick, current.seekCategory >= 0 ? fmt::format("seek{}:{}", current.seekCategory, actionName(current.decision)) : actionName(current.decision),
+			current.category, why, episodeTicks, reward,
 			changes.empty() ? " (no drive change)" : changes, effects.empty() ? " nothing" : effects, D, valence);
 	}
 
@@ -527,7 +720,8 @@ class HomeostatMind : public CreatureMind {
 			if (p.drives[i] >= 64)
 				needs += fmt::format(" {} {}", DRIVE_NAMES[i], (int)p.drives[i]);
 		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f}\n",
-			p.creatureId, p.tick, actionName(choice.decision), choice.category, choice.want, choice.novelty,
+			p.creatureId, p.tick, choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
+			choice.category, choice.want, choice.novelty,
 			top, needs.empty() ? " none high" : needs, D);
 	}
 };
