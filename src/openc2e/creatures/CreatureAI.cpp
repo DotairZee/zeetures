@@ -540,6 +540,7 @@ MindPerception oldCreature::buildPerception() {
 	p.currentDecision = decn;
 	p.x = cx;
 	p.y = cy;
+	p.riding = (bool)parentagent->invehicle;
 	return p;
 }
 
@@ -596,6 +597,13 @@ void oldCreature::tickMind() {
 		mindborn = true;
 		mind->born(p);
 	}
+	static const bool watchrides = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	if (watchrides && p.riding != wasriding) {
+		Agent* v = parentagent->invehicle.get();
+		fmt::print("* WATCH RIDE unid {} {} at ({:.0f}, {:.0f}){}\n", parentagent->getUNID(), p.riding ? "boards" : "leaves", p.x, p.y,
+			v ? fmt::format(" vehicle {} {} {}", (int)v->family, (int)v->genus, v->species) : std::string());
+	}
+	wasriding = p.riding;
 	MindOutput out = mind->tick(p);
 
 	if (out.expression >= 0 && out.expression < 6) {

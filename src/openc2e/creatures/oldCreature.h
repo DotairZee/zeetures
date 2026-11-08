@@ -58,6 +58,7 @@ class oldCreature : public Creature {
 	std::vector<MindAction> mindactions; // built on the first mind tick
 	void buildMindActions();
 	void tickMind();
+	bool wasriding = false;
 	MindPerception buildPerception();
 	void notifyMindOfDeath();
 	void applyStimulusChemistry(const StimulusEvent& s);

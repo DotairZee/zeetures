@@ -93,6 +93,7 @@ struct MindPerception {
 	int currentAttention = -1; // category index, or -1
 	int currentDecision = -1; // decision index, or -1
 	float x = 0, y = 0; // the creature's centre, in world pixels
+	bool riding = false; // carried by a vehicle (a lift, a boat)
 	std::vector<InnateInstinct> newInstincts; // genome instincts expressed since the last tick
 };
 

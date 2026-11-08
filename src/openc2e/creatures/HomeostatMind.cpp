@@ -133,6 +133,15 @@ struct Params {
 	float seekMaxHeight = 200.0f; // walking west/east cannot change floors
 	float seekArrived = 40.0f; // closer than this and still not seen: forget the place
 
+	// Changing floors (a first cognitive map). Innate: lifts (C2 category 27,
+	// "lifts and up/down movers") and call buttons (2) are for changing floors;
+	// which action goes which way is learned from rides, as links.
+	int liftCategory = 27, buttonCategory = 2;
+	float floorChangeDiscount = 0.5f; // share of the target's value for each step toward it
+	float atPlace = 50.0f; // close enough to a lift's position to use it
+	float sameLevel = 120.0f; // heights this close count as the same floor
+	float minRide = 60.0f; // a ride shorter than this did not change floors
+
 	// 7. Facial expression from affect. Slots refer to the head sprites'
 	// expression rows (in the owner's norn heads: 0 neutral, 1 happy,
 	// 2 sad, 3 angry); other breeds may differ, so these belong in a breed file.
@@ -180,6 +189,14 @@ struct Place {
 	unsigned int tick = 0;
 };
 
+// A ride that changed floors: at this lift position, this action took the
+// creature from one height to another.
+struct Link {
+	float x = 0, fromY = 0, toY = 0;
+	int decision = 0;
+	int uses = 0;
+};
+
 struct Candidate {
 	int category; // -1 for actions that need no object
 	int decision;
@@ -188,6 +205,7 @@ struct Candidate {
 	float novelty;
 	float score;
 	int seekCategory = -1; // >= 0: travelling toward where this category was last seen
+	bool chain = false; // a step toward something else (changing floors): no drive learning
 };
 
 class HomeostatMind : public CreatureMind {
@@ -259,6 +277,21 @@ class HomeostatMind : public CreatureMind {
 			}
 		}
 
+		// Riding a lift (or another vehicle): stay put until it lets us off,
+		// then remember where it took us.
+		if (p.riding) {
+			if (!riding) {
+				riding = true;
+				rideFromX = p.x;
+				rideFromY = p.y;
+			}
+			return out;
+		}
+		if (riding) {
+			riding = false;
+			learnRide(p);
+		}
+
 		// Choose the next action.
 		std::vector<Candidate> candidates = evaluate(p, d, D);
 		if (candidates.empty())
@@ -266,6 +299,8 @@ class HomeostatMind : public CreatureMind {
 		Candidate choice = pick(candidates, D);
 		logChoice(p, choice, candidates, D);
 
+		if (choice.category == prm.liftCategory)
+			lastLiftDecision = choice.decision;
 		current = choice;
 		inEpisode = true;
 		episodeTicks = 0;
@@ -305,6 +340,8 @@ class HomeostatMind : public CreatureMind {
 		}
 		for (auto& sig : appliedInstincts)
 			s += fmt::format("instinct {}\n", sig);
+		for (auto& l : links)
+			s += fmt::format("link {} {} {} {} {}\n", l.x, l.fromY, l.toY, l.decision, l.uses);
 		return s;
 	}
 
@@ -332,6 +369,11 @@ class HomeostatMind : public CreatureMind {
 					l >> f;
 				if (l)
 					innateDefaults[decision] = e;
+			} else if (what == "link") {
+				Link lk;
+				l >> lk.x >> lk.fromY >> lk.toY >> lk.decision >> lk.uses;
+				if (l)
+					links.push_back(lk);
 			} else if (what == "instinct") {
 				std::string sig;
 				l >> sig;
@@ -385,6 +427,10 @@ class HomeostatMind : public CreatureMind {
 	std::set<std::string> appliedInstincts;
 	int activeInstincts = 0, dormantInstincts = 0;
 	std::map<int, Place> places; // where each category was last seen
+	std::vector<Link> links; // learned rides between floors
+	bool riding = false;
+	float rideFromX = 0, rideFromY = 0;
+	int lastLiftDecision = -1;
 	std::array<float, 40> habituation;
 	float valence = 0.0f;
 	std::mt19937 rng;
@@ -506,6 +552,23 @@ class HomeostatMind : public CreatureMind {
 	}
 	bool inEpisodeJustEnded = false;
 
+	// How much the best action on a category would help, counting only what
+	// the creature has experienced or a specific instinct names: a vague hunch
+	// ("eat anything when hungry") is reason to try what is at hand, not to
+	// travel across the world for it.
+	float knownRelief(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, int category) {
+		float best = 0.0f;
+		for (auto& a : *p.actions) {
+			if (!a.needsObject)
+				continue;
+			Expectation& e = expectation(category, a.decision);
+			if (e.count == 0 && e.prior <= 0.0f)
+				continue;
+			best = std::max(best, predictedRelief(d, D, e));
+		}
+		return best;
+	}
+
 	// Seeking: for each remembered place whose category is out of sight, how
 	// much would the best action on it help? If enough, offer walking toward
 	// it (C2 decisions 10 and 11: travel west and east).
@@ -520,23 +583,20 @@ class HomeostatMind : public CreatureMind {
 		if (!canWest && !canEast)
 			return;
 		std::vector<int> forget;
+		std::vector<int> offLevel;
 		for (auto& [category, place] : places) {
 			if (isVisible(p, category))
 				continue;
 			float dx = place.x - p.x, dy = place.y - p.y;
-			if (std::fabs(dy) > prm.seekMaxHeight)
+			if (std::fabs(dy) > prm.seekMaxHeight) {
+				offLevel.push_back(category);
 				continue;
+			}
 			if (std::fabs(dx) < prm.seekArrived) {
 				forget.push_back(category); // here, and it is gone
 				continue;
 			}
-			float best = 0.0f;
-			for (auto& a : *p.actions) {
-				if (!a.needsObject)
-					continue;
-				best = std::max(best, predictedRelief(d, D, expectation(category, a.decision)));
-			}
-			float want = best * prm.seekDiscount;
+			float want = knownRelief(p, d, D, category) * prm.seekDiscount;
 			if (want < prm.seekMinWant)
 				continue;
 			int decision = dx < 0 ? 10 : 11;
@@ -549,6 +609,94 @@ class HomeostatMind : public CreatureMind {
 		}
 		for (int category : forget)
 			places.erase(category);
+
+		// The most wanted thing remembered on another floor: take steps
+		// toward changing floors.
+		float bestWant = 0.0f;
+		int bestCategory = -1;
+		for (int category : offLevel) {
+			float best = knownRelief(p, d, D, category);
+			if (best > bestWant) {
+				bestWant = best;
+				bestCategory = category;
+			}
+		}
+		if (bestCategory >= 0 && bestWant * prm.floorChangeDiscount >= prm.seekMinWant)
+			addFloorChange(p, bestWant * prm.floorChangeDiscount, places[bestCategory].y, bestCategory, canWest, canEast, out);
+	}
+
+	void addFloorChange(const MindPerception& p, float want, float targetY, int target, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		float direction = targetY > p.y ? 1.0f : -1.0f; // +1 down, -1 up
+		auto walkTo = [&](float x) {
+			int decision = x < p.x ? 10 : 11;
+			if ((decision == 10 && !canWest) || (decision == 11 && !canEast))
+				return;
+			Candidate c{-1, decision, std::fabs(x - p.x), want, 0, 0};
+			c.score = want - prm.distanceCost * std::fabs(x - p.x);
+			c.seekCategory = target;
+			c.chain = true;
+			out.push_back(c);
+		};
+		auto actOn = [&](int category, int decision, float share) {
+			Candidate c{category, decision, 0, want * share, 0, 0};
+			c.score = c.want;
+			c.chain = true;
+			out.push_back(c);
+		};
+		const SeenAgent* lift = nullptr;
+		const SeenAgent* button = nullptr;
+		for (auto& s : p.visible) {
+			if (s.category == prm.liftCategory)
+				lift = &s;
+			if (s.category == prm.buttonCategory)
+				button = &s;
+		}
+		// a known link from this floor in the right direction, nearest first
+		const Link* link = nullptr;
+		for (auto& l : links) {
+			if (std::fabs(l.fromY - p.y) > prm.sameLevel || (l.toY - l.fromY) * direction <= 0)
+				continue;
+			if (!link || std::fabs(l.x - p.x) < std::fabs(link->x - p.x))
+				link = &l;
+		}
+		bool liftHere = lift && std::fabs(lift->x - p.x) < prm.atPlace * 1.5f && std::fabs(lift->y - p.y) < prm.sameLevel;
+		if (link) {
+			if (std::fabs(link->x - p.x) > prm.atPlace)
+				walkTo(link->x);
+			else if (liftHere)
+				actOn(prm.liftCategory, link->decision, 1.0f);
+			else if (button)
+				actOn(prm.buttonCategory, 1, 0.8f); // call the lift
+			return;
+		}
+		// no link yet: go to the nearest lift and try what it does
+		if (lift) {
+			if (std::fabs(lift->x - p.x) > prm.atPlace)
+				walkTo(lift->x);
+			else if (liftHere) {
+				actOn(prm.liftCategory, 1, 0.6f);
+				actOn(prm.liftCategory, 2, 0.6f);
+			} else if (button)
+				actOn(prm.buttonCategory, 1, 0.8f);
+		} else if (button) {
+			actOn(prm.buttonCategory, 1, 0.5f);
+		}
+	}
+
+	void learnRide(const MindPerception& p) {
+		float dy = p.y - rideFromY;
+		if (std::fabs(dy) < prm.minRide || lastLiftDecision < 0)
+			return;
+		for (auto& l : links) {
+			if (std::fabs(l.x - rideFromX) < prm.atPlace && std::fabs(l.fromY - rideFromY) < prm.sameLevel &&
+				std::fabs(l.toY - p.y) < prm.sameLevel && l.decision == lastLiftDecision) {
+				l.uses++;
+				return;
+			}
+		}
+		links.push_back({rideFromX, rideFromY, p.y, lastLiftDecision, 1});
+		fmt::print("[homeostat] creature {} learned a ride: {} at x {:.0f} takes it from y {:.0f} to y {:.0f}\n", p.creatureId,
+			actionName(lastLiftDecision), rideFromX, rideFromY, p.y);
 	}
 
 	// 6. Genome instincts become innate expectations (gene-translation.md).
@@ -596,12 +744,18 @@ class HomeostatMind : public CreatureMind {
 			// any object: a weak hunch, the starting point for categories not
 			// yet met and added to those already known; experience with each
 			// kind of object soon outweighs it
+			// The hunch sets the starting expectation but adds no weight
+			// against experience: one disappointing try should undo it.
 			weight = std::min(weight, prm.anyObjectInstinctWeight);
-			Expectation& def = innateDefaults[inst.decision];
-			blend(def);
+			auto hunch = [&](Expectation& e) {
+				float old = e.count + e.prior;
+				for (int i = 0; i < NUM_DRIVES; i++)
+					e.delta[i] = (e.delta[i] * old + delta[i] * weight) / (old + weight);
+			};
+			hunch(innateDefaults[inst.decision]);
 			for (auto& [key, e] : expectations)
 				if (key % 64 == inst.decision && key / 64 - 1 >= 0)
-					blend(e);
+					hunch(e);
 		}
 		activeInstincts++;
 		fmt::print("[homeostat] creature {} instinct: {} {} when{} (strength {:.2f}, weight {:.1f})\n", p.creatureId,
@@ -659,7 +813,7 @@ class HomeostatMind : public CreatureMind {
 			drift[i] += prm.driftRate * (change[i] / ticks - drift[i]);
 		}
 
-		if (current.seekCategory < 0) {
+		if (current.seekCategory < 0 && !current.chain) {
 			Expectation& e = expectation(current.category, current.decision);
 			// an innate prior counts as remembered experience: learning is slow
 			// while it outweighs real experience and speeds up as that grows
