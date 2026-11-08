@@ -589,6 +589,15 @@ MindPerception oldCreature::buildPerception() {
 					continue;
 				*side = std::max(*side, n->foodscent);
 			}
+			// water ahead on either side (to stay out of seas when walking)
+			for (auto& [n, door] : here->getDoors()) {
+				if (door.perm <= 0 || n->type != 2)
+					continue;
+				if (n->x_right <= here->x_left + 2)
+					p.waterWest = true;
+				else if (n->x_left + 2 >= here->x_right)
+					p.waterEast = true;
+			}
 			// water: the way to the nearest dry room through open doors
 			p.inWater = here->type == 2;
 			p.breath = breathLeft();

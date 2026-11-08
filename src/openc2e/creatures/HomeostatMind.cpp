@@ -245,6 +245,16 @@ struct Params {
 	// the airlock's (9), lifts (27)
 	std::vector<int> escapeDevices{2, 3, 9, 27};
 
+	// Boats (owner request): walking a trip into water is avoided; with a boat
+	// in view, rowing that way is worth the trip. C2 boats (category 31): the
+	// first activate rows east (back west on a second press), the second rows
+	// west, and the boat puts its passengers out on the far shore. Rides are
+	// learned (decision and how far east or west it carried the creature), so
+	// the innate guess gives way to experience.
+	int boatCategory = 31;
+	float boatShare = 0.9f; // a boat crossing: this share of the trip's worth
+	float boatRide = 200.0f; // a ride carrying the creature this far counts
+
 	float blockedMove = 3.0f; // moved less than this in a walking episode (walking covers about 10)
 	float blockedNear = 40.0f; // still this close to where it got stuck
 	unsigned int blockedTicks = 600;
@@ -341,6 +351,12 @@ struct Candidate {
 	bool escape = false; // getting out of water
 };
 
+struct BoatLink {
+	int decision = 0;
+	float dx = 0; // how far east (positive) or west the ride carried the creature
+	int rides = 0;
+};
+
 struct ExitLink {
 	float x = 0, y = 0; // where the object was used
 	int category = -1, decision = -1;
@@ -408,6 +424,18 @@ class HomeostatMind : public CreatureMind {
 				actionName(lastObjectUse.decision), lastObjectUse.category, lastObjectUse.x, lastObjectUse.y);
 		}
 		wasInWater = p.inWater;
+		// boat rides
+		if (p.riding && !wasRiding) {
+			rideStartX = p.x;
+			rideDecision = (current.category == prm.boatCategory) ? current.decision : -1;
+		} else if (!p.riding && wasRiding && rideDecision >= 0 && std::fabs(p.x - rideStartX) > prm.boatRide) {
+			BoatLink& bl = boatLinks[rideDecision];
+			bl.decision = rideDecision;
+			bl.dx = (bl.dx * bl.rides + (p.x - rideStartX)) / (bl.rides + 1);
+			bl.rides++;
+			fmt::print("[homeostat] creature {} t{}: boat ride with {} took it {:.0f} px\n", p.creatureId, p.tick, actionName(rideDecision), p.x - rideStartX);
+		}
+		wasRiding = p.riding;
 		bool foodInSight = false;
 		for (auto& s : p.visible)
 			if (s.edible >= prm.foodSeeEdible) {
@@ -618,6 +646,8 @@ class HomeostatMind : public CreatureMind {
 		s += fmt::format("restless {}\n", hungryTicks);
 		for (auto& e : exits)
 			s += fmt::format("exit {} {} {} {} {}\n", e.x, e.y, e.category, e.decision, e.uses);
+		for (auto& [decision, bl] : boatLinks)
+			s += fmt::format("boat {} {} {}\n", decision, bl.dx, bl.rides);
 		return s;
 	}
 
@@ -651,6 +681,11 @@ class HomeostatMind : public CreatureMind {
 				l >> category >> edible;
 				if (l)
 					scents[category] = edible;
+			} else if (what == "boat") {
+				BoatLink bl;
+				l >> bl.decision >> bl.dx >> bl.rides;
+				if (l)
+					boatLinks[bl.decision] = bl;
 			} else if (what == "exit") {
 				ExitLink e;
 				l >> e.x >> e.y >> e.category >> e.decision >> e.uses;
@@ -736,6 +771,10 @@ class HomeostatMind : public CreatureMind {
 	std::vector<FoodPlace> foodPlaces; // the food map
 	std::map<std::pair<int, int>, unsigned int> visited; // (x bin, y bin) -> last mind tick there
 	std::vector<ExitLink> exits; // objects that got the creature out of water
+	std::map<int, BoatLink> boatLinks; // decision -> learned ride
+	bool wasRiding = false;
+	float rideStartX = 0;
+	int rideDecision = -1;
 	bool wasInWater = false;
 	ExitLink lastObjectUse; // the most recent object action, for exit learning
 	unsigned int lastObjectUseTick = 0;
@@ -1029,6 +1068,12 @@ class HomeostatMind : public CreatureMind {
 		if (bestSame && wantSame >= prm.seekMinWant && wantSame >= wantOther) {
 			startTrip(bestSame);
 			int decision = bestSame->x < p.x ? 10 : 11;
+			if (waterAhead(p, decision)) {
+				Candidate t{};
+				t.food = true;
+				addBoatInstead(p, decision, wantSame, t, out);
+				return;
+			}
 			if (!((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision))) {
 				Candidate c{-1, decision, std::fabs(bestSame->x - p.x), wantSame, 0, wantSame};
 				c.chain = true;
@@ -1061,7 +1106,14 @@ class HomeostatMind : public CreatureMind {
 		float want = expectedMealRelief(d, D) * prm.forageShare * (1.0f + prm.restlessBoost * restless) * (d[HUNGER] - threshold) / (1.0f - threshold);
 		if (want < prm.seekMinWant)
 			return;
-		auto open = [&](int dir) { return ((dir == 10 && canWest) || (dir == 11 && canEast)) && !isBlocked(p, dir); };
+		auto open = [&](int dir) { return ((dir == 10 && canWest) || (dir == 11 && canEast)) && !isBlocked(p, dir) && !waterAhead(p, dir); };
+		// water ahead with a boat in view: rowing across is a way to search further
+		for (int dir : {10, 11})
+			if (waterAhead(p, dir)) {
+				Candidate t{};
+				t.forage = true;
+				addBoatInstead(p, dir, want, t, out);
+			}
 		if (forageHeading != 0 && p.tick > forageStartTick + prm.forageStuckTicks) {
 			float progress = forageHeading == 10 ? forageStartX - p.x : p.x - forageStartX;
 			if (progress < prm.foragePass) {
@@ -1144,6 +1196,31 @@ class HomeostatMind : public CreatureMind {
 			for (size_t i = before; i < out.size(); i++)
 				out[i].forage = true;
 		}
+	}
+
+	// Which boat action goes east (dir 11) or west (10): learned rides first,
+	// then the innate guess (activate 1 east, activate 2 west).
+	int boatDecisionFor(int dir) const {
+		for (auto& [decision, bl] : boatLinks)
+			if (bl.rides > 0 && ((dir == 11 && bl.dx > 0) || (dir == 10 && bl.dx < 0)))
+				return decision;
+		return dir == 11 ? 0 : 1;
+	}
+
+	// A trip walking dir would go into water: if a boat is in view, offer
+	// rowing that way instead (and do not offer the walk).
+	bool waterAhead(const MindPerception& p, int dir) const {
+		return !p.inWater && ((dir == 10 && p.waterWest) || (dir == 11 && p.waterEast));
+	}
+	void addBoatInstead(const MindPerception& p, int dir, float want, Candidate tmpl, std::vector<Candidate>& out) {
+		if (!isVisible(p, prm.boatCategory))
+			return;
+		Candidate c{prm.boatCategory, boatDecisionFor(dir), 0, want * prm.boatShare, 0, want * prm.boatShare};
+		c.chain = true;
+		c.food = tmpl.food;
+		c.forage = tmpl.forage;
+		c.scent = tmpl.scent;
+		out.push_back(c);
 	}
 
 	void addEscape(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
@@ -1291,6 +1368,12 @@ class HomeostatMind : public CreatureMind {
 		if (!best)
 			return;
 		if (best->kind == 10 || best->kind == 11) {
+			if (waterAhead(p, best->kind)) {
+				Candidate t{};
+				t.scent = true;
+				addBoatInstead(p, best->kind, want, t, out);
+				return;
+			}
 			if ((best->kind == 10 && !canWest) || (best->kind == 11 && !canEast) || isBlocked(p, best->kind))
 				return;
 			Candidate c{-1, best->kind, 0, want, 0, want};
