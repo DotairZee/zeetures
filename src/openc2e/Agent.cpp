@@ -253,6 +253,9 @@ std::shared_ptr<script> Agent::findScript(unsigned short event) {
 #include "creatures/Creature.h"
 #include "creatures/CreatureAgent.h"
 bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosValue two) {
+	static const bool watcheat = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	if (watcheat && event == 12 && engine.version == 2 && family == 2)
+		fmt::print("* WATCH EATEN {} {} {} by {}\n", (int)family, (int)genus, species, from ? from->getUNID() : -1);
 	// Start running the specified script on the VM of this agent, with FROM set to the provided agent.
 
 	if (dying)

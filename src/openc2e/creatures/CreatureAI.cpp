@@ -605,8 +605,16 @@ void oldCreature::tickMind() {
 
 	// Run the world's script for the chosen action when the choice changes,
 	// or when the mind asks again after the previous action finished.
-	if (decn >= 0 && (oldattn != attention || olddecn != decn || (out.decision >= 0 && p.actionFinished)))
+	if (decn >= 0 && (oldattn != attention || olddecn != decn || (out.decision >= 0 && p.actionFinished))) {
+		static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+		if (watch && attention) {
+			float dx = (attention->x + attention->getWidth() / 2.0f) - (parentagent->x + parentagent->getWidth() / 2.0f);
+			float dy = (attention->y + attention->getHeight() / 2.0f) - (parentagent->y + parentagent->getHeight() / 2.0f);
+			fmt::print("* WATCH ACT unid {} decision {} on {} {} {} (category {}) dx {:.0f} dy {:.0f}\n", parentagent->getUNID(), decn,
+				(int)attention->family, (int)attention->genus, attention->species, attn, dx, dy);
+		}
 		parentagent->queueScript(decn + 16);
+	}
 }
 
 void oldCreature::notifyMindOfDeath() {
