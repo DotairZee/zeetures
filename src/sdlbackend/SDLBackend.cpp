@@ -425,7 +425,9 @@ void SDLRenderTarget::setViewportOffsetBottom(int offset_bottom) {
 }
 
 void SDLRenderTarget::renderTexture(const Texture& tex_, Rect2i src, Rect2f dest, RenderOptions options) {
-	if (dest.right() + tex_.width <= 0 || dest.x >= getWidth() || dest.bottom() <= 0 || dest.y >= getHeight()) {
+	// dest is in window coordinates (callers have already added viewport_offset_top),
+	// so the visible area ends at the viewport height plus that offset
+	if (dest.right() + tex_.width <= 0 || dest.x >= getWidth() || dest.bottom() <= 0 || dest.y >= getHeight() + viewport_offset_top) {
 		// cull non-visible textures
 		return;
 	}
