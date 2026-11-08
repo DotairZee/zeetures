@@ -154,6 +154,7 @@ class c1Creature : public oldCreature {
 struct c2Reaction {
 	explicit c2Reaction(bioReactionGene*);
 	bioReactionGene* data;
+	float carry = 0; // fraction of a unit left over (smooth rate curve)
 };
 
 struct c2Receptor {

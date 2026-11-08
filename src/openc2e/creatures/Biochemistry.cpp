@@ -733,6 +733,39 @@ void c2Organ::processReaction(c2Reaction& d) {
 
 	bioReactionGene& g = *d.data;
 
+	// C2 reaction speed: the reaction's half-life is H0 * B^(rate / 8) organ
+	// activations (rate byte: higher is slower), and each activation that share
+	// of the possible amount reacts; fractions carry over so slow reactions
+	// still happen in whole units. B = 2.2, H0 = 1 is the curve openc2e uses
+	// for C3 (2.2^(rate * 32 / 255)), and fitted against a real C2 norn over DDE
+	// (2026-11-07) it reproduces the real steady levels: glycogen ~200 and
+	// stable, oxygen ~200-255, adrenaline 0, fat slowly rising. The C1 table
+	// openc2e used before (rate / 8 tick masks) drained glycogen and starved
+	// creatures of oxygen. OPENC2E_C2RATE_B=0 restores it, for comparison.
+	static const float curveB = getenv("OPENC2E_C2RATE_B") ? (float)atof(getenv("OPENC2E_C2RATE_B")) : 2.2f;
+	static const float curveH0 = getenv("OPENC2E_C2RATE_H0") ? (float)atof(getenv("OPENC2E_C2RATE_H0")) : 1.0f;
+	if (curveB > 0.0f) {
+		float avail = 255.0f;
+		if (g.reactant[0] != 0)
+			avail = std::min(avail, (float)parent->getChemical(g.reactant[0]) / g.quantity[0]);
+		if (g.reactant[1] != 0)
+			avail = std::min(avail, (float)parent->getChemical(g.reactant[1]) / g.quantity[1]);
+		if (avail <= 0.0f)
+			return;
+		float half = curveH0 * powf(curveB, g.rate / 8.0f);
+		float share = 1.0f - powf(0.5f, 1.0f / half);
+		float amount = avail * share + d.carry;
+		int n = (int)amount;
+		d.carry = amount - n;
+		if (n <= 0)
+			return;
+		parent->subChemical(g.reactant[0], n * g.quantity[0]);
+		parent->subChemical(g.reactant[1], n * g.quantity[1]);
+		parent->addChemical(g.reactant[2], n * g.quantity[2]);
+		parent->addChemical(g.reactant[3], n * g.quantity[3]);
+		return;
+	}
+
 	// TODO: this might not all be correct
 
 	// work out which rate we're dealing with
