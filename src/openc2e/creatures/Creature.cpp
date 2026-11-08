@@ -23,6 +23,9 @@
 #include "Engine.h"
 #include "CreatureAgent.h"
 #include "World.h"
+#include "common/Random.h"
+#include "Room.h"
+#include "Map.h"
 #include "c2eBrain.h"
 #include "c2eCreature.h"
 #include "common/throw_ifnot.h"
@@ -386,6 +389,37 @@ void c1Creature::tick() {
 	Creature::tick();
 }
 
+// C2 creatures breathe through the genome: an emitter on the air-quality locus
+// (sensorimotor 9) makes Air, which the genome turns into oxygen. The engine's
+// part is the air quality. With the head in a sea room (room type 2, "in the
+// sea") there is no air: the genome then runs short of oxygen and the creature
+// suffocates. Bubbles rise from the head while it is under water, using the
+// world's own bubble object (classifier 2 1 27, sprite "bubs").
+void c2Creature::updateUnderwater() {
+	if (!parentagent || !world.map)
+		return;
+	float headx = parentagent->x + parentagent->getWidth() / 2.0f;
+	float heady = parentagent->y + 10.0f; // near the top of the body, where the head is
+	std::shared_ptr<Room> room = world.map->roomAt(headx, heady);
+	bool underwater = room && room->type == 2;
+	if (underwater)
+		senses[9] = 0;
+	if (!underwater) {
+		bubbletimer = 0;
+		return;
+	}
+	if (bubbletimer > 0) {
+		bubbletimer--;
+		return;
+	}
+	bubbletimer = rand_int32(12, 40);
+	std::string caos = fmt::format("inst new: simp bubs 10 0 8000 0 setv cls2 2 1 27 mvto {} {} mesg writ targ 8",
+		(int)headx - 10, (int)heady - 30);
+	std::string result = engine.executeNetwork(caos);
+	if (!result.empty())
+		fmt::print("* Couldn't make a bubble: {}\n", result);
+}
+
 void c2Creature::tick() {
 	// TODO: should we tick some things even if dead?
 	if (!alive) {
@@ -402,7 +436,8 @@ void c2Creature::tick() {
 	senses[6] = 0; // radiation (TODO)
 	senses[7] = 0; // time of day (TODO)
 	senses[8] = 0; // season (TODO)
-	senses[9] = 255; // air quality (TODO)
+	senses[9] = 255; // air quality: full, unless the head is under water (below)
+	updateUnderwater();
 	senses[10] = 0; // slope up (TODO)
 	senses[11] = 0; // slope down (TODO)
 	senses[12] = 0; // wind towards (TODO)

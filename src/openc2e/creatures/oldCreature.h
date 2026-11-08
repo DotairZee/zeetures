@@ -236,6 +236,8 @@ class c2Creature : public oldCreature {
 
 	// loci
 	unsigned char senses[14];
+	int bubbletimer = 0;
+	void updateUnderwater();
 	unsigned char gaitloci[16];
 	unsigned char drives[17];
 	unsigned char mutationchance, mutationdegree;
