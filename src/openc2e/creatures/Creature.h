@@ -122,7 +122,8 @@ class Creature {
 	void born();
 	void die();
 
-	bool shouldProcessGene(gene*);
+	bool shouldProcessGene(gene*); // switches on at the current life stage
+	bool isGeneExpressed(gene*); // switched on at this or an earlier life stage
 };
 
 #endif

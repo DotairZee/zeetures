@@ -61,7 +61,7 @@ class oldCreature : public Creature {
 	bool wasriding = false;
 	MindPerception buildPerception();
 	void notifyMindOfDeath();
-	void applyStimulusChemistry(const StimulusEvent& s);
+	void applyStimulusChemistry(StimulusEvent& s);
 
 	oldCreature(std::shared_ptr<genomeFile> g, bool is_female, unsigned char _variant, CreatureAgent* a);
 

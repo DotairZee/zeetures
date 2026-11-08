@@ -71,6 +71,10 @@ struct StimulusEvent {
 	std::array<int, 4> amount{}; // full form: amounts for each chemical
 	AgentRef source; // the agent whose script sent it, if known
 	std::string command; // e.g. "STM# WRIT", for logging
+	// What the body actually received (either form, after the creature's
+	// stimulus genes and sleep): chemical numbers and amounts, 0 = none.
+	std::array<int, 4> feltChem{};
+	std::array<int, 4> feltAmount{};
 };
 
 // An action the world's creature scripts make available (event 16 + decision).

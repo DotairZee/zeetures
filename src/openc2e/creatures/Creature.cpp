@@ -33,6 +33,7 @@
 #include "oldBrain.h"
 #include "oldCreature.h"
 
+#include <algorithm>
 #include <cassert>
 #include <memory>
 
@@ -91,6 +92,17 @@ bool Creature::shouldProcessGene(gene* g) {
 	// TODO: header.variant?
 
 	return true;
+}
+
+bool Creature::isGeneExpressed(gene* g) {
+	geneFlags& flags = g->header.flags;
+	if (flags.notexpressed)
+		return false;
+	if (flags.femaleonly && !female)
+		return false;
+	if (flags.maleonly && female)
+		return false;
+	return g->header.switchontime <= stage;
 }
 
 void Creature::processGenes() {
@@ -431,7 +443,11 @@ void c2Creature::tick() {
 	senses[1] = (asleep ? 255 : 0); // asleep
 	senses[2] = 0; // air coldness (TODO)
 	senses[3] = 0; // air hotness (TODO)
-	senses[4] = 0; // light level (TODO)
+	senses[4] = 0; // light level: the room's (rooms keep the light level the world gives them)
+	if (parentagent && world.map) {
+		if (std::shared_ptr<Room> r = world.map->roomAt(parentagent->x + parentagent->getWidth() / 2.0f, parentagent->y + parentagent->getHeight() / 2.0f))
+			senses[4] = (unsigned char)std::clamp(r->lite, 0, 255);
+	}
 	senses[5] = 0; // crowdedness (TODO)
 	senses[6] = 0; // radiation (TODO)
 	senses[7] = 0; // time of day (TODO)

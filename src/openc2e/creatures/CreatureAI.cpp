@@ -410,7 +410,8 @@ void Creature::chooseAgents() {
 
 AgentRef oldCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> possibles) {
 	// The nearest one, with height counting extra: an object on another floor
-	// is much harder to reach than one the same distance away on this floor.
+	// is much harder to reach than one the same distance away on this floor;
+	// food-smelling ones count as nearer.
 	// (openc2e picked one at random, often unreachable.)
 	(void)type;
 	if (possibles.empty())
@@ -422,6 +423,10 @@ AgentRef oldCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> 
 	for (auto& a : possibles) {
 		float ax = a->x + a->getWidth() / 2.0f, ay = a->y + a->getHeight() / 2.0f;
 		float cost = std::fabs(ax - cx) + 4.0f * std::fabs(ay - cy);
+		// The smell of food draws attention: in a category that mixes food
+		// with things that are not (a fruit and its seed), the food is
+		// noticed first unless it is much farther away.
+		cost *= 1.0f - 0.6f * edibleScent(a.get());
 		if (!best || cost < bestcost) {
 			best = a;
 			bestcost = cost;
@@ -463,22 +468,26 @@ void oldCreature::handleStimulus(const StimulusEvent& s) {
 		return;
 	if (!alive)
 		return;
-	applyStimulusChemistry(s);
+	StimulusEvent felt = s;
+	applyStimulusChemistry(felt);
 	if (pendingstimuli.size() < 64)
-		pendingstimuli.push_back(s);
+		pendingstimuli.push_back(felt);
 }
 
 // The body side of a stimulus: add the chemicals the world (full form) or
 // the creature's own genome (numbered form, via stimulus genes) specifies.
 // Only the chemical part is used; brain-related gene fields are ignored.
 // Not implemented: the 'modulate' and 'addoffset' gene flags.
-void oldCreature::applyStimulusChemistry(const StimulusEvent& s) {
+void oldCreature::applyStimulusChemistry(StimulusEvent& s) {
 	if (s.numbered) {
 		creatureStimulusGene* g = nullptr;
 		for (auto& gene : genome->genes) {
 			if (auto* x = dynamic_cast<creatureStimulusGene*>(gene.get())) {
-				if (x->stim == s.id && shouldProcessGene(x))
-					g = x; // the last expressed gene for this stimulus wins
+				// genes that have switched on by now (shouldProcessGene only
+				// passes those switching on at this very stage, so adults
+				// felt nothing); the last one for this stimulus wins
+				if (x->stim == s.id && isGeneExpressed(x))
+					g = x;
 			}
 		}
 		if (!g)
@@ -486,14 +495,20 @@ void oldCreature::applyStimulusChemistry(const StimulusEvent& s) {
 		if (asleep && !g->whenasleep)
 			return;
 		for (unsigned int i = 0; i < 4; i++) {
-			if (g->drives[i] != 0 && g->drives[i] != 255 && g->amounts[i] > 0)
+			if (g->drives[i] != 0 && g->drives[i] != 255 && g->amounts[i] > 0) {
 				addChemical(g->drives[i], g->amounts[i]);
+				s.feltChem[i] = g->drives[i];
+				s.feltAmount[i] = g->amounts[i];
+			}
 		}
 	} else {
 		for (unsigned int i = 0; i < 4; i++) {
 			int chem = s.chem[i], amount = s.amount[i];
-			if (chem > 0 && chem < 255 && amount > 0)
+			if (chem > 0 && chem < 255 && amount > 0) {
 				addChemical((unsigned char)chem, (unsigned char)std::min(amount, 255));
+				s.feltChem[i] = chem;
+				s.feltAmount[i] = std::min(amount, 255);
+			}
 		}
 	}
 }
