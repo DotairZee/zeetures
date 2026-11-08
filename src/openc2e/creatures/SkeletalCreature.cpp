@@ -491,17 +491,29 @@ void SkeletalCreature::snapDownFoot() {
 	if (!downfootroom /*|| !falling */) {
 		// TODO: hackery to cope with scripts moving us, this needs handling correctly somewhere
 		if (fabs(lastgoodfootx - attachmentX(orig_footpart, 1) - x) > 50.0f || fabs(lastgoodfooty - attachmentY(orig_footpart, 1) - y) > 50.0f) {
-			downfootroom = bestRoomAt(footx, footy, 3, m, std::shared_ptr<Room>());
-			if (downfootroom) {
+			// Retry once from the room the foot is in now. Only once: if the
+			// retry also finds no room it may enter (e.g. every way on is a
+			// wall), retrying again recursed until the stack overflowed and the
+			// game vanished without a trace. After one retry, accept the room
+			// the foot is in (a script moved us; pushing back would undo it).
+			static bool retrying = false;
+			std::shared_ptr<Room> here = bestRoomAt(footx, footy, 3, m, std::shared_ptr<Room>());
+			if (here && !retrying) {
+				downfootroom = here;
+				retrying = true;
 				snapDownFoot();
+				retrying = false;
 				return;
-			} else {
+			} else if (!here) {
 				fmt::print(stderr, "Creature out of room system at ({}, {})!\n", footx, footy);
 				// TODO: exceptiony death?
 				return;
 			}
+			downfootroom = here;
 		}
+	}
 
+	if (!downfootroom) {
 		// We fell out of the room system! How did that happen? Push ourselves back in, run collision script.
 		// fmt::print("Creature out of room system at ({}, {}), pushing it back in.\n", footx, footy);
 
