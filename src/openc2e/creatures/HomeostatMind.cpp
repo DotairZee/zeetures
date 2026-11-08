@@ -110,7 +110,8 @@ struct Params {
 	float commitment = 0.01f; // bonus for repeating the current choice
 	float distanceCost = 0.00002f; // per pixel to the object
 	int maxEpisodeTicks = 12; // looping actions are evaluated this often
-	int maxObjectEpisodeTicks = 50; // actions on an object (walk there, then act) get longer to finish
+	int maxObjectEpisodeTicks = 150; // actions on an object (walk there, then act): at most this long
+	int stallTicks = 25; // ...and given up if not getting closer for this long
 	float habituationRate = 0.7f; // multiplier after an uneventful interaction
 	float habituationRecovery = 0.01f; // per tick, back toward 1
 	float eventfulThreshold = 0.02f; // total |drive change| that counts as eventful
@@ -284,8 +285,21 @@ class HomeostatMind : public CreatureMind {
 			bool objectGone = current.category >= 0 && !isVisible(p, current.category);
 			bool finished = p.actionFinished && episodeTicks > 1;
 			int limit = current.category >= 0 ? prm.maxObjectEpisodeTicks : prm.maxEpisodeTicks;
-			if (finished || objectGone || episodeTicks >= limit) {
-				endEpisode(p, d, D, finished ? "finished" : objectGone ? "object gone" : "time");
+			bool stalled = false;
+			if (current.category >= 0 && !objectGone) {
+				float dist = 0;
+				for (auto& s : p.visible)
+					if (s.category == current.category)
+						dist = s.distance;
+				if (dist < closest - 5.0f) {
+					closest = dist;
+					lastProgress = episodeTicks;
+				} else if (episodeTicks - lastProgress >= prm.stallTicks) {
+					stalled = true;
+				}
+			}
+			if (finished || objectGone || stalled || episodeTicks >= limit) {
+				endEpisode(p, d, D, finished ? "finished" : objectGone ? "object gone" : stalled ? "stalled" : "time");
 			} else {
 				return out; // let the current action run
 			}
@@ -318,6 +332,8 @@ class HomeostatMind : public CreatureMind {
 		current = choice;
 		inEpisode = true;
 		episodeTicks = 0;
+		closest = 1e9f;
+		lastProgress = 0;
 		startDrives = d;
 		startD = D;
 
@@ -459,6 +475,8 @@ class HomeostatMind : public CreatureMind {
 	std::mt19937 rng;
 
 	bool inEpisode = false;
+	float closest = 1e9f; // nearest the creature has been to its target this episode
+	int lastProgress = 0;
 	Candidate current{};
 	int episodeTicks = 0;
 	std::array<float, NUM_DRIVES> startDrives{};
@@ -564,7 +582,8 @@ class HomeostatMind : public CreatureMind {
 		for (auto& a : *p.actions) {
 			if (a.needsObject) {
 				for (auto& s : p.visible)
-					add(s.category, a.decision, s.distance);
+					if (s.reachable)
+						add(s.category, a.decision, s.distance);
 			} else {
 				add(-1, a.decision, 0.0f);
 			}

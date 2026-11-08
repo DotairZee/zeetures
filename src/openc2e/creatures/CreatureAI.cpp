@@ -586,7 +586,10 @@ MindPerception oldCreature::buildPerception() {
 			continue;
 		float ax = a->x + a->getWidth() / 2.0f;
 		float ay = a->y + a->getHeight() / 2.0f;
-		p.visible.push_back({(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay, edibleScent(a.get())});
+		// walking only moves the creature sideways, and it must touch the object
+		// (APPR): reachable only if their heights overlap
+		bool reachable = !(a->y + a->getHeight() < parentagent->y || a->y > parentagent->y + parentagent->getHeight());
+		p.visible.push_back({(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay, edibleScent(a.get()), reachable});
 	}
 
 	p.stimuli = pendingstimuli;

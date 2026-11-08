@@ -41,6 +41,7 @@ struct SeenAgent {
 	float distance; // between centres, in world pixels
 	float x = 0, y = 0; // the agent's centre, in world pixels
 	float edible = 0; // scent: how nourishing its eat script is, 0-1 (see edibleScent)
+	bool reachable = true; // overlaps the creature's height, so walking can reach it
 };
 
 // An instinct from the genome, translated into neutral terms (see
