@@ -664,6 +664,16 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 		ImGui::Render();
 		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 
+		if (!pending_screenshot.empty()) {
+			SDL_SetRenderTarget(renderer, nullptr);
+			if (SDL_Surface* shot = SDL_RenderReadPixels(renderer, nullptr)) {
+				SDL_SaveBMP(shot, pending_screenshot.c_str());
+				SDL_DestroySurface(shot);
+				fmt::print("* Screenshot saved: {}\n", pending_screenshot);
+			}
+			pending_screenshot.clear();
+		}
+
 		SDL_RenderPresent(renderer);
 	}
 }

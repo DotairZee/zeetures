@@ -77,6 +77,8 @@ class SDLBackend : public Backend {
 	int translateScancode(int key);
 
   public:
+	void requestScreenshot(const std::string& path) override { pending_screenshot = path; }
+	std::string pending_screenshot;
 	void setWindowTitle(const std::string& title) override;
 	SDL_Window* window = nullptr;
 

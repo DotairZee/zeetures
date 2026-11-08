@@ -67,6 +67,9 @@
 #include <cxxopts.hpp>
 #include <fmt/core.h>
 #include <memory>
+#include <cstdio>
+#include <tuple>
+#include <sstream>
 #include <stdexcept>
 
 #ifdef _WIN32
@@ -372,6 +375,37 @@ void Engine::update() {
 }
 
 bool Engine::tick() {
+	// developer aid: OPENC2E_SNAPSHOTS="x,y,file;x,y,file" moves the camera to
+	// each (x, y) in turn and saves a screenshot there (BMP), one every 40 ticks
+	static std::vector<std::tuple<int, int, std::string>> snapshots = [] {
+		std::vector<std::tuple<int, int, std::string>> v;
+		if (const char* s = getenv("OPENC2E_SNAPSHOTS")) {
+			std::stringstream ss(s);
+			std::string item;
+			while (std::getline(ss, item, ';')) {
+				int x, y;
+				char file[512];
+				if (sscanf(item.c_str(), "%d,%d,%511s", &x, &y, file) == 3)
+					v.emplace_back(x, y, file);
+			}
+		}
+		return v;
+	}();
+	static size_t snapshot_index = 0;
+	static unsigned int snapshot_wait = 0;
+	if (snapshot_index < snapshots.size() && ++snapshot_wait % 40 == 0) {
+		if (getenv("OPENC2E_SNAPSHOTS_PAUSED"))
+			world.paused = true; // freeze the world so captures differ only by camera
+		auto& [sx, sy, sfile] = snapshots[snapshot_index];
+		if (snapshot_wait % 80 == 40) {
+			camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+			camera->moveToGlobal(sx, sy, jump);
+		} else {
+			get_backend()->requestScreenshot(sfile);
+			snapshot_index++;
+		}
+	}
+
 	// developer aid: OPENC2E_TEST_SAVE_AFTER_TICKS=N saves the world after N
 	// ticks and quits (for testing world saving without the UI)
 	static long test_save_after = getenv("OPENC2E_TEST_SAVE_AFTER_TICKS") ? atol(getenv("OPENC2E_TEST_SAVE_AFTER_TICKS")) : -1;
@@ -1100,10 +1134,13 @@ bool Engine::initialSetup() {
 	Backend* b = possible_backends[preferred_backend];
 	if (!b)
 		throw Exception("No such backend " + preferred_backend);
+	int window_width = OPENC2E_DEFAULT_WIDTH, window_height = OPENC2E_DEFAULT_HEIGHT;
+	if (const char* size = getenv("OPENC2E_WINDOW_SIZE")) // developer aid, e.g. 1200x950
+		sscanf(size, "%dx%d", &window_width, &window_height);
 	b->init(
 		gamename.size() ? gamename + " - openc2e (development build)" : "openc2e (development build)",
-		OPENC2E_DEFAULT_WIDTH,
-		OPENC2E_DEFAULT_HEIGHT);
+		window_width,
+		window_height);
 	setBackend(b);
 	possible_backends.clear();
 	Openc2eImGui::Init();

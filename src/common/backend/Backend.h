@@ -89,6 +89,8 @@ class Backend {
 
 	virtual void run(std::function<bool()> render_callback) = 0;
 	virtual void setWindowTitle(const std::string&) {}
+	// developer aid: save the next presented frame as a BMP file
+	virtual void requestScreenshot(const std::string&) {}
 
 	virtual ~Backend() {}
 };
