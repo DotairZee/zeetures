@@ -1057,6 +1057,22 @@ void Agent::physicsTickC2() {
 	}
 	vely = dy;
 
+	// An object under its room's floor line (the SSFC surface) never meets
+	// that line, since the floor check below only catches an object crossing
+	// it from above; it rests on the room's rectangular bottom instead, out
+	// of sight inside the ground (the world file starts some critters there).
+	// Lift a moving object with gravity onto the line, where the floor is
+	// solid for it (the same size/floor-value rule as that check).
+	if (suffercollisions() && sufferphysics()) {
+		float cx = x + getWidth() / 2.0f, bottom = y + getHeight();
+		std::shared_ptr<Room> r = world.map->roomAt(cx, bottom - 1);
+		if (r && r->floorpoints.size() && size > r->floorvalue) {
+			float floory = r->floorYatX(cx);
+			if (bottom > floory + 1 && floory > r->y_left_ceiling)
+				moveTo(x, floory - getHeight());
+		}
+	}
+
 	Point deltapt(0, 0);
 	double delta = 1000000000;
 
