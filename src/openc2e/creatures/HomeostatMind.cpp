@@ -240,6 +240,16 @@ struct Params {
 	float exitNear = 400.0f;
 	unsigned int exitWindow = 400;
 	size_t exitMax = 8;
+	// Devices that did nothing for an escape (passed over) are not tried again
+	// for this long (mind ticks); with none left untried in view, the creature
+	// searches the room, walking away from the ones it has tried (in the
+	// airlock's west end the land door is out of sight)
+	unsigned int triedFor = 400;
+	float searchShare = 0.6f; // searching: this share of the escape's worth
+	// Devices that flooded the creature (it was dry, used one, and was in water
+	// soon after): not used again while dry near where that happened (the
+	// airlock's sea door, or its pump once drained, which floods it again)
+	float flooderNear = 200.0f;
 	// devices worth trying to get out (C2 categories are genus numbers):
 	// call buttons (2), machines such as the airlock pump (3), doors such as
 	// the airlock's (9), lifts (27)
@@ -460,6 +470,25 @@ class HomeostatMind : public CreatureMind {
 			fmt::print("[homeostat] creature {} t{}: out of the water; remembers {}@{} at {:.0f},{:.0f} as an exit\n", p.creatureId, p.tick,
 				actionName(lastObjectUse.decision), lastObjectUse.category, lastObjectUse.x, lastObjectUse.y);
 		}
+		// (only working a device counts: activate 1 or 2, deactivate; eating
+		// or approaching near one taught creatures nonsense flooders)
+		if (!wasInWater && p.inWater && lastObjectUse.category >= 0 && lastObjectUse.decision >= 1 && lastObjectUse.decision <= 3 && p.tick < lastObjectUseTick + prm.exitWindow) {
+			bool known = false;
+			for (auto& f : flooders)
+				if (f.category == lastObjectUse.category && f.decision == lastObjectUse.decision && std::fabs(f.x - lastObjectUse.x) < prm.flooderNear && std::fabs(f.y - lastObjectUse.y) < prm.sameLevel) {
+					f.uses++;
+					known = true;
+				}
+			if (!known) {
+				if (flooders.size() >= prm.exitMax)
+					flooders.erase(flooders.begin());
+				ExitLink f = lastObjectUse;
+				f.uses = 1;
+				flooders.push_back(f);
+			}
+			fmt::print("[homeostat] creature {} t{}: in the water; remembers {}@{} at {:.0f},{:.0f} as a flooder\n", p.creatureId, p.tick,
+				actionName(lastObjectUse.decision), lastObjectUse.category, lastObjectUse.x, lastObjectUse.y);
+		}
 		wasInWater = p.inWater;
 		// boat rides
 		if (p.riding && !wasRiding) {
@@ -665,6 +694,9 @@ class HomeostatMind : public CreatureMind {
 			candidates.erase(std::remove_if(candidates.begin(), candidates.end(),
 								 [&](const Candidate& c) { return c.category < 0 && c.decision == prm.sleepDecision; }),
 				candidates.end());
+		if (!p.inWater && !flooders.empty())
+			candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](const Candidate& c) { return isFlooder(p, c.category, c.decision); }),
+				candidates.end());
 		if (candidates.empty())
 			return out;
 		Candidate choice = pick(candidates, D);
@@ -759,6 +791,8 @@ class HomeostatMind : public CreatureMind {
 		s += fmt::format("restless {}\n", hungryTicks);
 		for (auto& e : exits)
 			s += fmt::format("exit {} {} {} {} {}\n", e.x, e.y, e.category, e.decision, e.uses);
+		for (auto& f : flooders)
+			s += fmt::format("flooder {} {} {} {} {}\n", f.x, f.y, f.category, f.decision, f.uses);
 		for (auto& [decision, bl] : boatLinks)
 			s += fmt::format("boat {} {} {}\n", decision, bl.dx, bl.rides);
 		for (auto& tl : travelLinks)
@@ -818,6 +852,11 @@ class HomeostatMind : public CreatureMind {
 				l >> e.x >> e.y >> e.category >> e.decision >> e.uses;
 				if (l && exits.size() < prm.exitMax)
 					exits.push_back(e);
+			} else if (what == "flooder") {
+				ExitLink f;
+				l >> f.x >> f.y >> f.category >> f.decision >> f.uses;
+				if (l && f.decision >= 1 && f.decision <= 3 && flooders.size() < prm.exitMax)
+					flooders.push_back(f);
 			} else if (what == "restless") {
 				l >> hungryTicks;
 			} else if (what == "food") {
@@ -898,6 +937,8 @@ class HomeostatMind : public CreatureMind {
 	std::vector<FoodPlace> foodPlaces; // the food map
 	std::map<std::pair<int, int>, unsigned int> visited; // (x bin, y bin) -> last mind tick there
 	std::vector<ExitLink> exits; // objects that got the creature out of water
+	std::vector<ExitLink> flooders; // objects that got the creature into water
+	std::vector<std::pair<AgentRef, unsigned int>> triedDevices; // passed over while escaping, and when
 	std::map<int, BoatLink> boatLinks; // decision -> learned ride
 	std::vector<TravelLink> travelLinks;
 	std::vector<CallButton> callButtons; // buttons tried for calling boats
@@ -1472,9 +1513,21 @@ class HomeostatMind : public CreatureMind {
 				out[i].chain = true; // no drive learning from the steps themselves
 			}
 		};
+		auto tried = [&](const AgentRef& a) {
+			for (auto& t : triedDevices)
+				if (t.first && t.first == a && p.tick < t.second + prm.triedFor)
+					return true;
+			return false;
+		};
+		auto shownTried = [&](int category) {
+			for (auto& s : p.visible)
+				if (s.category == category)
+					return tried(s.agent);
+			return false;
+		};
 		// a remembered exit in view and near
 		for (auto& e : exits) {
-			if (std::fabs(e.x - p.x) > prm.exitNear || std::fabs(e.y - p.y) > prm.sameLevel || !isVisible(p, e.category))
+			if (std::fabs(e.x - p.x) > prm.exitNear || std::fabs(e.y - p.y) > prm.sameLevel || !isVisible(p, e.category) || shownTried(e.category))
 				continue;
 			Candidate c{e.category, e.decision, 0, worth * prm.exitBonus, 0, worth * prm.exitBonus};
 			c.escape = true;
@@ -1497,8 +1550,16 @@ class HomeostatMind : public CreatureMind {
 		}
 		// no open way out: try the devices in view (passing over handles the
 		// ones that do nothing)
+		bool offered = false;
+		float triedX = 0;
+		int triedSeen = 0;
 		for (auto& s : p.visible) {
 			if (std::find(prm.escapeDevices.begin(), prm.escapeDevices.end(), s.category) != prm.escapeDevices.end()) {
+				if (tried(s.agent)) {
+					triedX += s.x;
+					triedSeen++;
+					continue;
+				}
 				for (int decision : {1, 2}) { // activate 1 and 2
 					bool can = false;
 					for (auto& a : *p.actions)
@@ -1509,9 +1570,34 @@ class HomeostatMind : public CreatureMind {
 					Candidate c{s.category, decision, s.distance, worth * prm.escapeDeviceShare, 0, worth * prm.escapeDeviceShare};
 					c.escape = true;
 					out.push_back(c);
+					offered = true;
 				}
 			}
 		}
+		// every device in view already tried: search the room, walking away
+		// from them (the other way if that side is closed)
+		if (!offered && triedSeen > 0) {
+			int away = (triedX / triedSeen) < p.x ? 11 : 10;
+			for (int dir : {away, away == 10 ? 11 : 10}) {
+				if ((dir == 10 && !canWest) || (dir == 11 && !canEast) || isBlocked(p, dir))
+					continue;
+				Candidate c{-1, dir, 0, worth * prm.searchShare, 0, worth * prm.searchShare};
+				out.push_back(c);
+				mark(out.size() - 1);
+				break;
+			}
+		}
+	}
+
+	// A device that once flooded the creature, used the same way near the
+	// same place
+	bool isFlooder(const MindPerception& p, int category, int decision) const {
+		if (category < 0)
+			return false;
+		for (auto& f : flooders)
+			if (f.category == category && f.decision == decision && std::fabs(f.x - p.x) < prm.flooderNear && std::fabs(f.y - p.y) < prm.sameLevel)
+				return true;
+		return false;
 	}
 
 	// Seeking: for each remembered place whose category is out of sight, how
@@ -1831,6 +1917,10 @@ class HomeostatMind : public CreatureMind {
 				lastUselessAgent = episodeAgent;
 				if (uselessInARow >= prm.passOverAfter) {
 					pendingPassOver = episodeAgent;
+					if (current.escape) {
+						triedDevices.erase(std::remove_if(triedDevices.begin(), triedDevices.end(), [&](auto& t) { return !t.first || t.first == episodeAgent || p.tick >= t.second + prm.triedFor; }), triedDevices.end());
+						triedDevices.push_back({episodeAgent, p.tick});
+					}
 					uselessInARow = 0;
 				}
 			} else
