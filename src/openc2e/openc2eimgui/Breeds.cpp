@@ -191,9 +191,10 @@ static int appearancePart(char x) {
 
 // Edits a C2 genome's appearance genes in place, byte for byte: each is
 // "gene", type 2, subtype 2, five header bytes, then part, slot, species.
-// (openc2e's genome writer does not round-trip C2 genomes, so the bytes are
-// patched instead.) The raw scan must find exactly the appearance genes the
-// genome reader finds, or the genome is left unchanged.
+// Patching keeps everything else exactly as it was, including what follows
+// "gend" in the genome's 36001-byte block. The raw scan must find exactly
+// the appearance genes the genome reader finds, or the genome is left
+// unchanged.
 template <typename F>
 static std::vector<uint8_t> editGenome(const std::vector<uint8_t>& bytes, F edit) {
 	try {

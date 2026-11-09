@@ -221,6 +221,7 @@ add_executable(test_fileformats
 	src/fileformats/tests/CaosLexerTest.cpp
 	src/fileformats/tests/CatalogueFileTest.cpp
 	src/fileformats/tests/CfgFileTest.cpp
+	src/fileformats/tests/GenomeFileTest.cpp
 	src/fileformats/tests/MngTest.cpp
 	src/fileformats/tests/PrayTest.cpp
 )

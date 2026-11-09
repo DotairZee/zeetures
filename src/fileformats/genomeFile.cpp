@@ -18,6 +18,8 @@
  */
 #include "genomeFile.h"
 
+#include "common/io/VectorWriter.h"
+
 #include "common/endianlove.h"
 #include "common/io/IOException.h"
 #include "common/io/Reader.h"
@@ -206,15 +208,28 @@ Reader& operator>>(Reader& s, genomeFile& f) {
 
 Writer& operator<<(Writer& s, const genomeFile& f) {
 	char majic[4] = {'d', 'n', 'a', static_cast<char>(f.cversion + 48)}; // 48 = ASCII '0';
-	s.write(majic, 4);
-
-	// iterate through genes
-	for (auto& gene : ((genomeFile&)f).genes) {
-		s << *gene;
+	if (f.cversion != 2) {
+		s.write(majic, 4);
+		for (auto& gene : ((genomeFile&)f).genes)
+			s << *gene;
+		s.write("gend", 4);
+		return s;
 	}
 
-	s.write("gend", 4);
-
+	// Creatures 2 keeps every genome in a fixed block of 36001 bytes: the
+	// genes, "gend", then the rest of the block (zeros in the games' own
+	// norn genomes, leftovers of older genes in some others; readers stop at
+	// "gend"). Genomes in the game's Genetics folder and in its eggs are all
+	// this size, so a written C2 genome is padded the same way.
+	VectorWriter body;
+	body.write(majic, 4);
+	for (auto& gene : ((genomeFile&)f).genes)
+		body << *gene;
+	body.write("gend", 4);
+	std::vector<uint8_t> out = body.vector();
+	if (out.size() < C2_GENOME_BLOCK)
+		out.resize(C2_GENOME_BLOCK, 0);
+	s.write(reinterpret_cast<const char*>(out.data()), out.size());
 	return s;
 }
 

@@ -31,6 +31,9 @@ class Reader;
 class Writer;
 
 class gene;
+
+// the size of a Creatures 2 genome file or egg genome: genes, "gend", padding
+constexpr size_t C2_GENOME_BLOCK = 36001;
 struct geneNote;
 class organGene;
 
