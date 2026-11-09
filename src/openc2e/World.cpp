@@ -306,6 +306,33 @@ void World::tick() {
 	if (engine.version < 3)
 		WorldSave::TickLifeStageChanges();
 
+	// developer aid: OPENC2E_DUMP_AGENTS="x0 y0 x1 y1" prints, once after
+	// load, every agent overlapping that box: class, plane, size and the
+	// sprite file of each part
+	static const char* agentBox = getenv("OPENC2E_DUMP_AGENTS");
+	static bool agentsDumped = false;
+	if (agentBox && !agentsDumped && tickcount > 5) {
+		agentsDumped = true;
+		int bx0, by0, bx1, by1;
+		if (sscanf(agentBox, "%d %d %d %d", &bx0, &by0, &bx1, &by1) == 4) {
+			for (auto& a : agents) {
+				if (!a || a->x > bx1 || a->x + a->getWidth() < bx0 || a->y > by1 || a->y + a->getHeight() < by0)
+					continue;
+				std::string sprites;
+				{
+					auto* c = dynamic_cast<CompoundAgent*>(a.get());
+					unsigned int n = c ? c->partCount() : 1;
+					for (unsigned int i = 0; i < n; i++) {
+						auto* sp = dynamic_cast<SpritePart*>(c ? c->part(i) : a->part(0));
+						if (sp && sp->getSprite())
+							sprites += fmt::format(" part {} {} img {} z {} at +{},+{}", i, sp->getSprite()->getName(), sp->getFirstImg() + sp->getPose(), sp->zorder, sp->x, sp->y);
+					}
+				}
+				fmt::print("* AGENT {} {} {} plane {} at ({:.0f},{:.0f}) {}x{}{}\n", (int)a->family, (int)a->genus, a->species, a->zorder, a->x, a->y, a->getWidth(), a->getHeight(), sprites);
+			}
+		}
+	}
+
 	// developer aid: OPENC2E_WATCH_SUNK=N lists, every N ticks, creatures
 	// and objects sunk into a solid floor (bottom more than 20 px below the
 	// floor of their room, where that floor is solid) or outside the rooms
