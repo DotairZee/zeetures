@@ -67,6 +67,15 @@ static bool isEgg(Agent* a) {
 	return engine.version <= 2 && a->family == 2 && a->genus == 5;
 }
 
+// Objects a script asks to keep: OV99 set to KEEP_MARK. They are saved and
+// restored like eggs (sprite, picture, plane, attributes, timer, place and
+// object variables), so things scripts make at load time, such as plants
+// that grow over game days, carry on between sessions.
+static const int KEEP_MARK = 7461;
+static bool isKept(Agent* a) {
+	return engine.version <= 2 && !isEgg(a) && a->var[99].hasInt() && a->var[99].getInt() == KEEP_MARK;
+}
+
 static oldCreature* oldCreatureOf(Agent* a) {
 	CreatureAgent* ca = dynamic_cast<CreatureAgent*>(a);
 	return ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
@@ -139,11 +148,17 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			}
 			out << "end\n";
 			ncreatures++;
-		} else if (isEgg(a.get())) {
+		} else if (isEgg(a.get()) || isKept(a.get())) {
 			SpritePart* sp = dynamic_cast<SpritePart*>(a->part(0));
 			if (!sp)
 				continue;
-			out << "egg\n";
+			if (isKept(a.get())) {
+				out << "object\n";
+				out << "frames " << (int)sp->getSprite()->numframes() - (int)sp->getFirstImg() << "\n";
+				out << "plane " << a->zorder << "\n";
+			} else {
+				out << "egg\n";
+			}
 			out << "classifier " << (int)a->family << " " << (int)a->genus << " " << a->species << "\n";
 			out << "sprite " << sp->getSprite()->getName() << " " << sp->getFirstImg() << " " << sp->getPose() << "\n";
 			out << "attr " << a->attr << "\n";
@@ -192,6 +207,8 @@ struct SavedCreature {
 };
 
 struct SavedEgg {
+	bool kept = false; // a kept object rather than an egg
+	int frames = 8, plane = 2000;
 	int family = 2, genus = 5, species = 0;
 	std::string sprite = "eggs";
 	unsigned int firstimg = 0, pose = 0, attr = 195, timer = 0;
@@ -268,14 +285,16 @@ static void restoreCreature(const fs::path& savedir, const SavedCreature& s, boo
 }
 
 static void restoreEgg(const SavedEgg& e) {
-	std::string script = fmt::format("new: simp {} 8 {} 2000 0\n", e.sprite, e.firstimg);
+	std::string script = fmt::format("new: simp {} {} {} {} 0\n", e.sprite, e.frames, e.firstimg, e.plane);
 	script += fmt::format("pose {}\n", e.pose);
 	script += fmt::format("setv cls2 {} {} {}\nsetv attr {}\n", e.family, e.genus, e.species, e.attr);
 	for (auto& v : e.vars)
 		script += v + "\n";
 	if (e.timer)
 		script += fmt::format("tick {}\n", e.timer);
-	script += fmt::format("mvto {} {}\nsetv grav 1\n", e.x, e.y);
+	script += fmt::format("mvto {} {}\n", e.x, e.y);
+	if (!e.kept)
+		script += "setv grav 1\n";
 	std::string err = engine.executeNetwork(script);
 	if (!err.empty())
 		fmt::print("* Couldn't restore an egg: {}\n", err);
@@ -311,9 +330,10 @@ bool LoadWorldState(const fs::path& worlddir) {
 			creatures.emplace_back();
 			c = &creatures.back();
 			e = nullptr;
-		} else if (key == "egg") {
+		} else if (key == "egg" || key == "object") {
 			eggs.emplace_back();
 			e = &eggs.back();
+			e->kept = key == "object";
 			c = nullptr;
 		} else if (key == "end") {
 			c = nullptr;
@@ -360,6 +380,10 @@ bool LoadWorldState(const fs::path& worlddir) {
 				l >> e->sprite >> e->firstimg >> e->pose;
 			else if (key == "attr")
 				l >> e->attr;
+			else if (key == "frames")
+				l >> e->frames;
+			else if (key == "plane")
+				l >> e->plane;
 			else if (key == "timer")
 				l >> e->timer;
 			else if (key == "pos")
@@ -377,7 +401,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 	// the saved creatures and eggs replace those in the world file
 	std::vector<std::shared_ptr<Agent>> remove;
 	for (auto& a : world.agents)
-		if (a && (oldCreatureOf(a.get()) || isEgg(a.get())))
+		if (a && (oldCreatureOf(a.get()) || isEgg(a.get()) || isKept(a.get())))
 			remove.push_back(a);
 	for (auto& a : remove)
 		a->kill();
@@ -393,7 +417,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 		restoreEgg(s);
 	if (camx >= 0 && camy >= 0)
 		engine.camera->moveToGlobal(camx, camy, jump);
-	fmt::print("* Restored saved world: {} creatures, {} eggs\n", creatures.size(), eggs.size());
+	int nkept = (int)std::count_if(eggs.begin(), eggs.end(), [](const SavedEgg& e) { return e.kept; });
+	fmt::print("* Restored saved world: {} creatures, {} eggs, {} kept objects\n", creatures.size(), (int)eggs.size() - nkept, nkept);
 	return true;
 }
 
