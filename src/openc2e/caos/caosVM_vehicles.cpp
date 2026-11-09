@@ -207,6 +207,7 @@ void c_DPAS_c2(caosVM* vm) {
 /**
  CABP (command) plane (integer)
  %status maybe
+ %variants c2 cv c3 sm
 */
 void c_CABP(caosVM* vm) {
 	VM_PARAM_INTEGER(plane)

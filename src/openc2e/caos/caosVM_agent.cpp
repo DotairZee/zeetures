@@ -1313,6 +1313,7 @@ void v_TRAN(caosVM* vm) {
 /**
  TRAN (command) transparency (integer) part_no (integer)
  %status maybe
+ %variants c2 cv c3 sm
 
  Sets the TARG agent's behaviour with regard to transparency.  If set to 1, invisible 
  parts of the agent can't be clicked.  If 0, anywhere on the agent (including transparent 
@@ -1572,7 +1573,7 @@ static void alph_impl(caosVM* vm, int32_t transparency, int32_t enable) {
 /**
  ALPH (command) transparency (integer) enable (integer)
  %status maybe
- %variants c3 sm
+ %variants c2 c3 sm
 
  Sets the degree of alpha blending on the TARG agent, to a value from 0 (solid) to 256
  (invisible). The second parameter will turn alpha blending on and off.

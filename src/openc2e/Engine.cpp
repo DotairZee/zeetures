@@ -354,6 +354,27 @@ uint32_t Engine::get_ticks_msec() const {
 // matching agent's position and its parts (sprite, frames, offsets, depth)
 // on every snapshot (and every world tick with OPENC2E_DUMP_AGENT_EVERY_TICK),
 // so part changes can be compared frame by frame
+// developer aid: OPENC2E_DUMP_RENDERS="x0,x1" prints, on every snapshot, the
+// draw order (bottom to top) of the agent parts whose agents lie between x0
+// and x1, with their planes, to check what is drawn over what
+static void dumpRenders() {
+	int x0, x1;
+	const char* s = getenv("OPENC2E_DUMP_RENDERS");
+	if (!s || sscanf(s, "%d,%d", &x0, &x1) != 2)
+		return;
+	int i = 0;
+	for (auto* r : world.renders) {
+		i++;
+		auto* p = dynamic_cast<CompoundPart*>(r);
+		if (!p)
+			continue;
+		Agent* a = p->getParent();
+		if ((a->x < x0 || a->x > x1) && a->family != 4)
+			continue;
+		fmt::print("  render #{} {} part {} z {}\n", i, a->identify(), p->id, p->getZOrder());
+	}
+}
+
 static void dumpAgents() {
 	int f, g, sp;
 	const char* s = getenv("OPENC2E_DUMP_AGENT");
@@ -485,6 +506,7 @@ bool Engine::tick() {
 		} else {
 			get_backend()->requestScreenshot(sfile);
 			dumpAgents();
+			dumpRenders();
 			snapshot_index++;
 		}
 	}
