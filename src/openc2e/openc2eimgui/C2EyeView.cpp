@@ -94,6 +94,26 @@ static std::string describe(Agent* a) {
 	return fmt::format("an object ({} {} {})", (int)a->family, (int)a->genus, a->species);
 }
 
+std::string DescribeCreatureActivity(Agent* self) {
+	auto* ca = dynamic_cast<CreatureAgent*>(self);
+	Creature* cr = ca ? ca->getCreature() : nullptr;
+	if (!cr)
+		return {};
+	if (!cr->isAlive())
+		return "Dead";
+	if (cr->isAsleep())
+		return "Asleep";
+	Agent* focus = cr->getAttentionFocus().get();
+	if (focus == self || (focus && focus->isDying()))
+		focus = nullptr;
+	if (!focus)
+		return "Not paying attention to anything";
+	std::string s = fmt::format("{} {}", actionWords(cr->getDecisionId()), describe(focus));
+	if (!s.empty())
+		s[0] = (char)toupper((unsigned char)s[0]);
+	return s;
+}
+
 // the shorter way from x0 to x1 in the creature's metaroom, if it wraps
 static MetaRoom* s_room = nullptr;
 static float wrapDelta(float x0, float x1) {

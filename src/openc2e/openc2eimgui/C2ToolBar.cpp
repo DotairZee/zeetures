@@ -1,6 +1,7 @@
 #include "C2ToolBar.h"
 
 #include "AgentInjector.h"
+#include "C2Kits.h"
 #include "C2EyeView.h"
 #include "WorldChooser.h"
 #include "common/backend/Backend.h"
@@ -218,6 +219,11 @@ static void DrawC2MenuBar() {
 			SetHatcheryOpen(true);
 		if (ImGui::MenuItem("Agent Injector", nullptr, false, IsAgentInjectorEnabled())) // openc2e's
 			SetAgentInjectorOpen(true);
+		ImGui::Separator();
+		if (ImGui::MenuItem("Health Kit", nullptr, false, IsC2KitAvailable("health")))
+			OpenC2Kit("health");
+		if (ImGui::MenuItem("Science Kit", nullptr, false, IsC2KitAvailable("science")))
+			OpenC2Kit("science");
 		ImGui::EndMenu();
 	}
 	if (ImGui::BeginMenu("Creatures")) {
@@ -482,11 +488,17 @@ void DrawC2Toolbar() {
 			SetHatcheryOpen(true);
 		};
 		ImageButton(icon_ownerskit, false);
-		ImageButton(icon_healthkit, false);
+		if (ImageButton(icon_healthkit, IsC2KitAvailable("health")))
+			OpenC2Kit("health");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Health Kit");
 		ImageButton(icon_graveyard, false);
 		ImGui::Separator();
 		ImageButton(icon_unknown_maybe_breederskit, false);
-		ImageButton(icon_unknown_maybe_sciencekit, false);
+		if (ImageButton(icon_unknown_maybe_sciencekit, IsC2KitAvailable("science")))
+			OpenC2Kit("science");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Science Kit");
 		ImageButton(icon_unknown_maybe_neurosciencekit, false);
 		ImageButton(icon_unknown_maybe_observationkit, false);
 		ImGui::Separator();

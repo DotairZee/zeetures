@@ -281,6 +281,8 @@ class c2Creature : public oldCreature {
 
 	void tick();
 
+	// the organs, for the Health and Science Kits (read only)
+	const std::vector<std::shared_ptr<c2Organ>>& getOrgans() const { return organs; }
 	unsigned char getDrive(unsigned int id) {
 		assert(id < 17);
 		return drives[id];

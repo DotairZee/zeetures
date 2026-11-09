@@ -1,5 +1,6 @@
 #include "C2StatusBar.h"
 
+#include "C2Kits.h"
 #include "AgentHelpers.h"
 #include "Camera.h"
 #include "Engine.h"
@@ -147,6 +148,9 @@ void DrawC2StatusBar() {
 			s_hearticons_texs[3] = GetTextureFromExeFileWithTransparentTopLeft(0xb0); // small
 			s_hearticons_texs[4] = GetTextureFromExeFileWithTransparentTopLeft(0xe7); // dead (blue)
 		}
+
+		// minimized kits, as chips that bring them back
+		Openc2eImgui::DrawC2KitChips();
 
 		static int s_last_statusbar_rightside_width = 0;
 		ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - s_last_statusbar_rightside_width);

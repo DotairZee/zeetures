@@ -4,6 +4,7 @@
 #include "BrainViewer.h"
 #include "C1ToolBar.h"
 #include "C2EyeView.h"
+#include "C2Kits.h"
 #include "C2ScrollBars.h"
 #include "C2StatusBar.h"
 #include "C2ToolBar.h"
@@ -49,6 +50,7 @@ void Update() {
 		Openc2eImgui::DrawC2StatusBar();
 		Openc2eImgui::DrawC2ScrollBars();
 		Openc2eImgui::DrawEyeView();
+		Openc2eImgui::DrawC2Kits();
 	}
 	if (ImGui::GetIO().MouseClicked[0] && ImGui::IsKeyDown(ImGuiMod_Shortcut)) {
 		ImGui::OpenPopup("Menu");
