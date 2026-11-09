@@ -10,6 +10,7 @@
 #include "common/mappedfile.h"
 #include "s16Image.h"
 #include "sprImage.h"
+#include "pngImage.h"
 
 #include <filesystem>
 
@@ -40,6 +41,9 @@ MultiImage ReadImage(const fs::path& path) {
 	}
 	if (ext == ".bmp") {
 		return {ReadBmpFile(in)};
+	}
+	if (ext == ".png") {
+		return ReadPngFile(in);
 	}
 
 	auto filename = path.filename();
@@ -267,6 +271,10 @@ Color GetPixelColor(const Image& image, unsigned int x, unsigned int y) {
 		g = g * 255 / 63;
 		b = b * 255 / 31;
 		return Color{r, g, b, 255};
+
+	} else if (image.format == if_rgba32) {
+		const uint8_t* p = &image.data[(y * image.width + x) * 4];
+		return Color{p[0], p[1], p[2], p[3]};
 
 	} else if (image.format == if_bgr24) {
 		uint8_t b = image.data[(y * image.width + x) * 3];

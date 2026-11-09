@@ -394,6 +394,13 @@ void Engine::zoomStep(int steps, int anchorx, int anchory) {
 	setZoom(zoom_levels[i], anchorx, anchory);
 }
 
+float Engine::tickFraction() const {
+	if (world.paused || world.ticktime == 0)
+		return 1.0f;
+	float f = (float)(get_ticks_msec() - tickdata) / (float)world.ticktime;
+	return f < 0 ? 0.0f : (f > 1 ? 1.0f : f);
+}
+
 static std::chrono::steady_clock::time_point program_started = std::chrono::steady_clock::now();
 uint32_t Engine::get_ticks_msec() const {
 	// TODO: this will wrap every ~49 days, not good. Use a 64-bit result or handle this differently

@@ -178,7 +178,11 @@ std::shared_ptr<creaturesImage> imageManager::getImage(const std::string& name) 
 	if (engine.version == 1) {
 		img = tryOpenImage(name + ".spr");
 	} else if (engine.version == 2) {
-		img = tryOpenImage(name + ".s16");
+		// openc2e: a PNG sprite (with real transparency) comes first, so an
+		// add-on's own art can use it; the game's sprites are all .s16
+		img = tryOpenImage(name + ".png");
+		if (!img)
+			img = tryOpenImage(name + ".s16");
 	} else if (engine.bmprenderer) {
 		img = tryOpenImage(name + ".bmp");
 		if (img) {

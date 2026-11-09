@@ -120,6 +120,8 @@ bool creaturesImage::transparentAt(unsigned int frame, unsigned int x, unsigned 
 		size_t offset = (y * width(frame)) + x;
 		uint16_t* buffer = (uint16_t*)data(frame);
 		return buffer[offset] == 0;
+	} else if (imgformat == if_rgba32) {
+		return ((const uint8_t*)data(frame))[((y * width(frame)) + x) * 4 + 3] < 128;
 	} else if (imgformat == if_index8 && !hasCustomPalette(frame)) {
 		size_t offset = (y * width(frame)) + x;
 		uint8_t* buffer = (uint8_t*)data(frame);

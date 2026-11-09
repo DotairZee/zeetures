@@ -21,6 +21,8 @@
 #include "WorldSave.h"
 
 #include <algorithm>
+#include "Vehicle.h"
+
 #include <cmath>
 #include "AgentHelpers.h"
 
@@ -242,6 +244,14 @@ void World::tick() {
 		agents.clear();
 		engine.done = true;
 		return;
+	}
+
+	// remember where vehicles start this tick, for smooth drawing
+	for (auto& a : agents) {
+		if (auto* v = dynamic_cast<Vehicle*>(a.get())) {
+			v->tickstartx = v->x;
+			v->tickstarty = v->y;
+		}
 	}
 
 	// Tick all agents, deleting as necessary.
@@ -481,6 +491,26 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand) {
 		surface->renderCreaturesImage(bkgd, 0, destx + m->width(), desty);
 	}
 
+	// vehicles and their riders glide between ticks: draw them back along
+	// this tick's move, by the part of the tick not yet elapsed (not for
+	// jumps)
+	const float glide = 1.0f - engine.tickFraction();
+	auto glideOffset = [&](renderable* r, int& gx, int& gy) {
+		gx = gy = 0;
+		auto* p = dynamic_cast<CompoundPart*>(r);
+		if (!p || glide <= 0)
+			return;
+		Agent* a = p->getParent();
+		Vehicle* v = dynamic_cast<Vehicle*>(a->invehicle ? a->invehicle.get() : a);
+		if (!v)
+			return;
+		float dx = v->x - v->tickstartx, dy = v->y - v->tickstarty;
+		if (std::fabs(dx) > 64 || std::fabs(dy) > 64)
+			return;
+		gx = -(int)std::lround(dx * glide);
+		gy = -(int)std::lround(dy * glide);
+	};
+
 	// render all the agents
 	for (auto render : renders) {
 		if (skip_hand) {
@@ -492,7 +522,9 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand) {
 			// three-pass for wraparound rooms, the third since agents often straddle the boundary
 			// TODO: same as above with background rendering
 			for (unsigned int z = 0; z < (m->wraparound() ? 3 : 1); z++) {
-				int newx = -adjustx, newy = -adjusty;
+				int gx, gy;
+				glideOffset(render, gx, gy);
+				int newx = -adjustx + gx, newy = -adjusty + gy;
 				if (z == 1)
 					newx += m->width();
 				else if (z == 2)

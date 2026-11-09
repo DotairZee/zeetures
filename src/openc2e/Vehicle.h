@@ -48,6 +48,11 @@ class Vehicle : public CompoundAgent {
 
 	std::vector<AgentRef> passengers;
 
+	// where it was at the start of this world tick: vehicles (and their
+	// riders) are drawn gliding from there to where they are now, so a lift
+	// moving many pixels a tick still looks smooth (see World::drawWorld)
+	float tickstartx = 0, tickstarty = 0;
+
 	virtual void carry(AgentRef);
 	virtual void drop(AgentRef);
 	virtual void adjustCarried(float xoffset, float yoffset);

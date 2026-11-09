@@ -333,6 +333,9 @@ void SDLBackend::updateTexture(Texture& tex, Rect2i location, const Image& image
 		case if_rgb24:
 			sdlformat = SDL_PIXELFORMAT_RGB24;
 			break;
+		case if_rgba32:
+			sdlformat = SDL_PIXELFORMAT_RGBA32;
+			break;
 	}
 
 	// create initial surface

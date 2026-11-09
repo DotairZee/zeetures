@@ -92,6 +92,8 @@ class Engine {
 
 	std::string getGameName() { return gamename; }
 	uint32_t get_ticks_msec() const;
+	// how far we are from the last world tick to the next one, 0-1
+	float tickFraction() const;
 
 	bool done;
 	bool dorendering, fastticks, refreshdisplay;

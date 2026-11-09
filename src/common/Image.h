@@ -12,7 +12,8 @@ enum imageformat {
 	if_rgb555,
 	if_rgb565,
 	if_bgr24,
-	if_rgb24
+	if_rgb24,
+	if_rgba32 // 8 bits each, R G B A (openc2e: PNG sprites with real transparency)
 };
 
 class Image {
