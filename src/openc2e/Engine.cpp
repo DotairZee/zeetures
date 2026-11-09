@@ -1262,11 +1262,13 @@ bool Engine::initialSetup() {
 
 	// audio
 	musicmanager = std::make_unique<MusicManager>();
-	if (!cmdline_enable_sound) {
-		soundmanager.setMuted(true);
-		musicmanager->setMuted(true);
-		musicmanager->setMIDIMuted(true);
-	}
+	// start quiet: music, world sounds and creature speech all begin muted
+	// (the player turns them on from File > Sound); with sound disabled on
+	// the command line they stay off
+	soundmanager.setMuted(true);
+	soundmanager.setVoicesMutedByPlayer(true);
+	musicmanager->setMuted(true);
+	musicmanager->setMIDIMuted(true);
 
 	// initial setup
 	if (engine.version == 3) {

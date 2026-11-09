@@ -95,6 +95,8 @@ void SDLBackend::init(const std::string& name, int32_t width, int32_t height) {
 		if (sscanf(pos, "%d,%d", &wx, &wy) == 2)
 			SDL_SetWindowPosition(window, wx, wy);
 	}
+	// start maximized, on whichever monitor the window opened on
+	SDL_MaximizeWindow(window);
 
 	renderer = SDL_CreateRenderer(window, nullptr);
 	if (!renderer) {
