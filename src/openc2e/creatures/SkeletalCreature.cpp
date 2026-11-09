@@ -218,12 +218,20 @@ void SkeletalCreature::skeletonInit() {
 
 		// find relevant sprite
 		bool tryfemale = creature->isFemale();
+		// (the file found, so its body data can be the matching one)
+		int foundstage = -1, foundvar = -1;
+		bool foundfemale = false;
 		while (!images[i]) {
 			int var = partvariant;
 			while (var > -1 && !images[i]) {
 				int stage_to_try = creature->getStage();
 				while (stage_to_try > -1 && !images[i]) {
 					images[i] = world.gallery->getImage(x + dataString(stage_to_try, tryfemale, spe, var));
+					if (images[i]) {
+						foundstage = stage_to_try;
+						foundvar = var;
+						foundfemale = tryfemale;
+					}
 					stage_to_try--;
 				}
 				var--;
@@ -235,8 +243,13 @@ void SkeletalCreature::skeletonInit() {
 		if (!images[i])
 			throw Exception(fmt::format("SkeletalCreature couldn't find an image for part {:c} of species {}, variant {}, stage {}", x, (int)partspecies, (int)partvariant, (int)creature->getStage()));
 
-		// find relevant ATT data
+		// find relevant ATT data: the body data that goes with the sprite
+		// found (same sex, age and breed). Looking it up as male only gave
+		// female golden norns (breed k, whose male and female heads differ
+		// in size and neck point) the male neck points: heads rode high.
 		decltype(findBodyDataFile("")) attpath;
+		if (foundstage >= 0)
+			attpath = findBodyDataFile(x + dataString(foundstage, foundfemale, spe, foundvar) + ".att");
 		int var = partvariant;
 		while (var > -1 && attpath.empty()) {
 			int stage_to_try = creature->getStage();
