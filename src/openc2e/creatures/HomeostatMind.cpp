@@ -131,6 +131,7 @@ struct Params {
 	// creature woken by the cold at the west edge came to rank sleep so low
 	// that it never slept again and ran out of energy)
 	float badSleepNear = 300.0f;
+	float poisonPain = 1.0f; // felt Pain per unit of poison taken in (see the stimulus loop)
 	unsigned int badSleepTicks = 1200;
 	int maxObjectEpisodeTicks = 150; // actions on an object (walk there, then act): at most this long
 	int stallTicks = 25; // ...and given up if not getting closer for this long
@@ -617,6 +618,12 @@ class HomeostatMind : public CreatureMind {
 				} else if (c >= prm.driveDecreaseChem && c < prm.driveDecreaseChem + NUM_DRIVES) {
 					felt[c - prm.driveDecreaseChem] -= amt;
 					feltAny[c - prm.driveDecreaseChem] = true;
+				} else if (amt > 0 && (c == 140 || c == 141 || c == 143 || c == 144 || c == 145 || (c >= 234 && c <= 239) || c == 170)) {
+					// a poison taken in is felt as harm, like a bitter, burning
+					// taste (alcohol at half): one bite of the cyanide berries
+					// teaches the creature to leave them alone
+					felt[PAIN] += amt * (c == 170 ? 0.5f : 1.0f) * prm.poisonPain;
+					feltAny[PAIN] = true;
 				}
 			}
 			if (s.numbered)
@@ -1749,7 +1756,10 @@ class HomeostatMind : public CreatureMind {
 		for (auto& s : p.visible) {
 			if (s.category == prm.liftCategory)
 				lift = &s;
-			if (s.category == prm.buttonCategory)
+			// only a call button on this floor, within reach: far-east norns
+			// on a ledge pressed the call button of the deck below them over
+			// a thousand times
+			if (s.category == prm.buttonCategory && s.reachable && std::fabs(s.y - p.y) < prm.sameLevel)
 				button = &s;
 		}
 		// a known link from this floor in the right direction, nearest first

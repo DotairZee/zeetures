@@ -132,6 +132,14 @@ class c1Creature : public oldCreature {
 	unsigned char gaitloci[8];
 	unsigned char drives[16];
 
+	// developer aid: OPENC2E_WATCH_CHEM keeps each creature's last 400 ticks
+	// of chemistry and organ life force, and prints them once if its ATP
+	// collapses (from 180 or more to under 30)
+	std::deque<std::vector<unsigned char>> chemHistory;
+	std::deque<std::vector<float>> organHistory;
+	bool chemDumped = false;
+	void watchChemistry();
+
 	void addGene(gene*);
 	void tickBiochemistry();
 	void processReaction(c1Reaction&);
@@ -254,6 +262,14 @@ class c2Creature : public oldCreature {
 	unsigned char gaitloci[16];
 	unsigned char drives[17];
 	unsigned char mutationchance, mutationdegree;
+
+	// developer aid: OPENC2E_WATCH_CHEM keeps each creature's last 400 ticks
+	// of chemistry and organ life force, and prints them once if its ATP
+	// collapses (from 180 or more to under 30)
+	std::deque<std::vector<unsigned char>> chemHistory;
+	std::deque<std::vector<float>> organHistory;
+	bool chemDumped = false;
+	void watchChemistry();
 
 	void addGene(gene*);
 	void tickBiochemistry();

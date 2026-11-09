@@ -517,10 +517,56 @@ void c2Creature::tick() {
 			ageCreature();
 	}
 
+	static const bool watchChem = getenv("OPENC2E_WATCH_CHEM") != nullptr;
+	if (watchChem)
+		watchChemistry();
+
 	if (dead != 0)
 		die();
 
 	Creature::tick();
+}
+
+void c2Creature::watchChemistry() {
+	const int ATP = 99;
+	chemHistory.emplace_back(chemicals, chemicals + 256);
+	organHistory.push_back(getOrganState());
+	if (chemHistory.size() > 400) {
+		chemHistory.pop_front();
+		organHistory.pop_front();
+	}
+	if (chemDumped || chemicals[ATP] >= 30)
+		return;
+	unsigned char peak = 0;
+	for (auto& h : chemHistory)
+		peak = std::max(peak, h[ATP]);
+	if (peak < 180)
+		return;
+	chemDumped = true;
+	int unid = parentagent ? parentagent->getUNID() : -1;
+	size_t n = chemHistory.size();
+	fmt::print("* CHEM COLLAPSE unid {} tick {} asleep {} dead-locus {} ATP {} (peak {}) over the last {} ticks; every 20th tick, oldest first:\n",
+		unid, world.tickcount, (bool)asleep, (int)dead, (int)chemicals[ATP], (int)peak, n);
+	for (int c = 1; c < 256; c++) {
+		int lo = 255, hi = 0;
+		for (auto& h : chemHistory) {
+			lo = std::min(lo, (int)h[c]);
+			hi = std::max(hi, (int)h[c]);
+		}
+		if (hi - lo < 30 && c != ATP)
+			continue;
+		std::string row;
+		for (size_t i = 0; i < n; i += 20)
+			row += fmt::format(" {}", (int)chemHistory[i][c]);
+		row += fmt::format(" | now {}", (int)chemHistory[n - 1][c]);
+		fmt::print("*   chem {:3}:{}\n", c, row);
+	}
+	for (size_t o = 0; 2 * o + 1 < organHistory.back().size(); o++) {
+		float first = organHistory.front()[2 * o + 1], last = organHistory.back()[2 * o + 1];
+		float sfirst = organHistory.front()[2 * o], slast = organHistory.back()[2 * o];
+		if (std::fabs(first - last) > 1.0f || std::fabs(sfirst - slast) > first * 0.05f || last <= 0.5f)
+			fmt::print("*   organ {}: short-term life {:.0f} -> {:.0f}, long-term {:.0f} -> {:.0f}\n", o, sfirst, slast, first, last);
+	}
 }
 
 void c2eCreature::tick() {

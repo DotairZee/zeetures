@@ -186,8 +186,9 @@ std::shared_ptr<Room> roomContainingAgent(AgentRef agent) {
 // Edible scent: how nourishing an object smells. Read from the object's own
 // eat script (event 12): the nutrients its stimulus gives the eater (glucose,
 // fatty acid, glycogen, starch, fat, protein, amino acid) plus the direct
-// "Hunger Decrease" chemical, summed and scaled to 0-1. Being read from the
-// scripts, it also works for add-on objects. Cached per script.
+// "Hunger Decrease" chemical, summed and scaled to 0-1; 0 if it also gives a
+// poison. Being read from the scripts, it also works for add-on objects.
+// Cached per script.
 float edibleScent(Agent* a) {
 	static std::map<const script*, float> cache;
 	std::shared_ptr<script> sc = a->findScript(12);
@@ -210,6 +211,7 @@ float edibleScent(Agent* a) {
 		return true;
 	};
 	int total = 0;
+	bool poison = false;
 	for (size_t i = 0; i + 1 < tok.size(); i++) {
 		if (tok[i] != "stim")
 			continue;
@@ -227,9 +229,15 @@ float edibleScent(Agent* a) {
 				break;
 			if (chem == 37 || (chem >= 70 && chem <= 74) || chem == 79 || chem == 80)
 				total += amount;
+			// C2 poisons (heavy metals, cyanide, belladonna, geddonase,
+			// glycotoxin, the toxins 234-239): food that carries them does
+			// not smell like food (the game's poisonous berries give cyanide
+			// with their starch, and norns starved... of ATP eating them)
+			if (amount > 0 && (chem == 140 || chem == 141 || chem == 143 || chem == 144 || chem == 145 || (chem >= 234 && chem <= 239)))
+				poison = true;
 		}
 	}
-	float scent = std::clamp(total / 255.0f, 0.0f, 1.0f);
+	float scent = poison ? 0.0f : std::clamp(total / 255.0f, 0.0f, 1.0f);
 	cache[sc.get()] = scent;
 	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
 	if (watch)
