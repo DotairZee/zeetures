@@ -69,6 +69,9 @@ class Map {
 	unsigned int getRoomCount();
 
 	MetaRoom* metaRoomAt(unsigned int, unsigned int);
+	// the wrapping metaroom that a point up to one width past either of its
+	// side edges belongs to (null if none)
+	MetaRoom* wrappingMetaRoomNear(float x, float y);
 	std::shared_ptr<Room> roomAt(float, float);
 	std::vector<std::shared_ptr<Room>> roomsAt(float, float);
 

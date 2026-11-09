@@ -442,6 +442,11 @@ bool Engine::tick() {
 			fastticks = true; // run the world as fast as possible (headless tests)
 		int x0, y0, x1, y1;
 		if (const char* s = getenv("OPENC2E_DUMP_ROOMS"); s && sscanf(s, "%d,%d,%d,%d", &x0, &y0, &x1, &y1) == 4) {
+			for (unsigned int i = 0; i < world.map->getMetaRoomCount(); i++) {
+				MetaRoom* mr = world.map->getMetaRoom(i);
+				if (mr)
+					fmt::print("* MetaRoom {}: x {} y {} size {}x{} (background {}x{}) wraps {}\n", i, mr->x(), mr->y(), mr->width(), mr->height(), mr->fullwidth(), mr->fullheight(), mr->wraparound());
+			}
 			for (unsigned int id = 0, found = 0; found < world.map->getRoomCount() && id < 100000; id++) {
 				{
 					auto r = world.map->getRoom(id);

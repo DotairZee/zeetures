@@ -146,6 +146,15 @@ MetaRoom* Map::metaRoomAt(unsigned int x, unsigned int y) {
 	return nullptr;
 }
 
+MetaRoom* Map::wrappingMetaRoomNear(float x, float y) {
+	for (auto& m : metarooms) {
+		int left = (int)m->x(), right = left + (int)m->width();
+		if (m->wraparound() && y >= (int)m->y() && y <= (int)m->y() + (int)m->height() && x >= left - (int)m->width() && x < right + (int)m->width())
+			return m.get();
+	}
+	return nullptr;
+}
+
 std::shared_ptr<Room> Map::roomAt(float _x, float _y) {
 	MetaRoom* m = metaRoomAt((unsigned int)_x, (unsigned int)_y); // TODO: good casts?
 	if (!m)

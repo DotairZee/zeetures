@@ -435,8 +435,33 @@ void SkeletalCreature::snapDownFoot() {
 	float footy = y + attachmentY(orig_footpart, 1);
 
 	MetaRoom* m = world.map->metaRoomAt(x, y);
+	if (!m) {
+		// past the edge of a wrapping world, which has no metaroom of its own
+		// out there: find the wrapping metaroom it belongs to
+		m = world.map->wrappingMetaRoomNear(footx, y);
+	}
 	if (!m)
 		return; // TODO: exceptiony death
+
+	// In a wrapping world (C2's Albia joins its east and west edges) openc2e
+	// wraps an agent by its top-left corner, so a creature near the east edge
+	// can have its foot (about 50 px right of that corner) past the map. Judge
+	// rooms and floors with the foot's x wrapped into the map. Without this,
+	// room lookups (which wrap on their own) gave such a creature the rooms at
+	// the west end while its floors were measured at the out-of-range x, and
+	// one fell through a solid floor and out of the room system.
+	float wrapshift = 0;
+	auto wrapFoot = [&](float fx) {
+		if (m->wraparound()) {
+			if (fx >= (int)m->x() + (int)m->width())
+				return -(float)m->width();
+			if (fx < (int)m->x())
+				return (float)m->width();
+		}
+		return 0.0f;
+	};
+	wrapshift = wrapFoot(footx);
+	footx += wrapshift;
 
 	std::shared_ptr<Room> newroom;
 
@@ -480,13 +505,8 @@ void SkeletalCreature::snapDownFoot() {
 					}
 				}
 				footx = unwrappedfootx;
-				if (newroom && m->wraparound() && !(newroom->x_left <= footx && newroom->x_right >= footx)) {
-					// crossing the seam: carry on from the other end of the world
-					float shift = footx >= m->x() + (int)m->width() ? -(float)m->width() : (float)m->width();
-					footx += shift;
-					moveTo(x + shift, y); // carries anything attached along
-					lastgoodfootx += shift;
-				}
+				// (crossing the seam needs no move here: the foot is judged
+				// wrapped above, and moveTo wraps the creature itself)
 			}
 		}
 	} else {
@@ -510,7 +530,12 @@ void SkeletalCreature::snapDownFoot() {
 
 	if (!downfootroom /*|| !falling */) {
 		// TODO: hackery to cope with scripts moving us, this needs handling correctly somewhere
-		if (fabs(lastgoodfootx - attachmentX(orig_footpart, 1) - x) > 50.0f || fabs(lastgoodfooty - attachmentY(orig_footpart, 1) - y) > 50.0f) {
+		// how far the foot is from where it last stood (across the seam of a
+		// wrapping world, the short way round)
+		float movedx = lastgoodfootx - attachmentX(orig_footpart, 1) - x;
+		if (m->wraparound())
+			movedx -= std::round(movedx / (float)m->width()) * (float)m->width();
+		if (fabs(movedx) > 50.0f || fabs(lastgoodfooty - attachmentY(orig_footpart, 1) - y) > 50.0f) {
 			// Retry once from the room the foot is in now. Only once: if the
 			// retry also finds no room it may enter (e.g. every way on is a
 			// wall), retrying again recursed until the stack overflowed and the
@@ -539,7 +564,8 @@ void SkeletalCreature::snapDownFoot() {
 
 		// TODO: sucky code
 		x = lastgoodfootx - attachmentX(orig_footpart, 1);
-		footx = lastgoodfootx;
+		wrapshift = wrapFoot(lastgoodfootx);
+		footx = lastgoodfootx + wrapshift;
 		footy = lastgoodfooty;
 		downfootroom = m->roomAt(footx, footy);
 		queueScript(6);
@@ -578,7 +604,7 @@ void SkeletalCreature::snapDownFoot() {
 
 	moveTo(x, newy - (footy - y));
 
-	lastgoodfootx = footx;
+	lastgoodfootx = footx - wrapshift; // kept in the creature's own (unwrapped) terms
 	lastgoodfooty = footy;
 
 	// Falling through a floor a creature is light enough to pass (C2: its size
