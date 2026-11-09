@@ -155,7 +155,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			if (isKept(a.get())) {
 				out << "object\n";
 				out << "frames " << (int)sp->getSprite()->numframes() - (int)sp->getFirstImg() << "\n";
-				out << "plane " << a->zorder << "\n";
+				out << "plane " << (int)a->zorder << "\n"; // signed: planes can be below 0
 			} else {
 				out << "egg\n";
 			}
