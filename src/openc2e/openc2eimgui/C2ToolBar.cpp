@@ -143,8 +143,6 @@ static void DrawC2MenuBar() {
 				ImGui::SetTooltip("Creatures' speech");
 			ImGui::EndMenu();
 		}
-		if (ImGui::BeginMenu("Send To", false))
-			ImGui::EndMenu();
 		ImGui::Separator();
 		if (ImGui::MenuItem("Exit"))
 			world.quitting = true;
