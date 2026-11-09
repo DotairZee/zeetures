@@ -109,6 +109,9 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	out << "saved " << timestamp() << "\n";
 	out << "chemical-relays 1\n"; // body chemistry relays were running when saved
 	out << "camera " << engine.camera->getX() << " " << engine.camera->getY() << "\n";
+	// the calendar: world ticks, part of the day, day of the season, season,
+	// year (without this every session began again in spring of year 0)
+	out << "calendar " << world.worldtickcount << " " << world.timeofday << " " << world.dayofseason << " " << world.season << " " << world.year << "\n";
 
 	int ncreatures = 0, neggs = 0;
 	for (auto& a : world.agents) {
@@ -326,6 +329,15 @@ bool LoadWorldState(const fs::path& worlddir) {
 			relays_saved = true;
 		} else if (key == "camera") {
 			l >> camx >> camy;
+		} else if (key == "calendar") {
+			unsigned int wt, tod, dos, sea, yr;
+			if (l >> wt >> tod >> dos >> sea >> yr) {
+				world.worldtickcount = wt;
+				world.timeofday = tod % 5;
+				world.dayofseason = dos % 4;
+				world.season = sea % 4;
+				world.year = yr;
+			}
 		} else if (key == "creature") {
 			creatures.emplace_back();
 			c = &creatures.back();
