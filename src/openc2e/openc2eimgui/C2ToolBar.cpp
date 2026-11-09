@@ -224,6 +224,8 @@ static void DrawC2MenuBar() {
 			OpenC2Kit("health");
 		if (ImGui::MenuItem("Science Kit", nullptr, false, IsC2KitAvailable("science")))
 			OpenC2Kit("science");
+		if (ImGui::MenuItem("Breeder's Kit", nullptr, false, IsC2KitAvailable("breeders")))
+			OpenC2Kit("breeders");
 		ImGui::EndMenu();
 	}
 	if (ImGui::BeginMenu("Creatures")) {
@@ -494,7 +496,10 @@ void DrawC2Toolbar() {
 			ImGui::SetTooltip("Health Kit");
 		ImageButton(icon_graveyard, false);
 		ImGui::Separator();
-		ImageButton(icon_unknown_maybe_breederskit, false);
+		if (ImageButton(icon_unknown_maybe_breederskit, IsC2KitAvailable("breeders")))
+			OpenC2Kit("breeders");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Breeder's Kit");
 		if (ImageButton(icon_unknown_maybe_sciencekit, IsC2KitAvailable("science")))
 			OpenC2Kit("science");
 		if (ImGui::IsItemHovered())
@@ -549,6 +554,20 @@ void DrawC2Toolbar() {
 		}
 		if (ImageButton(icon_go, !places.empty()))
 			GoToFavoritePlace(s_place);
+		// zoom, as a dropdown beside Places (owner, 2026-11-09; also
+		// Ctrl+wheel and the View menu)
+		ImGui::Text("Zoom:");
+		ImGui::SetNextItemWidth(70);
+		static const float s_zooms[] = {0.5f, 0.75f, 1.0f, 1.5f, 2.0f, 3.0f};
+		std::string zoomLabel = fmt::format("{:.0f}%", engine.zoom * 100);
+		if (ImGui::BeginCombo("##Zoom", zoomLabel.c_str())) {
+			for (float z : s_zooms)
+				if (ImGui::Selectable(fmt::format("{:.0f}%", z * 100).c_str(), std::fabs(engine.zoom - z) < 0.01f))
+					engine.setZoom(z);
+			ImGui::EndCombo();
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Zoom the view (also Ctrl+wheel; Ctrl+0 for actual size)");
 		}
 
 		s_last_c2toolbar_height = ImGui::GetWindowSize().y;

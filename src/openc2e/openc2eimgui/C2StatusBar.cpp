@@ -12,6 +12,7 @@
 #include "creatures/oldCreature.h"
 
 #include <array>
+#include <cmath>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <optional>
@@ -125,7 +126,14 @@ void DrawC2StatusBar() {
 				ImGuiUtils::Image(s_temperature_icons_texs[tempiconid]);
 			}
 			int temp_celsius = ((temp * 80) / 255) - 15; // signed: rooms below 0 °C are common
-			ImGui::Text("%d°", temp_celsius);
+			if (Openc2eImgui::KitFahrenheit())
+				ImGui::Text("%d°F", (int)std::lround(temp_celsius * 9 / 5.0 + 32));
+			else
+				ImGui::Text("%d°C", temp_celsius);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Click for %s", Openc2eImgui::KitFahrenheit() ? "Celsius" : "Fahrenheit");
+			if (ImGui::IsItemClicked())
+				Openc2eImgui::KitToggleFahrenheit();
 			// TODO: fahrenheit calculation + textual version of temperature
 			// (0 = -15C = 5F, 48 = 0C = 32F, 255 = 65C = 149F)
 		}

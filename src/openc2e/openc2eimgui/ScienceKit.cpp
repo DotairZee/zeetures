@@ -34,9 +34,11 @@ static void PhysicalPage() {
 	c2Creature* c = KitCreature();
 	auto& organs = c->getOrgans();
 	ImGui::Text("%d organs. Hover a row for more.", (int)organs.size());
-	if (ImGui::BeginTable("organs", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(470, 300))) {
+	ImGui::SameLine();
+	ImGui::TextDisabled("(names from the species' gene notes)");
+	if (ImGui::BeginTable("organs", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(660, 300))) {
 		ImGui::TableSetupScrollFreeze(0, 1);
-		ImGui::TableSetupColumn("Organ");
+		ImGui::TableSetupColumn("Organ", ImGuiTableColumnFlags_WidthFixed, 250);
 		ImGui::TableSetupColumn("Health", ImGuiTableColumnFlags_WidthFixed, 130);
 		ImGui::TableSetupColumn("Clock");
 		ImGui::TableSetupColumn("Energy");
@@ -48,7 +50,11 @@ static void PhysicalPage() {
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
 			bool brain = o->getGene() && o->getGene()->isBrain();
-			ImGui::Text("%s %d", brain ? "Brain organ" : "Organ", (int)i + 1);
+			const KitGeneNote* note = KitNoteFor(o->getGene());
+			if (note && !note->caption.empty())
+				ImGui::TextUnformatted(note->caption.c_str());
+			else
+				ImGui::Text("%s %d", brain ? "Brain organ" : "Organ", (int)i + 1);
 			bool hov = ImGui::IsItemHovered();
 			ImGui::TableNextColumn();
 			float start = o->getInitialLifeforce();
@@ -68,7 +74,8 @@ static void PhysicalPage() {
 			ImGui::TableNextColumn();
 			ImGui::Text("%d / %d", (int)o->getReceptorCount(), (int)o->getEmitterCount());
 			if (hov || ImGui::IsItemHovered())
-				ImGui::SetTooltip("Life force now %.0f%%, long-term %.0f%%\nRepair rate %d, damage rate %d, injury to apply %d\nATP damage coefficient %d",
+				ImGui::SetTooltip("%sLife force now %.0f%%, long-term %.0f%%\nRepair rate %d, damage rate %d, injury to apply %d\nATP damage coefficient %d",
+					(note && !note->comment.empty()) ? (note->comment + "\n\n").c_str() : "",
 					st * 100, lt * 100, o->getRepairRate(), o->getDamageRate(), o->getInjuryToApply(), o->getATPDamageCoefficient());
 		}
 		ImGui::EndTable();
@@ -146,11 +153,25 @@ static void DnaPage() {
 					flags += " fixed";
 				if (g->header.flags.notexpressed)
 					flags += " silent";
-				ImGui::BulletText("#%d  %s", idx, geneSummary(g).c_str());
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("Gene %d: %s %s\nSwitches on: %s\nGeneration %d, mutation weight %d%s",
-						idx, type.c_str(), kind.c_str(), fmt::format("{}", g->header.switchontime).c_str(),
-						(int)g->header.generation, (int)g->header.mutweighting, flags.c_str());
+				const KitGeneNote* note = KitNoteFor(g);
+				std::string summary = geneSummary(g);
+				if (note && !note->caption.empty())
+					ImGui::BulletText("#%d  %s%s%s", idx, note->caption.c_str(), summary.empty() ? "" : ":  ", summary.c_str());
+				else
+					ImGui::BulletText("#%d  %s", idx, summary.c_str());
+				if (ImGui::IsItemHovered()) {
+					ImGui::BeginTooltip();
+					ImGui::Text("Gene %d: %s %s", idx, type.c_str(), kind.c_str());
+					ImGui::Text("Switches on: %s", fmt::format("{}", g->header.switchontime).c_str());
+					ImGui::Text("Generation %d, mutation weight %d%s", (int)g->header.generation, (int)g->header.mutweighting, flags.c_str());
+					if (note && !note->comment.empty()) {
+						ImGui::Separator();
+						ImGui::PushTextWrapPos(380);
+						ImGui::TextUnformatted(note->comment.c_str());
+						ImGui::PopTextWrapPos();
+					}
+					ImGui::EndTooltip();
+				}
 			}
 			ImGui::TreePop();
 		}

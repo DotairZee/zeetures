@@ -9,7 +9,7 @@
 
 namespace Openc2eImgui {
 
-// Kit ids: "health", "science".
+// Kit ids: "health", "science", "breeders".
 bool IsC2KitAvailable(const char* id);
 void OpenC2Kit(const char* id);
 
@@ -18,5 +18,10 @@ void DrawC2Kits();
 
 // Draws the chips for minimized kits, in the status bar's horizontal row.
 void DrawC2KitChips();
+
+// Celsius or Fahrenheit for every temperature shown (status bar and kits);
+// clicking a temperature switches it.
+bool KitFahrenheit();
+void KitToggleFahrenheit();
 
 } // namespace Openc2eImgui

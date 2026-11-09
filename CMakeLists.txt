@@ -346,6 +346,8 @@ add_library(openc2e_core OBJECT
 	src/openc2e/openc2eimgui/BrainViewer.cpp
 	src/openc2e/openc2eimgui/C1ToolBar.cpp
 	src/openc2e/openc2eimgui/C2EyeView.cpp
+	src/openc2e/openc2eimgui/BreedersKit.cpp
+	src/openc2e/openc2eimgui/Breeds.cpp
 	src/openc2e/openc2eimgui/C2Kits.cpp
 	src/openc2e/openc2eimgui/HealthKit.cpp
 	src/openc2e/openc2eimgui/ScienceKit.cpp

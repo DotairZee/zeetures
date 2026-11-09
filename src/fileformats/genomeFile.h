@@ -138,6 +138,9 @@ class gene {
 	virtual ~gene() {}
 
 	uint8_t version() { return cversion; }
+	// the gene's type and subtype numbers (as in genome and gene-note files)
+	uint8_t geneType() const { return type(); }
+	uint8_t geneSubtype() const { return subtype(); }
 
 	virtual const char* name() = 0;
 	virtual const char* typeName() = 0;

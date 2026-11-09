@@ -9,6 +9,7 @@
 
 class Agent;
 class c2Creature;
+class gene;
 
 namespace Openc2eImgui {
 
@@ -40,10 +41,34 @@ float KitLed(ImVec2 p, const std::string& text);
 // "need" bar starts green and turns red as it fills; otherwise full is green.
 void KitBar(float level, const char* label, float width = 192, bool need = false);
 
+// Gene notes: the captions and comments C2's genetics files give each gene
+// (Genetics/norn.gno, gren.gno, ettn.gno, by the creature's genus). Notes
+// are matched by a gene's place among the genes of its kind, so they fit the
+// species' original genome; duplicated or deleted genes shift them. Caption
+// "HEART", comment in plain text (from RTF). Null when there is no note.
+struct KitGeneNote {
+	std::string caption, comment;
+};
+const KitGeneNote* KitNoteFor(gene* g);
+
+// Temperatures: Celsius or Fahrenheit (click a temperature to switch; kept
+// in kits.ini)
+bool KitFahrenheit();
+void KitToggleFahrenheit();
+
+// Applet Data files of one kind in a subfolder ("Medicine", ".cob")
+std::vector<std::string> KitAppletDataFiles(const std::string& sub, const std::string& ext);
+
+// A shelf picture with the COBs of an Applet Data subfolder standing on it
+// (thumbnails; click one to read about it, then add it to the world).
+// shelves: the y of each shelf top; columns: the x of each place on a shelf.
+void KitCobShelf(const char* picture, const char* subfolder, const std::vector<float>& shelves, const std::vector<float>& columns, const char* hint, const char* added);
+
 // a page tab (ImGui::BeginTabItem; the test aid can pick one)
 bool KitTab(const char* label);
 
 void DrawHealthKit();
 void DrawScienceKit();
+void DrawBreedersKit();
 
 } // namespace Openc2eImgui

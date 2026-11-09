@@ -28,6 +28,8 @@
 */
 
 #include "SkeletalCreature.h"
+
+#include "BreedSlots.h"
 #include "common/Random.h"
 
 #include "Creature.h"
@@ -131,14 +133,14 @@ SkeletalCreature::~SkeletalCreature() {
 }
 
 std::string SkeletalCreature::dataString(unsigned int _stage, bool tryfemale, unsigned int dataspecies, unsigned int databreed) {
-	char _postfix[4] = "XXX";
-	_postfix[0] = '0' + dataspecies + (tryfemale ? 4 : 0);
-	_postfix[1] = '0' + _stage;
+	std::string s;
+	s += (char)('0' + dataspecies + (tryfemale ? 4 : 0));
+	s += (char)('0' + _stage);
 	if (engine.version == 1)
-		_postfix[2] = '0' + databreed;
+		s += (char)('0' + databreed);
 	else
-		_postfix[2] = 'a' + databreed;
-	return _postfix;
+		s += breedSlotName((int)databreed); // a-z, then aa, ab ... (BreedSlots.h)
+	return s;
 }
 
 void SkeletalCreature::processGenes() {

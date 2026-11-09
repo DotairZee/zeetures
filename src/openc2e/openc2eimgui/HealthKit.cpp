@@ -90,7 +90,19 @@ static void FitnessPage() {
 	// the big screen: body temperature
 	float t = temperatureOf(c);
 	dl->AddText(p + ImVec2(28, 142), green, "BODY TEMP");
-	KitLed(p + ImVec2(28, 162), fmt::format("{:.1f}C", t));
+	if (KitFahrenheit())
+		KitLed(p + ImVec2(24, 162), fmt::format("{:.1f}F", t * 9 / 5 + 32));
+	else
+		KitLed(p + ImVec2(28, 162), fmt::format("{:.1f}C", t));
+	{
+		ImVec2 keep = ImGui::GetCursorScreenPos();
+		ImGui::SetCursorScreenPos(p + ImVec2(20, 136));
+		if (ImGui::InvisibleButton("tempunits", ImVec2(94, 92)))
+			KitToggleFahrenheit();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Click for %s", KitFahrenheit() ? "Celsius" : "Fahrenheit");
+		ImGui::SetCursorScreenPos(keep);
+	}
 	const char* feel = t >= 38.5f ? "fever" : t >= 37.8f ? "warm" : t <= 35.5f ? "chilled" : "normal";
 	dl->AddText(p + ImVec2(28, 202), green, feel);
 
@@ -186,119 +198,9 @@ static void DrivesPage() {
 
 // ---- Doctor ----------------------------------------------------------------------
 
-struct Medicine {
-	std::string name, description;
-	fs::path file;
-	Texture picture;
-};
-
-static std::vector<fs::path> appletDataFiles(const std::string& sub, const std::string& ext) {
-	std::vector<fs::path> out;
-	for (auto& dir : getMainDirectories()) {
-		std::error_code ec;
-		for (auto& a : fs::directory_iterator(dir, ec)) {
-			if (to_ascii_lowercase(a.path().filename().string()) != "applet data")
-				continue;
-			for (auto& b : fs::directory_iterator(a.path(), ec)) {
-				if (to_ascii_lowercase(b.path().filename().string()) != to_ascii_lowercase(sub) || !b.is_directory())
-					continue;
-				for (auto& f : fs::directory_iterator(b.path(), ec))
-					if (to_ascii_lowercase(f.path().extension().string()) == ext)
-						out.push_back(f.path());
-			}
-		}
-	}
-	std::sort(out.begin(), out.end());
-	return out;
-}
-
-static std::vector<Medicine>& medicines() {
-	static std::vector<Medicine> list;
-	static bool loaded = false;
-	if (loaded)
-		return list;
-	loaded = true;
-	for (auto& f : appletDataFiles("Medicine", ".cob")) {
-		try {
-			c2cobfile cob(f);
-			for (auto b : cob.blocks) {
-				if (b->type != "agnt")
-					continue;
-				cobAgentBlock a(b);
-				Medicine m;
-				m.name = a.name;
-				m.description = a.description;
-				m.file = f;
-				if (a.thumbnail.width > 0)
-					m.picture = get_backend()->createTextureFromImage(a.thumbnail);
-				list.push_back(m);
-				break;
-			}
-		} catch (std::exception& e) {
-			fmt::print("Health Kit: couldn't read {}: {}\n", f.string(), e.what());
-		}
-	}
-	return list;
-}
-
 static void DoctorPage() {
-	static int selected = -1;
-	static std::string message;
-	auto& meds = medicines();
-	Texture bg = KitPicture("Applet Data/Shelves.bmp");
-	ImVec2 p = ImGui::GetCursorScreenPos();
-	DrawTexture(bg, p);
-	ImGui::Dummy(ImVec2(314, 195));
 	// three shelves (their tops at y 66, 128, 178), three medicines on each
-	const float shelf[3] = {66, 128, 178};
-	const float col[3] = {60, 157, 254};
-	for (size_t i = 0; i < meds.size() && i < 9; i++) {
-		auto& m = meds[i];
-		float w = m.picture ? (float)m.picture.width : 24, h = m.picture ? (float)m.picture.height : 24;
-		float s = std::min(1.0f, std::min(80.0f / w, 52.0f / h)); // fit a shelf
-		ImVec2 sz(w * s, h * s);
-		ImVec2 at = p + ImVec2(col[i % 3] - sz.x / 2, shelf[i / 3] - sz.y);
-		ImGui::SetCursorScreenPos(at);
-		ImGui::PushID((int)i);
-		if (ImGui::InvisibleButton("med", sz))
-			selected = (int)i;
-		bool hov = ImGui::IsItemHovered();
-		ImGui::PopID();
-		ImDrawList* dl = ImGui::GetWindowDrawList();
-		if ((int)i == selected || hov)
-			dl->AddRectFilled(at - 3, at + sz + 3, (int)i == selected ? IM_COL32(255, 230, 120, 90) : IM_COL32(255, 255, 255, 50), 4);
-		if (m.picture)
-			dl->AddImage(m.picture.as<ImTextureID>(), at, at + sz);
-		else
-			dl->AddText(at, IM_COL32(0, 0, 0, 255), m.name.c_str());
-		if (hov)
-			ImGui::SetTooltip("%s", m.name.c_str());
-	}
-	ImGui::SetCursorScreenPos(p + ImVec2(0, 199));
-	if (meds.empty()) {
-		ImGui::TextDisabled("No medicines found in Applet Data/Medicine.");
-		return;
-	}
-	if (selected >= 0 && selected < (int)meds.size()) {
-		auto& m = meds[selected];
-		ImGui::TextUnformatted(m.name.c_str());
-		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 314);
-		ImGui::TextDisabled("%s", m.description.c_str());
-		ImGui::PopTextWrapPos();
-		if (ImGui::Button("Add to the world")) {
-			try {
-				CobManager cm;
-				cm.inject(CobManager::CobFileInfo(m.name, m.file));
-				message = fmt::format("{} added. Encourage your creature to take it.", m.name);
-			} catch (std::exception& e) {
-				message = fmt::format("Couldn't add {}: {}", m.name, e.what());
-			}
-		}
-	} else {
-		ImGui::TextDisabled("Click a medicine to see what it is.");
-	}
-	if (!message.empty())
-		ImGui::TextUnformatted(message.c_str());
+	KitCobShelf("Applet Data/Shelves.bmp", "Medicine", {66, 128, 178}, {60, 157, 254}, "Click a medicine to see what it is.", "{} added. Encourage your creature to take it.");
 }
 
 void DrawHealthKit() {

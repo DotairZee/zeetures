@@ -21,7 +21,9 @@
 */
 
 
+#include "Breeds.h"
 #include "Engine.h"
+#include "creatures/BreedSlots.h"
 #include "common/io/FileWriter.h"
 #include "common/Ascii.h"
 #include "PathResolver.h"
@@ -167,42 +169,62 @@ static bool readC2Egg(const std::filesystem::path& file, C2EggInfo& egg) {
 	return !egg.genomes.empty();
 }
 
-// Sends a Hatchery egg into the world near the incubator: the world's own egg
-// object (2 5 2), whose scripts develop and hatch it. The egg's genomes are
-// written to the user data folder under short unique tokens for NEW: GENE.
-static void TakeC2Egg(size_t index) {
-	C2EggInfo& egg = s_c2eggs[index];
-	if (egg.taken)
-		return;
-	std::string mum = fmt::format("qh{:02d}", (int)index % 100);
-	std::string dad = egg.genomes.size() > 1 ? fmt::format("qi{:02d}", (int)index % 100) : mum;
+// Lays an egg in the world near the incubator: the world's own egg object
+// (2 5 2), whose scripts develop and hatch it. Its genomes are written to
+// the user data folder under short unique tokens for NEW: GENE. Used by the
+// Hatchery and by the Breeder's Kit ("lay an egg of this breed").
+bool LayC2Egg(const std::vector<std::vector<uint8_t>>& genomes, int gender, int frame, const std::string& token, std::string& err) {
+	if (genomes.empty()) {
+		err = "no genome";
+		return false;
+	}
+	std::string mum = token + "m";
+	std::string dad = genomes.size() > 1 ? token + "d" : mum;
 	{
 		FileWriter w = createUserGeneticsFile(mum + ".gen");
-		w.write(egg.genomes[0].data(), egg.genomes[0].size());
+		w.write(genomes[0].data(), genomes[0].size());
 	}
-	if (egg.genomes.size() > 1) {
+	if (genomes.size() > 1) {
 		FileWriter w = createUserGeneticsFile(dad + ".gen");
-		w.write(egg.genomes[1].data(), egg.genomes[1].size());
+		w.write(genomes[1].data(), genomes[1].size());
 	}
-
-	int frame = std::clamp(egg.frame, 0, 16);
+	frame = std::clamp(frame, 0, 16);
 	int x = rand_int32(5000, 5200);
 	std::string script = fmt::format("new: simp eggs 8 {} 2000 0\n", frame * 8);
 	script += "pose 0\n"; // start of development; the egg's timer script advances it
 	script += "setv cls2 2 5 2\nsetv attr 195\n";
 	script += fmt::format("new: gene tokn {} tokn {} obv0\n", mum, dad);
-	script += fmt::format("setv obv1 {}\n", egg.gender);
+	script += fmt::format("setv obv1 {}\n", gender);
 	script += "tick 2400\n";
 	script += fmt::format("mvto {} 750\n", x);
 	script += "setv grav 1\n";
-	std::string err = engine.executeNetwork(script);
-	if (!err.empty()) {
+	err = engine.executeNetwork(script);
+	if (!err.empty())
+		return false;
+	engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+	engine.camera->moveToGlobal(x - (int)engine.camera->getWidth() / 2, 750 - (int)engine.camera->getHeight() / 2, jump);
+	return true;
+}
+
+// the Hatchery's breed choice: -1 as in the egg, else species * 1000 + slot
+static int s_hatchery_breed = -1;
+
+static void TakeC2Egg(size_t index) {
+	C2EggInfo& egg = s_c2eggs[index];
+	if (egg.taken)
+		return;
+	std::vector<std::vector<uint8_t>> genomes = egg.genomes;
+	if (s_hatchery_breed >= 0)
+		if (const BreedInfo* b = FindBreed(s_hatchery_breed / 1000, s_hatchery_breed % 1000))
+			for (auto& g : genomes)
+				g = GenomeWithBreed(g, *b);
+	// tokens 4 characters, unique per Hatchery egg: q + 2 digits + m/d
+	std::string err;
+	if (!LayC2Egg(genomes, egg.gender, egg.frame, fmt::format("q{:02d}", (int)index % 100), err)) {
 		fmt::print("Couldn't hatch egg {}: {}\n", egg.file.filename().string(), err);
 		return;
 	}
 	egg.taken = true;
-	engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
-	engine.camera->moveToGlobal(x - (int)engine.camera->getWidth() / 2, 750 - (int)engine.camera->getHeight() / 2, jump);
 }
 
 // Finds a spot for an egg in the Hatchery tray, at least 20 px from the
@@ -363,6 +385,28 @@ void DrawHatchery() {
 			}
 			ImGui::SetCursorScreenPos(p + ImVec2(0, 275));
 			ImGui::Dummy(ImVec2(0, 0));
+			// breed: the eggs as laid, or every egg taken from now on in a breed
+			{
+				std::string cur = "As in the egg";
+				if (s_hatchery_breed >= 0)
+					if (const BreedInfo* b = FindBreed(s_hatchery_breed / 1000, s_hatchery_breed % 1000))
+						cur = BreedLabel(*b);
+				ImGui::SetNextItemWidth(250);
+				if (ImGui::BeginCombo("Breed", cur.c_str())) {
+					if (ImGui::Selectable("As in the egg", s_hatchery_breed < 0))
+						s_hatchery_breed = -1;
+					for (auto& b : KnownBreeds()) {
+						if (!b.parts.count('a') || !b.parts.count('b'))
+							continue; // needs at least a head and a body
+						int key = b.species * 1000 + b.slot;
+						if (ImGui::Selectable(BreedLabel(b).c_str(), key == s_hatchery_breed))
+							s_hatchery_breed = key;
+					}
+					ImGui::EndCombo();
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Eggs you take from now on hatch in this breed (the parts it has).\nBreeds are listed in the Breeder's Kit.");
+			}
 			if (!s_import_message.empty())
 				ImGui::TextUnformatted(s_import_message.c_str());
 			// TODO: gender markers and animation

@@ -91,6 +91,10 @@ class oldCreature : public Creature {
 	void handleStimulus(unsigned int id);
 	void handleStimulus(const StimulusEvent& s);
 	CreatureMind* getMind() { return mind.get(); }
+	// reproductive loci, 0-255 (Breeder's Kit)
+	unsigned char getFertile() const { return fertile; }
+	unsigned char getReceptive() const { return receptive; }
+	unsigned char getPregnant() const { return pregnant; }
 
 	oldBrain* getBrain() { return brain; }
 
