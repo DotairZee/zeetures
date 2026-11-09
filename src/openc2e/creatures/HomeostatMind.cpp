@@ -125,6 +125,13 @@ struct Params {
 	float wakeRise = 0.25f; // another drive has risen this much since falling asleep...
 	float wakeLevel = 0.6f; // ...and is at least this high
 	int noSleepAfterWaking = 100; // ticks before sleeping again after an urgent waking
+	// Woken by cold or heat: the place is the trouble, not sleeping. Do not
+	// sleep again near there for a while (so the creature sleeps somewhere
+	// else), and do not learn that sleeping itself chills or overheats (a
+	// creature woken by the cold at the west edge came to rank sleep so low
+	// that it never slept again and ran out of energy)
+	float badSleepNear = 300.0f;
+	unsigned int badSleepTicks = 1200;
 	int maxObjectEpisodeTicks = 150; // actions on an object (walk there, then act): at most this long
 	int stallTicks = 25; // ...and given up if not getting closer for this long
 	float habituationRate = 0.7f; // multiplier after an uneventful interaction
@@ -644,6 +651,11 @@ class HomeostatMind : public CreatureMind {
 			if (urgent >= 0) {
 				fmt::print("[homeostat] creature {} t{}: woken by {}\n", p.creatureId, p.tick, DRIVE_NAMES[urgent]);
 				noSleepUntil = p.tick + prm.noSleepAfterWaking;
+				if (urgent == COLD || urgent == HOT) {
+					badSleepX = p.x;
+					badSleepY = p.y;
+					badSleepUntil = p.tick + prm.badSleepTicks;
+				}
 			}
 		}
 
@@ -690,7 +702,8 @@ class HomeostatMind : public CreatureMind {
 
 		// Choose the next action.
 		std::vector<Candidate> candidates = evaluate(p, d, D);
-		if (p.tick < noSleepUntil)
+		bool badSleepHere = p.tick < badSleepUntil && std::fabs(p.x - badSleepX) < prm.badSleepNear && std::fabs(p.y - badSleepY) < prm.sameLevel;
+		if (p.tick < noSleepUntil || badSleepHere)
 			candidates.erase(std::remove_if(candidates.begin(), candidates.end(),
 								 [&](const Candidate& c) { return c.category < 0 && c.decision == prm.sleepDecision; }),
 				candidates.end());
@@ -991,6 +1004,8 @@ class HomeostatMind : public CreatureMind {
 	std::array<float, NUM_DRIVES> drift{}; // baseline drive change per tick
 	std::array<float, NUM_DRIVES> sleepStartDrives{};
 	unsigned int noSleepUntil = 0;
+	float badSleepX = 0, badSleepY = 0; // where a sleep was cut short by cold or heat
+	unsigned int badSleepUntil = 0;
 	bool drivesSeen = false;
 	std::array<float, NUM_DRIVES> felt{}; // drive changes this episode's stimuli delivered
 	std::array<bool, NUM_DRIVES> feltAny{};
@@ -1946,6 +1961,12 @@ class HomeostatMind : public CreatureMind {
 				current.decision == 10 ? "west" : "east", p.x);
 		}
 
+		if (current.category < 0 && current.decision == prm.sleepDecision) {
+			// the place's warmth is not something sleeping does (see badSleepNear)
+			for (int i : {COLD, HOT})
+				if (!feltAny[i])
+					effect[i] = 0.0f;
+		}
 		if (current.seekCategory < 0 && !current.chain) {
 			Expectation& e = expectation(current.category, current.decision);
 			// an innate prior counts as remembered experience: learning is slow
