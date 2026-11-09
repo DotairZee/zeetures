@@ -16,6 +16,8 @@
 #include "ImGuiUtils.h"
 #include "MainMenu.h"
 #include "World.h"
+#include "Scriptorium.h"
+#include "caosVM.h"
 #include "fileformats/ImageUtils.h"
 #include "fileformats/peFile.h"
 
@@ -399,7 +401,24 @@ void DrawC2Toolbar() {
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip(engine.camera->trackedAgent() && engine.camera->trackedAgent() == world.selectedcreature ? "Stop following" : "Follow selected creature");
-		ImageButton(icon_halo, false);
+		// the halo over the selected creature: the game's own system macro
+		// (world-file script 0 1 0 0) makes or removes the halo object
+		// (2 1 3), whose timer script keeps it over the creature's head
+		bool halo_on = false;
+		for (auto& a : world.agents)
+			if (a && a->family == 2 && a->genus == 1 && a->species == 3)
+				halo_on = true;
+		std::shared_ptr<script> halo_macro = world.scriptorium->getScript(0, 1, 0, 0);
+		if (ImageButton(icon_halo, (bool)world.selectedcreature && halo_macro)) {
+			caosVM vm(0);
+			try {
+				vm.runEntirely(halo_macro);
+			} catch (std::exception& e) {
+				fmt::print("* Halo macro failed: {}\n", e.what());
+			}
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip(halo_on ? "Hide the halo" : "Show a halo over the selected creature");
 		ImGui::Separator();
 		if (ImageButton(icon_play, world.paused)) {
 			world.paused = false;

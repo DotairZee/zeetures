@@ -389,6 +389,10 @@ void Engine::update() {
 		dumpAgents();
 	}
 
+	// keep the camera on a followed agent (View > Track Norn, the toolbar's
+	// follow button, CAOS camera tracking); before, it only centred once
+	camera->tick();
+
 	// update sounds
 	soundmanager.tick();
 
