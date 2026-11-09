@@ -25,6 +25,10 @@ class SoundManager {
 	bool isMuted();
 	void setMuted(bool);
 	bool areCreatureVoicesMuted();
+	// the player's own switch for creature speech (bibble), apart from the
+	// world's other sounds (isMuted/setMuted)
+	bool areVoicesMutedByPlayer() const { return voices_muted; }
+	void setVoicesMutedByPlayer(bool muted);
 
   private:
 	friend class Sound;
@@ -59,6 +63,7 @@ class SoundManager {
 	Sound getNewSound(AudioChannel handle, bool is_creature_voice = false);
 
 	bool sound_effects_muted = false;
+	bool voices_muted = false;
 	float sound_effects_volume = 1.0;
 
 	float viewpoint_center_x;

@@ -42,6 +42,11 @@ void SoundManager::setMuted(bool muted) {
 	updateVolumes();
 }
 
+void SoundManager::setVoicesMutedByPlayer(bool muted) {
+	voices_muted = muted;
+	updateVolumes();
+}
+
 bool SoundManager::SoundData::isAlive() {
 	if (handle && get_audio_backend()->audio_channel_get_state(handle) == AUDIO_PLAYING) {
 		return true;
@@ -96,7 +101,9 @@ void SoundManager::updateVolume(SoundData& s) {
 		return;
 	}
 
-	float volume = sound_effects_muted ? 0 : sound_effects_volume;
+	// creature speech has its own switch; muting the world's sounds leaves
+	// it alone, and the reverse
+	float volume = (s.is_creature_voice ? voices_muted : sound_effects_muted) ? 0 : sound_effects_volume;
 
 	if (s.is_creature_voice && areCreatureVoicesMuted()) {
 		volume = 0;

@@ -6,6 +6,7 @@
 #include "common/backend/Backend.h"
 #include "WorldSave.h"
 #include "MusicManager.h"
+#include "SoundManager.h"
 #include "C2StatusBar.h"
 #include "C2ScrollBars.h"
 #include "creatures/CreatureAgent.h"
@@ -124,10 +125,23 @@ static void DrawC2MenuBar() {
 		ImGui::MenuItem("Export Current Creature...", nullptr, false, false);
 		ImGui::MenuItem("Import Creature...", nullptr, false, false);
 		ImGui::Separator();
-		bool music = !engine.musicmanager->isMuted();
-		if (ImGui::MenuItem("Ambient Music", nullptr, music)) {
-			engine.musicmanager->setMuted(music);
-			engine.musicmanager->setMIDIMuted(music);
+		if (ImGui::BeginMenu("Sound")) {
+			bool music = !engine.musicmanager->isMuted();
+			if (ImGui::MenuItem("Ambient Music", nullptr, music)) {
+				engine.musicmanager->setMuted(music);
+				engine.musicmanager->setMIDIMuted(music);
+			}
+			bool world_sounds = !soundmanager.isMuted();
+			if (ImGui::MenuItem("World Sounds", nullptr, world_sounds))
+				soundmanager.setMuted(world_sounds);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Machines, objects, creatures' noises: every sound but music and speech");
+			bool bibble = !soundmanager.areVoicesMutedByPlayer();
+			if (ImGui::MenuItem("Bibble", nullptr, bibble))
+				soundmanager.setVoicesMutedByPlayer(bibble);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Creatures' speech");
+			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Send To", false))
 			ImGui::EndMenu();
