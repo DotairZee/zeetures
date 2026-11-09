@@ -28,6 +28,7 @@
 */
 
 #include "SkeletalCreature.h"
+#include "common/Random.h"
 
 #include "Creature.h"
 #include "Engine.h"
@@ -312,7 +313,7 @@ void SkeletalCreature::render(RenderTarget* renderer, int xoffset, int yoffset) 
 		if (part->parent == -1) { // body
 			ourpose += (pregnancy * (engine.version < 3 ? 10 : 16));
 		} else if (i == 1) { // head
-			ourpose += (eyesclosed ? (engine.version < 3 ? 10 : 16) : 0) + (facialexpression * (engine.version < 3 ? 20 : 32));
+			ourpose += ((eyesclosed || blinkticks > 0) ? (engine.version < 3 ? 10 : 16) : 0) + (facialexpression * (engine.version < 3 ? 20 : 32));
 		} else if (i == 16) { // hair
 			ourpose += 0; // TODO: 16 * hair
 		}
@@ -783,6 +784,17 @@ void SkeletalCreature::tick() {
 	CreatureAgent::tick();
 
 	eyesclosed = creature->isAsleep() || !creature->isAlive();
+
+	// blink every 3-8 seconds (C2 ticks 10 times a second), eyes shut for
+	// about a fifth of a second (the head picture is chosen when drawing)
+	if (!eyesclosed) {
+		if (blinkticks > 0)
+			blinkticks--;
+		else if (--blinkwait <= 0) {
+			blinkticks = 2;
+			blinkwait = rand_int32(30, 80);
+		}
+	}
 
 	// TODO: every 2 ticks = correct? what about the engine var?
 	ticks++;

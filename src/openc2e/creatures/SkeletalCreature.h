@@ -40,6 +40,9 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	unsigned int facialexpression;
 	unsigned int pregnancy;
 	bool eyesclosed;
+	// blinking: drawn with the eyes shut for a moment every few seconds
+	// (only the head picture; the eyes-closed state for sleep is apart)
+	int blinkwait = 40, blinkticks = 0;
 
 	bool calculated;
 	int oldfootx, oldfooty;
