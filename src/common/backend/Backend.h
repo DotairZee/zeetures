@@ -65,6 +65,8 @@ class RenderTarget {
 	virtual void setViewportOffsetRight(int) {}
 	// the backend texture behind an off-screen target, for showing it in the UI
 	virtual void* getNativeTexture() const { return nullptr; }
+	// saves an off-screen target's picture as a BMP file (Owner's Kit photos)
+	virtual bool saveToFile(const std::string&) { return false; }
 	virtual ~RenderTarget() {}
 };
 

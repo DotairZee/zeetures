@@ -5,6 +5,9 @@
 #include "Engine.h"
 #include "PathResolver.h"
 #include "World.h"
+#include "Camera.h"
+#include "creatures/Creature.h"
+#include "historyManager.h"
 #include "CobManager.h"
 #include "common/Ascii.h"
 #include "fileformats/c2cobfile.h"
@@ -36,12 +39,15 @@ struct KitDef {
 	const char* chip; // label on the status bar when minimized
 	int icon; // picture in the game's applet toolbar strip (22 x 21 each)
 	void (*draw)();
+	bool resizable = false; // a list the player may size; otherwise fits its page
 };
 
 static const KitDef s_kits[] = {
 	{"health", "Health Kit", "Health", 3, DrawHealthKit},
 	{"science", "Science Kit", "Science", 4, DrawScienceKit},
 	{"breeders", "Breeder's Kit", "Breeder's", 5, DrawBreedersKit},
+	{"owners", "Owner's Kit", "Owner's", 2, DrawOwnersKit},
+	{"observation", "Observation Kit", "Observation", 6, DrawObservationKit, true},
 };
 
 struct KitState {
@@ -102,6 +108,8 @@ static void KitsReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, cons
 	if (entry == &s_settings_entry) {
 		if (sscanf(line, "Fahrenheit=%d", &v) == 1)
 			s_fahrenheit = v != 0;
+		else if (std::strncmp(line, "Alarm=", 6) == 0)
+			KitAlarmsReadLine(line + 6);
 		return;
 	}
 	auto* st = (KitState*)entry;
@@ -112,7 +120,9 @@ static void KitsReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, cons
 }
 
 static void KitsWriteAll(ImGuiContext*, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) {
-	buf->appendf("[%s][settings]\nFahrenheit=%d\n\n", handler->TypeName, s_fahrenheit ? 1 : 0);
+	buf->appendf("[%s][settings]\nFahrenheit=%d\n", handler->TypeName, s_fahrenheit ? 1 : 0);
+	KitAlarmsWrite(buf);
+	buf->append("\n");
 	for (auto& k : s_kits) {
 		auto& st = s_state[k.id];
 		buf->appendf("[%s][%s]\nOpen=%d\nMinimized=%d\n\n", handler->TypeName, k.id, st.open ? 1 : 0, st.minimized ? 1 : 0);
@@ -292,6 +302,133 @@ void KitBar(float level, const char* label, float width, bool need) {
 		dl->AddText(tp, IM_COL32(255, 255, 255, 255), label);
 	}
 	ImGui::Dummy(ImVec2(width, h));
+}
+
+// ---- creatures and their records -----------------------------------------------
+
+std::vector<std::shared_ptr<Agent>> KitLivingCreatures() {
+	std::vector<std::shared_ptr<Agent>> out;
+	for (auto& a : world.agents) {
+		if (!a || a->isDying())
+			continue;
+		auto* ca = dynamic_cast<CreatureAgent*>(a.get());
+		if (ca && ca->getCreature() && ca->getCreature()->isAlive())
+			out.push_back(a);
+	}
+	return out;
+}
+
+c2Creature* KitC2Of(Agent* a) {
+	auto* ca = dynamic_cast<CreatureAgent*>(a);
+	return ca ? dynamic_cast<c2Creature*>(ca->getCreature()) : nullptr;
+}
+
+monikerData* KitRecordsOf(Agent* a) {
+	auto* ca = dynamic_cast<CreatureAgent*>(a);
+	if (!ca || !ca->getCreature() || !world.history)
+		return nullptr;
+	std::string m = world.history->findMoniker(ca->getCreature()->getGenome());
+	if (m.empty() || !world.history->hasMoniker(m))
+		return nullptr;
+	return &world.history->getMoniker(m);
+}
+
+std::string KitGivenName(Agent* a) {
+	monikerData* m = KitRecordsOf(a);
+	return m ? m->name : std::string();
+}
+
+const char* KitSpeciesWord(Agent* a) {
+	switch (a ? a->genus : 1) {
+		case 2: return "grendel";
+		case 3: return "ettin";
+		default: return "norn";
+	}
+}
+
+std::string KitCreatureName(Agent* a) {
+	monikerData* m = KitRecordsOf(a);
+	if (m && !m->name.empty())
+		return m->name;
+	return fmt::format("Unnamed {}", KitSpeciesWord(a));
+}
+
+static constexpr unsigned int TICKS_PER_PART = 3600, PARTS_PER_DAY = 5, DAYS_PER_SEASON = 4, SEASONS_PER_YEAR = 4;
+
+unsigned int KitAgeTicks(monikerData& m) {
+	return world.worldtickcount >= m.borntick ? world.worldtickcount - m.borntick : 0;
+}
+
+std::string KitAgeText(unsigned int ticks) {
+	unsigned int parts = ticks / TICKS_PER_PART;
+	unsigned int days = parts / PARTS_PER_DAY;
+	parts %= PARTS_PER_DAY;
+	unsigned int minutes = ticks / 600; // C2 runs 10 world ticks a second
+	std::string game = days ? fmt::format("{} day{} {} part{}", days, days == 1 ? "" : "s", parts, parts == 1 ? "" : "s")
+							: fmt::format("{} part{} of a day", parts, parts == 1 ? "" : "s");
+	return fmt::format("{} ({} min of play)", game, minutes);
+}
+
+std::string KitDateText(unsigned int tick) {
+	// counted back from today's calendar
+	long long nowParts = (((long long)world.year * SEASONS_PER_YEAR + world.season) * DAYS_PER_SEASON + world.dayofseason) * PARTS_PER_DAY + world.timeofday;
+	long long ago = world.worldtickcount >= tick ? (world.worldtickcount - tick) / TICKS_PER_PART : 0;
+	long long p = std::max(0LL, nowParts - ago);
+	long long day = p / PARTS_PER_DAY;
+	int dayOfSeason = (int)(day % DAYS_PER_SEASON);
+	long long season = day / DAYS_PER_SEASON;
+	static const char* seasons[] = {"Spring", "Summer", "Autumn", "Winter"};
+	return fmt::format("{}, day {}, year {:03d}", seasons[season % SEASONS_PER_YEAR], dayOfSeason + 1, season / SEASONS_PER_YEAR);
+}
+
+float KitOrganHealth(c2Creature* c, int* damaged) {
+	float sum = 0;
+	int n = 0, bad = 0;
+	for (auto& o : c->getOrgans()) {
+		float start = o->getInitialLifeforce();
+		if (start <= 0)
+			continue;
+		float h = std::clamp(o->getShortTermLifeforce() / start, 0.0f, 1.0f);
+		sum += h;
+		n++;
+		if (h < 0.75f)
+			bad++;
+	}
+	if (damaged)
+		*damaged = bad;
+	return n ? sum / n : 0;
+}
+
+std::string KitWhere(Agent* a) {
+	if (!a)
+		return {};
+	float cx = a->x + a->getWidth() / 2.0f, cy = a->y + a->getHeight() / 2.0f;
+	const World::FavoritePlace* best = nullptr;
+	float bestd = 1e30f;
+	for (auto& f : world.favoriteplaces) {
+		if (f.name.empty())
+			continue;
+		// places store the camera's top-left; their middle is about 400 x 250 in
+		float dx = cx - (f.x + 400), dy = cy - (f.y + 250);
+		float d = dx * dx + dy * dy;
+		if (d < bestd) {
+			bestd = d;
+			best = &f;
+		}
+	}
+	if (!best)
+		return fmt::format("{:.0f}, {:.0f}", cx, cy);
+	return fmt::format("{} {}", bestd < 900.0f * 900.0f ? "near" : "far from", best->name);
+}
+
+void KitGoTo(const std::shared_ptr<Agent>& a) {
+	if (!a)
+		return;
+	world.selectCreature(a);
+	engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+	int cx = (int)(a->x + a->getWidth() / 2.0f) - (int)engine.camera->getWidth() / 2;
+	int cy = (int)(a->y + a->getHeight() / 2.0f) - (int)engine.camera->getHeight() / 2;
+	engine.camera->moveToGlobal(cx, cy, jump);
 }
 
 // ---- shelves of COBs (Doctor, Aphrodisiacs) -------------------------------------
@@ -621,6 +758,7 @@ void DrawC2Kits() {
 	if (engine.version != 2)
 		return;
 	SetUpKitSettings();
+	KitAlarmsTick();
 	for (auto& k : s_kits) {
 		auto& st = s_state[k.id];
 		if (!st.open || st.minimized)
@@ -635,7 +773,12 @@ void DrawC2Kits() {
 			ImGui::SetNextWindowPos(ImVec2(120, 120), ImGuiCond_FirstUseEver);
 		bool open = true;
 		std::string title = fmt::format("{}###kit_{}", k.title, k.id);
-		if (ImGui::Begin(title.c_str(), &open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar)) {
+		if (k.resizable)
+			ImGui::SetNextWindowSize(ImVec2(960, 360), ImGuiCond_FirstUseEver);
+		ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar;
+		if (!k.resizable)
+			flags |= ImGuiWindowFlags_AlwaysAutoResize;
+		if (ImGui::Begin(title.c_str(), &open, flags)) {
 			if (TitleMinimizeButton()) {
 				st.minimized = true;
 				ImGui::MarkIniSettingsDirty();

@@ -59,6 +59,7 @@ class SDLRenderTarget : public RenderTarget {
 	void setViewportOffsetBottom(int offset_bottom) override;
 	void setViewportOffsetRight(int offset_right) override;
 	void* getNativeTexture() const override { return texture; }
+	bool saveToFile(const std::string& path) override;
 };
 
 class SDLBackend : public Backend {

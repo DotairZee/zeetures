@@ -7,9 +7,16 @@
 // minimized, and where they sit, is kept between sessions (kits.ini in the
 // user data folder).
 
+#include <string>
+
+class Agent;
+
 namespace Openc2eImgui {
 
-// Kit ids: "health", "science", "breeders".
+// the name a creature was given in the Owner's Kit, or empty
+std::string KitGivenName(Agent* a);
+
+// Kit ids: "health", "science", "breeders", "owners", "observation".
 bool IsC2KitAvailable(const char* id);
 void OpenC2Kit(const char* id);
 

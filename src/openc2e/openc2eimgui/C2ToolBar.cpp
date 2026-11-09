@@ -226,6 +226,10 @@ static void DrawC2MenuBar() {
 			OpenC2Kit("science");
 		if (ImGui::MenuItem("Breeder's Kit", nullptr, false, IsC2KitAvailable("breeders")))
 			OpenC2Kit("breeders");
+		if (ImGui::MenuItem("Owner's Kit", nullptr, false, IsC2KitAvailable("owners")))
+			OpenC2Kit("owners");
+		if (ImGui::MenuItem("Observation Kit", nullptr, false, IsC2KitAvailable("observation")))
+			OpenC2Kit("observation");
 		ImGui::EndMenu();
 	}
 	if (ImGui::BeginMenu("Creatures")) {
@@ -238,7 +242,9 @@ static void DrawC2MenuBar() {
 			if (!ca || !ca->getCreature() || !ca->getCreature()->isAlive())
 				continue;
 			n++;
-			std::string label = fmt::format("{} {} ({})", GenusName(a->genus), n, ca->getCreature()->isFemale() ? "female" : "male");
+			std::string given = KitGivenName(a.get());
+			std::string label = given.empty() ? fmt::format("{} {} ({})", GenusName(a->genus), n, ca->getCreature()->isFemale() ? "female" : "male")
+											   : fmt::format("{} ({} {})##{}", given, ca->getCreature()->isFemale() ? "female" : "male", GenusName(a->genus), n);
 			if (ImGui::MenuItem(label.c_str(), nullptr, a == current)) {
 				world.selectCreature(a);
 				int cx = (int)(a->x + a->getWidth() / 2.0f) - (int)engine.camera->getWidth() / 2;
@@ -489,7 +495,10 @@ void DrawC2Toolbar() {
 		if (ImageButton(icon_hatchery, IsHatcheryEnabled())) {
 			SetHatcheryOpen(true);
 		};
-		ImageButton(icon_ownerskit, false);
+		if (ImageButton(icon_ownerskit, IsC2KitAvailable("owners")))
+			OpenC2Kit("owners");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Owner's Kit");
 		if (ImageButton(icon_healthkit, IsC2KitAvailable("health")))
 			OpenC2Kit("health");
 		if (ImGui::IsItemHovered())
@@ -505,7 +514,10 @@ void DrawC2Toolbar() {
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Science Kit");
 		ImageButton(icon_unknown_maybe_neurosciencekit, false);
-		ImageButton(icon_unknown_maybe_observationkit, false);
+		if (ImageButton(icon_unknown_maybe_observationkit, IsC2KitAvailable("observation")))
+			OpenC2Kit("observation");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Observation Kit");
 		ImGui::Separator();
 		if (ImageButton(icon_agent_injector, IsAgentInjectorEnabled())) {
 			SetAgentInjectorOpen(true);

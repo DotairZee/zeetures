@@ -44,26 +44,6 @@ static float temperatureOf(c2Creature* c) {
 	return std::clamp(t, 30.0f, 43.0f);
 }
 
-// overall organ health: short-term life force against what each organ
-// started with, 0-1
-static float organHealth(c2Creature* c, int* damaged = nullptr) {
-	float sum = 0;
-	int n = 0, bad = 0;
-	for (auto& o : c->getOrgans()) {
-		float start = o->getInitialLifeforce();
-		if (start <= 0)
-			continue;
-		float h = std::clamp(o->getShortTermLifeforce() / start, 0.0f, 1.0f);
-		sum += h;
-		n++;
-		if (h < 0.75f)
-			bad++;
-	}
-	if (damaged)
-		*damaged = bad;
-	return n ? sum / n : 0;
-}
-
 static void FitnessPage() {
 	if (!KitNeedsCreature("Applet Data/HealthCover.bmp"))
 		return;
@@ -118,7 +98,7 @@ static void FitnessPage() {
 	ImGui::SetCursorScreenPos(p + ImVec2(128, 28));
 	ImGui::InvisibleButton("xray", ImVec2(124, 140));
 	int damaged = 0;
-	float h = organHealth(c, &damaged);
+	float h = KitOrganHealth(c, &damaged);
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("%d organs, %.0f%% of their life force on average\n%d damaged (under 75%%)\nDetails in the Science Kit's Physical page.", (int)c->getOrgans().size(), h * 100, damaged);
 	ImGui::SetCursorScreenPos(p + ImVec2(0, 244));

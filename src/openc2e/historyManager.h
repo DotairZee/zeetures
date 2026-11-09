@@ -71,6 +71,13 @@ class monikerData {
 	bool warpveteran;
 	unsigned int no_crossover_points, no_point_mutations;
 
+	// the owner's records (Owner's and Observation Kits; saved with the world)
+	unsigned int borntick = 0; // world tick count when born, or when first seen
+	bool bornknown = false; // false: borntick is when this world first saw it
+	bool registered = false; // birth registered (Owner's Kit)
+	std::vector<std::string> photos; // pictures in the world folder's photos/
+	std::string notes;
+
 	void init(std::string, std::shared_ptr<genomeFile>);
 	historyevent& addEvent(unsigned int event, std::string moniker1 = "", std::string moniker2 = "");
 	void moveToAgent(AgentRef a);

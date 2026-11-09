@@ -500,6 +500,24 @@ void SDLRenderTarget::renderCreaturesImage(creaturesImage& img, unsigned int fra
 	return renderTexture(img.getTextureForFrame(frame), src, dest, options);
 }
 
+bool SDLRenderTarget::saveToFile(const std::string& path) {
+	if (!texture)
+		return false;
+	SDL_SetRenderTarget(parent->renderer, texture);
+	SDL_Surface* shot = SDL_RenderReadPixels(parent->renderer, nullptr);
+	SDL_SetRenderTarget(parent->renderer, nullptr);
+	if (!shot)
+		return false;
+	// a plain 24-bit BMP, which every reader takes
+	SDL_Surface* rgb = SDL_ConvertSurface(shot, SDL_PIXELFORMAT_BGR24);
+	SDL_DestroySurface(shot);
+	if (!rgb)
+		return false;
+	bool ok = SDL_SaveBMP(rgb, path.c_str());
+	SDL_DestroySurface(rgb);
+	return ok;
+}
+
 void SDLRenderTarget::renderClear() {
 	SDL_SetRenderDrawColor(parent->renderer, 0, 0, 0, 255);
 	SDL_SetRenderTarget(parent->renderer, texture);

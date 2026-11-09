@@ -104,6 +104,10 @@ void monikerData::moveToAgent(AgentRef a) {
 
 void monikerData::moveToCreature(AgentRef a) {
 	moveToAgent(a);
+	if (borntick == 0) { // a new creature: born now (a restored one gets its saved records after)
+		borntick = world.worldtickcount;
+		bornknown = true;
+	}
 
 	CreatureAgent* c = dynamic_cast<CreatureAgent*>(owner.get());
 	THROW_IFNOT(c);

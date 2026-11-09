@@ -88,6 +88,8 @@ static std::string timestamp() {
 	return buf;
 }
 
+static std::string escapeLine(const std::string& t);
+
 bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	if (worlddir.empty()) {
 		error = "No world folder is open.";
@@ -137,6 +139,17 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			out << "ticks " << c->getTicks() << "\n";
 			out << "ageing " << (c->isAgeing() ? 1 : 0) << "\n";
 			out << "asleep " << (c->isAsleep() ? 1 : 0) << "\n";
+			{
+				monikerData& m = world.history->getMoniker(world.history->findMoniker(c->getGenome()));
+				if (!m.name.empty())
+					out << "name " << escapeLine(m.name) << "\n";
+				out << "registered " << (m.registered ? 1 : 0) << "\n";
+				out << "born " << m.borntick << " " << (m.bornknown ? 1 : 0) << "\n";
+				for (auto& ph : m.photos)
+					out << "photo " << escapeLine(ph) << "\n";
+				if (!m.notes.empty())
+					out << "notes " << escapeLine(m.notes) << "\n";
+			}
 			out << "chemicals";
 			for (int i = 0; i < 256; i++)
 				out << " " << (int)c->getChemical(i);
@@ -207,7 +220,48 @@ struct SavedCreature {
 	unsigned int age = 0, ticks = 0;
 	std::vector<int> chemicals;
 	std::vector<float> organs;
+	// the owner's records (monikerData)
+	std::string name, notes;
+	bool registered = false, hasborn = false, bornknown = false;
+	unsigned int born = 0;
+	std::vector<std::string> photos;
 };
+
+// one line of free text in state.txt: backslashes and line breaks escaped
+static std::string escapeLine(const std::string& t) {
+	std::string o;
+	for (char ch : t) {
+		if (ch == '\\')
+			o += "\\\\";
+		else if (ch == '\n')
+			o += "\\n";
+		else if (ch != '\r')
+			o += ch;
+	}
+	return o;
+}
+
+static std::string unescapeLine(const std::string& t) {
+	std::string o;
+	for (size_t i = 0; i < t.size(); i++) {
+		if (t[i] == '\\' && i + 1 < t.size()) {
+			o += t[i + 1] == 'n' ? '\n' : t[i + 1];
+			i++;
+		} else {
+			o += t[i];
+		}
+	}
+	return o;
+}
+
+// the rest of a line after its key and one space
+static std::string restOfLine(std::istringstream& l) {
+	std::string rest;
+	std::getline(l, rest);
+	if (!rest.empty() && rest[0] == ' ')
+		rest.erase(0, 1);
+	return rest;
+}
 
 struct SavedEgg {
 	bool kept = false; // a kept object rather than an egg
@@ -284,7 +338,20 @@ static void restoreCreature(const fs::path& savedir, const SavedCreature& s, boo
 		FileReader r(savedir / "genomes" / s.genome);
 		r >> *genome;
 	}
-	buildCreature(genome, s, revive_atp);
+	Agent* a = buildCreature(genome, s, revive_atp);
+	if (!a)
+		return;
+	monikerData& m = world.history->getMoniker(world.history->findMoniker(genome));
+	m.name = s.name;
+	m.registered = s.registered;
+	m.photos = s.photos;
+	m.notes = s.notes;
+	if (s.hasborn) {
+		m.borntick = s.born;
+		m.bornknown = s.bornknown;
+	} else {
+		m.bornknown = false; // saved before birth times were kept: counts from now
+	}
 }
 
 static void restoreEgg(const SavedEgg& e) {
@@ -371,6 +438,17 @@ bool LoadWorldState(const fs::path& worlddir) {
 				l >> c->ageing;
 			else if (key == "asleep")
 				l >> c->asleep;
+			else if (key == "name")
+				c->name = unescapeLine(restOfLine(l));
+			else if (key == "registered")
+				l >> c->registered;
+			else if (key == "born") {
+				l >> c->born >> c->bornknown;
+				c->hasborn = true;
+			} else if (key == "photo")
+				c->photos.push_back(unescapeLine(restOfLine(l)));
+			else if (key == "notes")
+				c->notes = unescapeLine(restOfLine(l));
 			else if (key == "chemicals") {
 				int v;
 				while (l >> v)

@@ -7,9 +7,13 @@
 #include <string>
 #include <vector>
 
+#include <memory>
+
 class Agent;
 class c2Creature;
 class gene;
+class monikerData;
+struct ImGuiTextBuffer;
 
 namespace Openc2eImgui {
 
@@ -64,11 +68,39 @@ std::vector<std::string> KitAppletDataFiles(const std::string& sub, const std::s
 // shelves: the y of each shelf top; columns: the x of each place on a shelf.
 void KitCobShelf(const char* picture, const char* subfolder, const std::vector<float>& shelves, const std::vector<float>& columns, const char* hint, const char* added);
 
+// ---- creatures and their records ----
+// every living C1/C2 creature in the world
+std::vector<std::shared_ptr<Agent>> KitLivingCreatures();
+c2Creature* KitC2Of(Agent* a);
+// the owner's records for a creature (name, birth, registration, photos)
+monikerData* KitRecordsOf(Agent* a);
+// its name, or "Unnamed norn" and so on
+std::string KitCreatureName(Agent* a);
+const char* KitSpeciesWord(Agent* a); // "norn", "grendel", "ettin"
+// ages and dates: C2 time runs a part of the day per 3600 world ticks, 5
+// parts a day, 4 days a season, 4 seasons a year
+unsigned int KitAgeTicks(monikerData& m);
+std::string KitAgeText(unsigned int ticks); // "2 days 3 parts (54 min of play)"
+std::string KitDateText(unsigned int worldtick); // "Summer, day 3, year 001"
+// mean short-term organ life force against each organ's start, 0-1
+float KitOrganHealth(c2Creature* c, int* damaged = nullptr);
+// the favorite place nearest to an agent ("near The Incubator")
+std::string KitWhere(Agent* a);
+// selects a creature and moves the camera to it
+void KitGoTo(const std::shared_ptr<Agent>& a);
+
+// ---- alarms (Observation Kit), checked every frame whatever is open ----
+void KitAlarmsTick();
+void KitAlarmsReadLine(const char* line);
+void KitAlarmsWrite(ImGuiTextBuffer* buf);
+
 // a page tab (ImGui::BeginTabItem; the test aid can pick one)
 bool KitTab(const char* label);
 
 void DrawHealthKit();
 void DrawScienceKit();
 void DrawBreedersKit();
+void DrawOwnersKit();
+void DrawObservationKit();
 
 } // namespace Openc2eImgui
