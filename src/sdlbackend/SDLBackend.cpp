@@ -18,6 +18,8 @@
  */
 
 #include "SDLBackend.h"
+#include <cstdio>
+#include <cstdlib>
 
 #include "common/Exception.h"
 #include "common/NumericCast.h"
@@ -84,6 +86,14 @@ void SDLBackend::init(const std::string& name, int32_t width, int32_t height) {
 		SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
 	if (!window) {
 		throw Exception(std::string("SDL error creating window: ") + SDL_GetError());
+	}
+	// OPENC2E_WINDOW_POS="x,y" places the window's top-left corner there
+	// (desktop coordinates, so it can pick a monitor); otherwise the window
+	// system decides
+	if (const char* pos = getenv("OPENC2E_WINDOW_POS")) {
+		int wx, wy;
+		if (sscanf(pos, "%d,%d", &wx, &wy) == 2)
+			SDL_SetWindowPosition(window, wx, wy);
 	}
 
 	renderer = SDL_CreateRenderer(window, nullptr);
