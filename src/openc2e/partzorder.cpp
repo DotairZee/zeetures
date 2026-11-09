@@ -13,11 +13,12 @@ bool partzorder::operator()(const CompoundPart* s1, const CompoundPart* s2) cons
 		return s1->getZOrder() > s2->getZOrder();
 	}
 	// TODO: we shouldn't be checking engine.bmprenderer for this, but it's a cheap/easy way to check for seamonkeys
-	// C1/C2 planes are signed too: an object placed below plane 0 (behind
-	// the plane-0 machines, whose parts sit at 0 plus their offsets) must
-	// sort behind them, not wrap round to the front
-	if (engine.bmprenderer || engine.version < 3)
+	if (engine.bmprenderer)
 		return (int)s1->getParent()->getZOrder() > (int)s2->getParent()->getZOrder();
+	// C1/C2: an object placed below plane 0 (behind the plane-0 machines)
+	// must sort behind them, not wrap round to the front (see c2PlaneKey)
+	if (engine.version < 3)
+		return c2PlaneKey(s1->getParent()->getZOrder()) > c2PlaneKey(s2->getParent()->getZOrder());
 	else
 		return s1->getParent()->getZOrder() > s2->getParent()->getZOrder();
 }
