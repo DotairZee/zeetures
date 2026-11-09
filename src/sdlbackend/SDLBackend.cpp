@@ -18,6 +18,7 @@
  */
 
 #include "SDLBackend.h"
+#include "openc2e_icon.h"
 #include <cstdio>
 #include <cstdlib>
 
@@ -94,6 +95,12 @@ void SDLBackend::init(const std::string& name, int32_t width, int32_t height) {
 		int wx, wy;
 		if (sscanf(pos, "%d,%d", &wx, &wy) == 2)
 			SDL_SetWindowPosition(window, wx, wy);
+	}
+	// the window icon: openc2e's winged egg
+	if (SDL_Surface* icon = SDL_CreateSurfaceFrom(openc2e_icon_size, openc2e_icon_size, SDL_PIXELFORMAT_RGBA32,
+			(void*)openc2e_icon_rgba, openc2e_icon_size * 4)) {
+		SDL_SetWindowIcon(window, icon);
+		SDL_DestroySurface(icon);
 	}
 	// start maximized, on whichever monitor the window opened on
 	SDL_MaximizeWindow(window);
