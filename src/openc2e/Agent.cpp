@@ -183,9 +183,11 @@ void Agent::moveTo(float _x, float _y, bool force) {
 		MetaRoom* m = world.map->getFallbackMetaroom();
 		assert(m);
 
+		// (at or past the far edge counts: an object whose corner sat exactly
+		// on x = width never wrapped, found no room, and fell out of the world)
 		if (x < m->x()) {
 			x += m->width();
-		} else if (x > m->x() + m->width()) {
+		} else if (x >= m->x() + m->width()) {
 			x -= m->width();
 		}
 	}
