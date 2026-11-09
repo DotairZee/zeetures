@@ -447,7 +447,7 @@ std::shared_ptr<Agent> World::lookupUNID(int unid) {
 	return unidmap[unid].lock();
 }
 
-void World::drawWorld(Camera* cam, RenderTarget* surface) {
+void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand) {
 	assert(surface);
 	surface->renderClear();
 
@@ -483,6 +483,11 @@ void World::drawWorld(Camera* cam, RenderTarget* surface) {
 
 	// render all the agents
 	for (auto render : renders) {
+		if (skip_hand) {
+			auto* p = dynamic_cast<CompoundPart*>(render);
+			if (p && p->getParent() == (Agent*)world.hand())
+				continue;
+		}
 		if (render->showOnRemoteCameras() || cam == engine.camera.get()) {
 			// three-pass for wraparound rooms, the third since agents often straddle the boundary
 			// TODO: same as above with background rendering

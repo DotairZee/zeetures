@@ -22,6 +22,8 @@
 #include "Camera.h"
 #include "DullPart.h"
 #include "Engine.h"
+
+#include <cmath>
 #include "Map.h"
 #include "MetaRoom.h"
 #include "Room.h"
@@ -211,7 +213,8 @@ void PointerAgent::handleEvent(BackendEvent& event) {
 	int x = pointerX(), y = pointerY();
 
 	if (event.type == eventmousemove) {
-		moveTo(event.x + engine.camera->getX() - hotspotx, event.y + engine.camera->getY() - hotspoty);
+		// the window shows the world at engine.zoom
+		moveTo((int)std::floor(event.x / engine.zoom) + engine.camera->getX() - hotspotx, (int)std::floor(event.y / engine.zoom) + engine.camera->getY() - hotspoty);
 		velx = (int)event.xrel * 4;
 		vely = (int)event.yrel * 4;
 
@@ -220,7 +223,7 @@ void PointerAgent::handleEvent(BackendEvent& event) {
 
 		// middle mouse button scrolling
 		if (event.button & buttonmiddle)
-			engine.camera->moveTo(engine.camera->getX() - event.xrel, engine.camera->getY() - event.yrel, jump);
+			engine.camera->moveTo(engine.camera->getX() - (int)std::lround(event.xrel / engine.zoom), engine.camera->getY() - (int)std::lround(event.yrel / engine.zoom), jump);
 	} else if (!handle_events) {
 		/* mouse move events are (apparently - see eg C3 agent help) still handled with handle_events disabled, but nothing else */
 		return;

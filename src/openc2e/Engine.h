@@ -77,6 +77,13 @@ class Engine {
 
 	std::unique_ptr<MainCamera> camera;
 
+	// C1/C2 world view zoom (owner, 2026-11-09): the world is drawn at this
+	// scale; camera sizes are in world pixels. See setZoom.
+	float zoom = 1.0f;
+	void setZoom(float z, int anchorx = -1, int anchory = -1);
+	void zoomStep(int steps, int anchorx = -1, int anchory = -1);
+	std::shared_ptr<class RenderTarget> zoomtarget;
+
 	std::vector<std::string> wordlist;
 	std::string translateWordlistWord(const std::string& s);
 	class peFile* getExeFile() {

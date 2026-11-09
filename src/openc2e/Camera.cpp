@@ -22,6 +22,8 @@
 #include "Agent.h"
 #include "CameraPart.h"
 #include "Engine.h"
+
+#include <cmath>
 #include "Map.h"
 #include "MetaRoom.h"
 #include "World.h"
@@ -156,7 +158,7 @@ void Camera::updateTracking() {
 }
 
 unsigned int MainCamera::getWidth() const {
-	auto target_width = numeric_cast<unsigned int>(get_backend()->getMainRenderTarget()->getWidth());
+	auto target_width = numeric_cast<unsigned int>(std::ceil(get_backend()->getMainRenderTarget()->getWidth() / engine.zoom));
 	if ((!getMetaRoom()) || (target_width < getMetaRoom()->width()))
 		return target_width;
 	else
@@ -164,7 +166,7 @@ unsigned int MainCamera::getWidth() const {
 }
 
 unsigned int MainCamera::getHeight() const {
-	auto target_height = numeric_cast<unsigned int>(get_backend()->getMainRenderTarget()->getHeight());
+	auto target_height = numeric_cast<unsigned int>(std::ceil(get_backend()->getMainRenderTarget()->getHeight() / engine.zoom));
 	if ((!getMetaRoom()) || (target_height < getMetaRoom()->height()))
 		return target_height;
 	else

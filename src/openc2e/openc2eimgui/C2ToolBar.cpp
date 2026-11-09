@@ -152,6 +152,14 @@ static void DrawC2MenuBar() {
 		if (ImGui::MenuItem("Creature's View", nullptr, IsEyeViewOpen(), (bool)world.selectedcreature))
 			SetEyeViewOpen(!IsEyeViewOpen());
 		ImGui::Separator();
+		// not in C2's menu; openc2e addition (owner, 2026-11-09)
+		if (ImGui::MenuItem("Zoom In", "Ctrl+Wheel", false, engine.zoom < 3.0f))
+			engine.zoomStep(1);
+		if (ImGui::MenuItem("Zoom Out", "Ctrl+Wheel", false, engine.zoom > 0.5f))
+			engine.zoomStep(-1);
+		if (ImGui::MenuItem(fmt::format("Actual Size ({:.0f}%)###actualsize", engine.zoom * 100).c_str(), "Ctrl+0", false, engine.zoom != 1.0f))
+			engine.setZoom(1.0f);
+		ImGui::Separator();
 		if (ImGui::BeginMenu("Toolbars")) {
 			ImGui::MenuItem("Standard", nullptr, &s_show_standard);
 			ImGui::MenuItem("Pointer", nullptr, &s_show_pointer);

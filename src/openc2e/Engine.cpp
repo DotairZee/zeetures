@@ -340,8 +340,58 @@ void Engine::drawWorld() {
 
 	if (dorendering || refreshdisplay) {
 		refreshdisplay = false;
-		world.drawWorld(camera.get(), get_backend()->getMainRenderTarget());
+		RenderTarget* main = get_backend()->getMainRenderTarget();
+		if (zoom == 1.0f) {
+			world.drawWorld(camera.get(), main);
+		} else {
+			// draw the world at 1:1 into a texture the size of the view in
+			// world pixels, scale that onto the window, then draw the hand on
+			// top at its usual size
+			int zw = (int)std::ceil(main->getWidth() / zoom), zh = (int)std::ceil(main->getHeight() / zoom);
+			if (!zoomtarget || zoomtarget->getWidth() != zw || zoomtarget->getHeight() != zh)
+				zoomtarget = get_backend()->newRenderTarget(zw, zh);
+			world.drawWorld(camera.get(), zoomtarget.get(), true);
+			main->renderClear();
+			main->blitRenderTarget(zoomtarget.get(), Rect2f(0, 0, zw * zoom, zh * zoom));
+			PointerAgent* hand = world.hand();
+			if (hand && hand->visible) {
+				int mx = (int)std::lround((hand->pointerX() - (int)camera->getX()) * zoom);
+				int my = (int)std::lround((hand->pointerY() - (int)camera->getY()) * zoom);
+				if (CompoundPart* p = hand->part(0))
+					p->render(main, mx - hand->pointerX(), my - hand->pointerY());
+			}
+		}
 	}
+}
+
+static const float zoom_levels[] = {0.5f, 0.75f, 1.0f, 1.5f, 2.0f, 3.0f};
+
+void Engine::setZoom(float z, int anchorx, int anchory) {
+	if (version > 2 || z == zoom)
+		return;
+	RenderTarget* main = get_backend()->getMainRenderTarget();
+	// keep the world point under the anchor (window pixels; default the
+	// view's centre) where it is
+	if (anchorx < 0 || anchory < 0) {
+		anchorx = main->getWidth() / 2;
+		anchory = main->getHeight() / 2;
+	}
+	float wx = camera->getX() + anchorx / zoom, wy = camera->getY() + anchory / zoom;
+	zoom = z;
+	camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+	camera->moveTo((int)std::lround(wx - anchorx / zoom), (int)std::lround(wy - anchory / zoom), jump);
+	if (world.hand())
+		world.hand()->moveTo((int)std::lround(wx) - (world.hand()->pointerX() - (int)world.hand()->x), (int)std::lround(wy) - (world.hand()->pointerY() - (int)world.hand()->y));
+	refreshdisplay = true;
+}
+
+void Engine::zoomStep(int steps, int anchorx, int anchory) {
+	int n = sizeof(zoom_levels) / sizeof(zoom_levels[0]);
+	int i = 0;
+	while (i < n - 1 && zoom_levels[i] < zoom - 0.001f)
+		i++;
+	i = std::max(0, std::min(n - 1, i + steps));
+	setZoom(zoom_levels[i], anchorx, anchory);
 }
 
 static std::chrono::steady_clock::time_point program_started = std::chrono::steady_clock::now();
@@ -500,6 +550,9 @@ bool Engine::tick() {
 		if (getenv("OPENC2E_SNAPSHOTS_PAUSED"))
 			world.paused = true; // freeze the world so captures differ only by camera
 		auto& [sx, sy, sfile] = snapshots[snapshot_index];
+		// OPENC2E_SNAPSHOT_ZOOM=z draws the snapshots at that zoom
+		if (const char* z = getenv("OPENC2E_SNAPSHOT_ZOOM"))
+			engine.zoom = (float)atof(z);
 		if (snapshot_wait % 80 == 40) {
 			camera->trackAgent(AgentRef(), 0, 0, brittle, none);
 			camera->moveToGlobal(sx, sy, jump);
@@ -692,6 +745,17 @@ void Engine::handleMouseButton(BackendEvent& event) {
 	// direction (their scripts have no use for the wheel). Directions follow
 	// the system's natural-scrolling setting, as SDL reports them.
 	if (version <= 2 && event.type == eventmousebuttondown && (event.wheel_x != 0 || event.wheel_y != 0)) {
+		// with Ctrl held, the wheel zooms about the pointer instead
+		if (get_backend()->keyDown(OPENC2E_KEY_CTRL)) {
+			static float acc = 0;
+			acc += event.wheel_y;
+			if (std::fabs(acc) >= 1.0f) {
+				zoomStep(acc > 0 ? 1 : -1, (int)std::lround((world.hand()->pointerX() - (int)camera->getX()) * zoom),
+					(int)std::lround((world.hand()->pointerY() - (int)camera->getY()) * zoom));
+				acc = 0;
+			}
+			return;
+		}
 		const float speed = 51.0f; // pixels per wheel unit (owner-tuned)
 		int dx = (int)std::lround(event.wheel_x * speed);
 		int dy = (int)std::lround(-event.wheel_y * speed);
@@ -804,6 +868,9 @@ void Engine::handleRawKeyUp(BackendEvent& event) {
 }
 
 void Engine::handleRawKeyDown(BackendEvent& event) {
+	// C1/C2: Ctrl+0 shows the world at its actual size
+	if (version <= 2 && event.key == OPENC2E_KEY_0 && get_backend()->keyDown(OPENC2E_KEY_CTRL))
+		setZoom(1.0f);
 	switch (event.key) {
 		case OPENC2E_KEY_W:
 			w_down = true;
