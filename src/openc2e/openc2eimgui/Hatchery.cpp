@@ -41,6 +41,8 @@
 #include <algorithm>
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <mutex>
+#include <SDL3/SDL_dialog.h>
 
 using namespace ImGuiUtils;
 
@@ -86,6 +88,44 @@ struct C2EggInfo {
 };
 
 static std::vector<C2EggInfo> s_c2eggs;
+
+// File > Import Genome: the desktop's file chooser (SDL3, through the
+// xdg file-chooser portal where there is one) answers on its own thread,
+// so its picks wait here until the Hatchery is next drawn.
+static std::mutex s_import_mutex;
+static std::vector<std::string> s_import_pending;
+static std::string s_import_message;
+
+static void SDLCALL ImportGenomeChosen(void*, const char* const* files, int) {
+	if (!files)
+		return; // error or cancelled
+	std::lock_guard<std::mutex> lock(s_import_mutex);
+	for (const char* const* f = files; *f; f++)
+		s_import_pending.push_back(*f);
+}
+
+static void PlaceEggInHatchery(C2EggInfo& egg);
+
+// Makes a Hatchery egg from a C2 genome file ("dna2..."): one parent
+// genome, so the creature is that genome (with the usual small mutations).
+static void ImportGenome(const std::string& path) {
+	std::ifstream in(path, std::ios::binary);
+	std::vector<uint8_t> d((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	std::string name = std::filesystem::path(path).filename().string();
+	if (d.size() < 8 || std::memcmp(d.data(), "dna2", 4) != 0) {
+		s_import_message = fmt::format("{} is not a Creatures 2 genome.", name);
+		return;
+	}
+	C2EggInfo egg;
+	egg.file = path;
+	egg.gender = 0;
+	egg.frame = rand_int32(0, 10);
+	egg.moniker = std::filesystem::path(path).stem().string().substr(0, 4);
+	egg.genomes.push_back(d);
+	PlaceEggInHatchery(egg);
+	s_c2eggs.push_back(egg);
+	s_import_message = fmt::format("Made an egg from {}.", name);
+}
 
 static std::vector<std::filesystem::path> findC2EggFiles() {
 	std::vector<std::filesystem::path> result;
@@ -134,8 +174,8 @@ static void TakeC2Egg(size_t index) {
 	C2EggInfo& egg = s_c2eggs[index];
 	if (egg.taken)
 		return;
-	std::string mum = fmt::format("qh{:02d}", (int)index);
-	std::string dad = egg.genomes.size() > 1 ? fmt::format("qi{:02d}", (int)index) : mum;
+	std::string mum = fmt::format("qh{:02d}", (int)index % 100);
+	std::string dad = egg.genomes.size() > 1 ? fmt::format("qi{:02d}", (int)index % 100) : mum;
 	{
 		FileWriter w = createUserGeneticsFile(mum + ".gen");
 		w.write(egg.genomes[0].data(), egg.genomes[0].size());
@@ -165,6 +205,29 @@ static void TakeC2Egg(size_t index) {
 	engine.camera->moveToGlobal(x - (int)engine.camera->getWidth() / 2, 750 - (int)engine.camera->getHeight() / 2, jump);
 }
 
+// Finds a spot for an egg in the Hatchery tray, at least 20 px from the
+// other eggs (gives up after 50 tries).
+static void PlaceEggInHatchery(C2EggInfo& egg) {
+	if (s_omelette.empty())
+		return;
+	int frame = std::clamp(egg.frame, 0, 16);
+	int x = 0, y = 0, tries = 0;
+	while (x == 0 && tries < 50) {
+		x = rand_int32(80, 240 - s_omelette[frame].width);
+		y = rand_int32(110, 230 - s_omelette[frame].height);
+		for (auto& other : s_c2eggs) {
+			if (&other == &egg || other.taken || other.x == 0)
+				continue;
+			float xdist = x - other.x, ydist = y - other.y;
+			if (xdist * xdist + ydist * ydist < 20 * 20)
+				x = 0; // too close: try again
+		}
+		tries++;
+	}
+	egg.x = x ? x : 160;
+	egg.y = y ? y : 170;
+}
+
 void LoadHatchery() {
 	if (engine.version == 1) {
 		s_hatcherybackground = LoadImageWithTransparentTopLeft("hatchery/hatchery.bmp")[0];
@@ -186,29 +249,10 @@ void LoadHatchery() {
 				break; // the hatchery holds ten
 		}
 		fmt::print("* Hatchery: {} eggs from the Eggs folder\n", s_c2eggs.size());
-		for (size_t i = 0; i < s_c2eggs.size(); i++) {
-			int frame = std::clamp(s_c2eggs[i].frame, 0, 16);
-			// Place eggs from 80-240 horizontally, 110-230 vertically
-			int x = 0, y = 0, tries = 0;
-			while (x == 0 && tries < 50) {
-				x = rand_int32(80, 240 - s_omelette[frame].width);
-				y = rand_int32(110, 230 - s_omelette[frame].height);
-				for (unsigned int j = 0; j < i; j++) {
-					float xdist = x - s_c2eggs[j].x;
-					xdist = xdist * xdist;
-					float ydist = y - s_c2eggs[j].y;
-					ydist = ydist * ydist;
-					if (xdist + ydist < 20 * 20) {
-						// less than 20 pixels apart
-						// try again
-						x = 0;
-					}
-				}
-				tries++; // give up after 50 attempts at placement..
-			}
-			s_c2eggs[i].x = x;
-			s_c2eggs[i].y = y;
-		}
+		for (auto& egg : s_c2eggs)
+			egg.x = 0;
+		for (auto& egg : s_c2eggs)
+			PlaceEggInHatchery(egg);
 		std::sort(s_c2eggs.begin(), s_c2eggs.end(), [](const auto& l, const auto& r) { return l.y < r.y; });
 	}
 
@@ -239,7 +283,8 @@ void DrawHatchery() {
 	}
 
 	if (s_hatchery_open && ImGui::Begin("Hatchery", &s_hatchery_open,
-							   ImGuiWindowFlags_NoScrollbar |
+							   (engine.version == 2 ? ImGuiWindowFlags_MenuBar : 0) |
+								   ImGuiWindowFlags_NoScrollbar |
 								   ImGuiWindowFlags_NoScrollWithMouse |
 								   ImGuiWindowFlags_NoCollapse)) {
 		if (!s_hatchery_loaded) {
@@ -274,6 +319,27 @@ void DrawHatchery() {
 			/* gender marker animation */
 			// TODO
 		} else if (engine.version == 2) {
+			if (ImGui::BeginMenuBar()) {
+				if (ImGui::BeginMenu("File")) {
+					if (ImGui::MenuItem("Import Genome...")) {
+						static const SDL_DialogFileFilter filters[] = {{"Creatures 2 genomes", "gen"}, {"All files", "*"}};
+						SDL_ShowOpenFileDialog(ImportGenomeChosen, nullptr, nullptr, filters, 2, nullptr, true);
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("Make an egg from a genome file (.gen) anywhere on disk.");
+					ImGui::EndMenu();
+				}
+				ImGui::EndMenuBar();
+			}
+			{
+				std::vector<std::string> picked;
+				{
+					std::lock_guard<std::mutex> lock(s_import_mutex);
+					picked.swap(s_import_pending);
+				}
+				for (auto& f : picked)
+					ImportGenome(f);
+			}
 			// background
 			ImVec2 p = ImGui::GetCursorScreenPos();
 			DrawTexture(s_hatcherybackground, p);
@@ -297,6 +363,8 @@ void DrawHatchery() {
 			}
 			ImGui::SetCursorScreenPos(p + ImVec2(0, 275));
 			ImGui::Dummy(ImVec2(0, 0));
+			if (!s_import_message.empty())
+				ImGui::TextUnformatted(s_import_message.c_str());
 			// TODO: gender markers and animation
 			// TODO: place shadows
 
