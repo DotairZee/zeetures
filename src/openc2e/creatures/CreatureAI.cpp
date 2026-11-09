@@ -430,7 +430,7 @@ AgentRef oldCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> 
 		// The smell of food draws attention: in a category that mixes food
 		// with things that are not (a fruit and its seed), the food is
 		// noticed first unless it is much farther away.
-		cost *= 1.0f - 0.6f * edibleScent(a.get());
+		cost *= 1.0f - 0.6f * std::max(0.0f, edibleScent(a.get()));
 		if (!best || cost < bestcost) {
 			best = a;
 			bestcost = cost;

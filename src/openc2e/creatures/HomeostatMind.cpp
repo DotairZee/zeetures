@@ -651,6 +651,11 @@ class HomeostatMind : public CreatureMind {
 		if (inEpisode && current.category < 0 && current.decision == prm.sleepDecision) {
 			episodeTicks++;
 			int urgent = wakeReason(d);
+			// asleep in water (it rose round the creature, or it dozed off in
+			// the shallows): wake at once, as for suffocation; two batch norns
+			// drowned asleep in the seas
+			if (p.inWater && urgent < 0)
+				urgent = SUFFOCATE;
 			bool done = p.actionFinished && episodeTicks > 1;
 			if (!done && urgent < 0 && episodeTicks < prm.maxSleepTicks)
 				return out;
@@ -710,7 +715,7 @@ class HomeostatMind : public CreatureMind {
 		// Choose the next action.
 		std::vector<Candidate> candidates = evaluate(p, d, D);
 		bool badSleepHere = p.tick < badSleepUntil && std::fabs(p.x - badSleepX) < prm.badSleepNear && std::fabs(p.y - badSleepY) < prm.sameLevel;
-		if (p.tick < noSleepUntil || badSleepHere)
+		if (p.tick < noSleepUntil || badSleepHere || p.inWater) // (never sleep in water)
 			candidates.erase(std::remove_if(candidates.begin(), candidates.end(),
 								 [&](const Candidate& c) { return c.category < 0 && c.decision == prm.sleepDecision; }),
 				candidates.end());
@@ -1124,6 +1129,10 @@ class HomeostatMind : public CreatureMind {
 		float curiosity = prm.curiosity * (1.0f + prm.boredomCuriosityGain * d[BORED]) * std::clamp(1.0f + 10.0f * valence, 0.2f, 1.5f)
 			* (1.0f - prm.survivalCuriosityDamp * std::clamp(survival, 0.0f, 1.0f));
 		auto add = [&](int category, int decision, float distance, float edible) {
+			// what smells of poison is never eaten (a grendel's single bite of
+			// the game's cyanide berries was enough to collapse it)
+			if (decision == prm.eatDecision && edible < 0.0f)
+				return;
 			Expectation& e = expectation(category, decision);
 			Candidate c{category, decision, distance, 0, 0, 0};
 			c.want = predictedRelief(d, D, e);

@@ -186,8 +186,8 @@ std::shared_ptr<Room> roomContainingAgent(AgentRef agent) {
 // Edible scent: how nourishing an object smells. Read from the object's own
 // eat script (event 12): the nutrients its stimulus gives the eater (glucose,
 // fatty acid, glycogen, starch, fat, protein, amino acid) plus the direct
-// "Hunger Decrease" chemical, summed and scaled to 0-1; 0 if it also gives a
-// poison. Being read from the scripts, it also works for add-on objects.
+// "Hunger Decrease" chemical, summed and scaled to 0-1; -1 if it also gives a
+// poison (it smells of poison: the mind never eats it). Being read from the scripts, it also works for add-on objects.
 // Cached per script.
 float edibleScent(Agent* a) {
 	static std::map<const script*, float> cache;
@@ -237,7 +237,7 @@ float edibleScent(Agent* a) {
 				poison = true;
 		}
 	}
-	float scent = poison ? 0.0f : std::clamp(total / 255.0f, 0.0f, 1.0f);
+	float scent = poison ? -1.0f : std::clamp(total / 255.0f, 0.0f, 1.0f);
 	cache[sc.get()] = scent;
 	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
 	if (watch)
