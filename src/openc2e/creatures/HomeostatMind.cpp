@@ -125,6 +125,13 @@ struct Params {
 	float wakeRise = 0.25f; // another drive has risen this much since falling asleep...
 	float wakeLevel = 0.6f; // ...and is at least this high
 	int noSleepAfterWaking = 100; // ticks before sleeping again after an urgent waking
+	// The world's sleep script can refuse: C2's lets a creature sleep only
+	// while its Tiredness is above 48, and a rested creature in the dark is
+	// very sleepy all the same (grendels: walking tires them only once old).
+	// A sleep that ends within this many ticks without the creature ever
+	// falling asleep was refused; sleep is not offered again for a while.
+	int refusedSleepTicks = 5;
+	int noSleepAfterRefusal = 300;
 	// Woken by cold or heat: the place is the trouble, not sleeping. Do not
 	// sleep again near there for a while (so the creature sleeps somewhere
 	// else), and do not learn that sleeping itself chills or overheats (a
@@ -656,9 +663,16 @@ class HomeostatMind : public CreatureMind {
 			// drowned asleep in the seas
 			if (p.inWater && urgent < 0)
 				urgent = SUFFOCATE;
+			if (p.asleep)
+				fellAsleep = true;
 			bool done = p.actionFinished && episodeTicks > 1;
 			if (!done && urgent < 0 && episodeTicks < prm.maxSleepTicks)
 				return out;
+			if (done && !fellAsleep && episodeTicks <= prm.refusedSleepTicks) {
+				noSleepUntil = std::max(noSleepUntil, (unsigned int)(p.tick + prm.noSleepAfterRefusal));
+				fmt::print("[homeostat] creature {} t{}: sleep refused (not tired enough); not offered for {} ticks\n", p.creatureId, p.tick,
+					prm.noSleepAfterRefusal);
+			}
 			endEpisode(p, d, D, done ? "finished" : urgent >= 0 ? DRIVE_NAMES[urgent] : "time");
 			if (urgent >= 0) {
 				fmt::print("[homeostat] creature {} t{}: woken by {}\n", p.creatureId, p.tick, DRIVE_NAMES[urgent]);
@@ -736,6 +750,7 @@ class HomeostatMind : public CreatureMind {
 			lastLiftDecision = choice.decision;
 		current = choice;
 		inEpisode = true;
+		fellAsleep = false;
 		episodeAgent = AgentRef();
 		if (choice.category >= 0)
 			for (auto& s : p.visible)
@@ -1016,6 +1031,7 @@ class HomeostatMind : public CreatureMind {
 	std::array<float, NUM_DRIVES> drift{}; // baseline drive change per tick
 	std::array<float, NUM_DRIVES> sleepStartDrives{};
 	unsigned int noSleepUntil = 0;
+	bool fellAsleep = false; // during the current sleep episode
 	float badSleepX = 0, badSleepY = 0; // where a sleep was cut short by cold or heat
 	unsigned int badSleepUntil = 0;
 	bool drivesSeen = false;
