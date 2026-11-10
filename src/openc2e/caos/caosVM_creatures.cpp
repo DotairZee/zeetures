@@ -929,8 +929,12 @@ class blockUntilApproached : public blockCond {
 	virtual bool operator()() {
 		if (!parent)
 			return false;
-		if (!it)
+		if (!it) {
+			// nothing to approach (the target has gone): stand, rather than
+			// carry on with whatever walking was going on
+			parentcreature->stopWalking();
 			return false; // TODO: CAs
+		}
 
 		if (agentsTouching(parent, it)) {
 			static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;

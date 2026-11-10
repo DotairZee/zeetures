@@ -513,15 +513,31 @@ void SkeletalCreature::snapDownFoot() {
 					}
 					if (engine.version == 2 && size > d.second.perm)
 						continue;
+					// From dry ground a water room is a wall: creatures fall or are
+					// dropped into water but never walk in (they walk out of it, up
+					// the pond's ramp). Which way a walk action goes depends on the
+					// creature's poses, so the mind's own check missed some: a norn
+					// walked off the incubator bank into the pond and was trapped at
+					// its far end (regression batch reg5).
+					if (engine.version == 2 && thisroom->type == 2 && downfootroom->type != 2)
+						continue;
 					// A neighbouring floor far above the foot is a wall, not a step. Without
 					// this, a creature at an edge whose level exit is closed to it (e.g. the
 					// garden's left edge, where the door down to the watermill ramp is too
 					// small for creatures) was moved into the open-air room above and left
 					// to fall, dropping it into the pit below.
-					if (engine.version == 2 && thisroom->floorYatX(footx) < footy - 40)
+					// A room whose floor line can be walked beneath (floor value above
+					// 0: a lift shaft whose bottom is the lift's lower stop) is judged
+					// by its bottom edge, as walking in it is (below): its line at the
+					// top of the shaft made the shaft's doorway a wall, so creatures
+					// stepped in place at the desert lift's foot (owner, 2026-11-09).
+					float thisfloor = thisroom->floorYatX(footx);
+					if (engine.version == 2 && thisroom->floorvalue > 0 && thisfloor < footy - 40)
+						thisfloor = thisroom->bottom.pointAtX(footx).y;
+					if (engine.version == 2 && thisfloor < footy - 40)
 						continue;
 					if (thisroom->x_left <= footx && thisroom->x_right >= footx) {
-						float thisydiff = fabs(footy - thisroom->floorYatX(footx));
+						float thisydiff = fabs(footy - thisfloor);
 						if (thisydiff < ydiff) {
 							newroom = thisroom;
 							ydiff = thisydiff;

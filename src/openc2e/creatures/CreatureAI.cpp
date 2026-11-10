@@ -100,6 +100,12 @@ void oldCreature::tickBrain() {
 	// TODO
 	if (parentagent->vmStopped() || oldattn != attention || olddecn != decn) {
 		// TODO
+		// a new action stops any walking the last one left going (a walk
+		// action starts walking again itself): an eat whose target had gone
+		// left a norn walking east into the volcano's wall while it "ate"
+		// the fruit behind it (owner, 2026-11-09)
+		if (auto* ca = dynamic_cast<CreatureAgent*>(parentagent))
+			ca->stopWalking();
 		parentagent->queueScript(decn + 16); // Extra scripts
 	}
 }
