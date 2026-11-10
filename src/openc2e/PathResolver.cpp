@@ -116,6 +116,19 @@ static fs::path getDirectory(const DataDirectory& d, FileDirectory type) {
 }
 
 static fs::path findFile(FileDirectory type, fs::path name) {
+	// openc2e: pictures and body data in the user data folder's "Overrides"
+	// folder (Overrides/Images, Overrides/Body Data) take the place of the
+	// game's own files of the same name (the female ettin's head, rebuilt on
+	// the player's machine from their male ettin's: owner, 2026-11-10). The
+	// user data folder itself is searched last, so a same-named file there
+	// was never used.
+	if (type == DIRECTORY_IMAGES || type == DIRECTORY_BODY_DATA) {
+		static const DataDirectory overrides(getUserDataDir() / "Overrides");
+		std::error_code err;
+		fs::path resolved = case_insensitive_filesystem::canonical(getDirectory(overrides, type) / name, err);
+		if (!err)
+			return resolved;
+	}
 	// TODO: check user directory before or after data directories?
 	for (auto d : data_directories) {
 		std::error_code err;
