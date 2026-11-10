@@ -18,6 +18,7 @@
  */
 
 #include "Engine.h"
+#include "CobManager.h"
 
 #include "Bubble.h"
 #include "Camera.h"
@@ -1465,6 +1466,33 @@ bool Engine::initialSetup() {
 	if (version < 3 && !currentworlddir.empty()) {
 		WorldSave::LoadWorldState(currentworlddir);
 		worldready = true;
+	}
+
+	// C2: objects built into every world (owner, 2026-11-09): the agents
+	// named in the Additions folder's builtin-cobs.txt are injected from the
+	// player's own COB files at each load (injected objects are not saved,
+	// so, like the additions below, they are made anew each time), before
+	// the additions, which may then adjust them. A COB the player does not
+	// have is skipped.
+	if (version == 2) {
+		auto names = CobManager::readNameList(getUserDataDir() / "Additions" / "builtin-cobs.txt");
+		if (!names.empty()) {
+			CobManager cobs;
+			cobs.update();
+			for (auto& name : names) {
+				auto it = std::find_if(cobs.objects.begin(), cobs.objects.end(), [&](auto& o) { return o.name == name; });
+				if (it == cobs.objects.end()) {
+					fmt::print("* Built-in object \"{}\": no COB for it\n", name);
+					continue;
+				}
+				try {
+					cobs.inject(*it);
+					fmt::print("* Built-in object \"{}\" injected\n", name);
+				} catch (std::exception& e) {
+					fmt::print("* Built-in object \"{}\" failed: {}\n", name, e.what());
+				}
+			}
+		}
 	}
 
 	// C1/C2: additions to the world, run after it has loaded (for example the

@@ -11,6 +11,7 @@
 #include "common/backend/BackendTexture.h"
 
 #include <SDL3/SDL_dialog.h>
+#include <algorithm>
 #include <filesystem>
 #include <fmt/format.h>
 #include <fstream>
@@ -114,6 +115,20 @@ static std::string installObjectFile(const std::string& name, const std::vector<
 	return fmt::format("{}: added{}", name, dest.filename() != fs::path(name).filename() ? fmt::format(" as {}", dest.filename().string()) : "");
 }
 
+// objects built into every world (builtin-cobs.txt) and ones that clash
+// with the project's changes (hidden-cobs.txt) are not offered
+static void hideListed() {
+	auto built = CobManager::readNameList(getUserDataDir() / "Additions" / "builtin-cobs.txt");
+	auto hidden = CobManager::readNameList(getUserDataDir() / "Additions" / "hidden-cobs.txt");
+	auto& objs = s_object_injector.objects;
+	objs.erase(std::remove_if(objs.begin(), objs.end(), [&](auto& o) {
+		return std::find(built.begin(), built.end(), o.name) != built.end() || std::find(hidden.begin(), hidden.end(), o.name) != hidden.end();
+	}),
+		objs.end());
+	if (s_object_selected_index >= objs.size())
+		s_object_selected_index = 0;
+}
+
 static void importPicked() {
 	std::vector<std::string> picked;
 	{
@@ -140,6 +155,7 @@ static void importPicked() {
 		}
 	}
 	s_object_injector.update();
+	hideListed();
 	s_cob_texture = {};
 	if (getenv("OPENC2E_TEST_IMPORT_OBJECTS"))
 		for (auto& line : s_import_report)
@@ -203,6 +219,7 @@ void DrawAgentInjector() {
 	if (ImGuiUtils::BeginWindow("Agent Injector", &s_agent_injector_open)) {
 		if (!s_read_agents) {
 			s_object_injector.update();
+			hideListed();
 			s_read_agents = true;
 		}
 		importPicked();

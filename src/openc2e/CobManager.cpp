@@ -13,10 +13,31 @@
 #include "fileformats/c2cobfile.h"
 
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
+#include <fstream>
 #include <fmt/format.h>
 
 namespace fs = std::filesystem;
+
+std::vector<std::string> CobManager::readNameList(const fs::path& file) {
+	std::vector<std::string> names;
+	std::ifstream in(file);
+	std::string line;
+	while (std::getline(in, line)) {
+		auto hash = line.find('#');
+		if (hash != std::string::npos)
+			line = line.substr(0, hash);
+		while (!line.empty() && std::isspace((unsigned char)line.back()))
+			line.pop_back();
+		size_t start = 0;
+		while (start < line.size() && std::isspace((unsigned char)line[start]))
+			start++;
+		if (start < line.size())
+			names.push_back(line.substr(start));
+	}
+	return names;
+}
 
 void CobManager::update() {
 	objects.clear();
