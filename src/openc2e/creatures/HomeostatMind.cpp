@@ -300,6 +300,13 @@ struct Params {
 	// (saved); a button that brought no boat counts against itself, and one
 	// with more failures than successes is not pressed for boats again.
 	unsigned int boatCallWait = 200;
+	// A call button pressed blind (no lift in view, no known link) that brings
+	// no lift into view and no ride within this many ticks is a dud there
+	// (our boat switches are buttons too: two starving norns pressed one for
+	// ever, owner 2026-11-10); no blind presses near it for dudButtonTicks.
+	unsigned int blindPressWait = 100;
+	unsigned int dudButtonTicks = 2000;
+	float dudButtonNear = 150.0f;
 	float boatCallKnownBonus = 1.2f; // a known boat switch: worth this much more
 	float boatRide = 200.0f; // a ride carrying the creature this far counts
 	unsigned int boatNoRide = 60; // pressed a boat, no ride this many ticks later: try the other action
@@ -400,6 +407,7 @@ struct Candidate {
 	bool forage = false; // searching for food
 	bool escape = false; // getting out of water
 	bool boatCall = false; // pressing a button to call a boat
+	bool blindPress = false; // pressing a call button with no lift in view or known
 };
 
 struct CallButton {
@@ -547,6 +555,22 @@ class HomeostatMind : public CreatureMind {
 				pendingLink.category = -1;
 			} else if (p.tick >= pendingLinkTick + prm.linkWindow)
 				pendingLink.category = -1;
+		}
+		if (blindPending) {
+			bool liftSeen = false;
+			for (auto& sa : p.visible)
+				if (sa.category == prm.liftCategory)
+					liftSeen = true;
+			if (liftSeen || p.riding || std::fabs(p.y - blindY) > prm.sameLevel)
+				blindPending = false; // it brought something
+			else if (p.tick > blindTick + prm.blindPressWait) {
+				dudButtons.erase(std::remove_if(dudButtons.begin(), dudButtons.end(), [&](auto& d) { return p.tick >= d.until; }), dudButtons.end());
+				if (dudButtons.size() < 16)
+					dudButtons.push_back({blindX, blindY, p.tick + prm.dudButtonTicks});
+				fmt::print("[homeostat] creature {} t{}: a call button at {:.0f},{:.0f} brought no lift; no blind presses there for {} ticks\n",
+					p.creatureId, p.tick, blindX, blindY, prm.dudButtonTicks);
+				blindPending = false;
+			}
 		}
 		if (callPending) {
 			bool boatHere = false;
@@ -751,6 +775,12 @@ class HomeostatMind : public CreatureMind {
 		current = choice;
 		inEpisode = true;
 		fellAsleep = false;
+		if (choice.blindPress && !blindPending) {
+			blindPending = true;
+			blindX = p.x;
+			blindY = p.y;
+			blindTick = p.tick;
+		}
 		episodeAgent = AgentRef();
 		if (choice.category >= 0)
 			for (auto& s : p.visible)
@@ -982,6 +1012,14 @@ class HomeostatMind : public CreatureMind {
 	std::map<int, BoatLink> boatLinks; // decision -> learned ride
 	std::vector<TravelLink> travelLinks;
 	std::vector<CallButton> callButtons; // buttons tried for calling boats
+	struct DudButton {
+		float x, y;
+		unsigned int until;
+	};
+	std::vector<DudButton> dudButtons; // blind presses that brought nothing
+	bool blindPending = false;
+	float blindX = 0, blindY = 0;
+	unsigned int blindTick = 0;
 	float callPressX = 0, callPressY = 0; // a boat-call press waiting for a boat
 	unsigned int callPressTick = 0;
 	bool callPending = false;
@@ -1831,9 +1869,16 @@ class HomeostatMind : public CreatureMind {
 				actOn(prm.liftCategory, 2, 0.6f);
 			} else if (button)
 				actOn(prm.buttonCategory, 1, 0.8f);
-		} else if (button) {
+		} else if (button && !dudButtonAt(p)) {
 			actOn(prm.buttonCategory, 1, 0.5f);
+			out.back().blindPress = true;
 		}
+	}
+	bool dudButtonAt(const MindPerception& p) const {
+		for (auto& d : dudButtons)
+			if (p.tick < d.until && std::fabs(d.x - p.x) < prm.dudButtonNear && std::fabs(d.y - p.y) < prm.sameLevel)
+				return true;
+		return false;
 	}
 
 	void applyScent(int category, float edible) {
