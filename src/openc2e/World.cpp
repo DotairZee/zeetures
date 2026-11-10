@@ -742,6 +742,16 @@ std::shared_ptr<genomeFile> World::loadGenome(const std::string& moniker) {
 	if (possibles.empty())
 		return std::shared_ptr<genomeFile>();
 	auto filename = rand_choice(possibles);
+	// a genome the player installed (in the user data folder) takes the place
+	// of the game's own of the same name: the imported Frog Norn pack's
+	// frog.gen replaces C2's (owner, 2026-11-10); before, either was chosen
+	// at random each time
+	const std::string user = getUserDataDir().lexically_normal().string();
+	for (auto& f : possibles)
+		if (f.lexically_normal().string().rfind(user, 0) == 0) {
+			filename = f;
+			break;
+		}
 
 	std::shared_ptr<genomeFile> p(new genomeFile());
 	FileReader gfile(filename);
