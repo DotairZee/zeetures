@@ -776,8 +776,19 @@ static bool TitleMinimizeButton() {
 // when it was first loaded with this get theirs here, oldest first, named
 // ones included (they keep their names but are counted).
 static void GiveDefaultNames() {
-	if (!world.history || world.history->namesgiven)
+	if (!world.history)
 		return;
+	if (world.history->namesgiven) {
+		// after that, any creature still without a name gets the next number
+		// (a hatchling from before births were recorded, or an imported one)
+		static int frame = 0;
+		if (++frame % 30 || ImGui::IsAnyItemActive()) // not while a name is being typed
+			return;
+		for (auto& a : KitLivingCreatures())
+			if (monikerData* m = KitRecordsOf(a.get()); m && m->name.empty())
+				m->name = world.history->nextDefaultName(m->genus);
+		return;
+	}
 	world.history->namesgiven = true;
 	std::vector<std::pair<monikerData*, std::string>> all;
 	for (auto& a : KitLivingCreatures())

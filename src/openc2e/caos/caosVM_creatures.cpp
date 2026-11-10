@@ -1288,7 +1288,20 @@ void c_NEW_CREA_c1(caosVM* vm) {
 
 	a->genome_slots[0] = genome;
 	world.newMoniker(genome, realmoniker, a);
-	world.history->getMoniker(world.history->findMoniker(genome)).moveToCreature(a);
+	{
+		std::string mon = world.history->findMoniker(genome);
+		monikerData& m = world.history->getMoniker(mon);
+		m.moveToCreature(a);
+		// C1/C2 hatching scripts don't call BORN, so the birth is recorded
+		// here: its date, a default name ("Ettin 0002") and the life log
+		if (!world.history->quiet) {
+			m.borntick = world.worldtickcount;
+			m.bornknown = true;
+			if (m.name.empty())
+				m.name = world.history->nextDefaultName(m.genus);
+			world.history->logLife(lifeLogEntry::birth, mon, (int)c->getStage());
+		}
+	}
 
 	// C1/C2 hatching scripts don't call BORN, so select a new creature here
 	// if nothing is selected (see also Creature::born)
