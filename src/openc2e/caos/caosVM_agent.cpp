@@ -26,6 +26,8 @@
 #include "Room.h" // LIML/LIMT etc
 #include "SpritePart.h"
 #include "Vehicle.h"
+#include "CallButton.h"
+#include "Lift.h"
 #include "World.h"
 #include "caosVM.h"
 #include "common/Random.h"
@@ -33,6 +35,7 @@
 #include "common/throw_ifnot.h"
 #include "creatures/SkeletalCreature.h"
 
+#include <algorithm>
 #include <cassert>
 #include <stdint.h>
 #include <climits>
@@ -257,6 +260,56 @@ void c_NEW_SIMP_c2(caosVM* vm) {
 	inheritInjected(vm, a);
 	vm->setTarg(a);
 	vm->part = 0; // TODO: correct?
+}
+
+/**
+ NEW: CALL (command) lift (agent) stop_y (integer) sprite_file (bareword) image_count (integer) first_image (integer) plane (integer)
+ %status maybe
+ %variants c2
+
+ openc2e: make a call button for a C1/C2 lift (the world file's own kind),
+ adding a stop to that lift at stop_y (the lift's bottom edge when it
+ stands there) if it has none at that height. The lift's stops stay in
+ order from top to bottom and its other call buttons are renumbered. The
+ new button is the target; give it a classifier and a place with SETV
+ CLS2 and MVTO. The world file's lifts and buttons are made anew at each
+ load, so a world addition script makes the stop again each time.
+*/
+void c_NEW_CALL_c2(caosVM* vm) {
+	VM_PARAM_INTEGER(plane)
+	VM_PARAM_INTEGER(first_image)
+	VM_PARAM_INTEGER(image_count)
+	VM_PARAM_STRING(sprite_file)
+	VM_PARAM_INTEGER(stop_y)
+	VM_PARAM_VALIDAGENT(liftagent)
+
+	Lift* lift = dynamic_cast<Lift*>(liftagent.get());
+	THROW_IFNOT(lift);
+	std::vector<int>& ys = lift->callbuttony;
+	unsigned int id;
+	auto found = std::find(ys.begin(), ys.end(), stop_y);
+	if (found != ys.end()) {
+		id = (unsigned int)(found - ys.begin());
+	} else {
+		auto pos = std::upper_bound(ys.begin(), ys.end(), stop_y);
+		id = (unsigned int)(pos - ys.begin());
+		ys.insert(pos, stop_y);
+		for (auto& other : world.agents)
+			if (auto* cb = dynamic_cast<CallButton*>(other.get()))
+				if (cb->lift.get() == lift && cb->buttonid >= id)
+					cb->buttonid++;
+		if (lift->currentbutton >= id)
+			lift->currentbutton++;
+		if (lift->newbutton >= id)
+			lift->newbutton++;
+	}
+
+	CallButton* b = new CallButton(0, 0, 0, plane, sprite_file, first_image, image_count);
+	b->finishInit();
+	b->lift = liftagent;
+	b->buttonid = (unsigned char)id;
+	vm->setTarg(b);
+	vm->part = 0;
 }
 
 /**
