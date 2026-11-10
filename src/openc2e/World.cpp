@@ -376,6 +376,37 @@ void World::tick() {
 		}
 	}
 
+	// C2: free objects that have left the room system (fallen out of the
+	// world: a beach ball and two critters lay below the map's bottom edge at
+	// the east-west seam, owner 2026-11-10) are put back on the floor of the
+	// nearest room above them, within 600 px. Only objects that collide with
+	// the rooms (attr 64; the critters fly by their own scripts, without
+	// physics), not creatures, nor carried ones, nor ones in vehicles; every
+	// 100 ticks.
+	if (engine.version == 2 && map && tickcount % 100 == 37) {
+		static const bool watchRescue = getenv("OPENC2E_WATCH_SUNK") != nullptr;
+		for (auto& a : agents) {
+			if (!a || a->isDying() || a->family != 2 || !(a->attr & 64) || a->carriedby || a->invehicle)
+				continue;
+			float cx = a->x + a->getWidth() / 2.0f, bottom = a->y + a->getHeight();
+			if (map->roomAt(cx, bottom - 1) || map->roomAt(cx, a->y + a->getHeight() / 2.0f))
+				continue;
+			for (float yy = bottom - 2; yy > bottom - 600 && yy > 0; yy -= 4) {
+				std::shared_ptr<Room> r = map->roomAt(cx, yy);
+				if (!r)
+					continue;
+				float floory = r->floorYatX(cx);
+				a->velx = 0;
+				a->vely = 0;
+				a->moveTo(a->x, floory - a->getHeight());
+				if (watchRescue)
+					fmt::print("* RESCUED {} {} {} from outside the rooms at ({:.0f}, {:.0f}) onto room {} floor {:.0f}\n", (int)a->family,
+						(int)a->genus, a->species, cx, bottom, r->id, floory);
+				break;
+			}
+		}
+	}
+
 	// developer aid: OPENC2E_WATCH_SUNK=N lists, every N ticks, creatures
 	// and objects sunk into a solid floor (bottom more than 20 px below the
 	// floor of their room, where that floor is solid) or outside the rooms
