@@ -80,6 +80,10 @@ historyevent& monikerData::addEvent(unsigned int event, std::string moniker1, st
 	events.push_back(historyevent(event, c));
 	events.back().monikers[0] = moniker1;
 	events.back().monikers[1] = moniker2;
+	if (event == 0 || event == 1) { // conceived, spliced: its parents
+		mother = moniker1;
+		father = moniker2;
+	}
 
 	for (auto& agent : world.agents) {
 		if (!agent)
@@ -199,7 +203,7 @@ std::string historyManager::newMoniker(std::shared_ptr<genomeFile> genome) {
 	std::string newmoniker = world.generateMoniker(basename);
 	unsigned int i = 0;
 	while (hasMoniker(newmoniker)) { // last-moment sanity check..
-		std::string newmoniker = world.generateMoniker(basename);
+		newmoniker = world.generateMoniker(basename);
 		i++;
 		if (i > 100) // emergency "don't go into an infinite loop handling"
 			throw Exception("Couldn't generate a moniker we don't already have!");
@@ -273,4 +277,44 @@ void historyManager::logLife(int kind, const std::string& mon, int stage, bool o
 	e.ageknown = m.bornknown;
 	lifelog.push_back(e);
 	notices.push_back(e);
+}
+
+void monikerData::initRecord(std::string m, unsigned char g, int gen) {
+	moniker = m;
+	status = dead;
+	warpveteran = false;
+	variant = -1;
+	gender = gen;
+	genus = g;
+	no_crossover_points = 0;
+	no_point_mutations = 0;
+}
+
+static const char* defaultNameWord(int genus) {
+	switch (genus) {
+		case 2: return "Grendel";
+		case 3: return "Ettin";
+		default: return "Norn";
+	}
+}
+
+std::string historyManager::nextDefaultName(int genus) {
+	unsigned int n = ++namecount[genus];
+	return fmt::format("{} {:04d}", defaultNameWord(genus), n);
+}
+
+bool historyManager::renameMoniker(const std::string& from, const std::string& to) {
+	if (from == to || to.empty() || hasMoniker(to) || !hasMoniker(from))
+		return false;
+	auto node = monikers.extract(from); // the records themselves stay where they are
+	node.key() = to;
+	node.mapped().moniker = to;
+	monikers.insert(std::move(node));
+	return true;
+}
+
+monikerData& historyManager::addRecord(const std::string& mon, unsigned char genus, int gender) {
+	monikerData& m = monikers[mon];
+	m.initRecord(mon, genus, gender);
+	return m;
 }

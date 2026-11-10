@@ -274,65 +274,6 @@ static void PhotosPage() {
 	}
 }
 
-// ---- Family -----------------------------------------------------------------------
-
-static void FamilyPage() {
-	if (!KitNeedsCreature("Applet Data/Owner.bmp"))
-		return;
-	Agent* a = KitCreatureAgent();
-	monikerData* m = KitRecordsOf(a);
-	if (!m)
-		return;
-	// parents and children come from the history's conception and birth
-	// events (C2 event numbers: 0 conceived, 1 spliced, 2 engineered,
-	// 3 born, 8 became pregnant, 9 impregnated, 10 child born)
-	std::string mother, father;
-	bool engineered = false;
-	for (auto& e : m->events) {
-		if (e.eventno == 0 || e.eventno == 1) {
-			mother = e.monikers[0];
-			father = e.monikers[1];
-		}
-		if (e.eventno == 2)
-			engineered = true;
-	}
-	auto nameOf = [](const std::string& mon) -> std::string {
-		if (mon.empty())
-			return {};
-		if (!world.history->hasMoniker(mon))
-			return mon;
-		auto& d = world.history->getMoniker(mon);
-		return d.name.empty() ? mon : fmt::format("{} ({})", d.name, mon);
-	};
-	ImGui::Text("%s", KitCreatureName(a).c_str());
-	ImGui::Separator();
-	if (!mother.empty() || !father.empty()) {
-		ImGui::Text("Mother: %s", mother.empty() ? "unknown" : nameOf(mother).c_str());
-		ImGui::Text("Father: %s", father.empty() ? "unknown" : nameOf(father).c_str());
-	} else {
-		ImGui::TextWrapped("Parents: none recorded. %s", engineered ? "It hatched from an egg laid by the Hatchery or the Breeder's Kit." : "");
-	}
-	std::vector<std::string> children;
-	std::string self = world.history->findMoniker(KitCreature()->getGenome());
-	for (auto& c : KitLivingCreatures()) {
-		monikerData* cm = KitRecordsOf(c.get());
-		if (!cm)
-			continue;
-		for (auto& e : cm->events)
-			if ((e.eventno == 0 || e.eventno == 1) && (e.monikers[0] == self || e.monikers[1] == self))
-				children.push_back(KitCreatureName(c.get()));
-	}
-	if (children.empty()) {
-		ImGui::Text("Children: none yet.");
-	} else {
-		ImGui::Text("Children:");
-		for (auto& n : children)
-			ImGui::BulletText("%s", n.c_str());
-	}
-	ImGui::Spacing();
-	ImGui::TextDisabled("Breeding is next on the list; family lines will fill in as creatures have young.");
-}
-
 // ---- Life log, and the notices on the status bar ------------------------------------
 
 static const char* kindWord(int kind) {
@@ -517,6 +458,274 @@ void DrawLifeNotices(float room) {
 	}
 	if (remove >= 0)
 		s_notices.erase(s_notices.begin() + remove);
+}
+
+// ---- Family tree, with each member's photos ---------------------------------------
+
+static monikerData* recordOf(const std::string& mon) {
+	return !mon.empty() && world.history->hasMoniker(mon) ? &world.history->getMoniker(mon) : nullptr;
+}
+
+static std::shared_ptr<Agent> bodyOf(monikerData* m) {
+	Agent* a = m ? m->owner.get() : nullptr;
+	if (!a || a->isDying() || !dynamic_cast<CreatureAgent*>(a))
+		return nullptr;
+	return AgentRef(a).lock();
+}
+
+static std::string recordName(monikerData* m) {
+	return m->name.empty() ? fmt::format("Unnamed {}", genusWord(m->genus)) : m->name;
+}
+
+// "female adult" (at death, for the dead), then its age or when it died
+static std::pair<std::string, std::string> recordStatus(monikerData* m) {
+	auto body = bodyOf(m);
+	c2Creature* c = body ? KitC2Of(body.get()) : nullptr;
+	bool female = c ? c->isFemale() : m->gender == 2;
+	const char* sex = c || m->gender > 0 ? (female ? "female " : "male ") : "";
+	if (m->died)
+		return {fmt::format("died: {}{}", sex, stageWord(m->diedstage)), KitDateText(m->diedtick)};
+	if (c) {
+		std::string age = KitAgeText(KitAgeTicks(*m));
+		age = age.substr(0, age.find(" ("));
+		return {fmt::format("{}{}", sex, stageWord((int)c->getStage())), (m->bornknown ? "age " : "at least ") + age};
+	}
+	return {"no longer in the world", ""};
+}
+
+static std::string fitText(std::string t, float w) {
+	if (ImGui::CalcTextSize(t.c_str()).x <= w)
+		return t;
+	while (!t.empty() && ImGui::CalcTextSize((t + "..").c_str()).x > w)
+		t.pop_back();
+	return t + "..";
+}
+
+static const float CARD_W = 176, THUMB_W = 168, THUMB_H = 126, CARD_H = THUMB_H + 58, CARD_GAP = 14, UNKNOWN_H = 40;
+static std::map<std::string, int> s_cardPhoto; // which photo each card shows (-1 the newest)
+static std::string s_album; // whose photos the album popup shows
+static int s_albumPhoto = 0;
+static bool s_openAlbum = false;
+
+// one member of the family: their photo (arrows when there are several;
+// click for the album), name, and alive or when they died. Returns the card's
+// top-left and bottom-right.
+static std::pair<ImVec2, ImVec2> familyCard(const std::string& mon, ImVec2 at, bool self, const char* id) {
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	const ImU32 gray = IM_COL32(150, 150, 150, 255);
+	monikerData* m = recordOf(mon);
+	ImVec2 end = at + ImVec2(CARD_W, m ? CARD_H : UNKNOWN_H);
+	dl->AddRectFilled(at, end, IM_COL32(30, 30, 34, 255), 4);
+	dl->AddRect(at, end, self ? IM_COL32(255, 220, 120, 255) : IM_COL32(90, 90, 100, 255), 4, 0, self ? 2.0f : 1.0f);
+	ImVec2 tp = at + ImVec2((CARD_W - THUMB_W) / 2, 4);
+	if (!m) { // a short card: nothing known
+		dl->AddText(at + ImVec2(CARD_W / 2 - ImGui::CalcTextSize("unknown").x / 2, UNKNOWN_H / 2 - 7), gray, "unknown");
+		return {at, end};
+	}
+	ImGui::PushID(id);
+	int n = (int)m->photos.size();
+	int& pick = s_cardPhoto[mon];
+	if (pick < 0 || pick >= n)
+		pick = n - 1; // the newest
+	Texture t = n ? photoTexture(engine.currentworlddir / m->photos[pick]) : Texture();
+	if (t) {
+		dl->AddImage(t.as<ImTextureID>(), tp, tp + ImVec2(THUMB_W, THUMB_H));
+	} else {
+		dl->AddRectFilled(tp, tp + ImVec2(THUMB_W, THUMB_H), IM_COL32(18, 18, 20, 255));
+		const char* none = n ? "(missing)" : "no photo";
+		dl->AddText(tp + ImVec2(THUMB_W / 2 - ImGui::CalcTextSize(none).x / 2, THUMB_H / 2 - 7), gray, none);
+	}
+	ImGui::SetCursorScreenPos(tp);
+	if (ImGui::InvisibleButton("photo", ImVec2(THUMB_W, THUMB_H)) && n) {
+		s_album = mon;
+		s_albumPhoto = pick;
+		s_openAlbum = true;
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip(n ? "%s: click to see the photo%s (%d)" : "%s: no photos yet", recordName(m).c_str(), n == 1 ? "" : "s", n);
+	if (n > 1) { // flip through them on the card
+		ImGui::SetCursorScreenPos(tp + ImVec2(2, THUMB_H - 20));
+		if (ImGui::ArrowButton("prev", ImGuiDir_Left))
+			pick = (pick + n - 1) % n;
+		std::string count = fmt::format("{}/{}", pick + 1, n);
+		ImVec2 cs = ImGui::CalcTextSize(count.c_str());
+		ImVec2 cp = tp + ImVec2(THUMB_W / 2 - cs.x / 2, THUMB_H - 17);
+		dl->AddRectFilled(cp - ImVec2(3, 1), cp + cs + ImVec2(3, 1), IM_COL32(0, 0, 0, 160), 3);
+		dl->AddText(cp, IM_COL32(230, 230, 230, 255), count.c_str());
+		ImGui::SetCursorScreenPos(tp + ImVec2(THUMB_W - 22, THUMB_H - 20));
+		if (ImGui::ArrowButton("next", ImGuiDir_Right))
+			pick = (pick + 1) % n;
+	}
+	auto body = bodyOf(m);
+	bool go = body && !self && !m->died;
+	auto [status, when] = recordStatus(m);
+	ImU32 sub = m->died ? IM_COL32(210, 120, 120, 255) : gray;
+	dl->AddText(at + ImVec2(6, THUMB_H + 8), m->died ? IM_COL32(200, 200, 200, 255) : IM_COL32(240, 240, 240, 255), fitText(recordName(m), CARD_W - (go ? 40 : 12)).c_str());
+	dl->AddText(at + ImVec2(6, THUMB_H + 24), sub, fitText(status, CARD_W - 12).c_str());
+	dl->AddText(at + ImVec2(6, THUMB_H + 40), sub, fitText(when, CARD_W - 12).c_str());
+	if (go) {
+		ImGui::SetCursorScreenPos(at + ImVec2(CARD_W - 32, THUMB_H + 6));
+		if (ImGui::SmallButton("Go"))
+			KitGoTo(body);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Select %s and go to it", recordName(m).c_str());
+	}
+	ImGui::PopID();
+	return {at, end};
+}
+
+// a line from the bottom middle of one card to the top middle of another,
+// with a bend halfway
+static void familyLine(const std::pair<ImVec2, ImVec2>& from, const std::pair<ImVec2, ImVec2>& to) {
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	const ImU32 col = IM_COL32(170, 150, 110, 255);
+	ImVec2 a((from.first.x + from.second.x) / 2, from.second.y), b((to.first.x + to.second.x) / 2, to.first.y);
+	float mid = (a.y + b.y) / 2;
+	dl->AddLine(a, ImVec2(a.x, mid), col, 2);
+	dl->AddLine(ImVec2(a.x, mid), ImVec2(b.x, mid), col, 2);
+	dl->AddLine(ImVec2(b.x, mid), b, col, 2);
+}
+
+static void familyAlbum() {
+	if (s_openAlbum) {
+		ImGui::OpenPopup("family album");
+		s_openAlbum = false;
+	}
+	if (!ImGui::BeginPopup("family album"))
+		return;
+	monikerData* m = recordOf(s_album);
+	if (!m || m->photos.empty()) {
+		ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
+		return;
+	}
+	int n = (int)m->photos.size();
+	s_albumPhoto = std::clamp(s_albumPhoto, 0, n - 1);
+	ImGui::Text("%s", recordName(m).c_str());
+	Texture t = photoTexture(engine.currentworlddir / m->photos[s_albumPhoto]);
+	if (t)
+		ImGui::Image(t.as<ImTextureID>(), ImVec2(t.width, t.height));
+	else
+		ImGui::TextDisabled("(this photo's file is missing)");
+	if (ImGui::ArrowButton("prev", ImGuiDir_Left))
+		s_albumPhoto = (s_albumPhoto + n - 1) % n;
+	ImGui::SameLine();
+	ImGui::Text("%d of %d, taken %s", s_albumPhoto + 1, n, KitDateText(photoTick(m->photos[s_albumPhoto])).c_str());
+	ImGui::SameLine();
+	if (ImGui::ArrowButton("next", ImGuiDir_Right))
+		s_albumPhoto = (s_albumPhoto + 1) % n;
+	// all of them, small
+	for (int i = 0; i < n; i++) {
+		Texture th = photoTexture(engine.currentworlddir / m->photos[i]);
+		if (i % 6)
+			ImGui::SameLine();
+		ImGui::PushID(i);
+		if (th) {
+			if (ImGui::ImageButton("thumb", th.as<ImTextureID>(), ImVec2(60, 45)))
+				s_albumPhoto = i;
+		} else if (ImGui::Button("?", ImVec2(68, 53)))
+			s_albumPhoto = i;
+		ImGui::PopID();
+	}
+	ImGui::EndPopup();
+}
+
+static void FamilyPage() {
+	if (!KitNeedsCreature("Applet Data/Owner.bmp"))
+		return;
+	Agent* a = KitCreatureAgent();
+	monikerData* m = KitRecordsOf(a);
+	if (!m)
+		return;
+	std::string self = m->getName();
+	auto parentsOf = [](const std::string& mon) -> std::pair<std::string, std::string> {
+		monikerData* r = recordOf(mon);
+		return r ? std::make_pair(r->mother, r->father) : std::make_pair(std::string(), std::string());
+	};
+	auto [mother, father] = parentsOf(self);
+	auto [mm, mf] = parentsOf(mother);
+	auto [fm, ff] = parentsOf(father);
+	bool parents = !mother.empty() || !father.empty();
+	bool grandparents = !mm.empty() || !mf.empty() || !fm.empty() || !ff.empty();
+	std::vector<std::string> children;
+	for (auto& [mon, r] : world.history->all())
+		if (!mon.empty() && (r.mother == self || r.father == self))
+			children.push_back(mon);
+	std::sort(children.begin(), children.end(), [](auto& x, auto& y) { return recordOf(x)->borntick < recordOf(y)->borntick; });
+	// developer aid: OPENC2E_TEST_ALBUM=1 opens this creature's album
+	static bool testAlbum = getenv("OPENC2E_TEST_ALBUM") != nullptr;
+	if (testAlbum && !m->photos.empty()) {
+		testAlbum = false;
+		s_album = self;
+		s_albumPhoto = 0;
+		s_openAlbum = true;
+	}
+	bool engineered = false;
+	for (auto& e : m->events)
+		if (e.eventno == 2)
+			engineered = true;
+
+	// four columns: grandparents in all four, each parent over its two,
+	// this creature in the middle, children below in rows of four
+	const float col = CARD_W + CARD_GAP, W = 4 * col - CARD_GAP, ROW = CARD_H + 44;
+	const ImU32 label = IM_COL32(190, 170, 130, 255);
+	// the tree scrolls when it is taller than the screen allows
+	float height = (grandparents + parents + 1) * ROW + (children.empty() ? 22 : ROW * ((children.size() + 3) / 4));
+	float room = std::max(300.0f, ImGui::GetIO().DisplaySize.y - 300);
+	ImGui::BeginChild("tree", ImVec2(W + (height > room ? ImGui::GetStyle().ScrollbarSize + 4 : 0), std::min(height, room)));
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	ImVec2 o = ImGui::GetCursorScreenPos();
+	float y = o.y;
+	std::pair<ImVec2, ImVec2> gp[4], pa[2], me;
+	if (grandparents) {
+		dl->AddText(ImVec2(o.x, y), label, "Grandparents");
+		const std::string* g[4] = {&mm, &mf, &fm, &ff};
+		for (int i = 0; i < 4; i++)
+			gp[i] = familyCard(*g[i], ImVec2(o.x + i * col, y + 18), false, fmt::format("gp{}", i).c_str());
+		y += ROW;
+	}
+	if (parents) {
+		dl->AddText(ImVec2(o.x, y), label, "Parents");
+		pa[0] = familyCard(mother, ImVec2(o.x + col / 2, y + 18), false, "mother");
+		pa[1] = familyCard(father, ImVec2(o.x + 2.5f * col, y + 18), false, "father");
+		if (grandparents)
+			for (int i = 0; i < 4; i++)
+				if (recordOf(i < 2 ? (i ? mf : mm) : (i == 2 ? fm : ff)))
+					familyLine(gp[i], pa[i / 2]);
+		y += ROW;
+	}
+	me = familyCard(self, ImVec2(o.x + 1.5f * col, y + 18), true, "self");
+	if (parents)
+		for (int i = 0; i < 2; i++)
+			if (recordOf(i ? father : mother))
+				familyLine(pa[i], me);
+	if (!parents) {
+		std::string why = engineered ? "No parents: it hatched from an egg the Hatchery or Breeder's Kit laid." : "No parents recorded.";
+		ImGui::SetCursorScreenPos(ImVec2(o.x, y));
+		ImGui::PushTextWrapPos(o.x + 1.5f * col - 8 - ImGui::GetWindowPos().x);
+		ImGui::TextDisabled("%s", why.c_str());
+		ImGui::PopTextWrapPos();
+	}
+	y += ROW;
+	if (!children.empty()) {
+		dl->AddText(ImVec2(o.x, y), label, children.size() == 1 ? "Child" : "Children");
+		for (size_t i = 0; i < children.size(); i++) {
+			size_t row = i / 4, inrow = std::min<size_t>(4, children.size() - row * 4);
+			float x0 = o.x + (W - (inrow * col - CARD_GAP)) / 2;
+			auto c = familyCard(children[i], ImVec2(x0 + (i % 4) * col, y + 18 + row * ROW), false, fmt::format("child{}", i).c_str());
+			if (row == 0)
+				familyLine(me, c);
+		}
+		y += ROW * ((children.size() + 3) / 4);
+	} else {
+		dl->AddText(ImVec2(o.x, y), IM_COL32(140, 140, 140, 255), "No children yet.");
+		y += 22;
+	}
+	ImGui::SetCursorScreenPos(o);
+	ImGui::Dummy(ImVec2(W, y - o.y));
+	familyAlbum();
+	ImGui::EndChild();
+	ImGui::TextDisabled("Click a picture for that creature's photos; Go selects a living relative.");
 }
 
 void DrawOwnersKit() {

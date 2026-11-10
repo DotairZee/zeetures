@@ -17,6 +17,7 @@
 #include "fileformats/ImageUtils.h"
 #include "fileformats/genomeFile.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <tuple>
@@ -770,9 +771,32 @@ static bool TitleMinimizeButton() {
 	return pressed;
 }
 
+// Default names ("Norn 0005": the fifth norn this world has had). Births
+// take the next number (Creature::born); the creatures a world already had
+// when it was first loaded with this get theirs here, oldest first, named
+// ones included (they keep their names but are counted).
+static void GiveDefaultNames() {
+	if (!world.history || world.history->namesgiven)
+		return;
+	world.history->namesgiven = true;
+	std::vector<std::pair<monikerData*, std::string>> all;
+	for (auto& a : KitLivingCreatures())
+		if (monikerData* m = KitRecordsOf(a.get()))
+			all.push_back({m, m->getName()});
+	std::sort(all.begin(), all.end(), [](auto& x, auto& y) {
+		return std::tie(x.first->borntick, x.second) < std::tie(y.first->borntick, y.second);
+	});
+	for (auto& [m, mon] : all) {
+		std::string n = world.history->nextDefaultName(m->genus);
+		if (m->name.empty())
+			m->name = n;
+	}
+}
+
 void DrawC2Kits() {
 	if (engine.version != 2)
 		return;
+	GiveDefaultNames();
 	SetUpKitSettings();
 	KitAlarmsTick();
 	for (auto& k : s_kits) {

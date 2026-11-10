@@ -230,6 +230,8 @@ void Creature::born() {
 		if (!world.history->quiet) { // a real birth, not a creature restored from a save
 			m.borntick = world.worldtickcount;
 			m.bornknown = true;
+			if (m.name.empty())
+				m.name = world.history->nextDefaultName(m.genus);
 			world.history->logLife(lifeLogEntry::birth, mon, (int)stage);
 		}
 	}

@@ -45,6 +45,7 @@
 #include <ctime>
 #include <fmt/core.h>
 #include <fstream>
+#include <map>
 #include <memory>
 #include <sstream>
 #include <system_error>
@@ -114,6 +115,10 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	// the calendar: world ticks, part of the day, day of the season, season,
 	// year (without this every session began again in spring of year 0)
 	out << "calendar " << world.worldtickcount << " " << world.timeofday << " " << world.dayofseason << " " << world.season << " " << world.year << "\n";
+	// default names: how many of each kind this world has had
+	for (auto& [genus, n] : world.history->namecount)
+		out << "names " << genus << " " << n << "\n";
+	out << "names-given " << (world.history->namesgiven ? 1 : 0) << "\n";
 	// the life log (Owner's Kit): kind, tick, genus, female, stage, age, age
 	// known, old age, moniker, then the name
 	for (auto& e : world.history->lifelog)
@@ -145,7 +150,11 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			out << "ageing " << (c->isAgeing() ? 1 : 0) << "\n";
 			out << "asleep " << (c->isAsleep() ? 1 : 0) << "\n";
 			{
-				monikerData& m = world.history->getMoniker(world.history->findMoniker(c->getGenome()));
+				std::string mon = world.history->findMoniker(c->getGenome());
+				monikerData& m = world.history->getMoniker(mon);
+				out << "moniker " << mon << "\n";
+				if (!m.mother.empty() || !m.father.empty())
+					out << "parents " << (m.mother.empty() ? "-" : m.mother) << " " << (m.father.empty() ? "-" : m.father) << "\n";
 				if (!m.name.empty())
 					out << "name " << escapeLine(m.name) << "\n";
 				out << "registered " << (m.registered ? 1 : 0) << "\n";
@@ -196,6 +205,29 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			neggs++;
 		}
 	}
+	// the records of the dead (Owner's Kit family tree, life log): no body,
+	// just who they were
+	int nrecords = 0;
+	for (auto& [mon, m] : world.history->all()) {
+		if (!m.died)
+			continue;
+		out << "record\n";
+		out << "moniker " << mon << "\n";
+		out << "genus " << (int)m.genus << " " << m.gender << "\n";
+		if (!m.mother.empty() || !m.father.empty())
+			out << "parents " << (m.mother.empty() ? "-" : m.mother) << " " << (m.father.empty() ? "-" : m.father) << "\n";
+		if (!m.name.empty())
+			out << "name " << escapeLine(m.name) << "\n";
+		out << "registered " << (m.registered ? 1 : 0) << "\n";
+		out << "born " << m.borntick << " " << (m.bornknown ? 1 : 0) << "\n";
+		out << "died " << m.diedtick << " " << m.diedstage << "\n";
+		for (auto& ph : m.photos)
+			out << "photo " << escapeLine(ph) << "\n";
+		if (!m.notes.empty())
+			out << "notes " << escapeLine(m.notes) << "\n";
+		out << "end\n";
+		nrecords++;
+	}
 	out.close();
 	if (!out) {
 		error = "Couldn't write the save file.";
@@ -213,7 +245,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 		return false;
 	}
 	fs::remove_all(old, ec);
-	fmt::print("* Saved world: {} creatures, {} eggs\n", ncreatures, neggs);
+	fmt::print("* Saved world: {} creatures, {} eggs, {} records of the dead\n", ncreatures, neggs, nrecords);
 	return true;
 }
 
@@ -230,6 +262,11 @@ struct SavedCreature {
 	bool registered = false, hasborn = false, bornknown = false;
 	unsigned int born = 0;
 	std::vector<std::string> photos;
+	std::string moniker, mother, father; // as saved (monikers used to be new each load)
+	// a record only (a creature that has died): its kind, sex and death
+	bool record = false;
+	int genus = 1, gender = -1, diedstage = -1;
+	unsigned int diedtick = 0;
 };
 
 // one line of free text in state.txt: backslashes and line breaks escaped
@@ -350,8 +387,13 @@ static void restoreCreature(const fs::path& savedir, const SavedCreature& s, boo
 	Agent* a = buildCreature(genome, s, revive_atp);
 	if (!a)
 		return;
-	monikerData& m = world.history->getMoniker(world.history->findMoniker(genome));
+	std::string mon = world.history->findMoniker(genome);
+	if (!s.moniker.empty() && world.history->renameMoniker(mon, s.moniker))
+		mon = s.moniker; // the same moniker as before, so parents and the log still find it
+	monikerData& m = world.history->getMoniker(mon);
 	m.name = s.name;
+	m.mother = s.mother;
+	m.father = s.father;
 	m.registered = s.registered;
 	m.photos = s.photos;
 	m.notes = s.notes;
@@ -394,6 +436,9 @@ bool LoadWorldState(const fs::path& worlddir) {
 	std::vector<SavedCreature> creatures;
 	std::vector<SavedEgg> eggs;
 	std::vector<lifeLogEntry> lifelog;
+	std::vector<SavedCreature> records;
+	std::map<int, unsigned int> namecount;
+	bool namesgiven = false;
 	int camx = -1, camy = -1;
 	bool relays_saved = false;
 	SavedCreature* c = nullptr;
@@ -425,9 +470,18 @@ bool LoadWorldState(const fs::path& worlddir) {
 				le.name = unescapeLine(restOfLine(l));
 				lifelog.push_back(le);
 			}
-		} else if (key == "creature") {
-			creatures.emplace_back();
-			c = &creatures.back();
+		} else if (key == "names") {
+			int genus;
+			unsigned int n;
+			if (l >> genus >> n)
+				namecount[genus] = n;
+		} else if (key == "names-given") {
+			l >> namesgiven;
+		} else if (key == "creature" || key == "record") {
+			auto& list = key == "creature" ? creatures : records;
+			list.emplace_back();
+			c = &list.back();
+			c->record = key == "record";
 			e = nullptr;
 		} else if (key == "egg" || key == "object") {
 			eggs.emplace_back();
@@ -458,6 +512,18 @@ bool LoadWorldState(const fs::path& worlddir) {
 				l >> c->ageing;
 			else if (key == "asleep")
 				l >> c->asleep;
+			else if (key == "moniker")
+				l >> c->moniker;
+			else if (key == "parents") {
+				l >> c->mother >> c->father;
+				if (c->mother == "-")
+					c->mother.clear();
+				if (c->father == "-")
+					c->father.clear();
+			} else if (key == "genus")
+				l >> c->genus >> c->gender;
+			else if (key == "died")
+				l >> c->diedtick >> c->diedstage;
 			else if (key == "name")
 				c->name = unescapeLine(restOfLine(l));
 			else if (key == "registered")
@@ -518,12 +584,30 @@ bool LoadWorldState(const fs::path& worlddir) {
 
 	world.history->lifelog = lifelog;
 	world.history->notices.clear();
+	world.history->namecount = namecount;
+	world.history->namesgiven = namesgiven;
 	for (auto& s : creatures) {
 		try {
 			restoreCreature(savedir, s, !relays_saved);
 		} catch (std::exception& ex) {
 			fmt::print("* Couldn't restore a creature ({}): {}\n", s.genome, ex.what());
 		}
+	}
+	for (auto& r : records) {
+		if (r.moniker.empty() || world.history->hasMoniker(r.moniker))
+			continue;
+		monikerData& m = world.history->addRecord(r.moniker, (unsigned char)r.genus, r.gender);
+		m.name = r.name;
+		m.registered = r.registered;
+		m.photos = r.photos;
+		m.notes = r.notes;
+		m.borntick = r.born;
+		m.bornknown = r.bornknown;
+		m.died = true;
+		m.diedtick = r.diedtick;
+		m.diedstage = r.diedstage;
+		m.mother = r.mother;
+		m.father = r.father;
 	}
 	for (auto& s : eggs)
 		restoreEgg(s);

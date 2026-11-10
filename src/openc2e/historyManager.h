@@ -56,6 +56,8 @@ enum monikerstatus { referenced = 1,
 	unreferenced = 7 };
 
 class monikerData {
+	friend class historyManager;
+
   private:
 	monikerstatus status;
 	std::string moniker;
@@ -81,8 +83,13 @@ class monikerData {
 	bool died = false;
 	unsigned int diedtick = 0; // world tick count
 	int diedstage = -1;
+	// its parents' monikers (set by a conceived or spliced event; kept with the world)
+	std::string mother, father;
 
 	void init(std::string, std::shared_ptr<genomeFile>);
+	// the records of a creature no longer in the world (restored from a save)
+	void initRecord(std::string moniker, unsigned char genus, int gender);
+	const std::string& getName() const { return moniker; }
 	historyevent& addEvent(unsigned int event, std::string moniker1 = "", std::string moniker2 = "");
 	void moveToAgent(AgentRef a);
 	void moveToCreature(AgentRef c);
@@ -118,6 +125,15 @@ class historyManager {
 	std::vector<lifeLogEntry> lifelog;
 	std::vector<lifeLogEntry> notices; // not yet shown by the interface (it takes them)
 	bool quiet = false; // restoring creatures from a save: nothing is new
+	// default names ("Norn 0005"): how many of each genus this world has had
+	std::map<int, unsigned int> namecount;
+	bool namesgiven = false; // the creatures there were at load have their numbers
+	std::string nextDefaultName(int genus);
+	// every moniker's records, living or not
+	std::map<std::string, monikerData>& all() { return monikers; }
+	// gives a creature's records back the moniker it was saved with (false if taken)
+	bool renameMoniker(const std::string& from, const std::string& to);
+	monikerData& addRecord(const std::string& moniker, unsigned char genus, int gender);
 	// records a birth, death or pregnancy (unless quiet)
 	void logLife(int kind, const std::string& moniker, int stage, bool oldage = false);
 
