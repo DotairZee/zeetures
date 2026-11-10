@@ -425,6 +425,7 @@ struct TravelLink {
 	float fromX = 0, fromY = 0, toX = 0, toY = 0;
 	int category = -1, decision = -1;
 	int uses = 0;
+	int fails = 0; // tries that took it nowhere (not saved)
 };
 
 struct ExitLink {
@@ -553,8 +554,21 @@ class HomeostatMind : public CreatureMind {
 				fmt::print("[homeostat] creature {} t{}: learned travel link {}@{} from {:.0f},{:.0f} to {:.0f},{:.0f}\n", p.creatureId, p.tick,
 					actionName(pendingLink.decision), pendingLink.category, pendingLink.fromX, pendingLink.fromY, p.x, p.y);
 				pendingLink.category = -1;
-			} else if (p.tick >= pendingLinkTick + prm.linkWindow)
+			} else if (p.tick >= pendingLinkTick + prm.linkWindow) {
+				// a known link that took it nowhere this time: twice, and it is
+				// forgotten
+				for (auto it = travelLinks.begin(); it != travelLinks.end(); ++it)
+					if (it->category == pendingLink.category && it->decision == pendingLink.decision &&
+						std::fabs(it->fromX - pendingLink.fromX) < 200.0f && std::fabs(it->fromY - pendingLink.fromY) < prm.sameLevel) {
+						if (++it->fails >= 2) {
+							fmt::print("[homeostat] creature {} t{}: forgot travel link {}@{} from {:.0f},{:.0f} (it took it nowhere)\n", p.creatureId, p.tick,
+								actionName(it->decision), it->category, it->fromX, it->fromY);
+							travelLinks.erase(it);
+						}
+						break;
+					}
 				pendingLink.category = -1;
+			}
 		}
 		if (blindPending) {
 			bool liftSeen = false;
@@ -788,7 +802,12 @@ class HomeostatMind : public CreatureMind {
 			for (auto& s : p.visible)
 				if (s.category == choice.category)
 					episodeAgent = s.agent;
-		if (choice.category == prm.boatCategory || std::find(prm.escapeDevices.begin(), prm.escapeDevices.end(), choice.category) != prm.escapeDevices.end()) {
+		// (only working a device can take a creature somewhere: activate 1 or
+		// 2, deactivate. A grendel that ate the airlock's land door and was
+		// soon let out far away learned "eat the door" as a way to travel,
+		// and bit it for ever on its food trips; owner, 2026-11-10)
+		if ((choice.category == prm.boatCategory || std::find(prm.escapeDevices.begin(), prm.escapeDevices.end(), choice.category) != prm.escapeDevices.end()) &&
+			choice.decision >= 1 && choice.decision <= 3) {
 			pendingLink = {p.x, p.y, 0, 0, choice.category, choice.decision, 0};
 			pendingLinkTick = p.tick;
 			pendingRode = false;
@@ -912,7 +931,9 @@ class HomeostatMind : public CreatureMind {
 			} else if (what == "tlink") {
 				TravelLink tl;
 				l >> tl.fromX >> tl.fromY >> tl.toX >> tl.toY >> tl.category >> tl.decision >> tl.uses;
-				if (l && travelLinks.size() < prm.linkMax)
+				// (links by eating, picking up and the like, learned before
+				// only device use counted, are dropped)
+				if (l && travelLinks.size() < prm.linkMax && tl.decision >= 1 && tl.decision <= 3)
 					travelLinks.push_back(tl);
 			} else if (what == "boat") {
 				BoatLink bl;
