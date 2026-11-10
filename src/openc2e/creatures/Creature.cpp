@@ -483,6 +483,10 @@ void c2Creature::updateUnderwater() {
 		if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent))
 			if (std::shared_ptr<Room> feet = sc->footRoom(); feet && feet->type != 2)
 				underwater = false;
+	// Inside a vehicle (the submarine) it breathes the vehicle's air: a norn
+	// carried under the sea blew bubbles (owner, 2026-11-10)
+	if (underwater && parentagent->invehicle)
+		underwater = false;
 	if (underwater) {
 		if (breathHeld < breathTicks)
 			breathHeld++; // holding its breath: the air sense stays as it was
