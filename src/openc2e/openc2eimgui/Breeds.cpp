@@ -147,6 +147,7 @@ std::vector<BreedInfo>& KnownBreeds(bool rescan) {
 		for (auto& x : split(f[5], ';'))
 			if (!x.empty())
 				b.files.push_back(x);
+		b.origSlot = f.size() > 6 && !f[6].empty() ? breedSlotFromName(f[6]) : -1;
 	}
 	s_breeds.clear();
 	for (auto& [k, b] : found)
@@ -163,14 +164,15 @@ const BreedInfo* FindBreed(int species, int slot) {
 
 void SaveBreedRegistry() {
 	std::ofstream out(registryPath());
-	out << "# Breeds imported in openc2e (Breeder's Kit): species|slot|name|source|genome|files\n";
+	out << "# Breeds imported in openc2e (Breeder's Kit): species|slot|name|source|genome|files|the pack's own slot, if moved\n";
 	for (auto& b : KnownBreeds()) {
 		if (!b.imported)
 			continue;
 		std::string files;
 		for (auto& f : b.files)
 			files += (files.empty() ? "" : ";") + f;
-		out << fmt::format("{}|{}|{}|{}|{}|{}\n", b.species, breedSlotName(b.slot), b.name, b.source, b.genome, files);
+		out << fmt::format("{}|{}|{}|{}|{}|{}|{}\n", b.species, breedSlotName(b.slot), b.name, b.source, b.genome, files,
+			b.origSlot >= 0 && b.origSlot != b.slot ? breedSlotName(b.origSlot) : "");
 	}
 }
 
@@ -251,12 +253,28 @@ std::vector<uint8_t> GenomeWithBreed(const std::vector<uint8_t>& genome, const B
 }
 
 std::vector<uint8_t> GenomeWithSlotMoved(const std::vector<uint8_t>& genome, int species, int from, int to) {
+	return GenomeWithSlotsMoved(genome, {{{species, from}, to}});
+}
+
+std::vector<uint8_t> GenomeWithSlotsMoved(const std::vector<uint8_t>& genome, const std::map<std::pair<int, int>, int>& moves) {
+	if (moves.empty())
+		return genome;
 	return editGenome(genome, [&](creatureAppearanceGene& a) {
-		if (a.species != species || a.variant != from)
+		auto it = moves.find({(int)a.species, (int)a.variant});
+		if (it == moves.end() || it->second < 0)
 			return false;
-		a.variant = (uint8_t)to;
+		a.variant = (uint8_t)it->second;
 		return true;
 	});
+}
+
+std::set<std::pair<int, int>> GenomeAppearanceSlots(const std::vector<uint8_t>& genome) {
+	std::set<std::pair<int, int>> out;
+	editGenome(genome, [&](creatureAppearanceGene& a) {
+		out.insert({(int)a.species, (int)a.variant});
+		return false;
+	});
+	return out;
 }
 
 std::vector<uint8_t> BreedBaseGenome(const BreedInfo& b) {

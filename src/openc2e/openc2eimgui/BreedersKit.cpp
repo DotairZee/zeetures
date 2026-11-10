@@ -11,6 +11,7 @@
 #include "C2KitsInternal.h"
 #include "Hatchery.h"
 #include "PathResolver.h"
+#include "common/case_insensitive_filesystem.h"
 #include "World.h"
 #include "common/Ascii.h"
 #include "common/Random.h"
@@ -148,6 +149,21 @@ struct ImportGroup {
 	int species = 0, slot = 0, target = 0;
 	std::vector<size_t> files;
 	bool install = true;
+	// checks made when the pack is read: its own slot is taken (clash); a
+	// breed already installed has the same files (sameAs: its slot; sameFiles
+	// of them identical, all of them for a duplicate); asked once the owner
+	// has answered the question about it
+	bool clash = false, asked = false;
+	int sameAs = -1, sameFiles = 0;
+	bool duplicate() const { return sameAs >= 0 && sameFiles == (int)files.size(); }
+};
+
+// a genome in the pack that uses a slot a breed imported earlier was moved
+// out of: it may mean that breed (by its old letter)
+struct SlotQuestion {
+	int species = 0, slot = 0, movedTo = 0;
+	std::string breed, genomes;
+	bool remap = false;
 };
 
 struct ImportPlan {
@@ -157,6 +173,8 @@ struct ImportPlan {
 	std::vector<ImportGroup> groups;
 	std::vector<size_t> genomes, notes, eggs, cobs, skipped;
 	std::vector<std::string> problems;
+	std::vector<SlotQuestion> slotQuestions;
+	int asking = -1; // the group the slot dialog is asking about
 };
 
 static std::unique_ptr<ImportPlan> s_plan;
@@ -428,6 +446,87 @@ static int firstFreeSlot(int species, const ImportPlan* plan, const ImportGroup*
 	return -1;
 }
 
+static std::string renamed(const std::string& name, int target);
+static std::vector<uint8_t> eggWithGenomes(const std::vector<uint8_t>& egg, const std::function<std::vector<uint8_t>(const std::vector<uint8_t>&)>& fn);
+
+// an installed breed file (the game's folders or the user's), by name;
+// empty if there is none
+static std::vector<uint8_t> installedBreedFile(const std::string& name) {
+	bool att = to_ascii_lowercase(fs::path(name).extension().string()) == ".att";
+	for (auto& d : data_directories) {
+		std::error_code ec;
+		fs::path p = case_insensitive_filesystem::canonical(BreedDataSubdir(d.main, att ? "Body Data" : "Images") / name, ec);
+		if (!ec && fs::is_regular_file(p, ec))
+			return readAll(p);
+	}
+	return {};
+}
+
+// Is this breed already installed? Each installed breed of the species is
+// compared file by file with the pack's (under that breed's letter): the
+// one with the most identical files is noted. Only breeds whose first
+// file matches are compared in full.
+static void findSameBreed(const ImportPlan& plan, ImportGroup& g) {
+	if (g.files.empty())
+		return;
+	for (auto& b : KnownBreeds()) {
+		if (b.species != g.species)
+			continue;
+		auto& first = plan.files[g.files[0]];
+		if (installedBreedFile(renamed(first.name, b.slot)) != first.data)
+			continue;
+		int same = 0;
+		for (size_t i : g.files)
+			if (installedBreedFile(renamed(plan.files[i].name, b.slot)) == plan.files[i].data)
+				same++;
+		if (same > g.sameFiles) {
+			g.sameFiles = same;
+			g.sameAs = b.slot;
+		}
+	}
+}
+
+// genomes and eggs in the pack that use a slot no breed in the pack fills,
+// where an earlier import was moved out of that slot
+static void findSlotQuestions(ImportPlan& plan) {
+	std::map<std::pair<int, int>, std::string> uses;
+	auto note = [&](const std::vector<uint8_t>& genome, const std::string& file) {
+		for (auto& k : GenomeAppearanceSlots(genome)) {
+			auto& u = uses[k];
+			if (u.find(file) == std::string::npos)
+				u += (u.empty() ? "" : ", ") + file;
+		}
+	};
+	for (size_t i : plan.genomes)
+		note(plan.files[i].data, plan.files[i].name);
+	for (size_t i : plan.eggs)
+		eggWithGenomes(plan.files[i].data, [&](const std::vector<uint8_t>& g) {
+			note(g, plan.files[i].name);
+			return g;
+		});
+	for (auto& [k, files] : uses) {
+		bool inPack = false;
+		for (auto& g : plan.groups)
+			inPack |= g.species == k.first && g.slot == k.second;
+		if (inPack)
+			continue;
+		for (auto& b : KnownBreeds()) {
+			if (!b.imported || b.species != k.first || b.origSlot != k.second || b.slot == k.second)
+				continue;
+			SlotQuestion q;
+			q.species = k.first;
+			q.slot = k.second;
+			q.movedTo = b.slot;
+			q.breed = BreedLabel(b);
+			q.genomes = files;
+			// if nothing is in the old slot here, the moved breed is surely meant
+			const BreedInfo* there = FindBreed(k.first, k.second);
+			q.remap = !there || !(there->inGame || there->inUser);
+			plan.slotQuestions.push_back(q);
+		}
+	}
+}
+
 static void planImport(const std::vector<std::string>& picked) {
 	auto plan = std::make_unique<ImportPlan>();
 	for (auto& p : picked) {
@@ -483,11 +582,20 @@ static void planImport(const std::vector<std::string>& picked) {
 		plan->files.push_back(std::move(g));
 		plan->genomes.push_back(plan->files.size() - 1);
 	}
-	for (auto& g : plan->groups)
-		if (!slotFree(g.species, g.target, plan.get(), &g))
+	for (auto& g : plan->groups) {
+		findSameBreed(*plan, g);
+		if (!slotFree(g.species, g.target, plan.get(), &g)) {
+			g.clash = true;
 			g.target = firstFreeSlot(g.species, plan.get(), &g);
+		}
+		if (g.duplicate())
+			g.install = false; // already here: not installed again unless asked
+	}
+	findSlotQuestions(*plan);
 	if (plan->groups.empty())
-		plan->problems.push_back("No body-part pictures (like a04k.s16) were found, so there is no breed to install.");
+		plan->problems.push_back(plan->genomes.empty() && plan->eggs.empty() && plan->cobs.empty()
+				? "No body-part pictures (like a04k.s16) were found, so there is no breed to install."
+				: "No body-part pictures (like a04k.s16): only its genomes, eggs and objects are installed.");
 	s_plan = std::move(plan);
 }
 
@@ -525,18 +633,28 @@ static void installPlan(ImportPlan& plan) {
 	std::error_code ec;
 	for (auto& d : {images, bodyData, genetics})
 		fs::create_directories(d, ec);
+	// every move at once, so a gene moved to a slot another breed of the
+	// pack is leaving is not moved again
+	std::map<std::pair<int, int>, int> moves;
+	for (auto& grp : plan.groups)
+		if (grp.install && grp.target >= 0 && grp.target != grp.slot)
+			moves[{grp.species, grp.slot}] = grp.target;
+	for (auto& q : plan.slotQuestions)
+		if (q.remap)
+			moves[{q.species, q.slot}] = q.movedTo;
 	auto moveSlots = [&](const std::vector<uint8_t>& g) {
-		std::vector<uint8_t> out = g;
-		for (auto& grp : plan.groups)
-			if (grp.install && grp.target != grp.slot)
-				out = GenomeWithSlotMoved(out, grp.species, grp.slot, grp.target);
-		return out;
+		return GenomeWithSlotsMoved(g, moves);
 	};
 	auto write = [&](const fs::path& dir, std::string name, const std::vector<uint8_t>& data, std::vector<std::string>& files) {
 		fs::path dest = dir / name;
-		// never overwrite: genomes and eggs of the same name get a number
-		for (int k = 2; fs::exists(dest) && k < 100; k++)
+		// never overwrite: genomes and eggs of the same name get a number;
+		// an identical file already there is used as it is (and stays the
+		// earlier breed's, so removing this one leaves it)
+		for (int k = 2; fs::exists(dest) && k < 100; k++) {
+			if (readAll(dest) == data)
+				return dest.filename().string();
 			dest = dir / fmt::format("{}_{}{}", fs::path(name).stem().string(), k, fs::path(name).extension().string());
+		}
 		std::ofstream out(dest, std::ios::binary);
 		out.write((const char*)data.data(), data.size());
 		files.push_back(fs::relative(dest, main, ec).string());
@@ -573,6 +691,7 @@ static void installPlan(ImportPlan& plan) {
 		b.name = plan.name;
 		b.source = plan.source;
 		b.genome = genomeName;
+		b.origSlot = g.target != g.slot ? g.slot : -1;
 		for (size_t i : g.files) {
 			auto& f = plan.files[i];
 			bool att = to_ascii_lowercase(fs::path(f.name).extension().string()) == ".att";
@@ -592,6 +711,7 @@ static void installPlan(ImportPlan& plan) {
 				k.source = b.source;
 				k.genome = b.genome;
 				k.files = b.files;
+				k.origSlot = b.origSlot;
 				merged = true;
 			}
 		if (!merged)
@@ -599,7 +719,9 @@ static void installPlan(ImportPlan& plan) {
 	}
 	SaveBreedRegistry();
 	KnownBreeds(true);
-	s_breed_message = fmt::format("Installed {} breed{} from {}.", installed, installed == 1 ? "" : "s", plan.source);
+	s_breed_message = installed || shared.empty()
+		? fmt::format("Installed {} breed{} from {}.", installed, installed == 1 ? "" : "s", plan.source)
+		: fmt::format("Installed {} file{} (genomes, eggs, objects) from {}.", shared.size(), shared.size() == 1 ? "" : "s", plan.source);
 }
 
 static void removeBreed(const BreedInfo& b) {
@@ -620,6 +742,120 @@ static void removeBreed(const BreedInfo& b) {
 	KnownBreeds(true);
 }
 
+// The question about one breed of the pack, as a dialog: its slot is taken
+// (put it in the next free one? yes, no, or another slot), or the same breed
+// is already installed (skip it, or install a copy).
+// breeds being installed keep distinct free slots (the first in the list
+// keeps its choice when two want the same one)
+static void settleTargets(ImportPlan& plan) {
+	for (size_t i = 0; i < plan.groups.size(); i++) {
+		auto& g = plan.groups[i];
+		if (!g.install)
+			continue;
+		bool taken = g.target < 0;
+		if (const BreedInfo* b = g.target >= 0 ? FindBreed(g.species, g.target) : nullptr)
+			taken |= b->inGame || b->inUser;
+		for (size_t j = 0; j < i; j++)
+			taken |= plan.groups[j].install && plan.groups[j].species == g.species && plan.groups[j].target == g.target;
+		if (taken)
+			g.target = firstFreeSlot(g.species, &plan, &g);
+	}
+}
+
+static void SlotDialog(ImportPlan& plan) {
+	settleTargets(plan);
+	if (plan.asking < 0) {
+		for (size_t gi = 0; gi < plan.groups.size(); gi++) {
+			auto& g = plan.groups[gi];
+			if (!g.asked && (g.clash || g.sameAs >= 0)) {
+				plan.asking = (int)gi;
+				ImGui::OpenPopup("Breed slot");
+				break;
+			}
+		}
+	}
+	if (plan.asking < 0)
+		return;
+	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+	if (!ImGui::BeginPopupModal("Breed slot", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		return;
+	auto& g = plan.groups[plan.asking];
+	const char* sp = BreedSpeciesName(g.species);
+	auto done = [&] {
+		g.asked = true;
+		plan.asking = -1;
+		ImGui::CloseCurrentPopup();
+	};
+	ImGui::PushTextWrapPos(ImGui::GetFontSize() * 30);
+	ImGui::Text("%s: %s breed %s (%d files)", plan.source.c_str(), sp, breedSlotName(g.slot).c_str(), (int)g.files.size());
+	ImGui::Spacing();
+	const BreedInfo* same = g.sameAs >= 0 ? FindBreed(g.species, g.sameAs) : nullptr;
+	if (g.duplicate() && same) {
+		ImGui::TextWrapped("This breed is already installed as %s: all its files are the same.", BreedLabel(*same).c_str());
+		ImGui::Spacing();
+		if (ImGui::Button("Skip it")) {
+			g.install = false;
+			done();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button(g.target >= 0 ? fmt::format("Install another copy in slot {}", breedSlotName(g.target)).c_str() : "Install another copy")) {
+			g.install = g.target >= 0;
+			done();
+		}
+	} else {
+		const BreedInfo* there = FindBreed(g.species, g.slot);
+		ImGui::TextWrapped("Its slot, %s, is already taken by %s%s.", breedSlotName(g.slot).c_str(), there ? BreedLabel(*there).c_str() : "another breed",
+			there && there->inGame ? " (in the game's folders)" : "");
+		if (same)
+			ImGui::TextWrapped("%d of its %d files are the same as %s's: it may be another version of that breed.", g.sameFiles, (int)g.files.size(),
+				BreedLabel(*same).c_str());
+		ImGui::Spacing();
+		static int other = -1;
+		if (g.target < 0) {
+			ImGui::TextColored(ImVec4(1, 0.6f, 0.4f, 1), "There is no free %s slot left.", sp);
+			if (ImGui::Button("OK")) {
+				g.install = false;
+				done();
+			}
+		} else {
+			ImGui::Text("Put it in the next free slot, %s?", breedSlotName(g.target).c_str());
+			ImGui::TextDisabled("Its files are renamed to the new letter, and the pack's genomes and eggs are changed to match.");
+			ImGui::Spacing();
+			if (ImGui::Button(fmt::format("Yes, slot {}", breedSlotName(g.target)).c_str())) {
+				g.install = true;
+				done();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("No, don't install it")) {
+				g.install = false;
+				done();
+			}
+			ImGui::SameLine();
+			ImGui::TextUnformatted("Other:");
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(70);
+			if (other < 0 || !slotFree(g.species, other, &plan, &g))
+				other = g.target;
+			if (ImGui::BeginCombo("##other", breedSlotName(other).c_str())) {
+				for (int s = 0; s < BREED_SLOTS; s++)
+					if (slotFree(g.species, s, &plan, &g))
+						if (ImGui::Selectable(breedSlotName(s).c_str(), s == other))
+							other = s;
+				ImGui::EndCombo();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Use it")) {
+				g.target = other;
+				g.install = true;
+				other = -1;
+				done();
+			}
+		}
+	}
+	ImGui::PopTextWrapPos();
+	ImGui::EndPopup();
+}
+
 static void ImportReview() {
 	ImportPlan& plan = *s_plan;
 	ImGui::SeparatorText("Import");
@@ -628,6 +864,7 @@ static void ImportReview() {
 	ImGui::InputText("Name", plan.name, sizeof(plan.name));
 	for (auto& p : plan.problems)
 		ImGui::TextColored(ImVec4(1, 0.6f, 0.4f, 1), "%s", p.c_str());
+	SlotDialog(plan);
 	for (size_t gi = 0; gi < plan.groups.size(); gi++) {
 		auto& g = plan.groups[gi];
 		ImGui::PushID((int)gi);
@@ -644,10 +881,23 @@ static void ImportReview() {
 			ImGui::EndCombo();
 		}
 		ImGui::SameLine();
-		if (g.target == g.slot)
+		const BreedInfo* same = g.sameAs >= 0 ? FindBreed(g.species, g.sameAs) : nullptr;
+		if (g.duplicate() && same)
+			ImGui::TextColored(ImVec4(0.6f, 0.85f, 1, 1), "(already installed as %s)", BreedLabel(*same).c_str());
+		else if (g.target == g.slot)
 			ImGui::TextDisabled("(its own slot is free)");
 		else
 			ImGui::TextColored(ImVec4(1, 0.85f, 0.4f, 1), "(%s is taken: moved)", breedSlotName(g.slot).c_str());
+		ImGui::PopID();
+	}
+	for (size_t qi = 0; qi < plan.slotQuestions.size(); qi++) {
+		auto& q = plan.slotQuestions[qi];
+		ImGui::PushID(1000 + (int)qi);
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 520);
+		ImGui::TextWrapped("%s uses %s slot %s, which %s was moved out of when it was imported.", q.genomes.c_str(), BreedSpeciesName(q.species),
+			breedSlotName(q.slot).c_str(), q.breed.c_str());
+		ImGui::PopTextWrapPos();
+		ImGui::Checkbox(fmt::format("Point it at {} (slot {})", q.breed, breedSlotName(q.movedTo)).c_str(), &q.remap);
 		ImGui::PopID();
 	}
 	if (!plan.genomes.empty() || !plan.eggs.empty() || !plan.notes.empty())
@@ -665,7 +915,7 @@ static void ImportReview() {
 		ImGui::PopTextWrapPos();
 	}
 	ImGui::TextDisabled("Files go to your openc2e data folder, never the game's.");
-	bool any = false;
+	bool any = plan.groups.empty() && (!plan.genomes.empty() || !plan.eggs.empty() || !plan.cobs.empty());
 	for (auto& g : plan.groups)
 		any |= g.install && g.target >= 0;
 	if (!any)
@@ -693,6 +943,30 @@ static void BreedsPage() {
 	}
 	static int sel_species = -1, sel_slot = -1;
 	auto& breeds = KnownBreeds();
+	// developer aid: OPENC2E_TEST_BREED_PLAN="pack;pack" reads the packs as if
+	// picked, leaving the review (and its questions) open, and prints what it
+	// found about each breed
+	if (const char* t = getenv("OPENC2E_TEST_BREED_PLAN")) {
+		static bool done = false;
+		if (!done) {
+			done = true;
+			std::vector<std::string> packs;
+			std::string list = t;
+			for (size_t a = 0, b; a < list.size(); a = b + 1) {
+				b = list.find(';', a);
+				if (b == std::string::npos)
+					b = list.size();
+				packs.push_back(list.substr(a, b - a));
+			}
+			planImport(packs);
+			for (auto& g : s_plan->groups)
+				fmt::print("* Breed plan: species {} slot {} -> {} ({} files) clash {} same as {} ({} files) install {}\n", g.species, breedSlotName(g.slot),
+					g.target < 0 ? "-" : breedSlotName(g.target), g.files.size(), g.clash, g.sameAs < 0 ? "-" : breedSlotName(g.sameAs), g.sameFiles, g.install);
+			for (auto& q : s_plan->slotQuestions)
+				fmt::print("* Breed plan: {} use species {} slot {}: {} moved to {} (remap {})\n", q.genomes, q.species, breedSlotName(q.slot), q.breed,
+					breedSlotName(q.movedTo), q.remap);
+		}
+	}
 	// developer aid: OPENC2E_TEST_BREED_IMPORT=pack imports it at once and
 	// shows the breed it became, printing a genome rewritten to wear it
 	if (const char* t = getenv("OPENC2E_TEST_BREED_IMPORT")) {
@@ -796,6 +1070,8 @@ static void BreedsPage() {
 			ImGui::TextColored(ImVec4(1, 0.7f, 0.4f, 1), "No body data (.att) in this slot: creatures fall back to another breed's.");
 		if (b->imported && !b->source.empty())
 			ImGui::TextDisabled("From %s", b->source.c_str());
+		if (b->imported && b->origSlot >= 0 && b->origSlot != b->slot)
+			ImGui::TextDisabled("Moved from slot %s (taken here); its files and genomes were changed to match.", breedSlotName(b->origSlot).c_str());
 		ImGui::PopTextWrapPos();
 
 		bool canLay = b->parts.count('a') && b->parts.count('b');

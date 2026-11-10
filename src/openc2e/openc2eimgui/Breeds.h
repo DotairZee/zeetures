@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -25,6 +26,7 @@ struct BreedInfo {
 	// from breeds.txt, for breeds imported here
 	bool imported = false;
 	std::string name, source, genome;
+	int origSlot = -1; // the slot its pack used, when it was moved to a free one
 	std::vector<std::string> files; // installed files, relative to the user data folder
 };
 
@@ -51,6 +53,11 @@ void SaveBreedRegistry();
 std::vector<uint8_t> GenomeWithBreed(const std::vector<uint8_t>& genome, const BreedInfo& b);
 // ... with every appearance gene of one species and slot moved to another
 std::vector<uint8_t> GenomeWithSlotMoved(const std::vector<uint8_t>& genome, int species, int from, int to);
+// ... with several moves at once, {species, from slot} -> to slot (each gene
+// moves at most once, so one move's new slot is never moved again)
+std::vector<uint8_t> GenomeWithSlotsMoved(const std::vector<uint8_t>& genome, const std::map<std::pair<int, int>, int>& moves);
+// the {species, slot} pairs a C2 genome's appearance genes use
+std::set<std::pair<int, int>> GenomeAppearanceSlots(const std::vector<uint8_t>& genome);
 
 // The genome a breed's eggs start from: its own (imported) or the species'
 // standard one from Genetics (norn.gen, gren.gen, ettn.gen).
