@@ -344,6 +344,14 @@ int SkeletalCreature::attachmentX(unsigned int part, unsigned int id) {
 	return partx[part] + att[part].attachments[pose[part]][0 + (id * 2)] + adjustx;
 }
 
+bool SkeletalCreature::headTop(float& hx, float& hy) {
+	if (!images[1])
+		return false;
+	hx = x + partx[1] + adjustx + images[1]->width(pose[1]) / 2.0f;
+	hy = y + party[1] + adjusty;
+	return true;
+}
+
 int SkeletalCreature::attachmentY(unsigned int part, unsigned int id) {
 	return party[part] + att[part].attachments[pose[part]][1 + (id * 2)] + adjusty;
 }

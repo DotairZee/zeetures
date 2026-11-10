@@ -113,6 +113,9 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	unsigned int getSkelHeight() { return height; }
 
 	int attachmentX(unsigned int part, unsigned int id);
+	// the middle of the top of the head picture, in world coordinates (for
+	// the halo); false when there is no head picture
+	bool headTop(float& hx, float& hy);
 	int attachmentY(unsigned int part, unsigned int id);
 	bool isLeftFootDown() { return downfoot_left; }
 

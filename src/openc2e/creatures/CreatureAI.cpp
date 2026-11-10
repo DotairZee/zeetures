@@ -408,6 +408,64 @@ void Creature::chooseAgents() {
 #endif
 }
 
+
+// Can a creature walking sideways from room "from" get to touch an object
+// spanning x0-x1? It crosses into the next room on that side through a
+// doorway it fits through (permeability at least its size), stepping up no
+// more than a little; a wall (a closed doorway, like the one between the
+// incubator bank and the pond, behind which the pond's water pump stands)
+// stops it. A floor line it fits through (floor value at least its size, as
+// in the desert lift's shaft) is walked under, on the room's bottom. Before
+// this, an object at the creature's height behind a wall counted as
+// reachable, and a norn walked into that wall for as long as it wanted the
+// pump (owner, 2026-11-09).
+static float walkFloorAt(Room& r, float x, int fit) {
+	if (fit <= r.floorvalue) { // passable floor line: the room's bottom edge
+		float t = r.x_right > r.x_left ? (x - r.x_left) / (float)(r.x_right - r.x_left) : 0;
+		return r.y_left_floor + (r.y_right_floor - (float)r.y_left_floor) * std::clamp(t, 0.0f, 1.0f);
+	}
+	return r.floorYatX(x);
+}
+
+static bool walkableTo(std::shared_ptr<Room> from, float x0, float x1, int fit) {
+	std::shared_ptr<Room> r = from;
+	for (int step = 0; r && step < 30; step++) {
+		if (r->x_right > x0 && r->x_left < x1)
+			return true; // standing in this room it can touch the object
+		bool east = x0 >= r->x_right;
+		float bx = east ? (float)r->x_right : (float)r->x_left;
+		float fy = walkFloorAt(*r, bx, fit);
+		std::shared_ptr<Room> next;
+		float bestd = 1e9f;
+		for (auto& [n, door] : r->getDoors()) {
+			if (door.perm < fit)
+				continue;
+			if (east ? n->x_left + 2 < r->x_right : n->x_right > r->x_left + 2)
+				continue; // not on that side
+			float nf = walkFloorAt(*n, bx, fit);
+			if (nf < fy - 40) {
+				// a floor line far above: walked under, along the room's
+				// bottom edge, when that is level with here (the desert
+				// lift's lower stop, under its shaft's floor line); else a climb
+				float t = n->x_right > n->x_left ? (bx - n->x_left) / (float)(n->x_right - n->x_left) : 0;
+				float bottom = n->y_left_floor + (n->y_right_floor - (float)n->y_left_floor) * std::clamp(t, 0.0f, 1.0f);
+				if (std::fabs(bottom - fy) > 40)
+					continue;
+				nf = bottom;
+			}
+			if (std::min(n->y_left_ceiling, n->y_right_ceiling) > fy) // wholly below this floor: a fall, not a walk
+				continue;
+			float dd = std::fabs(nf - fy);
+			if (dd < bestd) {
+				bestd = dd;
+				next = n;
+			}
+		}
+		r = next;
+	}
+	return false;
+}
+
 AgentRef oldCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> possibles) {
 	// The nearest one, with height counting extra: an object on another floor
 	// is much harder to reach than one the same distance away on this floor;
@@ -418,11 +476,16 @@ AgentRef oldCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> 
 		return AgentRef();
 	float cx = parentagent->x + parentagent->getWidth() / 2.0f;
 	float cy = parentagent->y + parentagent->getHeight() / 2.0f;
+	std::shared_ptr<Room> here = engine.version == 2 && world.map ? world.map->roomAt(cx, cy) : nullptr;
+	const int fit = std::max(1, parentagent->size);
 	AgentRef best;
 	float bestcost = 0;
 	for (auto& a : possibles) {
 		float ax = a->x + a->getWidth() / 2.0f, ay = a->y + a->getHeight() / 2.0f;
 		float cost = std::fabs(ax - cx) + 4.0f * std::fabs(ay - cy);
+		// one the creature cannot walk to (behind a wall) only if nothing else
+		if (here && !walkableTo(here, (float)a->x, a->x + a->getWidth(), fit))
+			cost += 5000.0f;
 		// passed over by the mind (its use kept doing nothing): notice others first
 		for (auto& po : passedover)
 			if (po.first == a && ticks < po.second)
@@ -556,6 +619,11 @@ MindPerception oldCreature::buildPerception() {
 		// walking only moves the creature sideways, and it must touch the object
 		// (APPR): reachable only if their heights overlap
 		bool reachable = !(a->y + a->getHeight() < parentagent->y || a->y > parentagent->y + parentagent->getHeight());
+		// and nothing but open doorways between (not a wall)
+		if (reachable && engine.version == 2 && world.map)
+			if (std::shared_ptr<Room> here = world.map->roomAt(cx, cy))
+				if (!(reachable = walkableTo(here, (float)a->x, a->x + a->getWidth(), std::max(1, parentagent->size))) && getenv("OPENC2E_TEST_REACH"))
+					fmt::print("* REACH {} {} {} at {:.0f},{:.0f} behind a wall from {:.0f},{:.0f}\n", (int)a->family, (int)a->genus, a->species, ax, ay, cx, cy);
 		p.visible.push_back({(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay, edibleScent(a.get()), reachable});
 	}
 

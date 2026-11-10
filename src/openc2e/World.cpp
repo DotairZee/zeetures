@@ -18,6 +18,7 @@
  */
 
 #include "World.h"
+#include "creatures/SkeletalCreature.h"
 #include "WorldSave.h"
 
 #include <algorithm>
@@ -286,6 +287,20 @@ void World::tick() {
 	}
 	scriptqueue.clear();
 	scriptqueue = newqueue;
+
+	// C2's halo (2 1 3, the toolbar's halo button) puts itself over the
+	// middle of the selected creature's bounding box, which is off its head
+	// when it faces sideways or crouches (owner, 2026-11-09): after the
+	// scripts, set it over the middle of the head picture instead
+	if (engine.version == 2) {
+		if (auto* sc = dynamic_cast<SkeletalCreature*>(selectedcreature.get())) {
+			float hx, hy;
+			if (sc->headTop(hx, hy))
+				for (auto& a : agents)
+					if (a && a->family == 2 && a->genus == 1 && a->species == 3 && !a->isDying())
+						a->moveTo(hx - a->getWidth() / 2.0f, hy - a->getHeight() - 2);
+		}
+	}
 
 	tickcount++;
 	worldtickcount++;
