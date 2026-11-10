@@ -15,6 +15,7 @@
 #include "Camera.h"
 #include "Engine.h"
 #include "Hatchery.h"
+#include "ImportCreature.h"
 #include "ImGuiUtils.h"
 #include "MainMenu.h"
 #include "PointerAgent.h"
@@ -126,7 +127,7 @@ static void DrawC2MenuBar() {
 			s_open_save_as = true;
 		ImGui::Separator();
 		ImGui::MenuItem("Export Current Creature...", nullptr, false, false);
-		ImGui::MenuItem("Import Creature...", nullptr, false, false);
+		ImportCreatureMenuItem();
 		ImGui::Separator();
 		if (ImGui::BeginMenu("Sound")) {
 			bool music = !engine.musicmanager->isMuted();
@@ -284,6 +285,7 @@ static void DrawC2MenuBar() {
 
 	// Save World As: a new world folder from the same starting world file,
 	// with the current state saved into it; the session continues there
+	ImportCreatureTick();
 	if (s_open_save_as) {
 		ImGui::OpenPopup("Save World As");
 		s_open_save_as = false;

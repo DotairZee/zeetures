@@ -361,6 +361,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/openc2eimgui/CreatureGrapher.cpp
 	src/openc2e/openc2eimgui/Hatchery.cpp
 	src/openc2e/openc2eimgui/ImGuiUtils.cpp
+	src/openc2e/openc2eimgui/ImportCreature.cpp
 	src/openc2e/openc2eimgui/MainMenu.cpp
 	src/openc2e/openc2eimgui/Openc2eImGui.cpp
 )
