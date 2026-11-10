@@ -120,27 +120,36 @@ void SDLBackend::init(const std::string& name, int32_t width, int32_t height) {
 
 	window = SDL_CreateWindow(name.c_str(),
 		width, height,
-		SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+		SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN);
 	if (!window) {
 		throw Exception(std::string("SDL error creating window: ") + SDL_GetError());
 	}
 	// OPENC2E_WINDOW_POS="x,y" places the window's top-left corner there
 	// (desktop coordinates, so it can pick a monitor); otherwise the window
 	// system decides
-	{
-		int wx, wy;
-		if (rememberedWindowPos(wx, wy))
-			SDL_SetWindowPosition(window, wx, wy);
-		else if (const char* pos = getenv("OPENC2E_WINDOW_POS"); pos && sscanf(pos, "%d,%d", &wx, &wy) == 2)
-			SDL_SetWindowPosition(window, wx, wy);
-	}
+	int wx = 0, wy = 0;
+	bool placed = rememberedWindowPos(wx, wy);
+	if (!placed)
+		if (const char* pos = getenv("OPENC2E_WINDOW_POS"); pos && sscanf(pos, "%d,%d", &wx, &wy) == 2)
+			placed = true;
+	if (placed)
+		SDL_SetWindowPosition(window, wx, wy);
 	// the window icon: openc2e's winged egg
 	if (SDL_Surface* icon = SDL_CreateSurfaceFrom(openc2e_icon_size, openc2e_icon_size, SDL_PIXELFORMAT_RGBA32,
 			(void*)openc2e_icon_rgba, openc2e_icon_size * 4)) {
 		SDL_SetWindowIcon(window, icon);
 		SDL_DestroySurface(icon);
 	}
-	// start maximized, on whichever monitor the window opened on
+	// start maximized, on whichever monitor the window opened on; it is
+	// created hidden so that the position above is where it first appears
+	// (a window placed after it is shown stays where the window manager put it)
+	SDL_ShowWindow(window);
+	if (placed) {
+		// the window manager may place a new window itself as it maps it:
+		// move it again once shown, and wait for that before maximizing
+		SDL_SetWindowPosition(window, wx, wy);
+		SDL_SyncWindow(window);
+	}
 	SDL_MaximizeWindow(window);
 
 	renderer = SDL_CreateRenderer(window, nullptr);
