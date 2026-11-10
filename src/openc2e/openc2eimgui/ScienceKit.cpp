@@ -357,10 +357,38 @@ static void SyringePage() {
 		fill = amount / 255.0f;
 		tint = IM_COL32(150, 210, 255, 255);
 	}
-	if (fluid && fill > 0) {
-		float h = fluid.height * fill;
+	// Inject animates as in C2: the plunger presses down and the fluid goes
+	// down with it, then, after a moment, the syringe draws up the next dose
+	// (owner, 2026-11-09): pressing 0.9 s, empty 0.4 s, refilling 0.6 s
+	static double pressed = -10;
+	float since = (float)(ImGui::GetTime() - pressed);
+	// developer aid: OPENC2E_TEST_SYRINGE=0.45 holds the animation at that time
+	static const char* holdAt = getenv("OPENC2E_TEST_SYRINGE");
+	if (holdAt)
+		since = (float)atof(holdAt);
+	auto ease = [](float t) { t = std::clamp(t, 0.0f, 1.0f); return t * t * (3 - 2 * t); };
+	float shown = fill;
+	if (since < 0.9f)
+		shown = fill * (1 - ease(since / 0.9f));
+	else if (since < 1.3f)
+		shown = 0;
+	else if (since < 1.9f)
+		shown = fill * ease((since - 1.3f) / 0.6f);
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	float h = fluid ? fluid.height * shown : 0;
+	if (fluid && shown > 0) {
 		ImVec2 a = p + ImVec2(17, 192 - h);
-		ImGui::GetWindowDrawList()->AddImage(fluid.as<ImTextureID>(), a, a + ImVec2(fluid.width, h), ImVec2(0, 1 - fill), ImVec2(1, 1), tint);
+		dl->AddImage(fluid.as<ImTextureID>(), a, a + ImVec2(fluid.width, h), ImVec2(0, 1 - shown), ImVec2(1, 1), tint);
+	}
+	// the plunger (its head resting on the fluid) and the barrel's glass
+	// front over both, from C2's own pictures; the rod is cut off at the top
+	// of the picture
+	auto& bits = KitSprites("Applet Data/SyringeBits.s16");
+	if (bits.size() >= 2) {
+		dl->PushClipRect(p, p + ImVec2(64, 256), true);
+		DrawTexture(bits[0], p + ImVec2(16, 192 - h - bits[0].height + 1));
+		dl->PopClipRect();
+		DrawTexture(bits[1], p + ImVec2(9, 38));
 	}
 	ImGui::Dummy(ImVec2(64, 256));
 	ImGui::SameLine();
@@ -408,7 +436,8 @@ static void SyringePage() {
 	bool can = c->isAlive() || mode == 0; // the kick-start mixtures are for the dead
 	if (!can)
 		ImGui::BeginDisabled();
-	if (ImGui::Button("Inject", ImVec2(120, 0))) {
+	if (ImGui::Button("Inject", ImVec2(120, 0)) && since >= 1.9f) {
+		pressed = ImGui::GetTime();
 		if (mode == 0 && mix < (int)mixes.size()) {
 			for (auto& [ch, amt] : mixes[mix].chems)
 				c->addChemical((unsigned char)ch, (unsigned char)std::clamp(amt, 0, 255));

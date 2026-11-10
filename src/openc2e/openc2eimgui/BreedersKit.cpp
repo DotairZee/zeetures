@@ -246,6 +246,15 @@ static bool readZip(const std::vector<uint8_t>& z, std::vector<ImportFile>& out,
 	return true;
 }
 
+bool KitReadZip(const std::vector<uint8_t>& zip, std::vector<std::pair<std::string, std::vector<uint8_t>>>& out, std::string& err) {
+	std::vector<ImportFile> files;
+	if (!readZip(zip, files, err))
+		return false;
+	for (auto& f : files)
+		out.push_back({f.name, std::move(f.data)});
+	return true;
+}
+
 static void gather(const fs::path& path, ImportPlan& plan) {
 	std::error_code ec;
 	if (fs::is_directory(path, ec)) {

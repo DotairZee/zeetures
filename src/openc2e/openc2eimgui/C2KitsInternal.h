@@ -22,6 +22,10 @@ namespace Openc2eImgui {
 Texture KitPicture(const std::string& name); // a .bmp drawn as it is
 const std::vector<Texture>& KitSprites(const std::string& name); // .s16 frames, transparent background
 
+// The files in a zip (stored or deflated), names without folders; false
+// with a reason if it is not a zip it can read (BreedersKit.cpp).
+bool KitReadZip(const std::vector<uint8_t>& zip, std::vector<std::pair<std::string, std::vector<uint8_t>>>& out, std::string& err);
+
 // The selected creature, if it is a C2 creature; and its agent.
 c2Creature* KitCreature();
 Agent* KitCreatureAgent();
