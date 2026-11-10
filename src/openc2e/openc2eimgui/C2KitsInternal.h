@@ -26,6 +26,10 @@ const std::vector<Texture>& KitSprites(const std::string& name); // .s16 frames,
 // with a reason if it is not a zip it can read (BreedersKit.cpp).
 bool KitReadZip(const std::vector<uint8_t>& zip, std::vector<std::pair<std::string, std::vector<uint8_t>>>& out, std::string& err);
 
+// The files in an old add-on installer (a Windows program with its files
+// appended; read, never run), as "Boney Grendels.exe" (BreedersKit.cpp).
+bool KitReadInstaller(const std::vector<uint8_t>& exe, std::vector<std::pair<std::string, std::vector<uint8_t>>>& out, std::string& err);
+
 // The selected creature, if it is a C2 creature; and its agent.
 c2Creature* KitCreature();
 Agent* KitCreatureAgent();

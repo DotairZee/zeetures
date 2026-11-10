@@ -140,10 +140,13 @@ static void importPicked() {
 	s_import_report.clear();
 	for (auto& path : picked) {
 		std::string ext = to_ascii_lowercase(fs::path(path).extension().string());
-		if (ext == ".zip") {
+		if (ext == ".zip" || ext == ".exe") {
 			std::vector<std::pair<std::string, std::vector<uint8_t>>> files;
-			std::string err;
-			if (!Openc2eImgui::KitReadZip(readAllBytes(path), files, err)) {
+			std::string err, ierr;
+			auto bytes = readAllBytes(path);
+			if (!(ext == ".exe" && Openc2eImgui::KitReadInstaller(bytes, files, ierr)) && !Openc2eImgui::KitReadZip(bytes, files, err)) {
+				if (ext == ".exe")
+					err = ierr;
 				s_import_report.push_back(fmt::format("{}: {}", fs::path(path).filename().string(), err));
 				continue;
 			}
@@ -255,7 +258,7 @@ void DrawAgentInjector() {
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Import...")) {
-			static const SDL_DialogFileFilter filters[] = {{"Objects (COB files, zips)", "cob;zip"}, {"All files", "*"}};
+			static const SDL_DialogFileFilter filters[] = {{"Objects (COB files, zips, add-on installers)", "cob;zip;exe"}, {"All files", "*"}};
 			SDL_ShowOpenFileDialog(ObjectFilesChosen, nullptr, nullptr, filters, 2, nullptr, true);
 		}
 		if (ImGui::IsItemHovered())

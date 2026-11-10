@@ -155,7 +155,7 @@ struct ImportPlan {
 	char name[64] = {};
 	std::vector<ImportFile> files;
 	std::vector<ImportGroup> groups;
-	std::vector<size_t> genomes, notes, eggs, skipped;
+	std::vector<size_t> genomes, notes, eggs, cobs, skipped;
 	std::vector<std::string> problems;
 };
 
@@ -255,6 +255,115 @@ bool KitReadZip(const std::vector<uint8_t>& zip, std::vector<std::pair<std::stri
 	return true;
 }
 
+// The self-extracting installers some C2 add-ons came as (Windows
+// programs, never run here): after the program's own sections comes a zlib
+// stream and an 8-byte trailer (the stream's offset, then "dbrf"). The stream
+// holds three length-prefixed strings (title, credits, description), a file
+// count, then each file as a length-prefixed name, a 32-bit size and its
+// bytes. Found in "Boney Grendels.exe" (owner, 2026-11-09).
+static bool readInstaller(const std::vector<uint8_t>& exe, std::vector<ImportFile>& out, std::string& err) {
+	if (exe.size() < 64 || exe[0] != 'M' || exe[1] != 'Z') {
+		err = "not a Windows program";
+		return false;
+	}
+	if (std::memcmp(&exe[exe.size() - 4], "dbrf", 4) != 0) {
+		err = "not an installer this can read";
+		return false;
+	}
+	uint32_t start = le32(exe, exe.size() - 8);
+	if (start >= exe.size() - 8) {
+		err = "damaged installer";
+		return false;
+	}
+	std::vector<uint8_t> raw;
+	z_stream zs{};
+	if (inflateInit(&zs) != Z_OK) {
+		err = "zlib";
+		return false;
+	}
+	zs.next_in = const_cast<uint8_t*>(&exe[start]);
+	zs.avail_in = (uInt)(exe.size() - 8 - start);
+	uint8_t buf[65536];
+	int r;
+	do {
+		zs.next_out = buf;
+		zs.avail_out = sizeof(buf);
+		r = inflate(&zs, Z_NO_FLUSH);
+		if (r != Z_OK && r != Z_STREAM_END)
+			break;
+		raw.insert(raw.end(), buf, buf + (sizeof(buf) - zs.avail_out));
+	} while (r != Z_STREAM_END);
+	inflateEnd(&zs);
+	if (r != Z_STREAM_END) {
+		err = "damaged installer data";
+		return false;
+	}
+	size_t p = 0;
+	auto u32 = [&](uint32_t& v) {
+		if (p + 4 > raw.size())
+			return false;
+		v = le32(raw, p);
+		p += 4;
+		return true;
+	};
+	auto str = [&](std::string& s) {
+		uint32_t n;
+		if (!u32(n) || p + n > raw.size())
+			return false;
+		s.assign((const char*)&raw[p], n);
+		p += n;
+		return true;
+	};
+	std::string title, credits, about;
+	uint32_t count;
+	if (!str(title) || !str(credits) || !str(about) || !u32(count)) {
+		err = "damaged installer contents";
+		return false;
+	}
+	for (uint32_t i = 0; i < count; i++) {
+		ImportFile f;
+		uint32_t size;
+		if (!str(f.name) || !u32(size) || p + size > raw.size()) {
+			err = "damaged installer contents";
+			return false;
+		}
+		f.data.assign(raw.begin() + p, raw.begin() + p + size);
+		p += size;
+		out.push_back(std::move(f));
+	}
+	return true;
+}
+
+bool KitReadInstaller(const std::vector<uint8_t>& exe, std::vector<std::pair<std::string, std::vector<uint8_t>>>& out, std::string& err) {
+	std::vector<ImportFile> files;
+	if (!readInstaller(exe, files, err))
+		return false;
+	for (auto& f : files)
+		out.push_back({f.name, std::move(f.data)});
+	return true;
+}
+
+// An exported creature (.exp) carries its genome as a CGenome record: the
+// genes, without the genome file's "dna2" header, ending in "gend". Breeds
+// that come without a genome file (goat norns, Kai norns) still have their
+// sample creatures' genomes here; this makes a genome file of the first.
+static std::vector<uint8_t> genomeFromExport(const std::vector<uint8_t>& exp) {
+	static const char tag[] = "CGenome";
+	auto at = std::search(exp.begin(), exp.end(), tag, tag + 7);
+	if (at == exp.end())
+		return {};
+	static const char gene[] = "gene", gend[] = "gend";
+	auto first = std::search(at, exp.end(), gene, gene + 4);
+	if (first == exp.end())
+		return {};
+	auto end = std::search(first, exp.end(), gend, gend + 4);
+	if (end == exp.end())
+		return {};
+	std::vector<uint8_t> g = {'d', 'n', 'a', '2'};
+	g.insert(g.end(), first, end + 4);
+	return g;
+}
+
 static void gather(const fs::path& path, ImportPlan& plan) {
 	std::error_code ec;
 	if (fs::is_directory(path, ec)) {
@@ -267,6 +376,13 @@ static void gather(const fs::path& path, ImportPlan& plan) {
 	if (ext == ".zip") {
 		std::string err;
 		if (!readZip(readAll(path), plan.files, err))
+			plan.problems.push_back(fmt::format("{}: {}", path.filename().string(), err));
+		return;
+	}
+	if (ext == ".exe") { // a self-extracting zip, or an old add-on installer (read, never run)
+		std::string err, zerr;
+		auto data = readAll(path);
+		if (!readInstaller(data, plan.files, err) && !readZip(data, plan.files, zerr))
 			plan.problems.push_back(fmt::format("{}: {}", path.filename().string(), err));
 		return;
 	}
@@ -323,6 +439,7 @@ static void planImport(const std::vector<std::string>& picked) {
 	std::string base = picked.empty() ? "Imported breed" : fs::path(picked[0]).stem().string();
 	std::snprintf(plan->name, sizeof(plan->name), "%s", base.c_str());
 	std::map<std::pair<int, int>, size_t> groupOf;
+	std::vector<ImportFile> exportGenomes;
 	for (size_t i = 0; i < plan->files.size(); i++) {
 		auto& f = plan->files[i];
 		std::string ext = to_ascii_lowercase(fs::path(f.name).extension().string());
@@ -345,9 +462,26 @@ static void planImport(const std::vector<std::string>& picked) {
 			plan->notes.push_back(i);
 		} else if (ext == ".egg") {
 			plan->eggs.push_back(i);
+		} else if (ext == ".cob") {
+			plan->cobs.push_back(i); // an object that comes with the breed (an update, a toy)
+		} else if (ext == ".exp") {
+			// a sample creature: its genome, for the breed's eggs
+			auto g = genomeFromExport(f.data);
+			if (g.empty()) {
+				plan->skipped.push_back(i);
+				continue;
+			}
+			exportGenomes.push_back({fs::path(f.name).stem().string() + ".gen", g});
+			plan->skipped.push_back(i);
 		} else {
 			plan->skipped.push_back(i);
 		}
+	}
+	// genomes from the sample creatures come after any genome files (the
+	// first genome is the breed's)
+	for (auto& g : exportGenomes) {
+		plan->files.push_back(std::move(g));
+		plan->genomes.push_back(plan->files.size() - 1);
 	}
 	for (auto& g : plan->groups)
 		if (!slotFree(g.species, g.target, plan.get(), &g))
@@ -420,6 +554,12 @@ static void installPlan(ImportPlan& plan) {
 	for (size_t i : plan.eggs) {
 		fs::create_directories(eggsDir, ec);
 		write(eggsDir, plan.files[i].name, eggWithGenomes(plan.files[i].data, moveSlots), shared);
+	}
+	// objects that came with the breed go where the Agent Injector finds them
+	for (size_t i : plan.cobs) {
+		fs::path objects = getUserDataDir() / "Objects";
+		fs::create_directories(objects, ec);
+		write(objects, plan.files[i].name, plan.files[i].data, shared);
 	}
 	int installed = 0;
 	std::vector<BreedInfo> added;
@@ -514,6 +654,8 @@ static void ImportReview() {
 		ImGui::TextDisabled("Also: %d genome%s, %d note file%s, %d egg%s (breed slots in them follow any move).",
 			(int)plan.genomes.size(), plan.genomes.size() == 1 ? "" : "s", (int)plan.notes.size(), plan.notes.size() == 1 ? "" : "s",
 			(int)plan.eggs.size(), plan.eggs.size() == 1 ? "" : "s");
+	if (!plan.cobs.empty())
+		ImGui::TextDisabled("And %d object%s for the Agent Injector.", (int)plan.cobs.size(), plan.cobs.size() == 1 ? "" : "s");
 	if (!plan.skipped.empty()) {
 		std::string names;
 		for (size_t i : plan.skipped)
@@ -719,7 +861,7 @@ static void BreedsPage() {
 		return;
 	}
 	if (ImGui::Button("Import files...")) {
-		static const SDL_DialogFileFilter filters[] = {{"Breed packs (zip, COB, sprites, body data, genomes, eggs)", "zip;cob;s16;c16;png;att;gen;gno;egg"}, {"All files", "*"}};
+		static const SDL_DialogFileFilter filters[] = {{"Breed packs (zip, installer exe, COB, sprites, body data, genomes, eggs, exported creatures)", "zip;exe;cob;s16;c16;png;att;gen;gno;egg;exp"}, {"All files", "*"}};
 		SDL_ShowOpenFileDialog(BreedFilesChosen, nullptr, nullptr, filters, 2, nullptr, true);
 	}
 	ImGui::SameLine();
