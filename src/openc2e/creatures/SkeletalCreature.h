@@ -134,6 +134,9 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// a script moved it (MVTO, MVBY): its foot room is found afresh where it
 	// now stands, not judged as a step from the room it stood in
 	void scriptMoved() { downfootroom.reset(); }
+	// the way its body faces now, in DIRN's terms (0 away, 1 toward the
+	// viewer, 2 right, 3 left), from its current pose
+	unsigned int facing() const { static const unsigned int dirn[4] = {2, 3, 1, 0}; return posedirection < 4 ? dirn[posedirection] : 2; }
 	float footX();
 
 	CompoundPart* part(unsigned int id);

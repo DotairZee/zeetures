@@ -547,6 +547,13 @@ void c_DIRN(caosVM* vm) {
 void v_DIRN(caosVM* vm) {
 	CreatureAgent* c = vm->getTargCreatureAgent();
 
+	// C2 creatures turn by their poses, which don't update the direction
+	// DIRN sets: report the way the body actually faces
+	if (engine.version == 2)
+		if (auto* sc = dynamic_cast<SkeletalCreature*>(vm->targ.get())) {
+			vm->result.setInt(sc->facing());
+			return;
+		}
 	vm->result.setInt(c->getDirection());
 }
 
