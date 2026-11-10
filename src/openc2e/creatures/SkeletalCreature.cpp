@@ -251,6 +251,21 @@ static const StageGrowth& stageGrowth(int species) {
 		return it->second;
 	StageGrowth best;
 	int bestcount = 1;
+	// the species' standard breed, when it has several ages: C2's own norn
+	// is breed h (norn.gen), its grendel breed a
+	const int standard = species == 0 ? 7 : 0;
+	{
+		StageGrowth g;
+		int count = 0;
+		for (int a = 0; a <= 6; a++)
+			if ((g.ages[a] = bodySetSize(species, false, a, standard)) > 0)
+				count++;
+		if (count >= 2) {
+			g.species = species;
+			g.breed = standard;
+			return cache[species] = g;
+		}
+	}
 	for (int breed = 0; breed < 26; breed++) {
 		StageGrowth g;
 		int count = 0;
@@ -276,8 +291,11 @@ static const StageGrowth& stageGrowth(int species) {
 static float stageScale(int species, bool female, int breed, int stage) {
 	if (!stageScaleOn() || engine.version != 2)
 		return 1.0f;
-	if (species != 1 && species != 2)
-		return 1.0f; // grendels and ettins (owner); norns not yet
+	// grendels and ettins (owner); norns (C2's own frog norn, breed l) only
+	// with OPENC2E_STAGE_SCALE=norns, until the owner has seen previews
+	static const bool norns = getenv("OPENC2E_STAGE_SCALE") && std::string(getenv("OPENC2E_STAGE_SCALE")) == "norns";
+	if (species != 1 && species != 2 && !(species == 0 && norns))
+		return 1.0f;
 	float own = bodySetSize(species, female, 0, breed);
 	if (own <= 0)
 		return 1.0f;
