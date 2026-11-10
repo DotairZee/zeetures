@@ -473,6 +473,16 @@ void c2Creature::updateUnderwater() {
 	}
 	std::shared_ptr<Room> room = world.map->roomAt(headx, heady);
 	bool underwater = room && room->type == 2;
+	// Standing on dry floor, the head is not under water, even where the
+	// box of a water room beside the floor's edge reaches higher than the
+	// head: at the end of the green walkway east of the incubator (room 14,
+	// floor 892) a creature facing the sea's room (31, up to y 669) blew
+	// bubbles (owner, 2026-11-10; 22 such edges on the map). Only with the
+	// feet in water too (or falling, or swimming: no foot room) is it under.
+	if (underwater)
+		if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent))
+			if (std::shared_ptr<Room> feet = sc->footRoom(); feet && feet->type != 2)
+				underwater = false;
 	if (underwater) {
 		if (breathHeld < breathTicks)
 			breathHeld++; // holding its breath: the air sense stays as it was
