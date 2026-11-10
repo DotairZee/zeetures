@@ -905,8 +905,9 @@ void v_SPCS(caosVM* vm) {
 /**
  PLNE (integer)
  %status maybe
+ %variants c2 cv c3 sm
 
- Returns the plane (z-order) of the TARG agent.
+ Returns the plane (z-order) of the TARG agent. (In C2, an openc2e extension.)
 */
 void v_PLNE(caosVM* vm) {
 	VM_VERIFY_SIZE(0)
@@ -1270,8 +1271,11 @@ void v_WDTH(caosVM* vm) {
 /**
  PLNE (command) depth (integer)
  %status maybe
+ %variants c2 cv c3 sm
 
  Sets the plane (the z-order) of the TARG agent.  Higher values are closer to the camera.
+ (In C2, an openc2e extension: C2 fixes planes at creation; world additions
+ use it to put the world file's foreground pieces behind a lift.)
 */
 void c_PLNE(caosVM* vm) {
 	VM_VERIFY_SIZE(1)
