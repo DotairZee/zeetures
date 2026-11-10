@@ -77,14 +77,16 @@ bool agentIsVisible(Agent* seeing, Agent* a, float ownerx, float ownery, MetaRoo
 // door object straddling a wall, such as the airlock's land door, centred on
 // the far side, is still seen from inside).
 bool agentPartlyVisible(Agent* seeing, Agent* dest) {
-	if (agentIsVisible(seeing, dest))
-		return true;
-	float ownerx = (seeing->x + (seeing->getWidth() / 2.0f));
-	float ownery = (seeing->y + (seeing->getHeight() / 2.0f));
+	return agentPartlyVisible(seeing, dest, seeing->x + (seeing->getWidth() / 2.0f), seeing->y + (seeing->getHeight() / 2.0f));
+}
+
+bool agentPartlyVisible(Agent* seeing, Agent* dest, float ownerx, float ownery) {
 	MetaRoom* ownermeta = world.map->metaRoomAt(ownerx, ownery);
 	std::shared_ptr<Room> ownerroom = world.map->roomAt(ownerx, ownery);
 	if (!ownermeta || !ownerroom || seeing == dest)
 		return false;
+	if (agentIsVisible(seeing, dest, ownerx, ownery, ownermeta, ownerroom))
+		return true;
 	float nx = std::clamp(ownerx, dest->x, dest->x + dest->getWidth() - 1.0f);
 	float ny = std::clamp(ownery, dest->y, dest->y + dest->getHeight() - 1.0f);
 	if (world.map->metaRoomAt(nx, ny) != ownermeta || !world.map->roomAt(nx, ny))

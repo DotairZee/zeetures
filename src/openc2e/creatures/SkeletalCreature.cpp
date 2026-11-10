@@ -340,6 +340,22 @@ void SkeletalCreature::render(RenderTarget* renderer, int xoffset, int yoffset) 
 	}
 }
 
+float SkeletalCreature::footX() {
+	float fx = x + attachmentX(downfoot_left ? 11 : 12, 1);
+	if (world.map) {
+		MetaRoom* m = world.map->metaRoomAt(x, y);
+		if (!m)
+			m = world.map->wrappingMetaRoomNear(fx, y);
+		if (m && m->wraparound()) {
+			if (fx >= (int)m->x() + (int)m->width())
+				fx -= m->width();
+			else if (fx < (int)m->x())
+				fx += m->width();
+		}
+	}
+	return fx;
+}
+
 int SkeletalCreature::attachmentX(unsigned int part, unsigned int id) {
 	return partx[part] + att[part].attachments[pose[part]][0 + (id * 2)] + adjustx;
 }

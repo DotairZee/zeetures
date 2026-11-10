@@ -1167,6 +1167,9 @@ class HomeostatMind : public CreatureMind {
 				int dir = (a.decision == 26) ? 10 : (a.decision == 27) ? 11 : a.decision;
 				if ((dir == 10 || dir == 11) && waterAhead(p, dir))
 					continue;
+				// nor walks into a wall right ahead (owner, 2026-11-10)
+				if ((dir == 10 || dir == 11) && wallAhead(p, dir))
+					continue;
 				add(-1, a.decision, 0.0f, 0.0f);
 			}
 		}
@@ -1468,6 +1471,9 @@ class HomeostatMind : public CreatureMind {
 	bool waterAhead(const MindPerception& p, int dir) const {
 		return !p.inWater && ((dir == 10 && p.waterWest) || (dir == 11 && p.waterEast));
 	}
+	bool wallAhead(const MindPerception& p, int dir) const {
+		return (dir == 10 && p.wallWest) || (dir == 11 && p.wallEast);
+	}
 	void addBoatInstead(const MindPerception& p, int dir, float want, Candidate tmpl, std::vector<Candidate>& out) {
 		bool reachableBoat = false; // seen from below or above, a boat cannot be boarded
 		bool reachableButton = false;
@@ -1650,6 +1656,11 @@ class HomeostatMind : public CreatureMind {
 		}
 		if (!canWest && !canEast)
 			return;
+		// a wall right ahead: no trip goes that way from here
+		if (p.wallWest)
+			canWest = false;
+		if (p.wallEast)
+			canEast = false;
 		std::vector<int> forget;
 		std::vector<int> offLevel;
 		for (auto& [category, place] : places) {

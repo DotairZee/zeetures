@@ -125,6 +125,11 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	int shovedir = 0, shoveticks = 0;
 	int attachmentY(unsigned int part, unsigned int id);
 	bool isLeftFootDown() { return downfoot_left; }
+	// for the creature's senses: the room its down foot stands in (null while
+	// falling, carried or riding) and the foot's x, wrapped into the map of a
+	// wrapping world
+	std::shared_ptr<class Room> footRoom() const { return downfootroom; }
+	float footX();
 
 	CompoundPart* part(unsigned int id);
 	void setZOrder(unsigned int plane);

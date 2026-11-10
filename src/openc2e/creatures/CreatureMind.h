@@ -111,6 +111,9 @@ struct MindPerception {
 	float breath = 1.0f; // breath left while under water (1 full, 0 none: suffocating)
 	bool waterWest = false, waterEast = false; // the room through the door on that side is water (or a fall lands in water)
 	float dropWest = 0, dropEast = 0; // how far the floor drops stepping through that side (0: no drop)
+	// a wall right ahead on that side: the foot is at the room's edge and no
+	// doorway it fits through goes on at walking height (nor a drop)
+	bool wallWest = false, wallEast = false;
 	int dryWay = 0, dryRooms = 0;
 	std::vector<InnateInstinct> newInstincts; // genome instincts expressed since the last tick
 };

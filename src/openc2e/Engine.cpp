@@ -18,6 +18,8 @@
  */
 
 #include "Engine.h"
+#include "creatures/CreatureAgent.h"
+#include "creatures/Creature.h"
 #include "CobManager.h"
 
 #include "Bubble.h"
@@ -463,6 +465,12 @@ void Engine::update() {
 
 	// tick the world
 	world.tick();
+	// developer aid: OPENC2E_TEST_KILL=N kills the selected creature at world
+	// tick N (headless; OPENC2E_TEST_DEATH needs the Owner's Kit drawn)
+	if (static const char* k = getenv("OPENC2E_TEST_KILL"); k && world.tickcount == (unsigned int)atoi(k) && world.selectedcreature)
+		if (auto* ca = dynamic_cast<CreatureAgent*>(world.selectedcreature.get()))
+			if (ca->getCreature()->isAlive())
+				ca->getCreature()->die();
 	if (getenv("OPENC2E_DUMP_AGENT_EVERY_TICK")) {
 		fmt::print("* Tick {}\n", world.tickcount);
 		dumpAgents();

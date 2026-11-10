@@ -23,6 +23,7 @@
 #include "Engine.h"
 #include "World.h"
 #include "Map.h"
+#include "MetaRoom.h"
 #include "Room.h"
 #include "c2eBrain.h"
 #include "c2eCreature.h"
@@ -364,6 +365,18 @@ bool Creature::agentInSight(AgentRef a) {
 
 	// TODO: specify x/y location for eyes
 	// TODO: check open cabin?
+	// At Albia's seam a creature's body can be drawn across the wall at the
+	// edge of the map while its foot stands on the near side (the library's
+	// west wall): it looks from above its foot, not from the middle of the
+	// body in the rock beyond, from where it saw the volcano's critters
+	// through the wall (owner, 2026-11-10).
+	if (engine.version == 2)
+		if (auto* sc = dynamic_cast<SkeletalCreature*>(parentagent)) {
+			float raw = sc->x + sc->attachmentX(sc->isLeftFootDown() ? 11 : 12, 1);
+			float fx = sc->footX();
+			if (fx != raw)
+				return agentPartlyVisible(parentagent, a.get(), fx, parentagent->y + parentagent->getHeight() / 2.0f);
+		}
 	return agentPartlyVisible(parentagent, a.get());
 #else
 	return false;
@@ -436,47 +449,124 @@ static float walkFloorAt(Room& r, float x, int fit) {
 	return r.floorYatX(x);
 }
 
+// Albia wraps: its east and west edges join through doorways (the rooms at
+// x 8240-8352 open onto those at x 0). The width of a wrapping world's map,
+// or 0, and how far to shift room n (by that width) to put it on the side of
+// x nearest to it, so that rooms across the seam lie beside each other.
+static float wrapWidth() {
+	if (engine.version != 2 || !world.map)
+		return 0.0f;
+	for (unsigned int i = 0; i < world.map->getMetaRoomCount(); i++)
+		if (MetaRoom* m = world.map->getMetaRoom(i); m && m->wraparound())
+			return (float)m->width();
+	return 0.0f;
+}
+static float seamShift(const Room& n, float x, float w) {
+	if (w <= 0.0f)
+		return 0.0f;
+	float c = (n.x_left + n.x_right) / 2.0f;
+	if (c - x > w / 2.0f)
+		return -w;
+	if (c - x < -w / 2.0f)
+		return w;
+	return 0.0f;
+}
+
+// The next room walking off room r on one side (east or west), at boundary
+// x bx (in r's own terms), or null where that side is a wall. The room's
+// shift across the seam is returned in nshift (bx - nshift is the boundary in
+// the next room's own terms). With dry, water does not count; with
+// fallsCount, a doorway down into a room wholly below (a drop) counts.
+static std::shared_ptr<Room> walkOnFrom(const Room& r, bool east, int fit, bool dry, bool fallsCount, float w, float& nshift) {
+	float bx = east ? (float)r.x_right : (float)r.x_left;
+	float fy = walkFloorAt(const_cast<Room&>(r), bx, fit);
+	float rc = (r.x_left + r.x_right) / 2.0f;
+	std::shared_ptr<Room> next;
+	float bestd = 1e9f;
+	for (auto& [n, door] : const_cast<Room&>(r).getDoors()) {
+		if (door.perm < fit || (dry && n->type == 2))
+			continue;
+		float s = seamShift(*n, rc, w);
+		if (east ? n->x_left + s + 2 < r.x_right : n->x_right + s > r.x_left + 2)
+			continue; // not on that side
+		float nbx = bx - s;
+		float nf = walkFloorAt(*n, nbx, fit);
+		if (nf < fy - 40) {
+			// a floor line far above: walked under, along the room's
+			// bottom edge, when that is level with here (the desert
+			// lift's lower stop, under its shaft's floor line); else a climb
+			float t = n->x_right > n->x_left ? (nbx - n->x_left) / (float)(n->x_right - n->x_left) : 0;
+			float bottom = n->y_left_floor + (n->y_right_floor - (float)n->y_left_floor) * std::clamp(t, 0.0f, 1.0f);
+			if (std::fabs(bottom - fy) > 40)
+				continue;
+			nf = bottom;
+		}
+		if (std::min(n->y_left_ceiling, n->y_right_ceiling) > fy) { // wholly below this floor: a fall, not a walk
+			if (!fallsCount)
+				continue;
+			nf = fy; // open, whatever the depth
+		}
+		float dd = std::fabs(nf - fy);
+		if (dd < bestd) {
+			bestd = dd;
+			next = n;
+			nshift = s;
+		}
+	}
+	return next;
+}
+
 static bool walkableTo(std::shared_ptr<Room> from, float x0, float x1, int fit) {
 	// from dry land, a way through water does not count: the pond's ramp
 	// made the fish in it "reachable" from the bank, and norns walked in after
 	// them (regression batch reg2, owner's pond, 2026-11-09)
 	const bool dry = from->type != 2;
+	// across the seam the short way round: the object on the side nearest
+	// the creature, and each room kept beside the last (off: its shift)
+	const float w = wrapWidth();
+	{
+		float oc = (x0 + x1) / 2.0f, fc = (from->x_left + from->x_right) / 2.0f;
+		if (w > 0 && oc - fc > w / 2.0f)
+			x0 -= w, x1 -= w;
+		else if (w > 0 && oc - fc < -w / 2.0f)
+			x0 += w, x1 += w;
+	}
 	std::shared_ptr<Room> r = from;
+	float off = 0.0f;
 	for (int step = 0; r && step < 30; step++) {
-		if (r->x_right > x0 && r->x_left < x1)
+		if (r->x_right + off > x0 && r->x_left + off < x1)
 			return true; // standing in this room it can touch the object
-		bool east = x0 >= r->x_right;
-		float bx = east ? (float)r->x_right : (float)r->x_left;
-		float fy = walkFloorAt(*r, bx, fit);
-		std::shared_ptr<Room> next;
-		float bestd = 1e9f;
-		for (auto& [n, door] : r->getDoors()) {
-			if (door.perm < fit || (dry && n->type == 2))
-				continue;
-			if (east ? n->x_left + 2 < r->x_right : n->x_right > r->x_left + 2)
-				continue; // not on that side
-			float nf = walkFloorAt(*n, bx, fit);
-			if (nf < fy - 40) {
-				// a floor line far above: walked under, along the room's
-				// bottom edge, when that is level with here (the desert
-				// lift's lower stop, under its shaft's floor line); else a climb
-				float t = n->x_right > n->x_left ? (bx - n->x_left) / (float)(n->x_right - n->x_left) : 0;
-				float bottom = n->y_left_floor + (n->y_right_floor - (float)n->y_left_floor) * std::clamp(t, 0.0f, 1.0f);
-				if (std::fabs(bottom - fy) > 40)
-					continue;
-				nf = bottom;
-			}
-			if (std::min(n->y_left_ceiling, n->y_right_ceiling) > fy) // wholly below this floor: a fall, not a walk
-				continue;
-			float dd = std::fabs(nf - fy);
-			if (dd < bestd) {
-				bestd = dd;
-				next = n;
-			}
-		}
-		r = next;
+		bool east = x0 >= r->x_right + off;
+		float nshift = 0.0f;
+		r = walkOnFrom(*r, east, fit, dry, false, w, nshift);
+		off += nshift;
 	}
 	return false;
+}
+
+// Which room the creature's senses start from, and its x in that room's
+// terms. openc2e wraps an agent by its top-left corner, so at Albia's seam a
+// creature can stand with its foot just past x 0 (in the library) while its
+// corner, and so the middle of its body, is at x ~8300, in the sealed rock
+// beyond the library's west wall: judged from there, the wall's doorways and
+// the things beyond it were all wrong, and a grendel walked into that wall for
+// good (owner, 2026-11-10). Such a creature is judged by its foot.
+static std::shared_ptr<Room> senseRoom(Agent* a, float cx, float cy, float& sx) {
+	sx = cx;
+	if (!world.map)
+		return nullptr;
+	if (engine.version == 2)
+		if (auto* sc = dynamic_cast<SkeletalCreature*>(a)) {
+			float raw = sc->x + sc->attachmentX(sc->isLeftFootDown() ? 11 : 12, 1);
+			float fx = sc->footX();
+			if (fx != raw) { // the foot is past the edge of the map: across the seam
+				sx = fx;
+				if (auto r = sc->footRoom())
+					return r;
+				return world.map->roomAt(fx, cy);
+			}
+		}
+	return world.map->roomAt(cx, cy);
 }
 
 AgentRef oldCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> possibles) {
@@ -489,7 +579,8 @@ AgentRef oldCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> 
 		return AgentRef();
 	float cx = parentagent->x + parentagent->getWidth() / 2.0f;
 	float cy = parentagent->y + parentagent->getHeight() / 2.0f;
-	std::shared_ptr<Room> here = engine.version == 2 && world.map ? world.map->roomAt(cx, cy) : nullptr;
+	float sx = cx;
+	std::shared_ptr<Room> here = engine.version == 2 ? senseRoom(parentagent, cx, cy, sx) : nullptr;
 	const int fit = std::max(1, parentagent->size);
 	AgentRef best;
 	float bestcost = 0;
@@ -638,7 +729,7 @@ MindPerception oldCreature::buildPerception() {
 		bool reachable = !(a->y + a->getHeight() < parentagent->y || a->y > parentagent->y + parentagent->getHeight());
 		// and nothing but open doorways between (not a wall)
 		if (reachable && engine.version == 2 && world.map)
-			if (std::shared_ptr<Room> here = world.map->roomAt(cx, cy))
+			if (float sx; std::shared_ptr<Room> here = senseRoom(parentagent, cx, cy, sx))
 				if (!(reachable = walkableTo(here, (float)a->x, a->x + a->getWidth(), std::max(1, parentagent->size))) && getenv("OPENC2E_TEST_REACH"))
 					fmt::print("* REACH {} {} {} at {:.0f},{:.0f} behind a wall from {:.0f},{:.0f}\n", (int)a->family, (int)a->genus, a->species, ax, ay, cx, cy);
 		// C2 marks what may be activated (attr 4): the airlock's drain machine
@@ -658,8 +749,15 @@ MindPerception oldCreature::buildPerception() {
 	p.y = cy;
 	p.riding = (bool)parentagent->invehicle;
 	if (engine.version == 2 && world.map) {
-		std::shared_ptr<Room> here = world.map->roomAt(cx, cy);
+		float sx = cx;
+		std::shared_ptr<Room> here = senseRoom(parentagent, cx, cy, sx);
 		if (here) {
+			// which side a neighbouring room is on (across the seam the short
+			// way round: Albia's east and west edges join)
+			const float w = wrapWidth();
+			const float hc = (here->x_left + here->x_right) / 2.0f;
+			auto westOf = [&](const Room& n) { return n.x_right + seamShift(n, hc, w) <= here->x_left + 2; };
+			auto eastOf = [&](const Room& n) { return n.x_left + seamShift(n, hc, w) + 2 >= here->x_right; };
 			p.scentHere = here->foodscent;
 			// only doorways the creature fits through count for its senses of
 			// direction (smell spreads through narrower gaps, but following it
@@ -672,9 +770,9 @@ MindPerception oldCreature::buildPerception() {
 				if (door.perm < fit)
 					continue;
 				float* side;
-				if (n->x_right <= here->x_left + 2)
+				if (westOf(*n))
 					side = &p.scentWest;
-				else if (n->x_left + 2 >= here->x_right)
+				else if (eastOf(*n))
 					side = &p.scentEast;
 				else if (std::max(n->y_left_floor, n->y_right_floor) <= ceiling + 2)
 					side = &p.scentUp;
@@ -688,9 +786,9 @@ MindPerception oldCreature::buildPerception() {
 			for (auto& [n, door] : here->getDoors()) {
 				if (door.perm < fit || n->type != 2)
 					continue;
-				if (n->x_right <= here->x_left + 2)
+				if (westOf(*n))
 					p.waterWest = true;
-				else if (n->x_left + 2 >= here->x_right)
+				else if (eastOf(*n))
 					p.waterEast = true;
 			}
 			// drops ahead: stepping through a side where the floor beyond is
@@ -699,11 +797,11 @@ MindPerception oldCreature::buildPerception() {
 			for (auto& [n, door] : here->getDoors()) {
 				if (door.perm < fit || n->type == 2)
 					continue;
-				bool west = n->x_right <= here->x_left + 2, east = n->x_left + 2 >= here->x_right;
+				bool west = westOf(*n), east = eastOf(*n);
 				if (!west && !east)
 					continue;
 				float bx = west ? (float)here->x_left : (float)here->x_right;
-				float drop = n->floorYatX(bx) - here->floorYatX(bx);
+				float drop = n->floorYatX(bx - seamShift(*n, hc, w)) - here->floorYatX(bx);
 				if (drop <= 60.0f)
 					continue;
 				(west ? p.dropWest : p.dropEast) = std::max(west ? p.dropWest : p.dropEast, drop);
@@ -722,12 +820,38 @@ MindPerception oldCreature::buildPerception() {
 					r = below;
 				}
 			}
+			// a wall right ahead: walking that way from where the foot stands
+			// goes nowhere (no doorway the creature fits through goes on at
+			// walking height, nor down). Wandering walks met no such sense and
+			// a grendel walked into the library's west wall for good (owner,
+			// 2026-11-10). Only standing: the foot's room is known.
+			if (auto* sc = dynamic_cast<SkeletalCreature*>(parentagent))
+				if (std::shared_ptr<Room> fr = sc->footRoom()) {
+					float fx = sc->footX();
+					fx -= seamShift(*fr, fx, w); // in the foot room's own terms
+					for (bool east : {false, true}) {
+						float edge = east ? (float)fr->x_right : (float)fr->x_left;
+						if (std::fabs(fx - edge) > 30.0f)
+							continue;
+						float ns = 0.0f;
+						if (!walkOnFrom(*fr, east, fit, false, true, w, ns))
+							(east ? p.wallEast : p.wallWest) = true;
+					}
+					static const bool watchwall = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+					static std::map<int, int> lastwall;
+					int wallnow = (p.wallWest ? 1 : 0) | (p.wallEast ? 2 : 0);
+					if (watchwall && lastwall[parentagent->getUNID()] != wallnow) {
+						fmt::print("* WATCH WALL unid {} foot {:.0f} room {} ({}-{}) wall{}{}\n", parentagent->getUNID(), fx, fr->id,
+							fr->x_left, fr->x_right, p.wallWest ? " west" : "", p.wallEast ? " east" : "");
+						lastwall[parentagent->getUNID()] = wallnow;
+					}
+				}
 			// water: the way to the nearest dry room through open doors
 			// in water when the middle is, or the feet are (wading in a shallow
 			// pond, the middle stays in the air room above it)
 			p.inWater = here->type == 2;
 			if (!p.inWater)
-				if (std::shared_ptr<Room> feet = world.map->roomAt(cx, parentagent->y + parentagent->getHeight() - 2))
+				if (std::shared_ptr<Room> feet = world.map->roomAt(sx, parentagent->y + parentagent->getHeight() - 2))
 					p.inWater = feet->type == 2;
 			p.breath = breathLeft();
 			if (p.inWater) {
@@ -741,9 +865,9 @@ MindPerception oldCreature::buildPerception() {
 					if (door.perm < fit)
 						continue;
 					int way = 0;
-					if (n->x_right <= here->x_left + 2)
+					if (westOf(*n))
 						way = 10;
-					else if (n->x_left + 2 >= here->x_right)
+					else if (eastOf(*n))
 						way = 11;
 					else if (std::max(n->y_left_floor, n->y_right_floor) <= ceiling + 2)
 						way = 0; // up: not on foot (lifts are handled by the mind)
