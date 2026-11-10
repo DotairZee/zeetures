@@ -1333,7 +1333,7 @@ unsigned int Agent::getZOrder() const {
 		// TODO: check for overflow
 		// TODO: is adding our own zorder here correct behaviour? someone should check
 		if (engine.version > 1)
-			return carriedby->getZOrder() - 100;
+			return carriedby->carriesInFront() ? carriedby->getZOrder() + 1 : carriedby->getZOrder() - 100;
 		else
 			return carriedby->getZOrder();
 	} else {

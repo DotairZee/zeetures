@@ -600,6 +600,14 @@ void SkeletalCreature::recalculateSkeleton() {
 	height = downfoot_left ? leftfoot : rightfoot;
 	width = 50; // TODO: arbitary values bad
 
+	// what it carries goes in front of or behind it with the hand (re-sorted
+	// for drawing when that changes)
+	if (bool front = carriesInFront(); front != carriedFront) {
+		carriedFront = front;
+		if (carrying)
+			carrying->setZOrder(carrying->zorder);
+	}
+
 	// TODO: muh, we should cooperate with physics system etc
 	/*if (carriedby || invehicle)
 		downfootroom.reset();
@@ -1185,12 +1193,22 @@ int SkeletalCreature::handleClick(float clickx, float clicky) {
 	}
 }
 
+// C2: a creature carries in the hand on the viewer's side, drawn in front
+// of its body: facing right its right forearm (part 10) is drawn over the
+// body and its left (9) behind, facing left the other way round; facing
+// toward or away from the viewer both are behind it. Before, everything was
+// held in the left hand and drawn behind the body, so a toy gun jumped from
+// the creature's hands to behind it as it turned (owner, 2026-11-10).
+bool SkeletalCreature::carriesInFront() const {
+	return engine.version == 2 && (posedirection == 0 || posedirection == 1);
+}
+
 std::pair<int, int> SkeletalCreature::getCarryPoint() {
 	std::pair<int, int> carrypoint;
 
-	// TODO: 9 is left hand, how do we work out which hand a norn is carrying with?
-	carrypoint.first = attachmentX(9, 1);
-	carrypoint.second = attachmentY(9, 1);
+	int hand = (engine.version == 2 && posedirection == 0) ? 10 : 9;
+	carrypoint.first = attachmentX(hand, 1);
+	carrypoint.second = attachmentY(hand, 1);
 
 	return carrypoint;
 }

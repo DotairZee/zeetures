@@ -66,6 +66,7 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	creatureGaitGene* gaitgene;
 
 	std::pair<int, int> getCarryPoint();
+	bool carriedFront = false; // as last sorted for drawing
 
 	void physicsTick();
 	void snapDownFoot();
@@ -125,6 +126,7 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	int shovedir = 0, shoveticks = 0;
 	int attachmentY(unsigned int part, unsigned int id);
 	bool isLeftFootDown() { return downfoot_left; }
+	bool carriesInFront() const override;
 	// for the creature's senses: the room its down foot stands in (null while
 	// falling, carried or riding) and the foot's x, wrapped into the map of a
 	// wrapping world

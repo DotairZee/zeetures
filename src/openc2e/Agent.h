@@ -286,6 +286,9 @@ class Agent : public std::enable_shared_from_this<Agent> {
 
 	virtual void setZOrder(unsigned int plane); // should be overridden!
 	virtual unsigned int getZOrder() const;
+	// C2: whether what this agent carries is drawn in front of it (a creature
+	// holding it in the hand on the viewer's side) or behind
+	virtual bool carriesInFront() const { return false; }
 
 	class std::shared_ptr<script> findScript(unsigned short event);
 
