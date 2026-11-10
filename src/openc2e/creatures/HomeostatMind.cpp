@@ -696,8 +696,10 @@ class HomeostatMind : public CreatureMind {
 				noSleepUntil = std::max(noSleepUntil, (unsigned int)(p.tick + prm.noSleepAfterRefusal));
 				fmt::print("[homeostat] creature {} t{}: sleep refused (not tired enough); not offered for {} ticks\n", p.creatureId, p.tick,
 					prm.noSleepAfterRefusal);
+				sleepRefused = true; // not a sleep: nothing to learn about sleeping
 			}
 			endEpisode(p, d, D, done ? "finished" : urgent >= 0 ? DRIVE_NAMES[urgent] : "time");
+			sleepRefused = false;
 			if (urgent >= 0) {
 				fmt::print("[homeostat] creature {} t{}: woken by {}\n", p.creatureId, p.tick, DRIVE_NAMES[urgent]);
 				noSleepUntil = p.tick + prm.noSleepAfterWaking;
@@ -827,7 +829,7 @@ class HomeostatMind : public CreatureMind {
 
 	// World saving: one fact per line, readable and hand-editable.
 	std::string saveState() const override {
-		std::string s = fmt::format("statever 4\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
+		std::string s = fmt::format("statever 5\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
 		s += "drift";
 		for (float f : drift)
 			s += fmt::format(" {}", f);
@@ -981,6 +983,26 @@ class HomeostatMind : public CreatureMind {
 			scents.clear();
 			fmt::print("[homeostat] relearning from scratch (expectations saved before felt effects)\n");
 		}
+		if (version >= 2 && version <= 4) {
+			// Saved while a sleep the world's sleep script refused (C2's: only
+			// while Tiredness is above 48) was learned as sleeping that did
+			// nothing: grendels and ettins, who hardly tire, learned that
+			// sleep never helps. Grendels and ettins now sleep when sleepy
+			// (sleep.cos, owner 2026-11-10): learn sleep afresh (its prior,
+			// from the instincts, is kept).
+			if (expectations.erase(prm.sleepDecision)) { // category -1
+				// and let the sleep instincts seed it again (signatures end
+				// "-action-drive-level")
+				for (auto it = appliedInstincts.begin(); it != appliedInstincts.end();) {
+					size_t a = it->find('-');
+					if (a != std::string::npos && std::atoi(it->c_str() + a + 1) == prm.sleepDecision)
+						it = appliedInstincts.erase(it);
+					else
+						++it;
+				}
+				fmt::print("[homeostat] relearning sleep (learned while sleep could be refused)\n");
+			}
+		}
 		if (version < 2) {
 			// Saved before body chemistry ran (frozen bodies: every action seemed
 			// to do nothing). That experience misleads, so start learning afresh.
@@ -1070,6 +1092,7 @@ class HomeostatMind : public CreatureMind {
 	std::array<float, NUM_DRIVES> sleepStartDrives{};
 	unsigned int noSleepUntil = 0;
 	bool fellAsleep = false; // during the current sleep episode
+	bool sleepRefused = false; // the episode ending now was a refused sleep
 	float badSleepX = 0, badSleepY = 0; // where a sleep was cut short by cold or heat
 	unsigned int badSleepUntil = 0;
 	bool drivesSeen = false;
@@ -2064,7 +2087,7 @@ class HomeostatMind : public CreatureMind {
 				if (!feltAny[i])
 					effect[i] = 0.0f;
 		}
-		if (current.seekCategory < 0 && !current.chain) {
+		if (current.seekCategory < 0 && !current.chain && !sleepRefused) {
 			Expectation& e = expectation(current.category, current.decision);
 			// an innate prior counts as remembered experience: learning is slow
 			// while it outweighs real experience and speeds up as that grows
