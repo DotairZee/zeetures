@@ -748,6 +748,16 @@ void SkeletalCreature::snapDownFoot() {
 
 	bool newroomchosen = (newroom != downfootroom) && downfootroom;
 	bool hadroom = downfootroom != nullptr;
+	// developer aid: OPENC2E_WATCH_ROOMS prints each change of a creature's
+	// foot room and which way it was found
+	static const bool watchrooms = getenv("OPENC2E_WATCH_ROOMS") != nullptr;
+	auto watchRoom = [&](const char* how, std::shared_ptr<Room> from, std::shared_ptr<Room> to) {
+		if (watchrooms && from != to)
+			fmt::print("* WATCH ROOM t{} unid {} {} foot ({:.0f}, {:.0f}) x {:.0f} room {} -> {}\n", world.tickcount, unid, how,
+				footx, footy, x, from ? (int)from->id : -1, to ? (int)to->id : -1);
+	};
+	watchRoom(hadroom ? "walk" : "place", downfootroom, newroom);
+	std::shared_ptr<Room> prevroom = downfootroom;
 	downfootroom = newroom;
 
 	if (!downfootroom /*|| !falling */) {
@@ -757,7 +767,24 @@ void SkeletalCreature::snapDownFoot() {
 		float movedx = lastgoodfootx - attachmentX(orig_footpart, 1) - x;
 		if (m->wraparound())
 			movedx -= std::round(movedx / (float)m->width()) * (float)m->width();
-		if (fabs(movedx) > 50.0f || fabs(lastgoodfooty - attachmentY(orig_footpart, 1) - y) > 50.0f) {
+		float movedy = lastgoodfooty - attachmentY(orig_footpart, 1) - y;
+		// A short jump of the foot into a room that the room it stood in has
+		// no doorway to (open at the creature's size) is a wall, not a script
+		// moving it: at the world's seam a grendel turning at the library's
+		// west wall had its foot shift ~58 px west across the seam, and was
+		// taken into the sealed pocket beyond (room 213), where it fell to the
+		// map's bottom and was trapped (owner, 2026-11-10).
+		bool walled = false;
+		if (engine.version == 2 && prevroom && fabs(movedx) <= 150.0f && fabs(movedy) <= 150.0f) {
+			std::shared_ptr<Room> here = bestRoomAt(footx, footy, 3, m, std::shared_ptr<Room>());
+			if (here && here != prevroom && (!world.map->hasDoor(prevroom, here) || world.map->getDoorPerm(prevroom, here) < size)) {
+				walled = true;
+				watchRoom("walled", here, prevroom);
+			}
+		}
+		if (walled)
+			; // pushed back below
+		else if (fabs(movedx) > 50.0f || fabs(movedy) > 50.0f) {
 			// Retry once from the room the foot is in now. Only once: if the
 			// retry also finds no room it may enter (e.g. every way on is a
 			// wall), retrying again recursed until the stack overflowed and the
@@ -766,6 +793,7 @@ void SkeletalCreature::snapDownFoot() {
 			static bool retrying = false;
 			std::shared_ptr<Room> here = bestRoomAt(footx, footy, 3, m, std::shared_ptr<Room>());
 			if (here && !retrying) {
+				watchRoom("retry", downfootroom, here);
 				downfootroom = here;
 				retrying = true;
 				snapDownFoot();
@@ -776,6 +804,7 @@ void SkeletalCreature::snapDownFoot() {
 				// TODO: exceptiony death?
 				return;
 			}
+			watchRoom("accept", downfootroom, here);
 			downfootroom = here;
 		}
 	}

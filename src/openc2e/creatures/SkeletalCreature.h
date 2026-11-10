@@ -131,6 +131,9 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// falling, carried or riding) and the foot's x, wrapped into the map of a
 	// wrapping world
 	std::shared_ptr<class Room> footRoom() const { return downfootroom; }
+	// a script moved it (MVTO, MVBY): its foot room is found afresh where it
+	// now stands, not judged as a step from the room it stood in
+	void scriptMoved() { downfootroom.reset(); }
 	float footX();
 
 	CompoundPart* part(unsigned int id);

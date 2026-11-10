@@ -25,6 +25,7 @@
 #include "Room.h"
 #include "World.h"
 #include "caosVM.h"
+#include "creatures/SkeletalCreature.h"
 #include "common/throw_ifnot.h"
 
 #include <algorithm>
@@ -76,6 +77,8 @@ void c_MVTO(caosVM* vm) {
 	VM_PARAM_FLOAT(x)
 	valid_agent(vm->targ);
 	vm->targ->moveTo(x, y);
+	if (auto* sc = dynamic_cast<SkeletalCreature*>(vm->targ.get()))
+		sc->scriptMoved();
 }
 
 /**
@@ -91,6 +94,8 @@ void c_MVBY(caosVM* vm) {
 
 	valid_agent(vm->targ);
 	vm->targ->moveTo(vm->targ->x + x, vm->targ->y + y);
+	if (auto* sc = dynamic_cast<SkeletalCreature*>(vm->targ.get()))
+		sc->scriptMoved();
 }
 
 /**
