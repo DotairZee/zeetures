@@ -428,6 +428,10 @@ static float walkFloorAt(Room& r, float x, int fit) {
 }
 
 static bool walkableTo(std::shared_ptr<Room> from, float x0, float x1, int fit) {
+	// from dry land, a way through water does not count: the pond's ramp
+	// made the fish in it "reachable" from the bank, and norns walked in after
+	// them (regression batch reg2, owner's pond, 2026-11-09)
+	const bool dry = from->type != 2;
 	std::shared_ptr<Room> r = from;
 	for (int step = 0; r && step < 30; step++) {
 		if (r->x_right > x0 && r->x_left < x1)
@@ -438,7 +442,7 @@ static bool walkableTo(std::shared_ptr<Room> from, float x0, float x1, int fit) 
 		std::shared_ptr<Room> next;
 		float bestd = 1e9f;
 		for (auto& [n, door] : r->getDoors()) {
-			if (door.perm < fit)
+			if (door.perm < fit || (dry && n->type == 2))
 				continue;
 			if (east ? n->x_left + 2 < r->x_right : n->x_right > r->x_left + 2)
 				continue; // not on that side
@@ -486,6 +490,10 @@ AgentRef oldCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> 
 		// one the creature cannot walk to (behind a wall) only if nothing else
 		if (here && !walkableTo(here, (float)a->x, a->x + a->getWidth(), fit))
 			cost += 5000.0f;
+		// nor scenery it can do nothing with (not activatable, carryable or
+		// food), like the airlock's drain machine, if anything else is there
+		if (engine.version <= 2 && !(a->attr & (1 | 4)) && edibleScent(a.get()) <= 0)
+			cost += 3000.0f;
 		// passed over by the mind (its use kept doing nothing): notice others first
 		for (auto& po : passedover)
 			if (po.first == a && ticks < po.second)
@@ -624,7 +632,12 @@ MindPerception oldCreature::buildPerception() {
 			if (std::shared_ptr<Room> here = world.map->roomAt(cx, cy))
 				if (!(reachable = walkableTo(here, (float)a->x, a->x + a->getWidth(), std::max(1, parentagent->size))) && getenv("OPENC2E_TEST_REACH"))
 					fmt::print("* REACH {} {} {} at {:.0f},{:.0f} behind a wall from {:.0f},{:.0f}\n", (int)a->family, (int)a->genus, a->species, ax, ay, cx, cy);
-		p.visible.push_back({(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay, edibleScent(a.get()), reachable});
+		// C2 marks what may be activated (attr 4): the airlock's drain machine
+		// (2 3 4, attr 0) is run only by its two doors, which close the sea
+		// door first; a norn activating it directly drained the chamber with
+		// the doors shut (owner, 2026-11-09)
+		bool activatable = engine.version > 2 || (a->attr & 4);
+		p.visible.push_back({(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay, edibleScent(a.get()), reachable, activatable});
 	}
 
 	p.stimuli = pendingstimuli;
@@ -701,7 +714,12 @@ MindPerception oldCreature::buildPerception() {
 				}
 			}
 			// water: the way to the nearest dry room through open doors
+			// in water when the middle is, or the feet are (wading in a shallow
+			// pond, the middle stays in the air room above it)
 			p.inWater = here->type == 2;
+			if (!p.inWater)
+				if (std::shared_ptr<Room> feet = world.map->roomAt(cx, parentagent->y + parentagent->getHeight() - 2))
+					p.inWater = feet->type == 2;
 			p.breath = breathLeft();
 			if (p.inWater) {
 				struct Step {

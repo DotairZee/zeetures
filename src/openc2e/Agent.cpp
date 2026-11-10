@@ -1063,12 +1063,16 @@ void Agent::physicsTickC2() {
 	// that line, since the floor check below only catches an object crossing
 	// it from above; it rests on the room's rectangular bottom instead, out
 	// of sight inside the ground (the world file starts some critters there).
-	// Lift a moving object with gravity onto the line, where the floor is
-	// solid for it (the same size/floor-value rule as that check).
+	// Lift a moving object with gravity onto the line, where the ground is
+	// solid (floor value 0). Where the floor value is above 0 the room is
+	// meant to be used beneath its line (a lift shaft whose bottom is the
+	// lift's lower stop, as creatures walk it): lifting there popped a norn
+	// that stumbled at the desert lift's foot up to the desert (owner,
+	// 2026-11-09).
 	if (suffercollisions() && sufferphysics()) {
 		float cx = x + getWidth() / 2.0f, bottom = y + getHeight();
 		std::shared_ptr<Room> r = world.map->roomAt(cx, bottom - 1);
-		if (r && r->floorpoints.size() && size > r->floorvalue) {
+		if (r && r->floorpoints.size() && r->floorvalue == 0 && size > r->floorvalue) {
 			float floory = r->floorYatX(cx);
 			if (bottom > floory + 1 && floory > r->y_left_ceiling)
 				moveTo(x, floory - getHeight());

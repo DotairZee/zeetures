@@ -1158,9 +1158,15 @@ class HomeostatMind : public CreatureMind {
 		for (auto& a : *p.actions) {
 			if (a.needsObject) {
 				for (auto& s : p.visible)
-					if (s.reachable)
+					if (s.reachable && (s.activatable || (a.decision != 1 && a.decision != 2 && a.decision != 3)))
 						add(s.category, a.decision, s.distance, s.edible);
 			} else {
+				// plain wandering never walks off dry land into water (food,
+				// forage and seeking trips already check; the pond's new ramp let
+				// wandering norns walk in and wade there, regression batch reg3)
+				int dir = (a.decision == 26) ? 10 : (a.decision == 27) ? 11 : a.decision;
+				if ((dir == 10 || dir == 11) && waterAhead(p, dir))
+					continue;
 				add(-1, a.decision, 0.0f, 0.0f);
 			}
 		}
@@ -1468,7 +1474,7 @@ class HomeostatMind : public CreatureMind {
 		for (auto& sa : p.visible) {
 			if (sa.category == prm.boatCategory && sa.reachable)
 				reachableBoat = true;
-			if (sa.category == prm.buttonCategory && sa.reachable)
+			if (sa.category == prm.buttonCategory && sa.reachable && sa.activatable)
 				reachableButton = true;
 		}
 		if (!reachableBoat) {
@@ -1512,7 +1518,7 @@ class HomeostatMind : public CreatureMind {
 				continue;
 			bool reachable = false;
 			for (auto& sa : p.visible)
-				if (sa.category == tl.category && sa.reachable)
+				if (sa.category == tl.category && sa.reachable && (sa.activatable || tl.decision < 1 || tl.decision > 3))
 					reachable = true;
 			if (!reachable)
 				continue;
@@ -1585,7 +1591,7 @@ class HomeostatMind : public CreatureMind {
 		float triedX = 0;
 		int triedSeen = 0;
 		for (auto& s : p.visible) {
-			if (std::find(prm.escapeDevices.begin(), prm.escapeDevices.end(), s.category) != prm.escapeDevices.end()) {
+			if (s.activatable && std::find(prm.escapeDevices.begin(), prm.escapeDevices.end(), s.category) != prm.escapeDevices.end()) {
 				if (tried(s.agent)) {
 					triedX += s.x;
 					triedSeen++;
@@ -1768,7 +1774,7 @@ class HomeostatMind : public CreatureMind {
 			// only a call button on this floor, within reach: far-east norns
 			// on a ledge pressed the call button of the deck below them over
 			// a thousand times
-			if (s.category == prm.buttonCategory && s.reachable && std::fabs(s.y - p.y) < prm.sameLevel)
+			if (s.category == prm.buttonCategory && s.reachable && s.activatable && std::fabs(s.y - p.y) < prm.sameLevel)
 				button = &s;
 		}
 		// a known link from this floor in the right direction, nearest first
