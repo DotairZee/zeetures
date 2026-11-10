@@ -1002,15 +1002,22 @@ void c_RNDV(caosVM* vm) {
 	var->setInt(rand_int32(value1, value2));
 }
 
+// larger than any population the world could hold
+static const int noPopulationCap = 1000000;
+
 /**
  EGGL (integer)
  %status stub
  %variants c2
 
  Returns the egg limit - when there are more than this many norns in the world, eggs should not hatch.
+ openc2e: no limit (a number larger than any population).
 */
 void v_EGGL(caosVM* vm) {
-	vm->result.setInt(16); // TODO
+	// openc2e: no cap on the population (owner, 2026-11-10). C2 read this
+	// from its options (16 by default); its egg and kiss scripts compare the
+	// number of norns with it.
+	vm->result.setInt(noPopulationCap);
 }
 
 /**
@@ -1019,9 +1026,11 @@ void v_EGGL(caosVM* vm) {
  %variants c2
  
  Returns the hatchery limit - when there are more than this many norns in the world, the hatchery should shut down.
+ openc2e: no limit (a number larger than any population).
 */
 void v_HATL(caosVM* vm) {
-	vm->result.setInt(12); // TODO
+	// openc2e: no cap on the population (owner, 2026-11-10); C2's was 12
+	vm->result.setInt(noPopulationCap);
 }
 
 /* vim: set noet: */
