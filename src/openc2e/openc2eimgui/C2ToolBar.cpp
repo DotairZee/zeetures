@@ -466,9 +466,29 @@ void DrawC2Toolbar() {
 		ImGui::Separator();
 		}
 		if (s_show_pointer) {
-		ImageButton(icon_invisible, false);
-		ImageButton(icon_teach, false);
-		ImageButton(icon_push, false);
+		// the Pointer toolbar: an invisible hand (creatures do not see it)
+		// as a switch, and the hand's two modes: teach (a click tickles or
+		// slaps) and push (a click shoves a creature away from the hand)
+		auto toggled = [](bool on, auto icon) {
+			if (on)
+				ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
+			bool clicked = ImageButton(icon, true);
+			if (on)
+				ImGui::PopStyleColor();
+			return clicked;
+		};
+		if (toggled(world.handInvisible, icon_invisible))
+			world.handInvisible = !world.handInvisible;
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip(world.handInvisible ? "Invisible hand: creatures can't see it (click to show it again)" : "Make the hand invisible to creatures");
+		if (toggled(!world.handPush, icon_teach))
+			world.handPush = false;
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Teach: click a creature's head to tickle it, lower down to slap it");
+		if (toggled(world.handPush, icon_push))
+			world.handPush = true;
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Push: click a creature to shove it away from the hand");
 		ImGui::Separator();
 		}
 

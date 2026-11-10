@@ -835,6 +835,14 @@ void SkeletalCreature::tick() {
 	}
 
 	// TODO: this kinda duplicates what physicsTick is doing below
+	if (shoveticks > 0) {
+		if (!falling && !carriedby && !invehicle) {
+			float step = 2.0f + shoveticks * 1.2f; // 14 px, easing to 3
+			moveTo(x + shovedir * step, y);
+		}
+		shoveticks--;
+	}
+
 	if ((engine.version == 1 || !falling) && !carriedby && !invehicle)
 		snapDownFoot();
 	else

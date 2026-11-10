@@ -88,6 +88,9 @@ class World {
 	std::vector<unsigned int> groundlevels;
 
 	AgentRef selectedcreature;
+	// C1/C2 Pointer toolbar: creatures do not see the hand; a click on a
+	// creature shoves it instead of tickling or slapping it
+	bool handInvisible = false, handPush = false;
 
 	// C1/C2 favorite places (camera bookmarks) from the world file; six slots,
 	// unused ones have empty names

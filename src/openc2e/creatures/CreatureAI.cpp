@@ -397,6 +397,9 @@ void Creature::chooseAgents() {
 
 		if (!agentInSight(a))
 			continue;
+		// the Pointer toolbar's invisible hand: creatures do not notice it
+		if (world.handInvisible && a.get() == (Agent*)world.hand())
+			continue;
 
 		possibles[a->category].push_back(a);
 	}

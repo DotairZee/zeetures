@@ -288,6 +288,14 @@ void World::tick() {
 	scriptqueue.clear();
 	scriptqueue = newqueue;
 
+	// developer aid: OPENC2E_TEST_PUSH=1 shoves the selected creature east
+	// once, at tick 100 (the push hand)
+	static bool testPush = getenv("OPENC2E_TEST_PUSH") != nullptr;
+	if (testPush && tickcount == 100 && selectedcreature) {
+		shoveCreature(selectedcreature.get(), 1);
+		fmt::print("* TEST PUSH at {:.0f},{:.0f}\n", selectedcreature->x, selectedcreature->y);
+	}
+
 	// C2's halo (2 1 3, the toolbar's halo button) puts itself over the
 	// middle of the selected creature's bounding box, which is off its head
 	// when it faces sideways or crouches (owner, 2026-11-09): after the

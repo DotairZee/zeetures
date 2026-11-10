@@ -52,6 +52,12 @@ PointerAgent::PointerAgent(std::string spritefile)
 	hotspoty = 0;
 }
 
+// the push hand: a short hop sideways (dir 1 east, -1 west)
+void shoveCreature(Agent* a, int dir) {
+	if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
+		sc->shove(dir);
+}
+
 void PointerAgent::finishInit() {
 	Agent::finishInit();
 
@@ -301,6 +307,13 @@ void PointerAgent::handleEvent(BackendEvent& event) {
 						holdingWire = 0;
 						eve = 113;
 					} else {
+						// the Pointer toolbar's push hand (C1/C2): a click on a
+						// creature shoves it away from where the hand pressed, a
+						// short hop sideways, instead of tickling or slapping it
+						if (engine.version < 3 && world.handPush && dynamic_cast<CreatureAgent*>(parent) && !parent->carriedby && !parent->invehicle) {
+							shoveCreature(parent, x < parent->x + parent->getWidth() / 2.0f ? 1 : -1);
+							return;
+						}
 						// if the agent isn't paused, tell it to handle a click
 						int scriptid = a->handleClick(x - a->x - parent->x, y - a->y - parent->y);
 						if (scriptid != -1) {

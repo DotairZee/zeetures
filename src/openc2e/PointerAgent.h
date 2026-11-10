@@ -24,6 +24,8 @@
 
 class DullPart;
 
+void shoveCreature(class Agent* a, int dir);
+
 class PointerAgent : public SimpleAgent {
   private:
 	DullPart* overlay;

@@ -116,6 +116,13 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// the middle of the top of the head picture, in world coordinates (for
 	// the halo); false when there is no head picture
 	bool headTop(float& hx, float& hy);
+	// the push hand: slide along the ground for a few ticks (dir 1 east,
+	// -1 west), fast at first, easing off; walls and floors as for walking
+	void shove(int dir) {
+		shovedir = dir;
+		shoveticks = 10;
+	}
+	int shovedir = 0, shoveticks = 0;
 	int attachmentY(unsigned int part, unsigned int id);
 	bool isLeftFootDown() { return downfoot_left; }
 
