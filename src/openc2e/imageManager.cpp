@@ -280,6 +280,14 @@ std::shared_ptr<creaturesImage> imageManager::getCharsetDta(imageformat format,
 	return img;
 }
 
+std::shared_ptr<creaturesImage> imageManager::stipple(const std::shared_ptr<creaturesImage>& oldimage) {
+	auto img = std::make_shared<creaturesImage>(oldimage->getName());
+	img->images.resize(oldimage->images.size());
+	for (size_t i = 0; i < img->images.size(); ++i)
+		img->images[i] = ImageUtils::Stipple(oldimage->images[i]);
+	return img;
+}
+
 std::shared_ptr<creaturesImage> imageManager::tint(const std::shared_ptr<creaturesImage>& oldimage,
 	unsigned char r, unsigned char g, unsigned char b,
 	unsigned char rotation, unsigned char swap) {

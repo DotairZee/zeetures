@@ -4,7 +4,7 @@
 
 class SpritePart : public AnimatablePart {
   protected:
-	std::shared_ptr<creaturesImage> origsprite, sprite;
+	std::shared_ptr<creaturesImage> origsprite, sprite, stippledFrom;
 	unsigned int firstimg, pose, base, spriteno;
 	SpritePart(Agent* p, unsigned int _id, std::string spritefile, unsigned int fimg, int _x, int _y,
 		unsigned int _z);
@@ -32,6 +32,9 @@ class SpritePart : public AnimatablePart {
 	void changeSprite(std::string spritefile, unsigned int fimg);
 	void changeSprite(std::shared_ptr<creaturesImage> spr);
 	void tint(unsigned char r, unsigned char g, unsigned char b, unsigned char rotation, unsigned char swap);
+	// drawn see-through (every other pixel, as C2 did), or as it is
+	void setStippled(bool on);
+	bool isStippled() { return sprite != origsprite && stippledFrom == origsprite; }
 	virtual bool isTransparent() { return is_transparent; }
 	bool transparentAt(unsigned int x, unsigned int y);
 

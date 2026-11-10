@@ -296,6 +296,16 @@ void World::tick() {
 		fmt::print("* TEST PUSH at {:.0f},{:.0f}\n", selectedcreature->x, selectedcreature->y);
 	}
 
+	// developer aid: OPENC2E_TEST_HAND_INVISIBLE="x y" turns the toolbar's
+	// invisible hand on and keeps the hand at that place (for snapshots)
+	if (const char* hi = getenv("OPENC2E_TEST_HAND_INVISIBLE")) {
+		float hx, hy;
+		if (sscanf(hi, "%f %f", &hx, &hy) == 2 && hand()) {
+			handInvisible = true;
+			hand()->moveTo(hx, hy);
+		}
+	}
+
 	// C2's halo (2 1 3, the toolbar's halo button) puts itself over the
 	// middle of the selected creature's bounding box, which is off its head
 	// when it faces sideways or crouches (owner, 2026-11-09): after the

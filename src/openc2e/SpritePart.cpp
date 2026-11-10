@@ -128,6 +128,18 @@ void SpritePart::tint(unsigned char r, unsigned char g, unsigned char b, unsigne
 	sprite = world.gallery->tint(origsprite, r, g, b, rotation, swap);
 }
 
+void SpritePart::setStippled(bool on) {
+	if (on == isStippled())
+		return;
+	if (on) {
+		stippledFrom = origsprite;
+		sprite = world.gallery->stipple(origsprite);
+	} else {
+		stippledFrom.reset();
+		sprite = origsprite;
+	}
+}
+
 void SpritePart::tick() {
 	if (!animation.empty()) {
 		if (framerate > 1) {

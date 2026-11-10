@@ -17,6 +17,8 @@
 #include "Hatchery.h"
 #include "ImGuiUtils.h"
 #include "MainMenu.h"
+#include "PointerAgent.h"
+#include "SpritePart.h"
 #include "World.h"
 #include "Scriptorium.h"
 #include "caosVM.h"
@@ -477,8 +479,13 @@ void DrawC2Toolbar() {
 				ImGui::PopStyleColor();
 			return clicked;
 		};
-		if (toggled(world.handInvisible, icon_invisible))
+		if (toggled(world.handInvisible, icon_invisible)) {
 			world.handInvisible = !world.handInvisible;
+			// see-through at once, even while the world is paused
+			if (world.hand())
+				if (auto* sp = dynamic_cast<SpritePart*>(world.hand()->part(0)))
+					sp->setStippled(world.handInvisible);
+		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip(world.handInvisible ? "Invisible hand: creatures can't see it (click to show it again)" : "Make the hand invisible to creatures");
 		if (toggled(!world.handPush, icon_teach))

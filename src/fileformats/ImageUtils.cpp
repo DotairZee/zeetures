@@ -1,5 +1,6 @@
 #include "ImageUtils.h"
 
+#include <cstring>
 #include "blkImage.h"
 #include "bmpImage.h"
 #include "c16Image.h"
@@ -111,6 +112,17 @@ Image StitchBackground(const MultiImage& images) {
 		}
 	}
 
+	return newimage;
+}
+
+Image Stipple(const Image& oldimage) {
+	Image newimage = oldimage;
+	newimage.data = shared_array<uint8_t>(oldimage.data.size());
+	std::memcpy(newimage.data.data(), oldimage.data.data(), oldimage.data.size());
+	int bpp = oldimage.format == if_index8 ? 1 : oldimage.format == if_rgba32 ? 4 : (oldimage.format == if_bgr24 || oldimage.format == if_rgb24) ? 3 : 2;
+	for (int y = 0; y < oldimage.height; y++)
+		for (int x = (y + 1) % 2; x < oldimage.width; x += 2)
+			std::memset(newimage.data.data() + ((size_t)y * oldimage.width + x) * bpp, 0, bpp); // 0 is transparent in each format
 	return newimage;
 }
 

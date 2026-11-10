@@ -21,6 +21,7 @@
 
 #include "Camera.h"
 #include "DullPart.h"
+#include "SpritePart.h"
 #include "Engine.h"
 
 #include <cmath>
@@ -111,6 +112,11 @@ void PointerAgent::physicsTick() {
 }
 
 void PointerAgent::tick() {
+	// the Pointer toolbar's invisible hand (C1/C2): drawn see-through, as C2
+	// draws it, while creatures can't see it
+	if (engine.version <= 2)
+		if (auto* sp = dynamic_cast<SpritePart*>(part(0)))
+			sp->setStippled(world.handInvisible);
 	if (!paused) {
 		int x = pointerX(), y = pointerY();
 		CompoundPart* a = world.partAt(x, y);

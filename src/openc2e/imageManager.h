@@ -41,6 +41,7 @@ class imageManager {
 	std::shared_ptr<creaturesImage> getBackground(const std::string& name, unsigned int metaroom_width, unsigned int metaroom_height);
 	std::shared_ptr<creaturesImage> getCharsetDta(imageformat format, uint32_t bgcolor,
 		uint32_t textcolor, uint32_t aliascolor);
+	std::shared_ptr<creaturesImage> stipple(const std::shared_ptr<creaturesImage>& image);
 	std::shared_ptr<creaturesImage> tint(const std::shared_ptr<creaturesImage>& image,
 		unsigned char r, unsigned char g, unsigned char b,
 		unsigned char rotation, unsigned char swap);
