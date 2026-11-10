@@ -47,6 +47,9 @@
 #include "common/throw_ifnot.h"
 #include "imageManager.h"
 
+#include <tuple>
+#include <array>
+#include <cmath>
 #include <cassert>
 #include <stdint.h>
 #include <fmt/core.h>
@@ -185,6 +188,133 @@ creatureAppearanceGene* SkeletalCreature::appearanceGeneForPart(char x) {
 	return 0;
 }
 
+
+// Life-stage scaling for breeds drawn at one age only (owner, 2026-11-10).
+// The engine picks a creature's sprites by life stage, falling back to the
+// nearest younger age it has, so a breed with only one set (Bony grendels,
+// C2's own ettins) looks the same from hatching to old age. With
+// OPENC2E_STAGE_SCALE set, such a breed's pictures (and with them every
+// joint point in its body data, so the parts still meet) are scaled to the
+// growth of a reference breed: the same species' breed with the most ages,
+// or else the standard grendels (the owner's guideline). The age a one-set
+// breed was drawn at is the reference age nearest its size; with no
+// reference of its own species, it is taken as drawn adult.
+static bool stageScaleOn() {
+	static const bool on = getenv("OPENC2E_STAGE_SCALE") != nullptr;
+	return on;
+}
+
+// the average frame size (mean of width and height) of a breed's body
+// sprite at an age, or 0 if there is none
+static float bodySetSize(int species, bool female, int age, int breed) {
+	static std::map<std::tuple<int, bool, int, int>, float> cache;
+	auto key = std::make_tuple(species, female, age, breed);
+	if (auto it = cache.find(key); it != cache.end())
+		return it->second;
+	float size = 0;
+	for (bool f : {female, false}) {
+		std::string name = "b";
+		name += (char)('0' + species + (f ? 4 : 0));
+		name += (char)('0' + age);
+		name += breedSlotName(breed);
+		if (auto img = world.gallery->getImage(name)) {
+			float sum = 0;
+			unsigned int n = img->numframes();
+			for (unsigned int i = 0; i < n; i++)
+				sum += (img->width(i) + img->height(i)) / 2.0f;
+			size = n ? sum / n : 0;
+			break;
+		}
+		if (!f)
+			break;
+	}
+	cache[key] = size;
+	return size;
+}
+
+// The reference growth for a species: its breed with the most ages drawn
+// (at least two), else the grendels'. ages[a] is that breed's body size at
+// age a, 0 where it has none.
+struct StageGrowth {
+	int species = -1, breed = -1;
+	std::array<float, 7> ages{};
+	float at(int stage) const { // the size the engine would show at a stage
+		for (int a = std::min(stage, 6); a >= 0; a--)
+			if (ages[a] > 0)
+				return ages[a];
+		return 0;
+	}
+};
+static const StageGrowth& stageGrowth(int species) {
+	static std::map<int, StageGrowth> cache;
+	if (auto it = cache.find(species); it != cache.end())
+		return it->second;
+	StageGrowth best;
+	int bestcount = 1;
+	for (int breed = 0; breed < 26; breed++) {
+		StageGrowth g;
+		int count = 0;
+		for (int a = 0; a <= 6; a++)
+			if ((g.ages[a] = bodySetSize(species, false, a, breed)) > 0)
+				count++;
+		if (count > bestcount || (breed == 0 && count >= 2)) {
+			bestcount = count;
+			best = g;
+			best.species = species;
+			best.breed = breed;
+			if (breed == 0)
+				break; // the standard breed (a) is the guideline when it has ages
+		}
+	}
+	if (best.breed < 0 && species != 1)
+		best = stageGrowth(1); // the standard grendels as the guideline
+	return cache[species] = best;
+}
+
+// the factor for a part from a breed with only one set of pictures, at a
+// life stage (1 for breeds drawn at more than one age)
+static float stageScale(int species, bool female, int breed, int stage) {
+	if (!stageScaleOn() || engine.version != 2)
+		return 1.0f;
+	if (species != 1 && species != 2)
+		return 1.0f; // grendels and ettins (owner); norns not yet
+	float own = bodySetSize(species, female, 0, breed);
+	if (own <= 0)
+		return 1.0f;
+	for (int a = 1; a <= 6; a++)
+		if (bodySetSize(species, female, a, breed) > 0)
+			return 1.0f; // drawn at more than one age: its own pictures
+	const StageGrowth& g = stageGrowth(species);
+	if (g.breed < 0)
+		return 1.0f;
+	// the age it was drawn at: the reference age nearest its size, or adult
+	int drawn = -1;
+	if (g.species == species) {
+		float bestd = 1e9f;
+		for (int a = 0; a <= 6; a++)
+			if (g.ages[a] > 0 && std::fabs(std::log(own / g.ages[a])) < bestd) {
+				bestd = std::fabs(std::log(own / g.ages[a]));
+				drawn = a;
+			}
+	} else {
+		for (int a = 6; a >= 0 && drawn < 0; a--)
+			if (g.ages[a] > 0)
+				drawn = a;
+	}
+	if (drawn < 0 || g.at(drawn) <= 0)
+		return 1.0f;
+	static std::map<std::tuple<int, bool, int>, bool> logged;
+	if (!logged[std::make_tuple(species, female, breed)]) {
+		logged[std::make_tuple(species, female, breed)] = true;
+		std::string f;
+		for (int st = 0; st <= 6; st++)
+			f += fmt::format(" {:.2f}", g.at(st) / g.at(drawn));
+		fmt::print("* STAGE SCALE species {} {} breed {}: one set (body size {:.0f}), drawn as age {} of reference species {} breed {}; by stage 0-6:{}\n",
+			species, female ? "female" : "male", breedSlotName(breed), own, drawn, g.species, breedSlotName(g.breed), f);
+	}
+	return g.at(stage) / g.at(drawn);
+}
+
 void SkeletalCreature::skeletonInit() {
 	// TODO: the exception throwing in here needs some more thought
 	// TODO: if we throw an exception when we need to kill the creature off, else segfault :/
@@ -274,6 +404,16 @@ void SkeletalCreature::skeletonInit() {
 		}
 
 		images[i] = tintBodySprite(images[i]);
+
+		// a breed drawn at one age only, scaled to the life stage: the
+		// pictures and every joint point together, so the parts still meet
+		float k = stageScale(spe, foundfemale, foundvar, creature->getStage());
+		if (std::fabs(k - 1.0f) > 0.01f) {
+			images[i] = world.gallery->scaled(images[i], k);
+			for (auto& pose : att[i].attachments)
+				for (auto& v : pose)
+					v = (unsigned int)std::lround(v * k);
+		}
 	}
 }
 

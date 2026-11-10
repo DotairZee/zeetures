@@ -1,4 +1,6 @@
 #include "ImageUtils.h"
+#include <algorithm>
+#include <cmath>
 
 #include <cstring>
 #include "blkImage.h"
@@ -124,6 +126,78 @@ Image Stipple(const Image& oldimage) {
 		for (int x = (y + 1) % 2; x < oldimage.width; x += 2)
 			std::memset(newimage.data.data() + ((size_t)y * oldimage.width + x) * bpp, 0, bpp); // 0 is transparent in each format
 	return newimage;
+}
+
+Image Scale(const Image& src, float k) {
+	const int w = std::max(1, (int)std::lround(src.width * k));
+	const int h = std::max(1, (int)std::lround(src.height * k));
+	const int bpp = src.format == if_index8 ? 1 : src.format == if_rgba32 ? 4 : (src.format == if_bgr24 || src.format == if_rgb24) ? 3 : 2;
+	Image out = src;
+	out.width = w;
+	out.height = h;
+	out.data = shared_array<uint8_t>((size_t)w * h * bpp);
+	std::memset(out.data.data(), 0, (size_t)w * h * bpp);
+	const uint8_t* in = src.data.data();
+	const bool sixteen = src.format == if_rgb565 || src.format == if_rgb555;
+	const bool rgba = src.format == if_rgba32;
+	const int N = 4; // samples per side of each new pixel
+	for (int oy = 0; oy < h; oy++) {
+		for (int ox = 0; ox < w; ox++) {
+			uint8_t* dst = out.data.data() + ((size_t)oy * w + ox) * bpp;
+			if (!sixteen && !rgba) { // nearest
+				int px = std::clamp((int)((ox + 0.5f) / k), 0, src.width - 1);
+				int py = std::clamp((int)((oy + 0.5f) / k), 0, src.height - 1);
+				std::memcpy(dst, in + ((size_t)py * src.width + px) * bpp, bpp);
+				continue;
+			}
+			int count = 0;
+			unsigned int sr = 0, sg = 0, sb = 0;
+			for (int sy = 0; sy < N; sy++) {
+				int py = std::clamp((int)((oy + (sy + 0.5f) / N) / k), 0, src.height - 1);
+				for (int sx = 0; sx < N; sx++) {
+					int px = std::clamp((int)((ox + (sx + 0.5f) / N) / k), 0, src.width - 1);
+					const uint8_t* p = in + ((size_t)py * src.width + px) * bpp;
+					if (sixteen) {
+						uint16_t v;
+						std::memcpy(&v, p, 2);
+						if (v == 0)
+							continue; // transparent
+						if (src.format == if_rgb565) {
+							sr += ((v >> 11) & 31) * 255 / 31;
+							sg += ((v >> 5) & 63) * 255 / 63;
+						} else {
+							sr += ((v >> 10) & 31) * 255 / 31;
+							sg += ((v >> 5) & 31) * 255 / 31;
+						}
+						sb += (v & 31) * 255 / 31;
+					} else {
+						if (p[3] < 128)
+							continue;
+						sr += p[0];
+						sg += p[1];
+						sb += p[2];
+					}
+					count++;
+				}
+			}
+			if (count * 2 < N * N)
+				continue; // mostly transparent: transparent
+			unsigned int r = sr / count, g = sg / count, b = sb / count;
+			if (sixteen) {
+				uint16_t v = src.format == if_rgb565 ? (uint16_t)(((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3))
+													 : (uint16_t)(((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3));
+				if (v == 0)
+					v = 1 << 5; // opaque black must not turn transparent
+				std::memcpy(dst, &v, 2);
+			} else {
+				dst[0] = (uint8_t)r;
+				dst[1] = (uint8_t)g;
+				dst[2] = (uint8_t)b;
+				dst[3] = 255;
+			}
+		}
+	}
+	return out;
 }
 
 Image Tint(const Image& oldimage, unsigned char r, unsigned char g, unsigned char b,

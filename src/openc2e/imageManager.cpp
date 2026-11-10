@@ -18,6 +18,8 @@
  */
 
 #include "imageManager.h"
+#include <cmath>
+#include <map>
 
 #include "Engine.h"
 #include "PathResolver.h"
@@ -285,6 +287,19 @@ std::shared_ptr<creaturesImage> imageManager::stipple(const std::shared_ptr<crea
 	img->images.resize(oldimage->images.size());
 	for (size_t i = 0; i < img->images.size(); ++i)
 		img->images[i] = ImageUtils::Stipple(oldimage->images[i]);
+	return img;
+}
+
+std::shared_ptr<creaturesImage> imageManager::scaled(const std::shared_ptr<creaturesImage>& oldimage, float k) {
+	static std::map<std::pair<std::string, int>, std::weak_ptr<creaturesImage>> cache;
+	auto key = std::make_pair(oldimage->getName(), (int)std::lround(k * 1000));
+	if (auto hit = cache[key].lock())
+		return hit;
+	auto img = std::make_shared<creaturesImage>(oldimage->getName());
+	img->images.resize(oldimage->images.size());
+	for (size_t i = 0; i < img->images.size(); ++i)
+		img->images[i] = ImageUtils::Scale(oldimage->images[i], k);
+	cache[key] = img;
 	return img;
 }
 
