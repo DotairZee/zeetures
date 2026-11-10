@@ -19,6 +19,15 @@ std::string KitGivenName(Agent* a);
 // Kit ids: "health", "science", "breeders", "owners", "observation".
 bool IsC2KitAvailable(const char* id);
 void OpenC2Kit(const char* id);
+// opens a kit at one of its pages ("Registration", "Reproductive")
+void OpenC2KitAt(const char* id, const char* page);
+
+// Births, deaths and pregnancies as small notices on the right of the status
+// bar (in its horizontal row). Clicking one selects the creature, moves the
+// camera to it and opens the Owner's Kit (birth, death) or the Breeder's Kit
+// (pregnancy); right-click dismisses it. As many of the newest as fit in
+// room (pixels), the rest behind a "+N" that opens the life log.
+void DrawLifeNotices(float room);
 
 // Draws every open kit (call once a frame, C2 only).
 void DrawC2Kits();

@@ -185,6 +185,7 @@ void Creature::addGene(gene* g) {
 
 void Creature::ageCreature() {
 	if (stage >= senile) {
+		diedofoldage = true;
 		die();
 		return;
 	} //previously we just returned
@@ -221,8 +222,17 @@ void Creature::born() {
 
 	// TODO: life event?
 #ifndef _CREATURE_STANDALONE
-	world.history->getMoniker(world.history->findMoniker(genome)).wasBorn();
-	world.history->getMoniker(world.history->findMoniker(genome)).addEvent(3, "", ""); // born event, parents..
+	{
+		std::string mon = world.history->findMoniker(genome);
+		monikerData& m = world.history->getMoniker(mon);
+		m.wasBorn();
+		m.addEvent(3, "", ""); // born event, parents..
+		if (!world.history->quiet) { // a real birth, not a creature restored from a save
+			m.borntick = world.worldtickcount;
+			m.bornknown = true;
+			world.history->logLife(lifeLogEntry::birth, mon, (int)stage);
+		}
+	}
 #endif
 
 	tickage = true;
@@ -233,8 +243,18 @@ void Creature::die() {
 
 	// TODO: life event?
 #ifndef _CREATURE_STANDALONE
-	world.history->getMoniker(world.history->findMoniker(genome)).hasDied();
-	world.history->getMoniker(world.history->findMoniker(genome)).addEvent(7, "", ""); // died event
+	{
+		std::string mon = world.history->findMoniker(genome);
+		monikerData& m = world.history->getMoniker(mon);
+		m.hasDied();
+		m.addEvent(7, "", ""); // died event
+		if (!m.died) {
+			m.died = true;
+			m.diedtick = world.worldtickcount;
+			m.diedstage = (int)stage;
+			world.history->logLife(lifeLogEntry::death, mon, (int)stage, diedofoldage);
+		}
+	}
 #endif
 	// TODO: disable brain/biochemistry updates
 
@@ -424,6 +444,8 @@ void c1Creature::tick() {
 			ageCreature();
 	}
 
+	watchPregnancy();
+
 	if (dead != 0)
 		die();
 
@@ -521,6 +543,8 @@ void c2Creature::tick() {
 	if (watchChem)
 		watchChemistry();
 
+	watchPregnancy();
+
 	if (dead != 0)
 		die();
 
@@ -599,6 +623,21 @@ void c2eCreature::tick() {
 		die();
 
 	Creature::tick();
+}
+
+void oldCreature::watchPregnancy() {
+	bool now = pregnant != 0;
+	if (pregnancywatched && now && !waspregnant) {
+#ifndef _CREATURE_STANDALONE
+		std::string mon = world.history->findMoniker(genome);
+		if (world.history->hasMoniker(mon)) {
+			world.history->getMoniker(mon).addEvent(8, "", ""); // became pregnant
+			world.history->logLife(lifeLogEntry::pregnancy, mon, (int)stage);
+		}
+#endif
+	}
+	waspregnant = now;
+	pregnancywatched = true;
 }
 
 void oldCreature::addGene(gene* g) {

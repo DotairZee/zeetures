@@ -11,6 +11,7 @@
 #include "creatures/CreatureAgent.h"
 #include "creatures/oldCreature.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <imgui.h>
@@ -160,10 +161,17 @@ void DrawC2StatusBar() {
 		// minimized kits, as chips that bring them back
 		Openc2eImgui::DrawC2KitChips();
 
+		// births, deaths and pregnancies (newest on the right), then health:
+		// the notices get the room the left side and the health leave
 		static int s_last_statusbar_rightside_width = 0;
-		ImGui::SetCursorPosX(ImGui::GetWindowContentRegionMax().x - s_last_statusbar_rightside_width);
+		static float s_last_health_width = 0;
+		const float left_end = ImGui::GetCursorPosX();
+		ImGui::SetCursorPosX(std::max(left_end, ImGui::GetWindowContentRegionMax().x - s_last_statusbar_rightside_width));
 		const int start_x = ImGui::GetCursorPosX();
 
+		Openc2eImgui::DrawLifeNotices(ImGui::GetWindowContentRegionMax().x - left_end - s_last_health_width - ImGui::GetStyle().ItemSpacing.x * 2);
+
+		const float health_x = ImGui::GetCursorPosX();
 		ImGui::Text("Health:");
 		// TODO: norn health/drive/heartbeat
 		if (!world.selectedcreature) {
@@ -194,6 +202,7 @@ void DrawC2StatusBar() {
 		}
 
 		s_last_statusbar_rightside_width = ImGui::GetCursorPosX() - start_x;
+		s_last_health_width = ImGui::GetCursorPosX() - health_x;
 
 		s_last_c2statusbar_height = ImGui::GetWindowSize().y;
 		ImGui::End();

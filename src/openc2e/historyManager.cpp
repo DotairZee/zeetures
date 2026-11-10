@@ -253,3 +253,24 @@ void historyManager::delMoniker(std::string s) {
 }
 
 /* vim: set noet: */
+
+void historyManager::logLife(int kind, const std::string& mon, int stage, bool oldage) {
+	if (quiet || !hasMoniker(mon))
+		return;
+	monikerData& m = getMoniker(mon);
+	lifeLogEntry e;
+	e.kind = kind;
+	e.tick = world.worldtickcount;
+	e.moniker = mon;
+	e.name = m.name;
+	e.genus = m.genus ? m.genus : 1;
+	e.female = m.gender == 2;
+	if (CreatureAgent* c = dynamic_cast<CreatureAgent*>(m.owner.get()))
+		e.female = c->getCreature()->isFemale();
+	e.stage = stage;
+	e.age = world.worldtickcount >= m.borntick ? world.worldtickcount - m.borntick : 0;
+	e.oldage = oldage;
+	e.ageknown = m.bornknown;
+	lifelog.push_back(e);
+	notices.push_back(e);
+}

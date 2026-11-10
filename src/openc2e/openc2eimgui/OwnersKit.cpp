@@ -1,14 +1,17 @@
 // The Owner's Kit (Creatures 2): birth registration (a name, the birth
-// certificate), photographs and the family. C2's own art from the player's
+// certificate), photographs, the family and the life log of births, deaths
+// and pregnancies (also announced as notices on the status bar). C2's own art from the player's
 // Applet Data; our layout. Names, registration, birth times, photos and
 // notes are kept with the world (WorldSave, monikerData).
 
 #include "Agent.h"
+#include "C2Kits.h"
 #include "C2KitsInternal.h"
 #include "Camera.h"
 #include "Engine.h"
 #include "World.h"
 #include "common/backend/Backend.h"
+#include "creatures/CreatureAgent.h"
 #include "creatures/oldCreature.h"
 #include "fileformats/ImageUtils.h"
 #include "historyManager.h"
@@ -26,6 +29,11 @@ namespace fs = std::filesystem;
 namespace Openc2eImgui {
 
 static const ImU32 INK = IM_COL32(74, 46, 22, 255);
+static const char* s_stages[] = {"baby", "child", "adolescent", "youth", "adult", "old", "senile"};
+
+static const char* stageWord(int st) {
+	return st >= 0 && st < 7 ? s_stages[st] : "?";
+}
 
 // ---- Registration ------------------------------------------------------------------
 
@@ -69,12 +77,13 @@ static void RegistrationPage() {
 	std::string age = "age " + KitAgeText(KitAgeTicks(*m));
 	age = age.substr(0, age.find(" ("));		  // game time on the certificate
 	dl->AddText(p + ImVec2(34, 184), INK, age.c_str());
-	static const char* stages[] = {"baby", "child", "adolescent", "youth", "adult", "old", "senile"};
-	int st = (int)c->getStage();
-	std::string stage = fmt::format("life stage: {}", st >= 0 && st < 7 ? stages[st] : "?");
+	int st = m->died ? m->diedstage : (int)c->getStage();
+	std::string stage = fmt::format("life stage: {}", stageWord(st));
 	dl->AddText(p + ImVec2(34, 202), INK, stage.c_str());
 	std::string mon = "moniker " + world.history->findMoniker(c->getGenome());
 	dl->AddText(p + ImVec2(34, 220), IM_COL32(74, 46, 22, 150), mon.c_str());
+	if (m->died) // the details go below (the seal leaves no room)
+		dl->AddText(p + ImVec2(34, 238), IM_COL32(120, 20, 20, 255), "DECEASED");
 
 	if (m->registered) {
 		dl->AddText(p + ImVec2(34, 262), IM_COL32(160, 20, 20, 255), "REGISTERED");
@@ -86,6 +95,14 @@ static void RegistrationPage() {
 			ImGui::SetTooltip("Seal the certificate. The name can still be changed.");
 	}
 	ImGui::SetCursorScreenPos(p + ImVec2(0, cert ? cert.height + 4 : 324));
+	if (m->died) {
+		std::string age = KitAgeText(KitAgeTicks(*m));
+		age = age.substr(0, age.find(" ("));
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + (cert ? cert.width : 320));
+		ImGui::TextColored(ImVec4(0.85f, 0.45f, 0.45f, 1), "Died %s, aged %s%s, a%s %s.", KitDateText(m->diedtick).c_str(), m->bornknown ? "" : "at least ",
+			age.c_str(), st == 4 || st == 5 ? "n" : "", stageWord(st));
+		ImGui::PopTextWrapPos();
+	}
 
 	// notes
 	static char notes[1024];
@@ -148,7 +165,7 @@ static std::string takePhoto(Agent* a, monikerData& m) {
 		target = get_backend()->newRenderTarget(PHOTO_W, PHOTO_H);
 	float cx = a->x + a->getWidth() / 2.0f, cy = a->y + a->getHeight() / 2.0f;
 	cam->moveToGlobal((int)cx - PHOTO_W / 2, (int)cy - PHOTO_H / 2 - 10, jump);
-	world.drawWorld(cam.get(), target.get(), true);
+	world.drawWorld(cam.get(), target.get(), true, a); // no other creature in the picture
 	fs::path dir = engine.currentworlddir / "photos";
 	std::error_code ec;
 	fs::create_directories(dir, ec);
@@ -227,7 +244,7 @@ static void PhotosPage() {
 	}
 	ImGui::SetCursorScreenPos(p + ImVec2(0, std::max(1, rows) * rowH + 4));
 	if (m->photos.empty())
-		ImGui::TextDisabled("No photos yet. The camera frames the creature where it stands.");
+		ImGui::TextDisabled("No photos yet. The camera frames the creature where it stands, with no other creature in the way.");
 
 	// the chosen photo, full size
 	if (big >= 0 && big < (int)m->photos.size()) {
@@ -316,6 +333,192 @@ static void FamilyPage() {
 	ImGui::TextDisabled("Breeding is next on the list; family lines will fill in as creatures have young.");
 }
 
+// ---- Life log, and the notices on the status bar ------------------------------------
+
+static const char* kindWord(int kind) {
+	switch (kind) {
+		case lifeLogEntry::birth: return "Born";
+		case lifeLogEntry::death: return "Died";
+		default: return "Pregnant";
+	}
+}
+
+static const char* genusWord(int genus) {
+	switch (genus) {
+		case 2: return "grendel";
+		case 3: return "ettin";
+		default: return "norn";
+	}
+}
+
+// its name now (it may have been named since), else then, else "Unnamed norn"
+static std::string entryName(const lifeLogEntry& e) {
+	if (world.history->hasMoniker(e.moniker) && !world.history->getMoniker(e.moniker).name.empty())
+		return world.history->getMoniker(e.moniker).name;
+	if (!e.name.empty())
+		return e.name;
+	return fmt::format("Unnamed {}", genusWord(e.genus));
+}
+
+static std::string entryDetail(const lifeLogEntry& e) {
+	std::string who = fmt::format("{} {}", e.female ? "female" : "male", genusWord(e.genus));
+	switch (e.kind) {
+		case lifeLogEntry::birth: return "a " + who;
+		case lifeLogEntry::death: {
+			std::string age = KitAgeText(e.age);
+			age = age.substr(0, age.find(" ("));
+			return fmt::format("{}, aged {}{}, {}{}", who, e.ageknown ? "" : "at least ", age, stageWord(e.stage), e.oldage ? ": old age" : "");
+		}
+		default: return fmt::format("{}, {}", who, stageWord(e.stage));
+	}
+}
+
+// the creature's body, if it is still in the world
+static std::shared_ptr<Agent> entryBody(const lifeLogEntry& e) {
+	if (!world.history->hasMoniker(e.moniker))
+		return nullptr;
+	Agent* a = world.history->getMoniker(e.moniker).owner.get();
+	if (!a || a->isDying() || !dynamic_cast<CreatureAgent*>(a))
+		return nullptr;
+	return AgentRef(a).lock();
+}
+
+static void followEntry(const lifeLogEntry& e) {
+	auto body = entryBody(e);
+	if (!body) { // gone: its line in the log is all there is
+		OpenC2KitAt("owners", "Life log");
+		return;
+	}
+	KitGoTo(body);
+	if (e.kind == lifeLogEntry::pregnancy)
+		OpenC2KitAt("breeders", "Reproductive");
+	else
+		OpenC2KitAt("owners", "Registration");
+}
+
+static void LifeLogPage() {
+	auto& log = world.history->lifelog;
+	if (log.empty()) {
+		ImGui::TextDisabled("No births, deaths or pregnancies yet. They are logged here as they happen.");
+		return;
+	}
+	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
+	if (ImGui::BeginTable("log", 5, flags, ImVec2(800, 300))) {
+		ImGui::TableSetupScrollFreeze(0, 1);
+		ImGui::TableSetupColumn("When", 0, 180);
+		ImGui::TableSetupColumn("", 0, 60);
+		ImGui::TableSetupColumn("Who", 0, 120);
+		ImGui::TableSetupColumn("Details", ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableSetupColumn("", 0, 30);
+		ImGui::TableHeadersRow();
+		for (int i = (int)log.size() - 1; i >= 0; i--) {
+			auto& e = log[i];
+			ImGui::PushID(i);
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::TextUnformatted(KitDateText(e.tick).c_str());
+			ImGui::TableNextColumn();
+			ImGui::TextUnformatted(kindWord(e.kind));
+			ImGui::TableNextColumn();
+			ImGui::TextUnformatted(entryName(e).c_str());
+			ImGui::TableNextColumn();
+			ImGui::TextUnformatted(entryDetail(e).c_str());
+			ImGui::TableNextColumn();
+			if (entryBody(e) && ImGui::SmallButton("Go"))
+				followEntry(e);
+			ImGui::PopID();
+		}
+		ImGui::EndTable();
+	}
+}
+
+static std::vector<lifeLogEntry> s_notices; // shown on the status bar until clicked or dismissed
+
+void DrawLifeNotices(float room) {
+	if (engine.version != 2 || !world.history)
+		return;
+	static historyManager* seen = nullptr;
+	if (seen != world.history.get()) { // another world
+		seen = world.history.get();
+		s_notices.clear();
+	}
+	for (auto& e : world.history->notices)
+		s_notices.push_back(e);
+	world.history->notices.clear();
+	// developer aid: OPENC2E_TEST_NOTICES=1 announces one of each for the
+	// selected creature (not logged); =follow also follows the last one
+	static bool test = getenv("OPENC2E_TEST_NOTICES") != nullptr;
+	if (test && world.selectedcreature) {
+		test = false;
+		std::string mon = world.history->findMoniker(AgentRef(world.selectedcreature));
+		for (int k = 0; k < 3; k++) {
+			lifeLogEntry e;
+			e.kind = k;
+			e.tick = world.worldtickcount;
+			e.moniker = mon;
+			e.genus = world.selectedcreature->genus;
+			s_notices.push_back(e);
+		}
+		if (std::string(getenv("OPENC2E_TEST_NOTICES")) == "follow") // as if the pregnancy notice were clicked
+			followEntry(s_notices.back());
+	}
+	// OPENC2E_TEST_DEATH=1: the selected creature dies (logged and announced)
+	static bool testDeath = getenv("OPENC2E_TEST_DEATH") != nullptr;
+	if (testDeath && world.selectedcreature) {
+		testDeath = false;
+		if (auto* ca = dynamic_cast<CreatureAgent*>(world.selectedcreature.get()))
+			if (ca->getCreature()->isAlive())
+				ca->getCreature()->die();
+	}
+	if (s_notices.empty())
+		return;
+
+	// the newest that fit in the room (at most three), the rest behind "+N"
+	auto label = [](const lifeLogEntry& e, int i) { return fmt::format("{}: {}##notice{}", kindWord(e.kind), entryName(e), i); };
+	const ImGuiStyle& style = ImGui::GetStyle();
+	float used = ImGui::CalcTextSize("+99").x + style.FramePadding.x * 2 + style.ItemSpacing.x;
+	int first = (int)s_notices.size();
+	while (first > 0 && (int)s_notices.size() - first < 3) {
+		float w = ImGui::CalcTextSize(label(s_notices[first - 1], first - 1).c_str(), nullptr, true).x + style.FramePadding.x * 2 + style.ItemSpacing.x;
+		if (used + w > room && first < (int)s_notices.size())
+			break;
+		used += w;
+		first--;
+	}
+	if (first > 0) {
+		std::string more = fmt::format("+{}##morenotices", first);
+		if (ImGui::SmallButton(more.c_str())) {
+			s_notices.erase(s_notices.begin(), s_notices.begin() + first);
+			OpenC2KitAt("owners", "Life log");
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%d older notice%s: click to see the life log", first, first == 1 ? "" : "s");
+	}
+	int remove = -1;
+	for (int i = first; i < (int)s_notices.size(); i++) {
+		auto& e = s_notices[i];
+		ImVec4 col = e.kind == lifeLogEntry::birth ? ImVec4(0.20f, 0.52f, 0.25f, 1) : e.kind == lifeLogEntry::death ? ImVec4(0.30f, 0.30f, 0.36f, 1)
+																										  : ImVec4(0.70f, 0.30f, 0.50f, 1);
+		ImGui::PushStyleColor(ImGuiCol_Button, col);
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(col.x + 0.12f, col.y + 0.12f, col.z + 0.12f, 1));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(col.x + 0.2f, col.y + 0.2f, col.z + 0.2f, 1));
+		if (ImGui::SmallButton(label(e, i).c_str())) {
+			followEntry(e);
+			remove = i;
+		}
+		ImGui::PopStyleColor(3);
+		if (ImGui::IsItemHovered()) {
+			const char* kit = e.kind == lifeLogEntry::pregnancy ? "Breeder's" : "Owner's";
+			ImGui::SetTooltip("%s %s\n%s\nClick to go to it and open the %s Kit; right-click to dismiss.",
+				kindWord(e.kind), KitDateText(e.tick).c_str(), entryDetail(e).c_str(), kit);
+		}
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+			remove = i;
+	}
+	if (remove >= 0)
+		s_notices.erase(s_notices.begin() + remove);
+}
+
 void DrawOwnersKit() {
 	if (ImGui::BeginTabBar("pages")) {
 		if (KitTab("Registration")) {
@@ -328,6 +531,10 @@ void DrawOwnersKit() {
 		}
 		if (KitTab("Family")) {
 			FamilyPage();
+			ImGui::EndTabItem();
+		}
+		if (KitTab("Life log")) {
+			LifeLogPage();
 			ImGui::EndTabItem();
 		}
 		ImGui::EndTabBar();

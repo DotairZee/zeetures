@@ -46,6 +46,10 @@ class oldCreature : public Creature {
 	unsigned char muscleenergy;
 	unsigned char lifestageloci[7];
 	unsigned char fertile, receptive, pregnant;
+	// pregnancy starting (announced and logged); not on the first tick, when
+	// a creature restored from a save may already be pregnant
+	bool pregnancywatched = false, waspregnant = false;
+	void watchPregnancy();
 	unsigned char dead;
 	unsigned char involaction[8];
 	unsigned int involactionlatency[8];

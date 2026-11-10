@@ -130,6 +130,7 @@ static void KitsWriteAll(ImGuiContext*, ImGuiSettingsHandler* handler, ImGuiText
 }
 
 // developer aid: OPENC2E_OPEN_KITS="health,science" selects the first norn
+// (if none is selected)
 // and opens those kits (for headless snapshots; the kits' ini file is then
 // neither read nor written); OPENC2E_KIT_PAGE="Drives" picks a page
 static bool s_test_kits = false;
@@ -140,7 +141,7 @@ static void OpenTestKits() {
 		return;
 	s_test_kits = true;
 	for (auto& a : world.agents)
-		if (a && dynamic_cast<CreatureAgent*>(a.get()) && a->genus == 1) {
+		if (!world.selectedcreature && a && dynamic_cast<CreatureAgent*>(a.get()) && a->genus == 1) {
 			world.selectedcreature = a;
 			break;
 		}
@@ -153,10 +154,24 @@ static void OpenTestKits() {
 		}
 }
 
+static std::string s_want_page; // a page to turn to (OpenC2KitAt)
+static int s_want_frames = 0;
+
+void OpenC2KitAt(const char* id, const char* page) {
+	OpenC2Kit(id);
+	s_want_page = page ? page : "";
+	s_want_frames = 3;
+}
+
 bool KitTab(const char* label) {
 	const char* want = getenv("OPENC2E_KIT_PAGE");
 	static int frames = 0;
 	bool force = want && std::strcmp(want, label) == 0 && frames++ < 3;
+	if (!s_want_page.empty() && s_want_page == label) {
+		force = true;
+		if (--s_want_frames <= 0)
+			s_want_page.clear();
+	}
 	return ImGui::BeginTabItem(label, nullptr, force ? ImGuiTabItemFlags_SetSelected : 0);
 }
 
@@ -356,7 +371,8 @@ std::string KitCreatureName(Agent* a) {
 static constexpr unsigned int TICKS_PER_PART = 3600, PARTS_PER_DAY = 5, DAYS_PER_SEASON = 4, SEASONS_PER_YEAR = 4;
 
 unsigned int KitAgeTicks(monikerData& m) {
-	return world.worldtickcount >= m.borntick ? world.worldtickcount - m.borntick : 0;
+	unsigned int now = m.died ? m.diedtick : world.worldtickcount; // the dead age no more
+	return now >= m.borntick ? now - m.borntick : 0;
 }
 
 std::string KitAgeText(unsigned int ticks) {

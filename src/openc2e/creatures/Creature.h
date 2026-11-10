@@ -43,6 +43,7 @@ class Creature {
 
 	// state
 	bool alive, asleep, dreaming, tickage;
+	bool diedofoldage = false; // set as it dies at the end of its last life stage
 	bool zombie;
 
 	unsigned int ticks;

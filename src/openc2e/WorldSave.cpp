@@ -114,6 +114,11 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	// the calendar: world ticks, part of the day, day of the season, season,
 	// year (without this every session began again in spring of year 0)
 	out << "calendar " << world.worldtickcount << " " << world.timeofday << " " << world.dayofseason << " " << world.season << " " << world.year << "\n";
+	// the life log (Owner's Kit): kind, tick, genus, female, stage, age, age
+	// known, old age, moniker, then the name
+	for (auto& e : world.history->lifelog)
+		out << "life " << e.kind << " " << e.tick << " " << e.genus << " " << (e.female ? 1 : 0) << " " << e.stage << " " << e.age << " "
+			<< (e.ageknown ? 1 : 0) << " " << (e.oldage ? 1 : 0) << " " << (e.moniker.empty() ? "-" : e.moniker) << " " << escapeLine(e.name) << "\n";
 
 	int ncreatures = 0, neggs = 0;
 	for (auto& a : world.agents) {
@@ -307,8 +312,12 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 
 	for (int i = 0; i < s.stage; i++)
 		c->ageCreature(); // also updates genes and appearance for each stage
-	if (s.ageing)
+	if (s.ageing) {
+		bool wasquiet = world.history->quiet;
+		world.history->quiet = true; // not a new birth
 		c->born();
+		world.history->quiet = wasquiet;
+	}
 	c->restoreLifeCounters(s.ticks, s.age);
 	for (size_t i = 0; i < s.chemicals.size() && i < 256; i++)
 		c->setChemicalLevel((unsigned char)i, (unsigned char)s.chemicals[i]);
@@ -384,6 +393,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 
 	std::vector<SavedCreature> creatures;
 	std::vector<SavedEgg> eggs;
+	std::vector<lifeLogEntry> lifelog;
 	int camx = -1, camy = -1;
 	bool relays_saved = false;
 	SavedCreature* c = nullptr;
@@ -404,6 +414,16 @@ bool LoadWorldState(const fs::path& worlddir) {
 				world.dayofseason = dos % 4;
 				world.season = sea % 4;
 				world.year = yr;
+			}
+		} else if (key == "life") {
+			lifeLogEntry le;
+			int female = 0, ageknown = 1, oldage = 0;
+			if (l >> le.kind >> le.tick >> le.genus >> female >> le.stage >> le.age >> ageknown >> oldage >> le.moniker) {
+				le.female = female != 0;
+				le.ageknown = ageknown != 0;
+				le.oldage = oldage != 0;
+				le.name = unescapeLine(restOfLine(l));
+				lifelog.push_back(le);
 			}
 		} else if (key == "creature") {
 			creatures.emplace_back();
@@ -496,6 +516,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 	for (auto& a : remove)
 		a->kill();
 
+	world.history->lifelog = lifelog;
+	world.history->notices.clear();
 	for (auto& s : creatures) {
 		try {
 			restoreCreature(savedir, s, !relays_saved);

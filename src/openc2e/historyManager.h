@@ -77,6 +77,10 @@ class monikerData {
 	bool registered = false; // birth registered (Owner's Kit)
 	std::vector<std::string> photos; // pictures in the world folder's photos/
 	std::string notes;
+	// its death, if it has died (the dead are not saved; the life log keeps them)
+	bool died = false;
+	unsigned int diedtick = 0; // world tick count
+	int diedstage = -1;
 
 	void init(std::string, std::shared_ptr<genomeFile>);
 	historyevent& addEvent(unsigned int event, std::string moniker1 = "", std::string moniker2 = "");
@@ -88,11 +92,35 @@ class monikerData {
 	monikerstatus getStatus();
 };
 
+// Births, deaths and pregnancies, for the interface to announce (status-bar
+// notices) and the Owner's Kit to log. The log is kept with the world.
+struct lifeLogEntry {
+	enum { birth = 0,
+		death = 1,
+		pregnancy = 2 };
+	int kind = birth;
+	unsigned int tick = 0; // world tick count
+	std::string moniker;
+	std::string name; // its name at the time, or empty
+	int genus = 1; // 1 norn, 2 grendel, 3 ettin
+	bool female = false;
+	int stage = 0; // life stage at the time
+	unsigned int age = 0; // world ticks lived, for a death
+	bool ageknown = true; // false: counted from when this world first saw it
+	bool oldage = false; // died at the end of its senile stage
+};
+
 class historyManager {
   private:
 	std::map<std::string, monikerData> monikers;
 
   public:
+	std::vector<lifeLogEntry> lifelog;
+	std::vector<lifeLogEntry> notices; // not yet shown by the interface (it takes them)
+	bool quiet = false; // restoring creatures from a save: nothing is new
+	// records a birth, death or pregnancy (unless quiet)
+	void logLife(int kind, const std::string& moniker, int stage, bool oldage = false);
+
 	std::string newMoniker(std::shared_ptr<genomeFile>);
 	bool hasMoniker(std::string);
 	monikerData& getMoniker(std::string);
