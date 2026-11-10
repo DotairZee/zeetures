@@ -19,6 +19,8 @@
 
 #include "caosVM.h"
 
+#include "Agent.h"
+
 #include "World.h"
 #include "bytecode.h"
 #include "caosScript.h"
@@ -261,15 +263,24 @@ inline void caosVM::runOpCore(script* s, caosOp op) {
 			break;
 		}
 		case CAOS_ENUMPOP: {
-			VM_PARAM_VALUE(v);
-			if (v.isEmpty())
+			// the next agent of the loop, skipping any that died since the
+			// loop began (scripts kill and eat things inside ENUM loops; the
+			// body used to run with a dead TARG and stop at its first use)
+			for (;;) {
+				VM_PARAM_VALUE(v);
+				if (v.isEmpty())
+					break;
+				if (!v.hasAgent()) {
+					dumpStack(this);
+					throw caosException(std::string("Stack item type mismatch: ") + v.dump());
+				}
+				const AgentRef& r = v.getAgentRef();
+				if (!r || r->isDying())
+					continue;
+				targ = r;
+				safeJMP(op.argument);
 				break;
-			if (!v.hasAgent()) {
-				dumpStack(this);
-				throw caosException(std::string("Stack item type mismatch: ") + v.dump());
 			}
-			targ = v.getAgentRef();
-			safeJMP(op.argument);
 			break;
 		}
 		default:
