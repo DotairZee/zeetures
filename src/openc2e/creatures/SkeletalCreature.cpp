@@ -792,7 +792,11 @@ void SkeletalCreature::snapDownFoot() {
 
 	if (engine.version > 1) {
 		// TODO: hilar hack: enable gravity if we're snapping by much
-		if (newroomchosen && abs(y - (newy - (footy - y))) > 20) {
+		// (down only: a step up into the next room, up to the 40 px the door
+		// rule above allows, is taken; as a fall, a creature at the top of the
+		// boardwalk pool's bank fell back each time from the 33 px step onto
+		// the planks, owner 2026-11-10)
+		if (newroomchosen && (newy - (footy - y)) - y > 20) {
 			falling = true;
 			return;
 		}
