@@ -18,6 +18,8 @@
  */
 
 #include "Engine.h"
+
+#include <climits>
 #include "creatures/CreatureAgent.h"
 #include "creatures/Creature.h"
 #include "CobManager.h"
@@ -562,16 +564,27 @@ bool Engine::tick() {
 
 	static size_t snapshot_index = 0;
 	static unsigned int snapshot_wait = 0;
-	if (snapshot_index < snapshots.size() && ++snapshot_wait % 40 == 0) {
+	// OPENC2E_SNAPSHOT_EVERY=n takes the steps n frames apart (default 40),
+	// for sequences of a creature moving; OPENC2E_SNAPSHOT_START=n waits n
+	// frames before the first
+	static const unsigned int snap_every = getenv("OPENC2E_SNAPSHOT_EVERY") ? std::max(1, atoi(getenv("OPENC2E_SNAPSHOT_EVERY"))) : 40;
+	static unsigned int snap_start = getenv("OPENC2E_SNAPSHOT_START") ? atoi(getenv("OPENC2E_SNAPSHOT_START")) : 0;
+	if (snap_start > 0 && snapshot_index < snapshots.size()) {
+		snap_start--;
+	} else if (snapshot_index < snapshots.size() && ++snapshot_wait % snap_every == 0) {
 		if (getenv("OPENC2E_SNAPSHOTS_PAUSED"))
 			world.paused = true; // freeze the world so captures differ only by camera
 		auto& [sx, sy, sfile] = snapshots[snapshot_index];
 		// OPENC2E_SNAPSHOT_ZOOM=z draws the snapshots at that zoom
 		if (const char* z = getenv("OPENC2E_SNAPSHOT_ZOOM"))
 			engine.zoom = (float)atof(z);
-		if (snapshot_wait % 80 == 40) {
+		// move the camera first whenever this snapshot is somewhere new
+		static int camx = INT_MIN, camy = INT_MIN;
+		if (sx != camx || sy != camy) {
 			camera->trackAgent(AgentRef(), 0, 0, brittle, none);
 			camera->moveToGlobal(sx, sy, jump);
+			camx = sx;
+			camy = sy;
 		} else {
 			get_backend()->requestScreenshot(sfile);
 			dumpAgents();
