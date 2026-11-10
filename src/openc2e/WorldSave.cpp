@@ -105,8 +105,9 @@ static std::string escapeLine(const std::string& t);
 // their pictures and animations, hotspots and their functions, a vehicle's
 // cabin, physics, pickup points, and object variables, including ones that
 // point to other objects (another saved object, or one from the world file,
-// found again by kind and place). Their COB's scripts are installed again at
-// load (world.injectedCobs), since scripts are not saved. Only plain C2
+// found again by kind and place). Their COB's scripts are saved with the
+// world too (world.injectedScripts) and installed again at load; saves made
+// before that reinstall them from the COB file. Only plain C2
 // objects, vehicles and compound objects are saved this way.
 static bool isInjected(Agent* a) {
 	if (engine.version != 2 || a->injectedFrom.empty() || isEgg(a) || isKept(a))
@@ -127,8 +128,13 @@ static void savePart(std::ostream& out, CompoundPart* cp) {
 }
 
 static void saveInjected(std::ostream& out, int& count) {
-	for (auto& name : world.injectedCobs)
+	for (auto& name : world.injectedCobs) {
 		out << "injected " << escapeLine(name) << "\n";
+		// and its scripts, so it works without its COB file
+		if (auto sc = world.injectedScripts.find(name); sc != world.injectedScripts.end())
+			for (auto& script : sc->second)
+				out << "injscript " << escapeLine(name) << "\t" << escapeLine(script) << "\n";
+	}
 	std::map<Agent*, int> ids;
 	for (auto& a : world.agents)
 		if (a && !a->isDying() && isInjected(a.get())) {
@@ -767,6 +773,7 @@ static void restoreEgg(const SavedEgg& e) {
 
 bool LoadWorldState(const fs::path& worlddir) {
 	world.injectedCobs.clear();
+	world.injectedScripts.clear();
 	if (!HasSavedState(worlddir))
 		return false;
 	fs::path savedir = worlddir / "save";
@@ -827,6 +834,11 @@ bool LoadWorldState(const fs::path& worlddir) {
 			l >> namesgiven;
 		} else if (key == "injected" && !c && !e && !io) {
 			injectedCobs.push_back(unescapeLine(restOfLine(l)));
+		} else if (key == "injscript" && !c && !e && !io) {
+			std::string rest = restOfLine(l);
+			size_t tab = rest.find('\t');
+			if (tab != std::string::npos)
+				world.injectedScripts[unescapeLine(rest.substr(0, tab))].push_back(unescapeLine(rest.substr(tab + 1)));
 		} else if (key == "creature" || key == "record") {
 			auto& list = key == "creature" ? creatures : records;
 			list.emplace_back();

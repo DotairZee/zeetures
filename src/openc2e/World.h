@@ -94,6 +94,9 @@ class World {
 	// C2: Agent Injector objects added by hand to this world (COB agent
 	// names): their scripts are installed again when the world loads
 	std::vector<std::string> injectedCobs;
+	// their scripts (one CAOS script per entry), saved with the world so the
+	// objects keep working without the COB file (owner, 2026-11-10)
+	std::map<std::string, std::vector<std::string>> injectedScripts;
 
 	// C1/C2 favorite places (camera bookmarks) from the world file; six slots,
 	// unused ones have empty names

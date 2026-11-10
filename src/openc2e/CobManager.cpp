@@ -97,6 +97,7 @@ Image CobManager::getPicture(const CobFileInfo& info) {
 // the CAOS for a C2 agent block: its scripts, then (withInstall) its install
 // script; images and sounds it needs are written to the user data folder
 static std::string c2AgentCaos(const std::filesystem::path& filename, const std::string& name, bool withInstall);
+static std::vector<std::string> c2AgentScripts(const std::filesystem::path& filename, const std::string& name);
 
 void CobManager::inject(const CobFileInfo& info, bool byHand) {
 	std::string idata;
@@ -130,6 +131,7 @@ void CobManager::inject(const CobFileInfo& info, bool byHand) {
 				a->injectedFrom = info.name;
 		if (std::find(world.injectedCobs.begin(), world.injectedCobs.end(), info.name) == world.injectedCobs.end())
 			world.injectedCobs.push_back(info.name);
+		world.injectedScripts[info.name] = c2AgentScripts(info.filename, info.name);
 	}
 }
 
@@ -190,7 +192,31 @@ static std::string c2AgentCaos(const std::filesystem::path& filename, const std:
 	return idata;
 }
 
+// the scripts of a C2 COB agent, one per entry (no install script)
+static std::vector<std::string> c2AgentScripts(const std::filesystem::path& filename, const std::string& name) {
+	c2cobfile cobfile(filename);
+	auto block = find_if(cobfile.blocks, [&](auto& b) {
+		return b->type == "agnt" && cobAgentBlock(b).name == name;
+	});
+	if (!block)
+		return {};
+	cobAgentBlock a(*block);
+	return a.scripts;
+}
+
 bool CobManager::reinstallScripts(const std::string& agentname, std::string& error) {
+	// the copy saved with the world first: the COB file may be gone
+	if (auto saved = world.injectedScripts.find(agentname); saved != world.injectedScripts.end() && !saved->second.empty()) {
+		std::string idata;
+		for (auto& s : saved->second)
+			idata += s + "\n";
+		std::string result = engine.executeNetwork(idata);
+		if (!result.empty()) {
+			error = result;
+			return false;
+		}
+		return true;
+	}
 	CobManager cobs;
 	cobs.update();
 	auto it = std::find_if(cobs.objects.begin(), cobs.objects.end(), [&](auto& o) { return o.name == agentname; });
@@ -204,6 +230,7 @@ bool CobManager::reinstallScripts(const std::string& agentname, std::string& err
 			error = result;
 			return false;
 		}
+		world.injectedScripts[agentname] = c2AgentScripts(it->filename, agentname);
 	} catch (std::exception& e) {
 		error = e.what();
 		return false;
