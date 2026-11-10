@@ -44,7 +44,9 @@ class Vehicle : public CompoundAgent {
 		cabinbottom = b;
 	}
 	void setCapacity(unsigned int c) { capacity = c; }
+	unsigned int getCapacity() { return capacity; }
 	unsigned int getBump() { return bump; }
+	void setBump(unsigned int b) { bump = b; }
 
 	std::vector<AgentRef> passengers;
 

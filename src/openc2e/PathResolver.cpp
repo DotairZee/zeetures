@@ -130,14 +130,17 @@ static fs::path findFile(FileDirectory type, fs::path name) {
 static std::vector<fs::path> findByWildcard(FileDirectory type, fs::path wild) {
 	std::vector<fs::path> results;
 	// TODO: check user directory before or after data directories?
+	// (the subfolder is added for every data directory: this used to strip it
+	// from the pattern after the first, so files in the user data folder's
+	// Objects folder were never found)
+	const fs::path subdir = wild.parent_path();
+	const std::string pattern = wild.filename().string();
 	for (auto d : data_directories) {
 		auto dirname = getDirectory(d, type);
-		if (!wild.parent_path().empty()) {
-			dirname /= wild.parent_path();
-			wild = wild.filename().string();
-		}
+		if (!subdir.empty())
+			dirname /= subdir;
 		for (const auto& entry : case_insensitive_filesystem::directory_iterator(dirname)) {
-			if (wildcard_match_ignore_case(wild.string(), entry.lexically_relative(dirname).string())) {
+			if (wildcard_match_ignore_case(pattern, entry.lexically_relative(dirname).string())) {
 				results.push_back(entry);
 			}
 		}

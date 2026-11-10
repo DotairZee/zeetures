@@ -218,6 +218,10 @@ class Agent : public std::enable_shared_from_this<Agent> {
 	int actv = 0;
 	int thrt = 0;
 	int size = 0;
+	// the Agent Injector object (its COB agent name) this was added by hand
+	// from, or that made the agent which made this one: such objects are
+	// saved with the world (WorldSave). Empty for everything else.
+	std::string injectedFrom;
 
 	// drawing
 	bool draw_mirrored = false;
@@ -258,6 +262,9 @@ class Agent : public std::enable_shared_from_this<Agent> {
 		tickssincelasttimer = 0;
 		timerrate = r;
 	}
+	// for saving: where the timer is between ticks
+	unsigned int getTimerPhase() { return tickssincelasttimer; }
+	void setTimerPhase(unsigned int t) { tickssincelasttimer = t; }
 
 	virtual int handleClick(float, float);
 

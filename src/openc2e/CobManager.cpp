@@ -1,5 +1,6 @@
 #include "CobManager.h"
 
+#include "Agent.h"
 #include "Engine.h"
 #include "PathResolver.h"
 #include "World.h"
@@ -16,6 +17,7 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <set>
 #include <fmt/format.h>
 
 namespace fs = std::filesystem;
@@ -92,7 +94,11 @@ Image CobManager::getPicture(const CobFileInfo& info) {
 	return {};
 }
 
-void CobManager::inject(const CobFileInfo& info) {
+// the CAOS for a C2 agent block: its scripts, then (withInstall) its install
+// script; images and sounds it needs are written to the user data folder
+static std::string c2AgentCaos(const std::filesystem::path& filename, const std::string& name, bool withInstall);
+
+void CobManager::inject(const CobFileInfo& info, bool byHand) {
 	std::string idata;
 	if (engine.version == 1) {
 		c1cobfile cobfile = read_c1cobfile(info.filename);
@@ -103,67 +109,109 @@ void CobManager::inject(const CobFileInfo& info) {
 			idata += "iscr," + s + "\n";
 		}
 	} else if (engine.version == 2) {
-		c2cobfile cobfile(info.filename);
-		auto block = find_if(cobfile.blocks, [&](auto& b) {
-			return b->type == "agnt" && cobAgentBlock(b).name == info.name;
-		});
-		if (!block) {
-			throw Exception(fmt::format("Couldn't find agent {}", info.name));
-		}
-		cobAgentBlock a(*block);
-
-		// dependencies
-		assert(a.deptypes.size() == a.depnames.size());
-		for (size_t i = 0; i < a.deptypes.size(); i++) {
-			int deptype = a.deptypes[i];
-			std::string depname = a.depnames[i];
-
-			fs::path resourcedir;
-			if (deptype == 0) {
-				if (!findImageFile(depname).empty())
-					continue; // TODO: update file if necessary?
-			} else if (deptype == 1) {
-				if (!findSoundFile(depname).empty())
-					continue; // TODO: update file if necessary?
-			} else {
-				throw Exception("Unknown dependency type " + std::to_string(deptype));
-			}
-
-			auto depBlock = find_if(cobfile.blocks, [&](auto& b) {
-				return b->type == "file" && cobFileBlock(b).filetype == deptype && cobFileBlock(b).filename == depname;
-			});
-			if (!depBlock) {
-				throw Exception(fmt::format("Couldn't find dependency {} (type {})", depname, deptype));
-			}
-			cobFileBlock f(*depBlock);
-
-			FileWriter output = [&] {
-				if (deptype == 0) {
-					return createUserImageFile(depname);
-				} else if (deptype == 1) {
-					return createUserSoundFile(depname);
-				} else {
-					throw Exception("Unknown dependency type " + std::to_string(deptype));
-				}
-			}();
-
-			output.write((char*)f.getFileContents(), f.filesize);
-		}
-
-		for (auto s : a.scripts) {
-			idata += s + "\n";
-		}
-		idata += "iscr," + a.installscript + "\n";
+		idata = c2AgentCaos(info.filename, info.name, true);
 	}
+
+	// by hand: the objects the install script makes are marked as injected
+	// (and so, through NEW:, is anything they make later)
+	std::set<Agent*> before;
+	if (byHand)
+		for (auto& a : world.agents)
+			before.insert(a.get());
 
 	// idata += "rscr\n";
 	std::string result = engine.executeNetwork(idata);
 	if (result.size()) {
 		fmt::print("warning: injection returned data (error?): {}\n", result);
 	}
+	if (byHand && engine.version == 2) {
+		for (auto& a : world.agents)
+			if (a && !before.count(a.get()) && a->injectedFrom.empty())
+				a->injectedFrom = info.name;
+		if (std::find(world.injectedCobs.begin(), world.injectedCobs.end(), info.name) == world.injectedCobs.end())
+			world.injectedCobs.push_back(info.name);
+	}
 }
 
-void CobManager::remove(const CobFileInfo& info) {
+static std::string c2AgentCaos(const std::filesystem::path& filename, const std::string& name, bool withInstall) {
+	std::string idata;
+	c2cobfile cobfile(filename);
+	auto block = find_if(cobfile.blocks, [&](auto& b) {
+		return b->type == "agnt" && cobAgentBlock(b).name == name;
+	});
+	if (!block) {
+		throw Exception(fmt::format("Couldn't find agent {}", name));
+	}
+	cobAgentBlock a(*block);
+
+	// dependencies
+	assert(a.deptypes.size() == a.depnames.size());
+	for (size_t i = 0; i < a.deptypes.size(); i++) {
+		int deptype = a.deptypes[i];
+		std::string depname = a.depnames[i];
+
+		fs::path resourcedir;
+		if (deptype == 0) {
+			if (!findImageFile(depname).empty())
+				continue; // TODO: update file if necessary?
+		} else if (deptype == 1) {
+			if (!findSoundFile(depname).empty())
+				continue; // TODO: update file if necessary?
+		} else {
+			throw Exception("Unknown dependency type " + std::to_string(deptype));
+		}
+
+		auto depBlock = find_if(cobfile.blocks, [&](auto& b) {
+			return b->type == "file" && cobFileBlock(b).filetype == deptype && cobFileBlock(b).filename == depname;
+		});
+		if (!depBlock) {
+			throw Exception(fmt::format("Couldn't find dependency {} (type {})", depname, deptype));
+		}
+		cobFileBlock f(*depBlock);
+
+		FileWriter output = [&] {
+			if (deptype == 0) {
+				return createUserImageFile(depname);
+			} else if (deptype == 1) {
+				return createUserSoundFile(depname);
+			} else {
+				throw Exception("Unknown dependency type " + std::to_string(deptype));
+			}
+		}();
+
+		output.write((char*)f.getFileContents(), f.filesize);
+	}
+
+	for (auto s : a.scripts) {
+		idata += s + "\n";
+	}
+	if (withInstall)
+		idata += "iscr," + a.installscript + "\n";
+	return idata;
+}
+
+bool CobManager::reinstallScripts(const std::string& agentname, std::string& error) {
+	CobManager cobs;
+	cobs.update();
+	auto it = std::find_if(cobs.objects.begin(), cobs.objects.end(), [&](auto& o) { return o.name == agentname; });
+	if (it == cobs.objects.end()) {
+		error = "no COB has it";
+		return false;
+	}
+	try {
+		std::string result = engine.executeNetwork(c2AgentCaos(it->filename, agentname, false));
+		if (!result.empty()) {
+			error = result;
+			return false;
+		}
+	} catch (std::exception& e) {
+		error = e.what();
+		return false;
+	}
+	return true;
+}
+
+void CobManager::remove(const CobFileInfo& info, bool byHand) {
 	std::string rdata;
 	if (engine.version == 1) {
 		auto rcbpath = findCobFile(with_extension(info.filename.filename(), "rcb"));
@@ -189,5 +237,10 @@ void CobManager::remove(const CobFileInfo& info) {
 	std::string result = engine.executeNetwork(rdata);
 	if (result.size()) {
 		fmt::print("warning: removal returned data (error?): {}\n", result);
+	}
+	// removed: its scripts are no longer installed when the world loads
+	if (byHand) {
+		auto& list = world.injectedCobs;
+		list.erase(std::remove(list.begin(), list.end(), info.name), list.end());
 	}
 }

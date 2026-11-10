@@ -201,6 +201,13 @@ void c_STAR(caosVM* vm) {
 	}
 }
 
+// an object made by a hand-injected one is saved with the world too
+// (WorldSave): it carries the same Agent Injector name
+static void inheritInjected(caosVM* vm, Agent* a) {
+	if (vm->owner && !vm->owner->injectedFrom.empty())
+		a->injectedFrom = vm->owner->injectedFrom;
+}
+
 /**
  NEW: SIMP (command) family (integer) genus (integer) species (integer) sprite_file (string) image_count (integer) first_image (integer) plane (integer)
  %status maybe
@@ -247,6 +254,7 @@ void c_NEW_SIMP_c2(caosVM* vm) {
 	// TODO: should we init with 0/0/0 or with a different constructor?
 	SimpleAgent* a = new SimpleAgent(0, 0, 0, plane, sprite_file, first_image, image_count);
 	a->finishInit();
+	inheritInjected(vm, a);
 	vm->setTarg(a);
 	vm->part = 0; // TODO: correct?
 }
@@ -294,6 +302,7 @@ void c_NEW_COMP_c1(caosVM* vm) {
 	// TODO: what does clone do?
 	CompoundAgent* a = new CompoundAgent(sprite_file, first_image, image_count);
 	a->finishInit();
+	inheritInjected(vm, a);
 	vm->setTarg(a);
 	// TODO: should part be set here?
 }
@@ -339,6 +348,7 @@ void c_NEW_VHCL_c1(caosVM* vm) {
 
 	Vehicle* a = new Vehicle(sprite_file, first_image, image_count);
 	a->finishInit();
+	inheritInjected(vm, a);
 	vm->setTarg(a);
 	// TODO: should part be set here?
 }

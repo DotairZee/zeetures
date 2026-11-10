@@ -1470,8 +1470,9 @@ bool Engine::initialSetup() {
 
 	// C2: objects built into every world (owner, 2026-11-09): the agents
 	// named in the Additions folder's builtin-cobs.txt are injected from the
-	// player's own COB files at each load (injected objects are not saved,
-	// so, like the additions below, they are made anew each time), before
+	// player's own COB files at each load (only objects added by hand from
+	// the Agent Injector are saved with the world, so, like the additions
+	// below, these are made anew each time), before
 	// the additions, which may then adjust them. A COB the player does not
 	// have is skipped.
 	if (version == 2) {

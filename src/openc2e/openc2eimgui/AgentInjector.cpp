@@ -219,6 +219,30 @@ void DrawAgentInjector() {
 			s_agent_injector_open = true;
 		}
 	}
+	// developer aid: OPENC2E_TEST_INJECT="Name;Name" adds those objects by
+	// hand once the world is running (for testing that they are saved)
+	static bool testInject = getenv("OPENC2E_TEST_INJECT") != nullptr;
+	if (testInject && world.tickcount > 5) {
+		testInject = false;
+		CobManager cobs;
+		cobs.update();
+		std::string list = getenv("OPENC2E_TEST_INJECT");
+		size_t start = 0;
+		while (start < list.size()) {
+			size_t end = list.find(';', start);
+			if (end == std::string::npos)
+				end = list.size();
+			std::string name = list.substr(start, end - start);
+			auto it = std::find_if(cobs.objects.begin(), cobs.objects.end(), [&](auto& o) { return o.name == name; });
+			if (it == cobs.objects.end())
+				fmt::print("* Test inject: no object \"{}\"\n", name);
+			else {
+				cobs.inject(*it, true);
+				fmt::print("* Test inject: added \"{}\"\n", name);
+			}
+			start = end + 1;
+		}
+	}
 	if (ImGuiUtils::BeginWindow("Agent Injector", &s_agent_injector_open)) {
 		if (!s_read_agents) {
 			s_object_injector.update();
@@ -246,12 +270,12 @@ void DrawAgentInjector() {
 		DrawAgentPreview(s_cob_texture);
 
 		if (ImGui::Button("Add Object") && s_object_selected_index < s_object_injector.objects.size()) {
-			s_object_injector.inject(s_object_injector.objects[s_object_selected_index]);
+			s_object_injector.inject(s_object_injector.objects[s_object_selected_index], true);
 		}
 		ImGui::SameLine();
 		if (s_object_selected_index < s_object_injector.objects.size() && s_object_injector.objects[s_object_selected_index].is_removable) {
 			if (ImGui::Button("Remove Object")) {
-				s_object_injector.remove(s_object_injector.objects[s_object_selected_index]);
+				s_object_injector.remove(s_object_injector.objects[s_object_selected_index], true);
 			}
 		} else {
 			ImGuiUtils::DisabledButton("Remove Object");
@@ -263,6 +287,7 @@ void DrawAgentInjector() {
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Add COB files, or zips of them, to this list (copied into your own data folder)");
+		ImGui::TextDisabled("Objects you add are saved with the world.");
 		for (auto& line : s_import_report)
 			ImGui::TextWrapped("%s", line.c_str());
 
