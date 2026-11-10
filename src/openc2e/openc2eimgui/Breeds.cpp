@@ -93,9 +93,17 @@ std::vector<BreedInfo>& KnownBreeds(bool rescan) {
 		user = getUserDataDir();
 	} catch (...) {
 	}
-	for (auto& d : data_directories) {
-		bool isUser = d.main == user;
-		for (auto& dir : {BreedDataSubdir(d.main, "Images"), BreedDataSubdir(d.main, "Body Data")}) {
+	// the game's and the user's folders, and the user's Overrides folder
+	// (pictures and body data there take the place of the game's: the
+	// imported Frog Norn pack in C2's own frog norn's slot l)
+	std::vector<std::pair<fs::path, int>> roots; // 0 game, 1 user, 2 overrides
+	for (auto& d : data_directories)
+		roots.push_back({d.main, d.main == user ? 1 : 0});
+	if (!user.empty())
+		roots.push_back({user / "Overrides", 2});
+	for (auto& [main, kind] : roots) {
+		bool isUser = kind >= 1;
+		for (auto& dir : {BreedDataSubdir(main, "Images"), BreedDataSubdir(main, "Body Data")}) {
 			std::error_code ec;
 			for (auto& e : fs::directory_iterator(dir, ec)) {
 				std::string fname = e.path().filename().string();
@@ -120,6 +128,8 @@ std::vector<BreedInfo>& KnownBreeds(bool rescan) {
 					b.bodyData = true;
 				}
 				(isUser ? b.inUser : b.inGame) = true;
+				if (kind == 2)
+					b.inOverrides = true;
 			}
 		}
 	}

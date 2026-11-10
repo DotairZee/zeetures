@@ -129,6 +129,17 @@ static fs::path findFile(FileDirectory type, fs::path name) {
 		if (!err)
 			return resolved;
 	}
+	// (and the same files asked for from the main folder, "Images/<name>",
+	// as the kits do)
+	if (type == DIRECTORY_MAIN) {
+		auto first = name.begin();
+		if (first != name.end() && (*first == "Images" || *first == "Body Data")) {
+			std::error_code err;
+			fs::path resolved = case_insensitive_filesystem::canonical(getUserDataDir() / "Overrides" / name, err);
+			if (!err)
+				return resolved;
+		}
+	}
 	// TODO: check user directory before or after data directories?
 	for (auto d : data_directories) {
 		std::error_code err;

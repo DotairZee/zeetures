@@ -453,6 +453,12 @@ static std::vector<uint8_t> eggWithGenomes(const std::vector<uint8_t>& egg, cons
 // empty if there is none
 static std::vector<uint8_t> installedBreedFile(const std::string& name) {
 	bool att = to_ascii_lowercase(fs::path(name).extension().string()) == ".att";
+	{
+		std::error_code ec;
+		fs::path p = case_insensitive_filesystem::canonical(BreedDataSubdir(getUserDataDir() / "Overrides", att ? "Body Data" : "Images") / name, ec);
+		if (!ec && fs::is_regular_file(p, ec))
+			return readAll(p);
+	}
 	for (auto& d : data_directories) {
 		std::error_code ec;
 		fs::path p = case_insensitive_filesystem::canonical(BreedDataSubdir(d.main, att ? "Body Data" : "Images") / name, ec);
@@ -805,7 +811,7 @@ static void SlotDialog(ImportPlan& plan) {
 	} else {
 		const BreedInfo* there = FindBreed(g.species, g.slot);
 		ImGui::TextWrapped("Its slot, %s, is already taken by %s%s.", breedSlotName(g.slot).c_str(), there ? BreedLabel(*there).c_str() : "another breed",
-			there && there->inGame ? " (in the game's folders)" : "");
+			there && there->inGame && !there->inOverrides ? " (in the game's folders)" : "");
 		if (same)
 			ImGui::TextWrapped("%d of its %d files are the same as %s's: it may be another version of that breed.", g.sameFiles, (int)g.files.size(),
 				BreedLabel(*same).c_str());
@@ -943,6 +949,18 @@ static void BreedsPage() {
 	}
 	static int sel_species = -1, sel_slot = -1;
 	auto& breeds = KnownBreeds();
+	// developer aid: OPENC2E_TEST_BREED_SELECT="species,slot letter" (e.g.
+	// "0,l") shows that breed on the Breeds page
+	if (const char* t = getenv("OPENC2E_TEST_BREED_SELECT")) {
+		static bool picked = false;
+		char letter[8] = {};
+		int sp;
+		if (!picked && sscanf(t, "%d,%7s", &sp, letter) == 2) {
+			picked = true;
+			sel_species = sp;
+			sel_slot = breedSlotFromName(letter);
+		}
+	}
 	// developer aid: OPENC2E_TEST_BREED_PLAN="pack;pack" reads the packs as if
 	// picked, leaving the review (and its questions) open, and prints what it
 	// found about each breed
@@ -1015,7 +1033,7 @@ static void BreedsPage() {
 			if (b.species != sp)
 				continue;
 			std::string label = b.name.empty() ? fmt::format("Breed {}", breedSlotName(b.slot)) : fmt::format("{}  ({})", b.name, breedSlotName(b.slot));
-			if (b.inUser && !b.inGame)
+			if (b.inUser && (!b.inGame || b.inOverrides))
 				label += "  *";
 			if (ImGui::Selectable(fmt::format("{}##{}_{}", label, sp, b.slot).c_str(), sel_species == sp && sel_slot == b.slot)) {
 				sel_species = sp;
@@ -1035,7 +1053,8 @@ static void BreedsPage() {
 		ImGui::TextDisabled("* marks breeds in your own data folder.");
 	} else {
 		ImGui::TextUnformatted(BreedLabel(*b).c_str());
-		ImGui::TextDisabled("%s", b->inGame ? "In the game's folders" : "Installed in your data folder");
+		ImGui::TextDisabled("%s", b->inOverrides ? (b->inGame ? "Installed in your data folder, in place of the game's" : "Installed in your data folder")
+														 : b->inGame ? "In the game's folders" : "Installed in your data folder");
 		// portraits: the adult face (or the oldest there is), each sex
 		int stage = b->stages.empty() ? 0 : std::min(4, *b->stages.rbegin());
 		ImVec2 p = ImGui::GetCursorScreenPos();

@@ -23,6 +23,7 @@ struct BreedInfo {
 	bool bodyData = false; // has .att files
 	bool inGame = false; // files in the game's own folders
 	bool inUser = false; // files in the user data folder
+	bool inOverrides = false; // files in its Overrides folder, in place of the game's
 	// from breeds.txt, for breeds imported here
 	bool imported = false;
 	std::string name, source, genome;
