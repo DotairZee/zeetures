@@ -22,6 +22,9 @@
 #include <cstdlib>
 
 #include "Engine.h"
+#include "Map.h"
+#include "Room.h"
+#include "World.h"
 
 #include <algorithm>
 #include <cassert>
@@ -112,6 +115,29 @@ void Vehicle::drop(AgentRef passenger) {
 
 	passenger->beDropped();
 	assert(passenger->invehicle != AgentRef(this));
+
+	// A creature let out with its feet in water, where dry floor lies just
+	// above, stands on that floor. C2's submarine lets its passengers out at
+	// the east dock with their feet below its berth (room 146, floor 906), in
+	// the sea under it, then throws them upward; the berth's doorway down to
+	// the sea is too small for a creature to pass back up, so they sank to
+	// the seabed instead of stepping onto the dock (owner, 2026-11-10).
+	if (engine.version == 2 && passenger->family == 4 && world.map) {
+		float fx = passenger->x + passenger->getWidth() / 2.0f;
+		float fy = passenger->y + passenger->getHeight();
+		std::shared_ptr<Room> here = world.map->roomAt(fx, fy);
+		if (here && here->type == 2) {
+			for (float y = fy - 1; y >= fy - 80; y--) {
+				std::shared_ptr<Room> above = world.map->roomAt(fx, y);
+				if (above && above != here && above->type != 2) {
+					float floor = above->floorYatX(fx);
+					if (floor > fy - 80 && floor <= fy)
+						passenger->moveTo(passenger->x, floor - passenger->getHeight() - 1);
+					break;
+				}
+			}
+		}
+	}
 
 	if (engine.version >= 3)
 		passenger->queueScript(122, this); // Vehicle Drop, TODO: is this valid call?
