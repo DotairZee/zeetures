@@ -77,6 +77,42 @@ static void ImGuiInit(SDL_Window* window, SDL_Renderer* renderer) {
 	}
 }
 
+// Where the window opens (owner, 2026-11-10: on the monitor it was last on).
+// OPENC2E_WINDOW_MEMORY names a file holding a point inside the monitor the
+// window was last on; it is written when the window moves to another
+// monitor and at shutdown, and read at start: when that point is on a
+// monitor that is connected now, the window opens there. Otherwise
+// OPENC2E_WINDOW_POS="x,y" (desktop coordinates), otherwise the window
+// system decides.
+static void rememberWindowDisplay(SDL_Window* window) {
+	const char* file = getenv("OPENC2E_WINDOW_MEMORY");
+	if (!file || !window)
+		return;
+	SDL_DisplayID display = SDL_GetDisplayForWindow(window);
+	SDL_Rect bounds;
+	if (!display || !SDL_GetDisplayBounds(display, &bounds))
+		return;
+	if (FILE* f = fopen(file, "w")) {
+		fprintf(f, "%d,%d\n", bounds.x + bounds.w / 4, bounds.y + bounds.h / 4);
+		fclose(f);
+	}
+}
+
+static bool rememberedWindowPos(int& wx, int& wy) {
+	const char* file = getenv("OPENC2E_WINDOW_MEMORY");
+	if (!file)
+		return false;
+	FILE* f = fopen(file, "r");
+	if (!f)
+		return false;
+	bool ok = fscanf(f, "%d,%d", &wx, &wy) == 2;
+	fclose(f);
+	if (!ok)
+		return false;
+	SDL_Point p{wx, wy};
+	return SDL_GetDisplayForPoint(&p) != 0; // that monitor is connected now
+}
+
 void SDLBackend::init(const std::string& name, int32_t width, int32_t height) {
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
 		throw Exception(std::string("SDL error during initialization: ") + SDL_GetError());
@@ -91,9 +127,11 @@ void SDLBackend::init(const std::string& name, int32_t width, int32_t height) {
 	// OPENC2E_WINDOW_POS="x,y" places the window's top-left corner there
 	// (desktop coordinates, so it can pick a monitor); otherwise the window
 	// system decides
-	if (const char* pos = getenv("OPENC2E_WINDOW_POS")) {
+	{
 		int wx, wy;
-		if (sscanf(pos, "%d,%d", &wx, &wy) == 2)
+		if (rememberedWindowPos(wx, wy))
+			SDL_SetWindowPosition(window, wx, wy);
+		else if (const char* pos = getenv("OPENC2E_WINDOW_POS"); pos && sscanf(pos, "%d,%d", &wx, &wy) == 2)
 			SDL_SetWindowPosition(window, wx, wy);
 	}
 	// the window icon: openc2e's winged egg
@@ -124,6 +162,7 @@ void SDLBackend::init(const std::string& name, int32_t width, int32_t height) {
 }
 
 void SDLBackend::shutdown() {
+	rememberWindowDisplay(window);
 	SDL_Quit();
 }
 
@@ -169,6 +208,9 @@ retry:
 	}
 
 	switch (event.type) {
+		case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
+			rememberWindowDisplay(window);
+			goto retry;
 		case SDL_EVENT_WINDOW_RESIZED:
 			e.window_id = event.window.windowID;
 			e.type = eventresizewindow;
