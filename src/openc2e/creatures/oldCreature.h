@@ -23,6 +23,7 @@
 #include "Creature.h"
 #include "CreatureMind.h"
 #include "Relationships.h"
+#include "Temperament.h"
 
 #include <cassert>
 #include <map>
@@ -119,6 +120,8 @@ class oldCreature : public Creature {
 	// what it feels about each creature it has met, by moniker
 	// (creatures/Relationships.h); saved with the world
 	std::map<std::string, Bond> bonds;
+	// inborn temperament, drawn at hatching (creatures/Temperament.h); saved
+	Temperament temperament;
 	int lastNeedSaid = -2;
 	unsigned int lastNeedTick = 0;
 

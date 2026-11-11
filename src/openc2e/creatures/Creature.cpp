@@ -283,6 +283,8 @@ void Creature::tick() {
  */
 oldCreature::oldCreature(std::shared_ptr<genomeFile> g, bool is_female, unsigned char _variant, CreatureAgent* a)
 	: Creature(g, is_female, _variant, a) {
+	// each creature its own temperament (a saved world puts back its own)
+	temperament = Temperaments::roll();
 	if (!engine.mindname.empty()) {
 		mind = createCreatureMind(engine.mindname);
 		// C1/C2 agents fall into categories 0-39 (see World::findCategory)

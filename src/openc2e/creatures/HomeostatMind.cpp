@@ -103,6 +103,9 @@ struct Params {
 	float driveExpM = 2.0f;
 	std::array<float, NUM_DRIVES> weights;
 	float learningRate = 0.3f; // delta rule
+	// temperament (reactivity): outcomes worse than expected are learned at
+	// this share of the rate, better ones at this share
+	float worseLearning = 1.0f, betterLearning = 1.0f;
 	// Felt effects: stimuli tell the body directly what an interaction did
 	// (C2 chemicals 18-34 raise drive 1-17, 35-51 lower it), like a taste.
 	// A drive an action's stimuli touched is learned from what was felt; the
@@ -450,6 +453,7 @@ class HomeostatMind : public CreatureMind {
 	std::string name() const override { return "homeostat"; }
 
 	void born(const MindPerception& p) override {
+		applyTemperament(p.temperament);
 		rng.seed((unsigned int)p.creatureId);
 		std::string acts;
 		for (auto& a : *p.actions)
@@ -542,7 +546,49 @@ class HomeostatMind : public CreatureMind {
 		return say;
 	}
 
+	// Inborn temperament (creatures/Temperament.h): each trait scales some
+	// settings by exp(k z). Survival needs are left alone; fear keeps at
+	// least half its weight however bold the creature.
+	std::array<float, 7> appliedTemperament{};
+	bool temperamentApplied = false;
+	void applyTemperament(const std::array<float, 7>& z) {
+		if (temperamentApplied && z == appliedTemperament)
+			return;
+		temperamentApplied = true;
+		appliedTemperament = z;
+		prm = Params();
+		auto f = [&](int t, float k) { return std::exp(k * z[t]); };
+		// boldness (0): less fear, more drawn to the new
+		prm.weights[FEAR] *= std::max(0.5f, f(0, -0.3f));
+		// curiosity (1): novelty worth more, boredom bites harder
+		prm.curiosity *= f(0, 0.15f) * f(1, 0.35f);
+		prm.weights[BORED] *= f(1, 0.25f);
+		// energy (2): restless sooner, tries more things
+		prm.restlessRamp *= f(2, -0.3f);
+		prm.temperature *= f(2, 0.2f);
+		// sociability (3): loneliness bites harder, crowds less
+		prm.weights[LONELY] *= f(3, 0.35f);
+		prm.weights[CROWDED] *= f(3, -0.25f);
+		// temper (4): anger bites harder
+		prm.weights[ANGER] *= f(4, 0.3f);
+		// reactivity (5): stress bites harder, moods swing, focus narrows
+		// under need, and bad outcomes are learned faster than good ones
+		prm.weights[STRESS] *= f(5, 0.3f);
+		prm.moodRate = std::min(1.0f, prm.moodRate * f(5, 0.3f));
+		prm.arousalFocus *= f(5, 0.25f);
+		prm.worseLearning = f(5, 0.25f);
+		prm.betterLearning = f(5, -0.1f);
+		// steadiness (6): sticks with what it is doing
+		prm.commitment *= f(6, 0.5f);
+		if (getenv("OPENC2E_WATCH_CREATURES"))
+			fmt::print("[homeostat] temperament z {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f}: fear w {:.2f} lonely w {:.2f} bored w {:.2f} anger w {:.2f} "
+					   "curiosity {:.3f} commitment {:.3f} worse/better learning {:.2f}/{:.2f}\n",
+				z[0], z[1], z[2], z[3], z[4], z[5], z[6], prm.weights[FEAR], prm.weights[LONELY], prm.weights[BORED], prm.weights[ANGER],
+				prm.curiosity, prm.commitment, prm.worseLearning, prm.betterLearning);
+	}
+
 	MindOutput tick(const MindPerception& p) override {
+		applyTemperament(p.temperament);
 		MindOutput out = tickChoose(p);
 		out.say = chooseSpeech(p, normalize(p.drives));
 		return out;
@@ -2276,9 +2322,10 @@ class HomeostatMind : public CreatureMind {
 				if (feltAny[i]) {
 					// a drive cannot go below empty or above full
 					float target = std::clamp(startDrives[i] + felt[i], 0.0f, 1.0f) - startDrives[i];
-					e.delta[i] += rate * (target - e.delta[i]);
+					e.delta[i] += rate * (target > e.delta[i] ? prm.worseLearning : prm.betterLearning) * (target - e.delta[i]);
 				} else {
-					e.delta[i] += rate * prm.unfeltLearningShare * (effect[i] - e.delta[i]);
+					e.delta[i] += rate * (effect[i] > e.delta[i] ? prm.worseLearning : prm.betterLearning) * prm.unfeltLearningShare *
+								  (effect[i] - e.delta[i]);
 				}
 			}
 			e.count++;

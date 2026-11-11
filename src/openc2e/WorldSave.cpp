@@ -502,6 +502,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			// a pregnancy: the baby's genome name (in the user Genetics folder)
 			if (a->babymoniker != 0)
 				out << "baby " << genomeNameFromInt(a->babymoniker) << "\n";
+			out << "temperament " << Temperaments::toLine(c->temperament) << "\n";
 			// what it feels about the creatures it has met (Relationships.h)
 			for (auto& [other, b] : c->bonds)
 				out << "bond " << Relationships::toLine(other, b) << "\n";
@@ -623,6 +624,7 @@ struct SavedCreature {
 	std::string baby; // the genome name of the baby she carries, if pregnant
 	std::vector<std::pair<int, int>> words; // word-list number, familiarity
 	std::vector<std::string> bonds; // bond lines (Relationships::fromLine)
+	std::string temperament; // Temperaments::toLine; empty: keep the one drawn at hatching
 	float x = 0, y = 0;
 	unsigned int age = 0, ticks = 0;
 	std::vector<int> chemicals;
@@ -730,6 +732,8 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 		a->babymoniker = genomeNameToInt(s.baby);
 		c->setPregnant(255);
 	}
+	if (!s.temperament.empty())
+		Temperaments::fromLine(s.temperament, c->temperament);
 	for (auto& line : s.bonds) {
 		std::string other;
 		Bond b;
@@ -923,6 +927,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 				l >> c->asleep;
 			else if (key == "baby")
 				l >> c->baby;
+			else if (key == "temperament")
+				std::getline(l, c->temperament);
 			else if (key == "bond") {
 				std::string rest;
 				std::getline(l, rest);

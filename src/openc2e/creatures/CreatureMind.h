@@ -115,6 +115,10 @@ struct MindPerception {
 		float here = 0, west = 0, east = 0, up = 0, down = 0;
 	};
 	std::vector<ScentUrge> scentUrges;
+	// inborn temperament (creatures/Temperament.h): a z-score for each of
+	// boldness, curiosity, energy, sociability, temper, reactivity,
+	// steadiness; 0 is average
+	std::array<float, 7> temperament{};
 	// water (C2 room type 2): whether the creature is in it, and which way the
 	// nearest dry room lies through open doors (10 west, 11 east, -1 up,
 	// 1 down, 0 none found) and how many rooms away

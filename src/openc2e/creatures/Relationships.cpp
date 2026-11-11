@@ -156,7 +156,11 @@ void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 
 		return;
 	Bond& b = c->bonds[them];
 	unsigned int now = world.worldtickcount;
-	float x = help * HELP_GAIN - harm * HELP_GAIN * HARM_WEIGHT;
+	// temperament: sociable creatures warm faster, hot-tempered ones sour
+	// harder, shy ones take more fright
+	const Temperament& t = c->temperament;
+	float x = help * HELP_GAIN * t.factor(SOCIABILITY, 0.3f) - harm * HELP_GAIN * HARM_WEIGHT * t.factor(TEMPER, 0.2f);
+	fear *= t.factor(BOLDNESS, -0.3f);
 	// making up after a fight counts double for a while
 	if (x > 0 && b.lastHarm && now - b.lastHarm < 600)
 		x *= 2.0f;
@@ -202,7 +206,7 @@ void tick() {
 				b.familiarity += 0.004f * (1.0f - b.familiarity);
 				b.lastContact = now;
 				if (lonely) // company eased a need
-					move(b, 0.01f);
+					move(b, 0.01f * me.c->temperament.factor(SOCIABILITY, 0.3f));
 				if ((int)me.c->getStage() <= 1 && (int)them.c->getStage() <= 1 && b.familiarity > 0.3f)
 					b.coReared = true;
 				if (b.friend_ || b.mate)

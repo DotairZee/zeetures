@@ -1,0 +1,112 @@
+/*
+ *  Temperament.cpp
+ *  openc2e
+ *
+ *  Inborn temperament. See Temperament.h.
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ */
+
+#include "Temperament.h"
+
+#include <algorithm>
+#include <fmt/core.h>
+#include <random>
+#include <sstream>
+#include <vector>
+
+int Temperament::percent(int t) const {
+	// the normal distribution's share below z
+	return (int)std::lround(50.0 * (1.0 + std::erf(z[t] / std::sqrt(2.0))));
+}
+
+namespace Temperaments {
+
+namespace {
+
+const char* names[NUM_TRAITS] = {"boldness", "curiosity", "energy", "sociability", "temper", "reactivity", "steadiness"};
+const char* lows[NUM_TRAITS] = {"shy", "incurious", "placid", "aloof", "easygoing", "steady-nerved", "flighty"};
+const char* highs[NUM_TRAITS] = {"bold", "curious", "energetic", "sociable", "quick to anger", "highly strung", "persistent"};
+
+// How much each trait follows one hidden "proactive" factor (bold animals
+// tend to be curious and active, a little more aggressive, less reactive).
+// Design guesses from the animal-personality literature, not measured values.
+const float loading[NUM_TRAITS] = {0.6f, 0.5f, 0.4f, 0.0f, 0.3f, -0.4f, 0.0f};
+
+std::mt19937& rng() {
+	static std::mt19937 g{std::random_device{}()};
+	return g;
+}
+
+} // namespace
+
+const char* traitName(int t) {
+	return t >= 0 && t < NUM_TRAITS ? names[t] : "?";
+}
+const char* lowWord(int t) {
+	return t >= 0 && t < NUM_TRAITS ? lows[t] : "?";
+}
+const char* highWord(int t) {
+	return t >= 0 && t < NUM_TRAITS ? highs[t] : "?";
+}
+
+Temperament roll() {
+	std::normal_distribution<float> n(0.0f, 1.0f);
+	Temperament t;
+	float f = n(rng());
+	for (int i = 0; i < NUM_TRAITS; i++) {
+		float own = n(rng());
+		float z = loading[i] * f + std::sqrt(1.0f - loading[i] * loading[i]) * own;
+		t.z[i] = std::clamp(z, -2.0f, 2.0f);
+	}
+	// sociable creatures run a little less to temper
+	t.z[TEMPER] = std::clamp(t.z[TEMPER] - 0.15f * t.z[SOCIABILITY], -2.0f, 2.0f);
+	return t;
+}
+
+std::string describe(const Temperament& t) {
+	std::vector<std::pair<float, int>> strong;
+	for (int i = 0; i < NUM_TRAITS; i++)
+		if (std::fabs(t.z[i]) >= 0.9f)
+			strong.push_back({std::fabs(t.z[i]), i});
+	if (strong.empty())
+		return "even-tempered";
+	std::sort(strong.rbegin(), strong.rend());
+	auto word = [&](int i) { return std::string(t.z[i] > 0 ? highs[i] : lows[i]); };
+	std::string s = word(strong[0].second);
+	if (strong.size() >= 2)
+		s += (strong.size() == 2 ? " and " : ", ") + word(strong[1].second);
+	if (strong.size() >= 3)
+		s += " and " + word(strong[2].second);
+	return s;
+}
+
+std::string toLine(const Temperament& t) {
+	std::string s;
+	for (int i = 0; i < NUM_TRAITS; i++)
+		s += fmt::format("{}{:.3f}", i ? " " : "", t.z[i]);
+	return s;
+}
+
+bool fromLine(const std::string& line, Temperament& t) {
+	std::istringstream l(line);
+	Temperament r;
+	for (int i = 0; i < NUM_TRAITS; i++)
+		if (!(l >> r.z[i]))
+			return false;
+	for (auto& z : r.z)
+		z = std::clamp(z, -2.0f, 2.0f);
+	t = r;
+	return true;
+}
+
+} // namespace Temperaments

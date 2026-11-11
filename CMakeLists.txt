@@ -311,6 +311,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/creatures/CreatureSpeech.cpp
 	src/openc2e/creatures/Pheromones.cpp
 	src/openc2e/creatures/Relationships.cpp
+	src/openc2e/creatures/Temperament.cpp
 	src/openc2e/creatures/Creature.cpp
 	src/openc2e/creatures/CreatureAgent.cpp
 	src/openc2e/creatures/CreatureAI.cpp

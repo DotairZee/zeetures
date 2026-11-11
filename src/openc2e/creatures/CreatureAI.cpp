@@ -804,6 +804,7 @@ void oldCreature::buildMindActions() {
 MindPerception oldCreature::buildPerception() {
 	MindPerception p;
 	p.creatureId = parentagent->getUNID();
+	p.temperament = temperament.z;
 	p.tick = ticks / 4;
 	p.stage = stage;
 	p.asleep = asleep;

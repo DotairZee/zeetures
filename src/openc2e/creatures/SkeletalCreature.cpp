@@ -1065,7 +1065,11 @@ void SkeletalCreature::tick() {
 			// rate (a step every other tick), slow in infancy and old age,
 			// briskest as a youth
 			if (engine.version == 2) {
-				paceCredit += stagePace((int)creature->getStage());
+				// and by temperament: energetic creatures walk a little faster
+				float energy = 1.0f;
+				if (auto* oc = dynamic_cast<oldCreature*>(creature))
+					energy = oc->temperament.factor(ENERGY, 0.12f);
+				paceCredit += stagePace((int)creature->getStage()) * energy;
 				while (paceCredit >= 1.0f) {
 					paceCredit -= 1.0f;
 					gaitTick();

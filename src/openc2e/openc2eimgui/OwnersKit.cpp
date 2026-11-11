@@ -17,6 +17,7 @@
 #include "historyManager.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 #include <filesystem>
 #include <fmt/format.h>
@@ -1125,6 +1126,36 @@ static void FamilyPage() {
 	}
 }
 
+// Temperament (openc2e addition, owner 2026-11-11): the creature's inborn
+// traits (creatures/Temperament.h), each where it stands among creatures
+// (50% is average), and a few words for the strongest.
+static void TemperamentPage() {
+	if (!KitNeedsCreature("Applet Data/Owner.bmp"))
+		return;
+	Agent* a = KitCreatureAgent();
+	auto* ca = dynamic_cast<CreatureAgent*>(a);
+	auto* c = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+	if (!c)
+		return;
+	const Temperament& t = c->temperament;
+	std::string name = KitCreatureName(a);
+	std::string words = Temperaments::describe(t);
+	ImGui::TextWrapped("%s is %s.", name.c_str(), words.c_str());
+	ImGui::Spacing();
+	ImGui::TextDisabled("Every creature has some of every trait. 50%% is average: the share of creatures with less.");
+	ImGui::Spacing();
+	for (int i = 0; i < NUM_TRAITS; i++) {
+		int pc = t.percent(i);
+		std::string trait = Temperaments::traitName(i);
+		trait[0] = (char)std::toupper((unsigned char)trait[0]);
+		const char* lean = pc >= 70 ? Temperaments::highWord(i) : pc <= 30 ? Temperaments::lowWord(i) : "";
+		std::string label = fmt::format("{} {}%{}", trait, pc, *lean ? fmt::format(" ({})", lean) : "");
+		KitBar(pc / 100.0f, label.c_str(), 260);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("%s ... %s", Temperaments::lowWord(i), Temperaments::highWord(i));
+	}
+}
+
 void DrawOwnersKit() {
 	if (ImGui::BeginTabBar("pages")) {
 		if (KitTab("Registration")) {
@@ -1137,6 +1168,10 @@ void DrawOwnersKit() {
 		}
 		if (KitTab("Family")) {
 			FamilyPage();
+			ImGui::EndTabItem();
+		}
+		if (KitTab("Temperament")) {
+			TemperamentPage();
 			ImGui::EndTabItem();
 		}
 		if (KitTab("Relationships")) {
