@@ -878,6 +878,7 @@ MindPerception oldCreature::buildPerception() {
 		if (MetaRoom* m = world.map->wrappingMetaRoomNear(cx, cy))
 			p.wrapWidth = (float)m->width();
 	p.riding = (bool)parentagent->invehicle;
+	p.carried = (bool)parentagent->carriedby;
 	if (engine.version == 2 && world.map) {
 		float sx = cx;
 		std::shared_ptr<Room> here = senseRoom(parentagent, cx, cy, sx);

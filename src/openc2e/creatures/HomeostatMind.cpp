@@ -42,6 +42,7 @@
 #include <cmath>
 #include <fmt/core.h>
 #include <map>
+#include <queue>
 #include <random>
 #include <set>
 #include <sstream>
@@ -153,6 +154,13 @@ struct Params {
 	float badSleepNear = 300.0f;
 	float poisonPain = 1.0f; // felt Pain per unit of poison taken in (see the stimulus loop)
 	unsigned int badSleepTicks = 1200;
+	// Hunger keeps a creature awake (starved animals sleep far less and
+	// forage instead; fruit flies and rats both show it): at hunger
+	// starveAwake or more, sleep is not chosen unless sleepiness or
+	// tiredness has reached exhausted. (A starving norn slept 300 s at a
+	// time: the sleep script's stimuli felt restful, its drives never fell,
+	// and it never went looking for food.)
+	float starveAwake = 0.85f, exhausted = 0.97f;
 	int maxObjectEpisodeTicks = 150; // actions on an object (walk there, then act): at most this long
 	int stallTicks = 25; // ...and given up if not getting closer for this long
 	float habituationRate = 0.7f; // multiplier after an uneventful interaction
@@ -224,6 +232,14 @@ struct Params {
 	// hunger makes the creature more patient: travelHalf * (1 + hungerPatience
 	// * hunger^2), so a starving creature will cross the world for food.
 	float travelHalf = 700.0f;
+	// The place map (a sense of place, owner 2026-11-11): the world in cells
+	// of cellWidth x cellHeight, and the ways between them the creature has
+	// found by walking, climbing, dropping and riding. Planned over for food
+	// further than a straight walk (a route costs its pixels walked, a ride
+	// floorChangeDistance); routeMaxCost bounds the search.
+	float cellWidth = 120.0f, cellHeight = 100.0f;
+	size_t placeEdgeMax = 6000;
+	float routeMaxCost = 9000.0f;
 	float hungerPatience = 6.0f;
 	float floorChangeDistance = 400.0f;
 	// Foraging: hungry, nothing in sight, nothing remembered worth the trip,
@@ -441,6 +457,7 @@ struct Candidate {
 	bool escape = false; // getting out of water
 	bool boatCall = false; // pressing a button to call a boat
 	bool blindPress = false; // pressing a call button with no lift in view or known
+	bool route = false; // a step along a route on the place map
 };
 
 struct CallButton {
@@ -633,6 +650,7 @@ class HomeostatMind : public CreatureMind {
 		for (auto& inst : p.newInstincts)
 			applyInstinct(p, inst);
 		visited[{(int)std::floor(p.x / prm.visitBinWidth), (int)std::floor(p.y / prm.visitBinHeight)}] = p.tick;
+		updatePlaceMap(p);
 		if (lastTick != 0 && p.tick > lastTick) {
 			if (d[HUNGER] >= prm.restlessHunger)
 				hungryTicks += (float)(p.tick - lastTick);
@@ -932,7 +950,8 @@ class HomeostatMind : public CreatureMind {
 		// Choose the next action.
 		std::vector<Candidate> candidates = evaluate(p, d, D);
 		bool badSleepHere = p.tick < badSleepUntil && std::fabs(dxTo(p, badSleepX)) < prm.badSleepNear && std::fabs(p.y - badSleepY) < prm.sameLevel;
-		if (p.tick < noSleepUntil || badSleepHere || p.inWater) // (never sleep in water)
+		bool starvingAwake = d[HUNGER] >= prm.starveAwake && d[SLEEPY] < prm.exhausted && d[TIRED] < prm.exhausted;
+		if (p.tick < noSleepUntil || badSleepHere || p.inWater || starvingAwake) // (never sleep in water)
 			candidates.erase(std::remove_if(candidates.begin(), candidates.end(),
 								 [&](const Candidate& c) { return c.category < 0 && c.decision == prm.sleepDecision; }),
 				candidates.end());
@@ -1069,6 +1088,9 @@ class HomeostatMind : public CreatureMind {
 			s += fmt::format("tlink {} {} {} {} {} {} {}\n", tl.fromX, tl.fromY, tl.toX, tl.toY, tl.category, tl.decision, tl.uses);
 		for (auto& cb : callButtons)
 			s += fmt::format("callbtn {} {} {} {}\n", cb.x, cb.y, cb.worked, cb.failed);
+		for (auto& [from, edges] : placeMap)
+			for (auto& e : edges)
+				s += fmt::format("pedge {} {} {} {} {} {:.0f} {} {}\n", from.first, from.second, e.to.first, e.to.second, e.dir, e.cost, e.uses, e.fails);
 		return s;
 	}
 
@@ -1107,6 +1129,14 @@ class HomeostatMind : public CreatureMind {
 				l >> cb.x >> cb.y >> cb.worked >> cb.failed;
 				if (l && callButtons.size() < 16)
 					callButtons.push_back(cb);
+			} else if (what == "pedge") {
+				Cell from;
+				PlaceEdge e;
+				l >> from.first >> from.second >> e.to.first >> e.to.second >> e.dir >> e.cost >> e.uses >> e.fails;
+				if (l && (e.dir == 10 || e.dir == 11) && placeEdges < prm.placeEdgeMax) {
+					placeMap[from].push_back(e);
+					placeEdges++;
+				}
 			} else if (what == "tlink") {
 				TravelLink tl;
 				l >> tl.fromX >> tl.fromY >> tl.toX >> tl.toY >> tl.category >> tl.decision >> tl.uses;
@@ -1248,6 +1278,24 @@ class HomeostatMind : public CreatureMind {
 	std::vector<std::pair<AgentRef, unsigned int>> triedDevices; // passed over while escaping, and when
 	std::map<int, BoatLink> boatLinks; // decision -> learned ride
 	std::vector<TravelLink> travelLinks;
+
+	// ---- The place map ----
+	using Cell = std::pair<int, int>;
+	struct PlaceEdge {
+		Cell to;
+		int dir = 0; // 10 west, 11 east: walking, climbing or dropping that way
+		float cost = 0; // pixels covered
+		int uses = 0; // times taken (0: only inferred, the way back along a level floor)
+		int fails = 0; // tries that met a wall or got nowhere
+	};
+	std::map<Cell, std::vector<PlaceEdge>> placeMap;
+	size_t placeEdges = 0;
+	Cell mapCell{0, 0};
+	bool mapCellValid = false;
+	float mapX = 0, mapY = 0;
+	int routeTarget = -1; // food place the current route leads to
+	float routeBest = 0; // the least cost left to it so far
+	unsigned int routeSince = 0;
 	std::vector<CallButton> callButtons; // buttons tried for calling boats
 	struct DudButton {
 		float x, y;
@@ -1362,6 +1410,9 @@ class HomeostatMind : public CreatureMind {
 			if (d[i] >= prm.wakeLevel && d[i] - sleepStartDrives[i] >= prm.wakeRise && (worst < 0 || d[i] > d[worst]))
 				worst = i;
 		}
+		// starving and not exhausted: hunger keeps it awake (see starveAwake)
+		if (worst < 0 && d[HUNGER] >= prm.starveAwake && d[SLEEPY] < prm.exhausted && d[TIRED] < prm.exhausted)
+			worst = HUNGER;
 		return worst;
 	}
 
@@ -1626,6 +1677,215 @@ class HomeostatMind : public CreatureMind {
 		return predictedRelief(d, D, typical);
 	}
 
+	// ---- The place map ----
+	Cell cellOf(float x, float y) const {
+		if (wrapW > 0) {
+			x = std::fmod(x, wrapW);
+			if (x < 0)
+				x += wrapW;
+		}
+		return {(int)std::floor(x / prm.cellWidth), (int)std::floor(y / prm.cellHeight)};
+	}
+	void addEdge(Cell from, Cell to, int dir, float cost, bool taken) {
+		auto& edges = placeMap[from];
+		for (auto& e : edges)
+			if (e.to == to && e.dir == dir) {
+				if (taken) {
+					int n = std::min(e.uses, 9);
+					e.cost = (e.cost * n + cost) / (n + 1);
+					e.uses++;
+					e.fails = std::max(0, e.fails - 1);
+				}
+				return;
+			}
+		if (placeEdges >= prm.placeEdgeMax)
+			return;
+		edges.push_back({to, dir, cost, taken ? 1 : 0, 0});
+		placeEdges++;
+	}
+	// Every tick: a step from one cell into the next under the creature's
+	// own power (walking, climbing, dropping; not riding or carried) is a way
+	// between them. A level step is assumed to go back the same way too.
+	void updatePlaceMap(const MindPerception& p) {
+		Cell c = cellOf(p.x, p.y);
+		if (!mapCellValid || p.riding || p.carried) {
+			mapCell = c;
+			mapX = p.x;
+			mapY = p.y;
+			mapCellValid = !p.riding && !p.carried;
+			return;
+		}
+		if (c == mapCell)
+			return;
+		bool walking = inEpisode && (current.category >= 0 || current.decision == 10 || current.decision == 11 || current.decision == 26 || current.decision == 27);
+		float mx = -dxTo(p, mapX), my = p.y - mapY; // how far it came
+		if (walking && std::fabs(mx) + std::fabs(my) < prm.cellWidth * 3) { // (no more in one go: a teleport)
+			int dir = mx < -2.0f ? 10 : mx > 2.0f ? 11 : (current.decision == 10 || current.decision == 11) ? current.decision : 0;
+			if (dir) {
+				addEdge(mapCell, c, dir, std::fabs(mx) + std::fabs(my), true);
+				if (std::fabs(my) < prm.cellHeight * 0.3f)
+					addEdge(c, mapCell, dir == 10 ? 11 : 10, std::fabs(mx), false);
+			}
+		}
+		mapCell = c;
+		mapX = p.x;
+		mapY = p.y;
+	}
+
+	// Food further than a straight walk: search the place map (and the
+	// remembered rides) for the remembered meal best worth its way, and
+	// offer the first step. Returns whether a step was offered.
+	bool addRouteToFood(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float meal, std::vector<Candidate>& out) {
+		struct Step {
+			int dir = 0, category = -1, decision = -1;
+			int lift = -1; // a learned lift ride (index in links): walk to it, call it, ride it
+		};
+		Cell start = cellOf(p.x, p.y);
+		std::map<Cell, float> dist;
+		std::map<Cell, Step> first;
+		using QE = std::pair<float, Cell>;
+		std::priority_queue<QE, std::vector<QE>, std::greater<QE>> q;
+		dist[start] = 0;
+		q.push({0, start});
+		while (!q.empty()) {
+			auto [c0, cell] = q.top();
+			q.pop();
+			if (c0 > dist[cell] || c0 > prm.routeMaxCost)
+				continue;
+			auto relax = [&](Cell to, float w, Step step) {
+				float nd = c0 + w;
+				auto it = dist.find(to);
+				if (it == dist.end() || nd < it->second) {
+					dist[to] = nd;
+					first[to] = cell == start ? step : first[cell];
+					q.push({nd, to});
+				}
+			};
+			if (auto it = placeMap.find(cell); it != placeMap.end())
+				for (auto& e : it->second) {
+					if (e.fails > e.uses + 2)
+						continue; // tried and failed too often
+					if (cell == start && (isBlocked(p, e.dir) || wallAhead(p, e.dir) || waterAhead(p, e.dir)))
+						continue;
+					relax(e.to, e.cost * (1.0f + 0.5f * e.fails) * (e.uses == 0 ? 1.5f : 1.0f), {e.dir, -1, -1});
+				}
+			// rides: a device used from this cell (or next to it on the level)
+			for (auto& tl : travelLinks) {
+				if (tl.fails > tl.uses)
+					continue;
+				Cell from = cellOf(tl.fromX, tl.fromY);
+				if (from.second != cell.second || std::abs(from.first - cell.first) > 1)
+					continue;
+				Step step{0, tl.category, tl.decision};
+				if (cell == start) {
+					bool ready = false;
+					for (auto& sa : p.visible)
+						if (sa.category == tl.category && sa.reachable && sa.activatable)
+							ready = true;
+					if (isFutile(p, tl.category, tl.decision))
+						continue;
+					if (!ready) {
+						// not at hand from here: walk to where it was used
+						if (std::fabs(dxTo(p, tl.fromX)) <= prm.atPlace)
+							continue;
+						int dir = dxTo(p, tl.fromX) < 0 ? 10 : 11;
+						if (isBlocked(p, dir) || wallAhead(p, dir) || waterAhead(p, dir))
+							continue;
+						step = {dir, -1, -1};
+					}
+				}
+				relax(cellOf(tl.toX, tl.toY), prm.floorChangeDistance + std::fabs(dxTo(p, tl.fromX)) * (cell == start ? 1.0f : 0.0f), step);
+			}
+			// learned lift rides: from the floor at the lift to the floor it took the creature to
+			for (size_t i = 0; i < links.size(); i++) {
+				const Link& l = links[i];
+				Cell from = cellOf(l.x, l.fromY);
+				if (from.second != cell.second || std::abs(from.first - cell.first) > 1)
+					continue;
+				Step step;
+				step.lift = (int)i;
+				relax(cellOf(l.x, l.toY), prm.floorChangeDistance, step);
+			}
+		}
+		// the meal best worth its way
+		int bestIdx = -1;
+		float bestWant = 0, bestCost = 0;
+		Step bestStep;
+		for (size_t i = 0; i < foodPlaces.size(); i++) {
+			const FoodPlace& fp = foodPlaces[i];
+			if (p.tick < fp.cooldownUntil)
+				continue;
+			Cell fc = cellOf(fp.x, fp.y);
+			for (int ox = -1; ox <= 1; ox++)
+				for (int oy = -1; oy <= 1; oy++) {
+					Cell c{fc.first + ox, fc.second + oy};
+					if (c == start)
+						continue; // there already, or nearly: the walk or the food in sight takes over
+					auto it = dist.find(c);
+					if (it == dist.end())
+						continue;
+					float cost = it->second + (std::abs(ox) + std::abs(oy)) * prm.cellWidth;
+					float want = meal * fp.confidence * travelDiscount(cost, 0, d[HUNGER]);
+					if (want > bestWant) {
+						bestWant = want;
+						bestIdx = (int)i;
+						bestCost = cost;
+						bestStep = first[c];
+					}
+				}
+		}
+		if (bestIdx < 0 || bestWant < prm.seekMinWant || (bestStep.dir == 0 && bestStep.category < 0 && bestStep.lift < 0))
+			return false;
+		// a lift ride: get to the lift, ride it if it is here, else call it
+		if (bestStep.lift >= 0) {
+			const Link& l = links[bestStep.lift];
+			const SeenAgent* lift = nullptr;
+			const SeenAgent* button = nullptr;
+			for (auto& sa : p.visible) {
+				if (sa.category == prm.liftCategory)
+					lift = &sa;
+				if (sa.category == prm.buttonCategory && sa.reachable && sa.activatable && std::fabs(sa.y - p.y) < prm.sameLevel)
+					button = &sa;
+			}
+			bool liftHere = lift && std::fabs(dxTo(p, lift->x)) < prm.atPlace * 1.5f && std::fabs(lift->y - p.y) < prm.sameLevel;
+			if (std::fabs(dxTo(p, l.x)) > prm.atPlace) {
+				int dir = dxTo(p, l.x) < 0 ? 10 : 11;
+				if (isBlocked(p, dir) || wallAhead(p, dir) || waterAhead(p, dir))
+					return false;
+				bestStep = {dir, -1, -1};
+			} else if (liftHere && !isFutile(p, prm.liftCategory, l.decision))
+				bestStep = {0, prm.liftCategory, l.decision};
+			else if (button && !dudButtonAt(p) && !isFutile(p, prm.buttonCategory, 1))
+				bestStep = {0, prm.buttonCategory, 1};
+			else
+				return false;
+		}
+		// a route that has not got any shorter for a while: that place is out
+		// of reach from here for now
+		if (bestIdx != routeTarget) {
+			routeTarget = bestIdx;
+			routeBest = bestCost;
+			routeSince = p.tick;
+		} else if (bestCost < routeBest - prm.foodTripGain) {
+			routeBest = bestCost;
+			routeSince = p.tick;
+		} else if (p.tick > routeSince + prm.foodTripTicks * 2) {
+			FoodPlace& t = foodPlaces[bestIdx];
+			t.confidence *= 0.5f;
+			t.cooldownUntil = p.tick + prm.foodCooldown;
+			fmt::print("[homeostat] creature {} t{}: the way to food at {:.0f},{:.0f} gets no shorter; giving it a rest\n", p.creatureId, p.tick, t.x, t.y);
+			routeTarget = -1;
+			return false;
+		}
+		foodTrip = -1; // (the straight-line trip check does not apply)
+		Candidate c{bestStep.category, bestStep.category >= 0 ? bestStep.decision : bestStep.dir, bestCost, bestWant, 0, bestWant};
+		c.chain = true;
+		c.food = true;
+		c.route = true;
+		out.push_back(c);
+		return true;
+	}
+
 	float travelDiscount(float distance, int floors, float hunger) const {
 		float half = prm.travelHalf * (1.0f + prm.hungerPatience * hunger * hunger);
 		return std::pow(0.5f, (distance + floors * prm.floorChangeDistance) / half);
@@ -1675,6 +1935,22 @@ class HomeostatMind : public CreatureMind {
 				wantOther = want;
 				bestOther = &fp;
 			}
+		}
+		// The place map steps in where a straight walk will not do: the best
+		// meal is on another floor, or the walk toward it is barred (water, a
+		// wall, a drop). A meal along this floor is walked to directly, even
+		// to a spot not yet on the map. (Routes everywhere crowded out
+		// searching: batch norns kept going back to remembered, emptied spots.)
+		{
+			bool walkable = false;
+			if (bestSame && wantSame >= prm.seekMinWant && wantSame >= wantOther) {
+				int dir = dxTo(p, bestSame->x) < 0 ? 10 : 11;
+				walkable = !waterAhead(p, dir) && !((dir == 10 && !canWest) || (dir == 11 && !canEast) || isBlocked(p, dir) || cliffAhead(p, dir, bestSame->y));
+			}
+			if (!walkable && addRouteToFood(p, d, meal, out))
+				return; // a known way, step by step
+			if (walkable)
+				routeTarget = -1;
 		}
 		// a known link toward the best place, if it saves a long way
 		{
@@ -2494,6 +2770,10 @@ class HomeostatMind : public CreatureMind {
 		if ((current.decision == 10 || current.decision == 11) && current.category < 0 && (current.seekCategory >= 0 || current.chain) &&
 			std::fabs(dxTo(p, startX)) < prm.blockedMove) {
 			blocked[current.decision == 10 ? 0 : 1] = {p.x, p.tick + prm.blockedTicks};
+			if (current.route)
+				for (auto& e : placeMap[cellOf(p.x, p.y)])
+					if (e.dir == current.decision)
+						e.fails++;
 			fmt::print("[homeostat] creature {} t{}: the way {} is blocked at x {:.0f}\n", p.creatureId, p.tick,
 				current.decision == 10 ? "west" : "east", p.x);
 		}
@@ -2588,7 +2868,7 @@ class HomeostatMind : public CreatureMind {
 			if (p.drives[i] >= 64)
 				needs += fmt::format(" {} {}", DRIVE_NAMES[i], (int)p.drives[i]);
 		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f} | at {:.0f},{:.0f} | restless {:.2f} | food map {}\n",
-			p.creatureId, p.tick, !choice.urge.empty() ? fmt::format("{}:{}", choice.urge, actionName(choice.decision)) : choice.boatCall ? fmt::format("callboat:{}", actionName(choice.decision)) : choice.escape ? fmt::format("escape:{}", actionName(choice.decision)) : choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
+			p.creatureId, p.tick, !choice.urge.empty() ? fmt::format("{}:{}", choice.urge, actionName(choice.decision)) : choice.route ? fmt::format("route:{}", actionName(choice.decision)) : choice.boatCall ? fmt::format("callboat:{}", actionName(choice.decision)) : choice.escape ? fmt::format("escape:{}", actionName(choice.decision)) : choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
 			choice.who.empty() ? fmt::format("{}", choice.category) : fmt::format("{}:{}", choice.category, choice.who), choice.want, choice.novelty,
 			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown, p.x, p.y, std::clamp(hungryTicks / prm.restlessRamp, 0.0f, 1.0f),
 			[&] { std::string m; for (auto& fp : foodPlaces) m += fmt::format(" {:.0f},{:.0f}x{:.2f}", fp.x, fp.y, fp.confidence); return m.empty() ? std::string(" none") : m; }());

@@ -109,6 +109,7 @@ struct MindPerception {
 	// the short way round.
 	float wrapWidth = 0;
 	bool riding = false; // carried by a vehicle (a lift, a boat)
+	bool carried = false; // held by the hand (or another agent): not moving by itself
 	// food smell (C2, World::tickFoodScent): in this room, and the strongest
 	// through the doors on each side
 	float scentHere = 0, scentWest = 0, scentEast = 0, scentUp = 0, scentDown = 0;
