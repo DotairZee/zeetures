@@ -1401,6 +1401,30 @@ void c_TRAN(caosVM* vm) {
 }
 
 /**
+ STPL (command) on (integer) part_no (integer)
+ %status maybe
+ %variants c2
+
+ openc2e's own: draws a part of the TARG agent stippled, every other pixel
+ left out in a checkerboard (as the invisible hand is drawn), so what is
+ behind it shows through; 0 draws it whole again. For scenery drawn in
+ front of creatures, such as the pond's waterfall, while a creature is
+ behind it (owner, 2026-11-10).
+*/
+void c_STPL(caosVM* vm) {
+	VM_VERIFY_SIZE(2)
+	VM_PARAM_INTEGER(part_no)
+	VM_PARAM_INTEGER(on)
+
+	valid_agent(vm->targ);
+	CompoundPart* s = vm->targ->part(part_no);
+	THROW_IFNOT(s);
+	SpritePart* p = dynamic_cast<SpritePart*>(s);
+	THROW_IFNOT(p);
+	p->setStippled(on != 0);
+}
+
+/**
  HGHT (integer)
  %status maybe
  %variants c1 c2 cv c3 sm
