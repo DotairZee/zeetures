@@ -82,6 +82,10 @@ class World {
 	unsigned int race;
 	unsigned int ticktime, tickcount;
 	unsigned int worldtickcount;
+	// C2: rooms with every doorway shut when first checked (sealed pockets of
+	// rock in the room map); see World::tick
+	bool sealedRoomsKnown = false;
+	std::set<unsigned int> sealedAtStart;
 	unsigned int timeofday, dayofseason, season, year;
 	bool showrooms, autokill, autostop;
 

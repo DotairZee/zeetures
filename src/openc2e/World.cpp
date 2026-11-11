@@ -381,27 +381,58 @@ void World::tick() {
 	// the east-west seam, owner 2026-11-10) are put back on the floor of the
 	// nearest room above them, within 600 px. Only objects that collide with
 	// the rooms (attr 64; the critters fly by their own scripts, without
-	// physics), not creatures, nor carried ones, nor ones in vehicles; every
-	// 100 ticks.
+	// physics), not carried ones, nor ones in vehicles; every 100 ticks.
+	//
+	// The same for objects and creatures in a sealed pocket: a room of solid
+	// rock in the room map, every doorway shut, when the world started and
+	// still. Nothing gets out of one (owner, 2026-11-10: a ball, a bat and a
+	// critter's leaving lay under the bamboo-cage lift's floor in the east
+	// caves, room 48, below the map's own ground; a bat flies home at dawn
+	// through the rock with its collisions off and may wake in such a
+	// pocket). The world has about 30 of them; a room whose doorways a script
+	// opens and shuts (an airlock) is not one unless both were shut at the
+	// start and still are.
 	if (engine.version == 2 && map && tickcount % 100 == 37) {
 		static const bool watchRescue = getenv("OPENC2E_WATCH_SUNK") != nullptr;
+		if (!sealedRoomsKnown) {
+			sealedRoomsKnown = true;
+			// (a shut room with a floor line or one creatures can be dropped
+			// in is a real, closed place: the terrarium of critters and
+			// plants in the west caves, room 85, is one)
+			for (auto& r : map->getRooms())
+				if (r->allDoorsShut() && r->floorpoints.empty() && r->dropstatus == 0)
+					sealedAtStart.insert(r->id);
+		}
+		auto sealed = [&](const std::shared_ptr<Room>& r) {
+			return r && sealedAtStart.count(r->id) && r->allDoorsShut();
+		};
 		for (auto& a : agents) {
-			if (!a || a->isDying() || a->family != 2 || !(a->attr & 64) || a->carriedby || a->invehicle)
+			if (!a || a->isDying() || a->carriedby || a->invehicle)
+				continue;
+			bool creature = a->family == 4;
+			if (!creature && (a->family != 2 || !(a->attr & 64)))
 				continue;
 			float cx = a->x + a->getWidth() / 2.0f, bottom = a->y + a->getHeight();
-			if (map->roomAt(cx, bottom - 1) || map->roomAt(cx, a->y + a->getHeight() / 2.0f))
+			std::shared_ptr<Room> at = map->roomAt(cx, bottom - 1);
+			std::shared_ptr<Room> mid = map->roomAt(cx, a->y + a->getHeight() / 2.0f);
+			bool outside = !at && !mid;
+			bool pocket = at && sealed(at) && (!mid || sealed(mid));
+			if (!(creature ? pocket : (outside || pocket)))
 				continue;
 			for (float yy = bottom - 2; yy > bottom - 600 && yy > 0; yy -= 4) {
 				std::shared_ptr<Room> r = map->roomAt(cx, yy);
-				if (!r)
+				if (!r || r == at || sealed(r))
 					continue;
 				float floory = r->floorYatX(cx);
 				a->velx = 0;
 				a->vely = 0;
 				a->moveTo(a->x, floory - a->getHeight());
+				if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()))
+					sc->scriptMoved();
 				if (watchRescue)
-					fmt::print("* RESCUED {} {} {} from outside the rooms at ({:.0f}, {:.0f}) onto room {} floor {:.0f}\n", (int)a->family,
-						(int)a->genus, a->species, cx, bottom, r->id, floory);
+					fmt::print("* RESCUED {} {} {} from {} at ({:.0f}, {:.0f}) onto room {} floor {:.0f}\n", (int)a->family,
+						(int)a->genus, a->species, outside ? std::string("outside the rooms") : fmt::format("sealed room {}", at->id),
+						cx, bottom, r->id, floory);
 				break;
 			}
 		}

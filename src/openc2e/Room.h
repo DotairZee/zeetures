@@ -46,6 +46,17 @@ class Room {
 	std::map<std::weak_ptr<Room>, RoomDoor, std::owner_less<std::weak_ptr<Room>>> doors;
 
   public:
+	// every doorway shut (a sealed pocket of rock in the room map, or an
+	// airlock with both doors closed)
+	bool allDoorsShut() const {
+		if (doors.empty())
+			return false;
+		for (auto& d : doors)
+			if (d.second.perm > 0)
+				return false;
+		return true;
+	}
+
 	unsigned int x_left, x_right, y_left_ceiling, y_right_ceiling;
 	unsigned int y_left_floor, y_right_floor;
 
