@@ -1126,6 +1126,36 @@ static void FamilyPage() {
 	}
 }
 
+// A trait's bar: its own colour filling to where the creature stands, a mark
+// at the middle (average), nothing judged good or bad. Colours from the
+// commonest colour-feeling associations, kept apart for colour-blind eyes:
+// temper red (anger), energy yellow (activity), steadiness blue (calm),
+// boldness orange, curiosity teal (the new and open), sociability pink
+// (warmth), reactivity purple (nervous arousal).
+static void TraitBar(int trait, int percent, const char* label, float width) {
+	static const ImU32 colours[NUM_TRAITS] = {
+		IM_COL32(235, 140, 40, 255), // boldness
+		IM_COL32(40, 175, 170, 255), // curiosity
+		IM_COL32(230, 200, 40, 255), // energy
+		IM_COL32(230, 110, 170, 255), // sociability
+		IM_COL32(215, 55, 50, 255), // temper
+		IM_COL32(150, 90, 210, 255), // reactivity
+		IM_COL32(70, 120, 220, 255), // steadiness
+	};
+	const float h = ImGui::GetTextLineHeight() + 6;
+	ImVec2 p = ImGui::GetCursorScreenPos();
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), IM_COL32(45, 45, 50, 255), 3);
+	dl->AddRectFilled(p, ImVec2(p.x + width * std::clamp(percent, 0, 100) / 100.0f, p.y + h), colours[trait], 3);
+	dl->AddLine(ImVec2(p.x + width / 2, p.y), ImVec2(p.x + width / 2, p.y + h), IM_COL32(255, 255, 255, 140), 1.0f);
+	dl->AddRect(p, ImVec2(p.x + width, p.y + h), IM_COL32(110, 110, 120, 255), 3);
+	ImVec2 ts = ImGui::CalcTextSize(label);
+	ImVec2 tp(p.x + 6, p.y + (h - ts.y) / 2);
+	dl->AddText(ImVec2(tp.x + 1, tp.y + 1), IM_COL32(0, 0, 0, 200), label);
+	dl->AddText(tp, IM_COL32(255, 255, 255, 255), label);
+	ImGui::Dummy(ImVec2(width, h));
+}
+
 // Temperament (openc2e addition, owner 2026-11-11): the creature's inborn
 // traits (creatures/Temperament.h), each where it stands among creatures
 // (50% is average), and a few words for the strongest.
@@ -1142,7 +1172,7 @@ static void TemperamentPage() {
 	std::string words = Temperaments::describe(t);
 	ImGui::TextWrapped("%s is %s.", name.c_str(), words.c_str());
 	ImGui::Spacing();
-	ImGui::TextDisabled("Every creature has some of every trait. 50%% is average: the share of creatures with less.");
+	ImGui::TextDisabled("Every creature has some of every trait. 50%% (the middle mark) is average: the share of creatures with less.");
 	ImGui::Spacing();
 	for (int i = 0; i < NUM_TRAITS; i++) {
 		int pc = t.percent(i);
@@ -1150,7 +1180,7 @@ static void TemperamentPage() {
 		trait[0] = (char)std::toupper((unsigned char)trait[0]);
 		const char* lean = pc >= 70 ? Temperaments::highWord(i) : pc <= 30 ? Temperaments::lowWord(i) : "";
 		std::string label = fmt::format("{} {}%{}", trait, pc, *lean ? fmt::format(" ({})", lean) : "");
-		KitBar(pc / 100.0f, label.c_str(), 260);
+		TraitBar(i, pc, label.c_str(), 280);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s ... %s", Temperaments::lowWord(i), Temperaments::highWord(i));
 	}
