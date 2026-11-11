@@ -23,6 +23,7 @@
  */
 
 #include "WorldSave.h"
+#include "creatures/Breeding.h"
 
 #include "Agent.h"
 #include "Camera.h"
@@ -497,6 +498,9 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			out << "ticks " << c->getTicks() << "\n";
 			out << "ageing " << (c->isAgeing() ? 1 : 0) << "\n";
 			out << "asleep " << (c->isAsleep() ? 1 : 0) << "\n";
+			// a pregnancy: the baby's genome name (in the user Genetics folder)
+			if (a->babymoniker != 0)
+				out << "baby " << genomeNameFromInt(a->babymoniker) << "\n";
 			{
 				std::string mon = world.history->findMoniker(c->getGenome());
 				monikerData& m = world.history->getMoniker(mon);
@@ -603,6 +607,7 @@ struct SavedCreature {
 	std::string genome, mind, mindstate;
 	bool female = false, selected = false, ageing = false, asleep = false;
 	int variant = 0, stage = 0;
+	std::string baby; // the genome name of the baby she carries, if pregnant
 	float x = 0, y = 0;
 	unsigned int age = 0, ticks = 0;
 	std::vector<int> chemicals;
@@ -706,6 +711,10 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 		world.history->quiet = wasquiet;
 	}
 	c->restoreLifeCounters(s.ticks, s.age);
+	if (s.baby.size() == 4) {
+		a->babymoniker = genomeNameToInt(s.baby);
+		c->setPregnant(255);
+	}
 	for (size_t i = 0; i < s.chemicals.size() && i < 256; i++)
 		c->setChemicalLevel((unsigned char)i, (unsigned char)s.chemicals[i]);
 	c->setOrganState(s.organs);
@@ -884,6 +893,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 				l >> c->ageing;
 			else if (key == "asleep")
 				l >> c->asleep;
+			else if (key == "baby")
+				l >> c->baby;
 			else if (key == "moniker")
 				l >> c->moniker;
 			else if (key == "parents") {

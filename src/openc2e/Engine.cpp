@@ -18,6 +18,7 @@
  */
 
 #include "Engine.h"
+#include "creatures/Breeding.h"
 
 #include <climits>
 #include "creatures/CreatureAgent.h"
@@ -473,6 +474,21 @@ void Engine::update() {
 		if (auto* ca = dynamic_cast<CreatureAgent*>(world.selectedcreature.get()))
 			if (ca->getCreature()->isAlive())
 				ca->getCreature()->die();
+	// developer aid: OPENC2E_TEST_MATE=N, at world tick N, has the first
+	// grown female and male of a genus mate (MATE's path: tryConceive)
+	if (static const char* k = getenv("OPENC2E_TEST_MATE"); k && world.tickcount == (unsigned int)atoi(k)) {
+		CreatureAgent *she = nullptr, *he = nullptr;
+		for (auto& a : world.agents) {
+			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
+			if (!ca || !ca->getCreature()->isAlive() || ca->getCreature()->getStage() < 2)
+				continue;
+			if (ca->getCreature()->isFemale() && !she)
+				she = ca;
+			else if (!ca->getCreature()->isFemale() && !he && (!she || dynamic_cast<Agent*>(she)->genus == a->genus))
+				he = ca;
+		}
+		fmt::print("* TEST MATE: {}\n", tryConceive(she, he) ? "conceived" : "no");
+	}
 	if (getenv("OPENC2E_DUMP_AGENT_EVERY_TICK")) {
 		fmt::print("* Tick {}\n", world.tickcount);
 		dumpAgents();

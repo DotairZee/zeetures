@@ -344,7 +344,22 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 	bool ranscript = false;
 	static const bool trace_events = getenv("OPENC2E_TRACE_EVENTS") != nullptr;
 
-	std::shared_ptr<script> s = findScript(event);
+	std::shared_ptr<script> s;
+	// C2: a creature's action on another creature runs the world's
+	// creature-on-creature script (classifier 0 0 0: activate 1 a kiss and,
+	// between a willing grown pair, mating; activate 2 a tickle; deactivate a
+	// push; hit a hit) rather than its own script for acting on an object,
+	// which only sent the other creature a message it has no script for
+	// (found 2026-11-10, starting on breeding)
+	if (engine.version == 2 && family == 4 && event >= 16 && event < 32)
+		if (CreatureAgent* ca = dynamic_cast<CreatureAgent*>(this))
+			if (Creature* c = ca->getCreature()) {
+				AgentRef focus = c->getAttentionFocus();
+				if (focus && focus.get() != this && dynamic_cast<CreatureAgent*>(focus.get()))
+					s = world.scriptorium->getScript(0, 0, 0, event);
+			}
+	if (!s)
+		s = findScript(event);
 	if (s) {
 		bool madevm = false;
 		if (!vm) {

@@ -26,6 +26,7 @@
 #include "caosVM.h"
 #include "common/Random.h"
 #include "common/throw_ifnot.h"
+#include "creatures/Breeding.h"
 #include "creatures/CompoundCreature.h"
 #include "creatures/SkeletalCreature.h"
 #include "creatures/c2eCreature.h"
@@ -1303,6 +1304,14 @@ void c_NEW_CREA_c1(caosVM* vm) {
 		std::string mon = world.history->findMoniker(genome);
 		monikerData& m = world.history->getMoniker(mon);
 		m.moveToCreature(a);
+		// a bred creature's genus gene names its parents (MATE): conceived
+		for (auto& gn : genome->genes)
+			if (auto* genus = dynamic_cast<creatureGenusGene*>(gn.get())) {
+				std::string mum = genus->mum.c_str(), dad = genus->dad.c_str();
+				if (mum.size() == 4 && dad.size() == 4 && world.history->hasMoniker(mum) && world.history->hasMoniker(dad))
+					m.addEvent(0, mum, dad);
+				break;
+			}
 		// C1/C2 hatching scripts don't call BORN, so the birth is recorded
 		// here: its date, a default name ("Ettin 0002") and the life log
 		if (!world.history->quiet) {
@@ -1399,16 +1408,26 @@ void c_LTCY(caosVM* vm) {
 /**
  MATE (command)
  %variants c2 cv c3
- %status stub
+ %status maybe
+
+ The TARG creature and _IT_ mate. In C2 the world's kiss script (activate 1
+ or 2 on a creature, between a willing grown pair) runs it. If one is female
+ and one male, she is fertile and receptive (her reproductive loci, set by
+ her chemistry) and not already pregnant, and he is fertile, she conceives:
+ the baby's genome is made from both (crossGenomes: crossover and gentle
+ mutation, our own recipe) and kept in the user Genetics folder under a new
+ four-letter name, which she carries as BABY until the world's egg-laying
+ script lays it in an egg. Her pregnant locus is set, so her genes' pregnancy
+ chemistry runs. OPENC2E_TEST_CONCEIVE=1 (developer aid) skips the fertility
+ checks. C2 only for now.
 */
 void c_MATE(caosVM* vm) {
-	vm->getTargCreature();
+	CreatureAgent* a = dynamic_cast<CreatureAgent*>(vm->targ.get());
+	THROW_IFNOT(a);
 	THROW_IFNOT(vm->_it_);
-	CreatureAgent* t = dynamic_cast<CreatureAgent*>(vm->_it_.get());
-	THROW_IFNOT(t);
-	t->getCreature();
-
-	// TODO
+	CreatureAgent* b = dynamic_cast<CreatureAgent*>(vm->_it_.get());
+	THROW_IFNOT(b);
+	tryConceive(a, b);
 }
 
 /**

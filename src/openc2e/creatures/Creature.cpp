@@ -446,6 +446,11 @@ void c1Creature::tick() {
 			ageCreature();
 	}
 
+	// C1/C2: the world's egg-laying script takes the baby's genome name from
+	// BABY and sets it to 0 as the egg is laid; that ends the pregnancy
+	if (pregnant != 0 && parentagent && parentagent->babymoniker == 0)
+		pregnant = 0;
+
 	watchPregnancy();
 
 	if (dead != 0)
@@ -558,6 +563,11 @@ void c2Creature::tick() {
 	static const bool watchChem = getenv("OPENC2E_WATCH_CHEM") != nullptr;
 	if (watchChem)
 		watchChemistry();
+
+	// C1/C2: the world's egg-laying script takes the baby's genome name from
+	// BABY and sets it to 0 as the egg is laid; that ends the pregnancy
+	if (pregnant != 0 && parentagent && parentagent->babymoniker == 0)
+		pregnant = 0;
 
 	watchPregnancy();
 

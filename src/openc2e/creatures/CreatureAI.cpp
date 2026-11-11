@@ -39,6 +39,43 @@
 #include <memory>
 #include <stdint.h>
 
+// C2, under a mind: two kinds of the replaced brain's sensory cells feed body
+// chemistry through the genome's emitters, so they are set here from what the
+// creature perceives (the brain itself does not run). The attention lobe
+// (tissue 2): the cell of the category attended to. The sensory-situation
+// lobe (tissue 5), cell 19: a creature of its own genus and the other sex in
+// sight (the norn's instincts pair it with Sex Drive and the kiss). A norn's
+// sex drive chemical (13) is made from 115 and the fertility hormone 114, and
+// 115 from what those two cells emit (116 while attending to a norn, 120 with
+// the other sex in sight); without them no creature ever felt sex drive, and
+// the world's kiss script, which asks both partners for more than 64 of it,
+// never let any mate (found 2026-11-10, starting on breeding).
+void oldCreature::feedSensoryCells() {
+	if (engine.version != 2 || !brain)
+		return;
+	if (oldLobe* att = brain->getLobeByTissue(2))
+		for (unsigned int n = 0; n < att->getNoNeurons(); n++) {
+			oldNeuron* cell = att->getNeuron(n);
+			cell->state = cell->output = ((int)n == attn && attention) ? 255 : 0;
+		}
+	if (oldLobe* sit = brain->getLobeByTissue(5); sit && sit->getNoNeurons() > 19) {
+		bool present = false;
+		for (auto& a : world.agents) {
+			if (!a || a.get() == parentagent || a->genus != parentagent->genus)
+				continue;
+			auto* ca = dynamic_cast<CreatureAgent*>(a.get());
+			if (!ca || !ca->getCreature() || !ca->getCreature()->isAlive() || ca->getCreature()->isFemale() == female)
+				continue;
+			if (agentInSight(AgentRef(a))) {
+				present = true;
+				break;
+			}
+		}
+		oldNeuron* cell = sit->getNeuron(19);
+		cell->state = cell->output = present ? 255 : 0;
+	}
+}
+
 void oldCreature::tickBrain() {
 	if (mind) {
 		tickMind();
@@ -46,6 +83,7 @@ void oldCreature::tickBrain() {
 		static const bool norelay = getenv("OPENC2E_NO_RELAY") != nullptr; // for A/B testing
 		if (brain && !norelay)
 			brain->tickChemicalRelays();
+		feedSensoryCells();
 		return;
 	}
 
@@ -743,6 +781,10 @@ MindPerception oldCreature::buildPerception() {
 		// door first; a norn activating it directly drained the chamber with
 		// the doors shut (owner, 2026-11-09)
 		bool activatable = engine.version > 2 || (a->attr & 4);
+		// another creature can always be acted on (kiss, tickle, push: the
+		// world's creature-on-creature scripts), whatever its attributes
+		if (dynamic_cast<CreatureAgent*>(a.get()))
+			activatable = true;
 		p.visible.push_back({(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay, edibleScent(a.get()), reachable, activatable});
 	}
 
@@ -924,7 +966,11 @@ MindPerception oldCreature::buildPerception() {
 // drives, 2 the attention categories, 3 heard verbs, 5 senses and 7 heard
 // nouns. Lobe 0 neuron 0 marks an unused input. The reinforcer is chemical 52
 // (reward) or 53 (punishment).
-static bool translateInstinct(creatureInstinctGene* g, InnateInstinct& out) {
+// Sense 19 (the other sex of the creature's own genus in sight, set by
+// feedSensoryCells) names the object of the act: a creature of its own genus
+// (category 35 + genus), as the sex instincts mean it (Sex Drive with the
+// other sex in sight: kiss).
+static bool translateInstinct(creatureInstinctGene* g, InnateInstinct& out, int genus) {
 	if (g->drive != 52 && g->drive != 53)
 		return false;
 	out.reward = (g->drive == 52);
@@ -940,7 +986,12 @@ static bool translateInstinct(creatureInstinctGene* g, InnateInstinct& out) {
 			case 1: out.conditions.push_back({InnateCondition::Drive, neuron}); break;
 			case 2: out.conditions.push_back({InnateCondition::Attention, neuron}); break;
 			case 3: out.conditions.push_back({InnateCondition::HeardVerb, neuron}); break;
-			case 5: out.conditions.push_back({InnateCondition::Sense, neuron}); break;
+			case 5:
+				if (neuron == 19 && genus >= 1 && genus <= 4)
+					out.conditions.push_back({InnateCondition::Attention, 35 + genus});
+				else
+					out.conditions.push_back({InnateCondition::Sense, neuron});
+				break;
 			case 7: out.conditions.push_back({InnateCondition::HeardNoun, neuron}); break;
 			default: return false; // not a lobe these genomes use for instincts
 		}
@@ -961,7 +1012,7 @@ void oldCreature::tickMind() {
 	if (engine.version == 2) {
 		while (!unprocessedinstincts.empty()) {
 			InnateInstinct inst;
-			if (translateInstinct(unprocessedinstincts.front(), inst))
+			if (translateInstinct(unprocessedinstincts.front(), inst, parentagent->genus))
 				p.newInstincts.push_back(inst);
 			unprocessedinstincts.pop_front();
 		}

@@ -99,6 +99,15 @@ class oldCreature : public Creature {
 	unsigned char getFertile() const { return fertile; }
 	unsigned char getReceptive() const { return receptive; }
 	unsigned char getPregnant() const { return pregnant; }
+	// C2: the reproductive switches (fertile, receptive) sum the signed
+	// outputs of all their receptors each biochemistry tick, then clip; see
+	// c2Organ::processReceptor
+	int reproSum[2] = {0, 0};
+	bool reproSet[2] = {false, false};
+	unsigned char* reproLocus(int i) { return i == 0 ? &fertile : &receptive; }
+	// conception (MATE) and a restored pregnancy set it; laying the egg clears it
+	void setPregnant(unsigned char p) { pregnant = p; }
+	void feedSensoryCells(); // C2 under a mind: see CreatureAI.cpp
 
 	oldBrain* getBrain() { return brain; }
 

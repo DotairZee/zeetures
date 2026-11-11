@@ -22,6 +22,7 @@
 #include "oldBrain.h"
 #include "oldCreature.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath> // powf
 #include <fmt/core.h>
@@ -113,10 +114,15 @@ void c2Creature::tickBiochemistry() {
 	if ((ticks % 2) != 0)
 		return; // every 2 ticks (0.2s)
 
-	// tick organs
+	// tick organs (the reproductive switches summed over their receptors)
+	reproSum[0] = reproSum[1] = 0;
+	reproSet[0] = reproSet[1] = false;
 	for (auto& organ : organs) {
 		organ->tick();
 	}
+	for (int i = 0; i < 2; i++)
+		if (reproSet[i])
+			*reproLocus(i) = (unsigned char)std::clamp(reproSum[i], 0, 255);
 
 	oldCreature::tickBiochemistry();
 }
@@ -895,7 +901,13 @@ void c2Organ::processEmitter(c2Emitter& d) {
 		f = 255 - f;
 
 	if (g.digital) {
-		if (f < g.threshold)
+		// fires when the signal is above the threshold, as a digital
+		// receptor does: at "threshold 0, at or above", the pregnancy
+		// hormones (a female's genes emit progesterone, 108, from her
+		// pregnant locus, threshold 0) flowed in every female, pregnant or
+		// not, and held her fertility off for good; "while awake" emitters
+		// kept going in sleep (found 2026-11-10, starting on breeding)
+		if (f <= g.threshold)
 			return;
 		parent->addChemical(g.chemical, g.gain);
 	} else {
@@ -1007,6 +1019,32 @@ void c2Organ::processReceptor(c2Receptor& d, bool checkchem) {
 		r = g.nominal - r;
 	else
 		r += g.nominal;
+
+	// The reproductive switches (creature, reproductive tissue: fertile and
+	// receptive) are each fed by several receptors, some inverted with a
+	// nominal of 0 to switch them off (a female's fertility goes off while
+	// her progesterone, 108, is above 150). Each receptor used to overwrite
+	// the switch, so the last one processed, that inverted one, held every
+	// female's fertility at 0 and none could conceive (found 2026-11-10,
+	// starting on breeding). C2's own rule for several receptors on one locus
+	// is not documented; here they add up, signed, and the sum is clipped
+	// after the organs' tick (c2Creature::tickBiochemistry).
+	// Each receptor's gain is read as its output at full signal, the
+	// analogue ones spread over the range from their threshold to 255: read
+	// as a slope of 1 from the threshold, a female's fertility (chemical 105,
+	// threshold 73) could reach only 182, under the 192 her genes need before
+	// she makes the chemical (110) that makes her receptive, so no female was
+	// ever receptive. Read this way her fertility passes 192 when 105 peaks,
+	// she turns receptive, and the progesterone her fertility makes switches
+	// it off again until it fades: a cycle, from her own genes.
+	if (g.organ == 1 && g.tissue == 2 && g.locus < 2 && d.locus == parent->reproLocus(g.locus)) {
+		int x = g.digital ? (d.lastvalue > g.threshold ? g.gain : 0)
+						  : (((int)d.lastvalue - g.threshold) * g.gain) / std::max(1, 255 - (int)g.threshold);
+		r = g.inverted ? g.nominal - x : g.nominal + x;
+		parent->reproSum[g.locus] += r;
+		parent->reproSet[g.locus] = true;
+		return;
+	}
 
 	// clip the result of the calculation to unsigned char, and reassign it
 	if (r < 0)
