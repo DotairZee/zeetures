@@ -109,8 +109,9 @@ class Agent : public std::enable_shared_from_this<Agent> {
 	std::shared_ptr<class VoiceData> voice;
 	std::vector<std::pair<std::string, unsigned int> > pending_voices;
 	unsigned int ticks_until_next_voice = 0;
+	float voice_pitch = 1.0f; // playback rate of the syllables being spoken (CreatureSpeech)
 	void setVoice(std::string name);
-	void speak(std::string sentence);
+	void speak(std::string sentence, float pitch = 1.0f, float pace = 1.0f);
 	void tickVoices();
 
 	Sound sound;

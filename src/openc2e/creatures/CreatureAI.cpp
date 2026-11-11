@@ -29,6 +29,7 @@
 #include "c2eCreature.h"
 #include "common/Random.h"
 #include "oldBrain.h"
+#include "CreatureSpeech.h"
 #include "oldCreature.h"
 #include <map>
 #include <sstream>
@@ -76,6 +77,47 @@ void oldCreature::feedSensoryCells() {
 	}
 }
 
+// C1/C2 under a mind: the involuntary actions (reflexes) the genes trigger
+// through the involuntary-action loci (a female's egg laying, sneezing,
+// coughing, shivering, falling asleep, the throes of dying) run the world's
+// scripts 64-71 as in the original brain path, which a mind replaces; before,
+// none ran, so a pregnant female never laid her egg (found 2026-11-10,
+// breeding). As reflexes they interrupt what the creature is doing; each
+// script starts by setting its own latency (LTCY), so it does not repeat at
+// once.
+void oldCreature::tickInvoluntaryActions() {
+	if (zombie)
+		return;
+	for (unsigned int i = 0; i < 8; i++) {
+		if (involactionlatency[i] > 0) {
+			involactionlatency[i]--;
+			continue;
+		}
+		if (involaction[i] > 0)
+			parentagent->queueScript(i + 64);
+	}
+}
+
+// SAYN (the world's "express need" action ends with it): the creature says
+// its strongest need, worded for its age (CreatureSpeech).
+void oldCreature::sayNeed() {
+	unsigned int ndrives = (engine.version == 1) ? 16 : 17;
+	int best = -1, level = 0;
+	for (unsigned int i = 0; i < ndrives; i++)
+		if ((int)getDrive(i) > level) {
+			level = getDrive(i);
+			best = (int)i;
+		}
+	// the same need again within about 30 s: the gesture only (an adult
+	// asking for sleep eleven times running in a test, 2026-11-10)
+	static const bool every = getenv("OPENC2E_TEST_SPEECH") != nullptr; // developer aid: no pause
+	if (!every && best == lastNeedSaid && ticks < lastNeedTick + 300)
+		return;
+	lastNeedSaid = best;
+	lastNeedTick = ticks;
+	creatureSays(parentagent, (int)stage, best < 0 ? phraseFor("babble", (int)stage) : phraseFor(fmt::format("need:{}:{}", best, level), (int)stage));
+}
+
 void oldCreature::tickBrain() {
 	if (mind) {
 		tickMind();
@@ -84,6 +126,7 @@ void oldCreature::tickBrain() {
 		if (brain && !norelay)
 			brain->tickChemicalRelays();
 		feedSensoryCells();
+		tickInvoluntaryActions();
 		return;
 	}
 
@@ -1037,6 +1080,9 @@ void oldCreature::tickMind() {
 			fmt::print("[homeostat] creature {} passes over {} {} {} at ({:.0f}, {:.0f})\n", p.creatureId, (int)out.passOver->family,
 				(int)out.passOver->genus, out.passOver->species, out.passOver->x, out.passOver->y);
 	}
+
+	if (!out.say.empty())
+		creatureSays(parentagent, (int)stage, phraseFor(out.say, (int)stage));
 
 	if (out.expression >= 0 && out.expression < 6) {
 		if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent))

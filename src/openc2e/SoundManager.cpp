@@ -1,4 +1,7 @@
 #include "SoundManager.h"
+#include <filesystem>
+#include <cstring>
+#include <fstream>
 
 #include "Engine.h"
 #include "Map.h"
@@ -195,7 +198,80 @@ Sound SoundManager::playSound(std::string name, bool loop) {
 	return getNewSound(handle);
 }
 
-Sound SoundManager::playVoice(std::string name) {
+// A copy of a PCM WAV clip resampled to play at `pitch` times its rate
+// (higher and shorter above 1), made once in the user data folder's "Voice
+// cache" and reused; the clip itself if it can't be made. For voices by a
+// creature's age (CreatureSpeech): made on the player's machine from their
+// own game's syllables.
+static std::filesystem::path pitchedClip(const std::filesystem::path& clip, const std::string& name, float pitch) {
+	int pct = (int)std::lround(pitch * 100.0f);
+	if (pct == 100)
+		return clip;
+	std::filesystem::path dir = getUserDataDir() / "Voice cache";
+	std::filesystem::path out = dir / fmt::format("{}_p{}.wav", name, pct);
+	if (std::filesystem::exists(out))
+		return out;
+	std::ifstream in(clip, std::ios::binary);
+	std::vector<uint8_t> d((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	auto u16 = [&](size_t o) { return (unsigned)(d[o] | (d[o + 1] << 8)); };
+	auto u32 = [&](size_t o) { return (unsigned)(d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | ((unsigned)d[o + 3] << 24)); };
+	if (d.size() < 12 || std::memcmp(d.data(), "RIFF", 4) != 0 || std::memcmp(d.data() + 8, "WAVE", 4) != 0)
+		return clip;
+	size_t fmtAt = 0, dataAt = 0, dataLen = 0;
+	for (size_t o = 12; o + 8 <= d.size();) {
+		unsigned len = u32(o + 4);
+		if (std::memcmp(d.data() + o, "fmt ", 4) == 0)
+			fmtAt = o + 8;
+		else if (std::memcmp(d.data() + o, "data", 4) == 0) {
+			dataAt = o + 8;
+			dataLen = std::min<size_t>(len, d.size() - dataAt);
+		}
+		o += 8 + len + (len & 1);
+	}
+	if (!fmtAt || !dataAt || u16(fmtAt) != 1)
+		return clip; // PCM only
+	unsigned channels = u16(fmtAt + 2), bits = u16(fmtAt + 14);
+	if ((bits != 8 && bits != 16) || channels < 1)
+		return clip;
+	unsigned frame = channels * bits / 8;
+	size_t frames = dataLen / frame;
+	size_t outFrames = std::max<size_t>(1, (size_t)(frames / pitch));
+	std::vector<uint8_t> pcm(outFrames * frame);
+	for (size_t i = 0; i < outFrames; i++) {
+		float src = i * pitch;
+		size_t a = std::min(frames - 1, (size_t)src), b = std::min(frames - 1, a + 1);
+		float f = src - a;
+		for (unsigned c = 0; c < channels; c++) {
+			if (bits == 8) {
+				float v = d[dataAt + a * frame + c] * (1 - f) + d[dataAt + b * frame + c] * f;
+				pcm[i * frame + c] = (uint8_t)std::lround(v);
+			} else {
+				auto s16 = [&](size_t fr) { return (int16_t)u16(dataAt + fr * frame + c * 2); };
+				int v = (int)std::lround(s16(a) * (1 - f) + s16(b) * f);
+				pcm[i * frame + c * 2] = v & 0xff;
+				pcm[i * frame + c * 2 + 1] = (v >> 8) & 0xff;
+			}
+		}
+	}
+	std::error_code ec;
+	std::filesystem::create_directories(dir, ec);
+	std::ofstream o(out, std::ios::binary);
+	if (!o)
+		return clip;
+	auto w32 = [&](unsigned v) { char b[4] = {(char)(v & 0xff), (char)((v >> 8) & 0xff), (char)((v >> 16) & 0xff), (char)(v >> 24)}; o.write(b, 4); };
+	o.write("RIFF", 4);
+	w32((unsigned)(36 + pcm.size()));
+	o.write("WAVE", 4);
+	o.write("fmt ", 4);
+	w32(16);
+	o.write(reinterpret_cast<const char*>(d.data() + fmtAt), 16);
+	o.write("data", 4);
+	w32((unsigned)pcm.size());
+	o.write(reinterpret_cast<const char*>(pcm.data()), pcm.size());
+	return o ? out : clip;
+}
+
+Sound SoundManager::playVoice(std::string name, float pitch) {
 	if (name.size() == 0)
 		return {};
 
@@ -205,6 +281,7 @@ Sound SoundManager::playVoice(std::string name) {
 			return {}; // creatures 1 and 2 ignore non-existent audio clips
 		throw Exception(fmt::format("No such clip '{}.wav'", name));
 	}
+	filename = pitchedClip(filename, name, pitch);
 
 	auto handle = get_audio_backend()->play_clip(filename);
 	if (!handle) {

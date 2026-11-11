@@ -1751,12 +1751,17 @@ void c_DONE(caosVM* vm) {
 
 /**
  SAYN (command)
- %status stub
+ %status maybe
  %variants c1 c2 cv c3
+
+ The target creature says its strongest need. In C1/C2 (openc2e's own,
+ under a mind): worded for its age, in a speech bubble and its voice
+ (CreatureSpeech); the world's "express need" action ends with SAYN.
 */
 void c_SAYN(caosVM* vm) {
-	vm->getTargCreature();
-	// TODO
+	Creature* c = vm->getTargCreature();
+	if (auto* oc = dynamic_cast<oldCreature*>(c))
+		oc->sayNeed();
 }
 
 /**

@@ -1648,17 +1648,20 @@ void Agent::setVoice(std::string name) {
 	}
 }
 
-void Agent::speak(std::string sentence) {
+void Agent::speak(std::string sentence, float pitch, float pace) {
 	if (!voice)
 		throw Exception("can't speak without voice");
 	std::vector<VoiceEntry> syllables = voice->GetSyllablesFor(sentence);
 	if (pending_voices.size() == 0) {
 		ticks_until_next_voice = 1; // because tickVoices subtracts one every time
 	}
+	voice_pitch = pitch;
 	for (const auto& entry : syllables) {
 		// TODO: voice delay values are the same across games, even though C3/DS
 		// run more ticks per second! Are C3/DS voices really "faster"?
-		pending_voices.push_back(std::pair<std::string, unsigned int>(entry.name, entry.delay_ticks));
+		// (a slower or brisker voice for a creature's age: pace)
+		unsigned int delay = std::max(1u, (unsigned int)std::lround(entry.delay_ticks / std::max(0.2f, pace)));
+		pending_voices.push_back(std::pair<std::string, unsigned int>(entry.name, delay));
 	}
 }
 
@@ -1674,7 +1677,7 @@ void Agent::tickVoices() {
 			// just delay for number of ticks
 		} else {
 			// uncontrolled audio is easier, we shall hope no-one notices
-			auto voice = soundmanager.playVoice(it->first);
+			auto voice = soundmanager.playVoice(it->first, voice_pitch);
 			if (!voice) {
 				unhandledException(fmt::format("Couldn't play voice '{}'", it->first), false);
 			}

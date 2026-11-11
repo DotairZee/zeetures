@@ -108,6 +108,10 @@ class oldCreature : public Creature {
 	// conception (MATE) and a restored pregnancy set it; laying the egg clears it
 	void setPregnant(unsigned char p) { pregnant = p; }
 	void feedSensoryCells(); // C2 under a mind: see CreatureAI.cpp
+	void tickInvoluntaryActions(); // under a mind: see CreatureAI.cpp
+	void sayNeed(); // SAYN: see CreatureAI.cpp
+	int lastNeedSaid = -2;
+	unsigned int lastNeedTick = 0;
 
 	oldBrain* getBrain() { return brain; }
 

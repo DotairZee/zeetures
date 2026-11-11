@@ -455,7 +455,93 @@ class HomeostatMind : public CreatureMind {
 		fmt::print("[homeostat] creature {} died at brain tick {}; {}\n", p.creatureId, p.tick, debugState());
 	}
 
+	// 7. Speaking (vocalizations, owner 2026-11-10): what the creature says,
+	// as a meaning the engine words for its age (CreatureSpeech.h). It
+	// speaks of what just happened to it or what it meets, not all the time:
+	//   "ow"     Pain or Injury rose sharply
+	//   "yum"    Hunger fell while eating
+	//   "love"   Sex Drive fell after acting on one of its own kind
+	//   "grr"    Anger high and rising
+	//   "greet"  a creature of a kind not seen for a while came into view
+	//   "need"   now and then, a pressing need (the "express need" action
+	//            says it too, through SAYN)
+	//   "babble" babies and children, now and then, when content
+	// Never asleep. A pause after anything said, and each kind of remark
+	// has its own longer pause.
+	struct SpeechState {
+		std::array<float, NUM_DRIVES> prev{};
+		bool havePrev = false;
+		unsigned int lastSaid = 0;
+		std::map<std::string, unsigned int> lastKind;
+		std::map<int, unsigned int> lastSeenKind; // creature category -> mind tick last in view
+	} speech;
+
+	std::string chooseSpeech(const MindPerception& p, const std::array<float, NUM_DRIVES>& d) {
+		SpeechState& s = speech;
+		std::string say;
+		unsigned int t = p.tick;
+		auto ready = [&](const std::string& kind, unsigned int gap) {
+			auto it = s.lastKind.find(kind);
+			return it == s.lastKind.end() || t >= it->second + gap;
+		};
+		// creatures in view now (categories 36-39: norn, grendel, ettin, ...)
+		std::map<int, bool> seenNow;
+		for (auto& v : p.visible)
+			if (v.category >= 36 && v.category <= 39)
+				seenNow[v.category] = true;
+		if (!p.asleep && s.havePrev && t >= s.lastSaid + 30) {
+			auto rose = [&](int i, float by) { return d[i] - s.prev[i] > by; };
+			auto fell = [&](int i, float by) { return s.prev[i] - d[i] > by; };
+			if ((rose(PAIN, 0.12f) || rose(INJURY, 0.12f)) && ready("ow", 15))
+				say = "ow";
+			else if (fell(HUNGER, 0.06f) && p.currentDecision == prm.eatDecision && ready("yum", 60))
+				say = "yum";
+			else if (fell(SEX, 0.15f) && (p.currentDecision == 1 || p.currentDecision == 2) && p.currentAttention >= 36 && ready("love", 60))
+				say = "love";
+			else if (d[ANGER] > 0.7f && rose(ANGER, 0.03f) && ready("grr", 150))
+				say = "grr";
+			else {
+				for (auto& [cat, yes] : seenNow) {
+					auto it = s.lastSeenKind.find(cat);
+					bool newcomer = it == s.lastSeenKind.end() || t > it->second + 600;
+					if (newcomer && ready("greet", 120)) {
+						say = fmt::format("greet:{}", cat - 35);
+						break;
+					}
+				}
+			}
+			if (say.empty()) {
+				int best = -1;
+				float level = 0.8f;
+				for (int i = 0; i < NUM_DRIVES; i++)
+					if (d[i] > level) {
+						level = d[i];
+						best = i;
+					}
+				if (best >= 0 && ready("need", 250) && std::uniform_real_distribution<float>(0, 1)(rng) < 0.05f)
+					say = fmt::format("need:{}:{}", best, (int)(level * 255));
+				else if ((int)p.stage <= 1 && overallDrive(d) < 0.3f && ready("babble", 200) && std::uniform_real_distribution<float>(0, 1)(rng) < 0.02f)
+					say = "babble";
+			}
+		}
+		for (auto& [cat, yes] : seenNow)
+			s.lastSeenKind[cat] = t;
+		s.prev = d;
+		s.havePrev = true;
+		if (!say.empty()) {
+			s.lastSaid = t;
+			s.lastKind[say.substr(0, say.find(':'))] = t;
+		}
+		return say;
+	}
+
 	MindOutput tick(const MindPerception& p) override {
+		MindOutput out = tickChoose(p);
+		out.say = chooseSpeech(p, normalize(p.drives));
+		return out;
+	}
+
+	MindOutput tickChoose(const MindPerception& p) {
 		MindOutput out;
 		if (pendingPassOver) {
 			out.passOver = pendingPassOver;

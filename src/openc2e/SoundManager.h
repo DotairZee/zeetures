@@ -18,7 +18,9 @@ class SoundManager {
 
 	void tick();
 	Sound playSound(std::string filename, bool loop = false);
-	Sound playVoice(std::string filename);
+	// pitch: playback rate (1 as recorded); other rates play a resampled copy
+	// made once in the user data folder's "Voice cache"
+	Sound playVoice(std::string filename, float pitch = 1.0f);
 
 	float getVolume();
 	void setVolume(float);

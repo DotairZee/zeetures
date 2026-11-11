@@ -128,6 +128,9 @@ struct MindOutput {
 	// category; without this a creature in the airlock only ever saw the sea
 	// door, never the land door that lets it out).
 	AgentRef passOver;
+	// Something to say (a meaning, worded by the engine for the creature's
+	// age: CreatureSpeech.h), or empty.
+	std::string say;
 };
 
 class CreatureMind {
