@@ -1024,19 +1024,19 @@ static void BreedsPage() {
 	for (int sp = 0; sp < 4; sp++) {
 		int n = 0;
 		for (auto& b : breeds)
-			n += b.species == sp;
+			n += b.group() == sp;
 		if (n == 0)
 			continue;
-		if (!ImGui::TreeNodeEx(BreedSpeciesName(sp), ImGuiTreeNodeFlags_DefaultOpen, "%s (%d of %d slots)", BreedSpeciesName(sp), n, BREED_SLOTS))
+		if (!ImGui::TreeNodeEx(BreedSpeciesName(sp), ImGuiTreeNodeFlags_DefaultOpen, "%s (%d breeds)", BreedSpeciesName(sp), n))
 			continue;
 		for (auto& b : breeds) {
-			if (b.species != sp)
+			if (b.group() != sp)
 				continue;
 			std::string label = b.name.empty() ? fmt::format("Breed {}", breedSlotName(b.slot)) : fmt::format("{}  ({})", b.name, breedSlotName(b.slot));
 			if (b.inUser && (!b.inGame || b.inOverrides))
 				label += "  *";
-			if (ImGui::Selectable(fmt::format("{}##{}_{}", label, sp, b.slot).c_str(), sel_species == sp && sel_slot == b.slot)) {
-				sel_species = sp;
+			if (ImGui::Selectable(fmt::format("{}##{}_{}", label, b.species, b.slot).c_str(), sel_species == b.species && sel_slot == b.slot)) {
+				sel_species = b.species; // its picture set and slot identify it
 				sel_slot = b.slot;
 			}
 		}
@@ -1089,6 +1089,9 @@ static void BreedsPage() {
 			ImGui::TextColored(ImVec4(1, 0.7f, 0.4f, 1), "No body data (.att) in this slot: creatures fall back to another breed's.");
 		if (b->imported && !b->source.empty())
 			ImGui::TextDisabled("From %s", b->source.c_str());
+		if (b->kind >= 0 && b->kind != b->species)
+			ImGui::TextDisabled("Its pictures are filed in the %s set (slot %s): the pack's authors put them there.", BreedSpeciesName(b->species),
+				breedSlotName(b->slot).c_str());
 		if (b->imported && b->origSlot >= 0 && b->origSlot != b->slot)
 			ImGui::TextDisabled("Moved from slot %s (taken here); its files and genomes were changed to match.", breedSlotName(b->origSlot).c_str());
 		ImGui::PopTextWrapPos();

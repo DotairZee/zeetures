@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
+#include <iterator>
 #include <fmt/format.h>
 #include <fstream>
 #include <map>
@@ -18,6 +19,22 @@
 namespace fs = std::filesystem;
 
 namespace Openc2eImgui {
+
+// The genus gene (the first gene: "gene", type 2, subtype 1, five header
+// bytes, then the genus: 0 norn, 1 grendel, 2 ettin) of a genome file, or -1.
+static int genomeGenus(const std::filesystem::path& file) {
+	std::ifstream in(file, std::ios::binary);
+	if (!in)
+		return -1;
+	std::vector<uint8_t> d((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	for (size_t i = 0; i + 12 < d.size(); i++)
+		if (d[i] == 'g' && d[i + 1] == 'e' && d[i + 2] == 'n' && d[i + 3] == 'e') {
+			if (d[i + 4] == 2 && d[i + 5] == 1 && d[i + 11] <= 2)
+				return d[i + 11];
+			return -1; // the first gene is not the genus gene
+		}
+	return -1;
+}
 
 const char* BreedSpeciesName(int species) {
 	switch (species) {
@@ -159,9 +176,35 @@ std::vector<BreedInfo>& KnownBreeds(bool rescan) {
 				b.files.push_back(x);
 		b.origSlot = f.size() > 6 && !f[6].empty() ? breedSlotFromName(f[6]) : -1;
 	}
+	// names for the game's own breeds, from the user data folder's
+	// breed-names.txt ("species|slot|name"; kept out of the engine: the
+	// names are the game's)
+	{
+		std::ifstream in(getUserDataDir() / "breed-names.txt");
+		std::string line;
+		while (std::getline(in, line)) {
+			if (line.empty() || line[0] == '#')
+				continue;
+			auto f = split(line, '|');
+			if (f.size() < 3)
+				continue;
+			int slot = breedSlotFromName(f[1]);
+			auto it = found.find({std::atoi(f[0].c_str()), slot});
+			if (slot >= 0 && it != found.end() && !it->second.imported && it->second.name.empty())
+				it->second.name = f[2];
+		}
+	}
 	s_breeds.clear();
-	for (auto& [k, b] : found)
+	for (auto& [k, b] : found) {
+		// the kind of creature: the game's own breeds are what their set says;
+		// an imported one is what its genome's genus gene says
+		if (!b.imported && b.species < 3)
+			b.kind = b.species;
+		if (!b.genome.empty())
+			if (int g = genomeGenus(BreedDataSubdir(getUserDataDir(), "Genetics") / b.genome); g >= 0)
+				b.kind = g;
 		s_breeds.push_back(b);
+	}
 	return s_breeds;
 }
 

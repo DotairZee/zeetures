@@ -15,7 +15,14 @@
 namespace Openc2eImgui {
 
 struct BreedInfo {
-	int species = 0; // 0 norn, 1 grendel, 2 ettin, 3 the fourth C2 species slot
+	int species = 0; // 0 norn, 1 grendel, 2 ettin, 3 the fourth C2 species slot (the picture set its files are in)
+	// what kind of creature it is, from its genome's genus gene (0 norn, 1
+	// grendel, 2 ettin), or -1 if not known. Not always its picture set: a
+	// creature's look is chosen by its appearance genes, so pack authors
+	// filed norn breeds in the grendel set or the unused fourth set to keep
+	// clear of other packs' norn slots (Midsummer, Goat, Kai Norns).
+	int kind = -1;
+	int group() const { return kind >= 0 ? kind : species; } // the kit lists breeds by this
 	int slot = 0;
 	std::set<char> parts; // body-part letters with sprites (a head ... n tail)
 	std::set<int> stages; // life stages with sprites
