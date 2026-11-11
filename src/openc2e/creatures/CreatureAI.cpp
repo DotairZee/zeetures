@@ -484,7 +484,7 @@ static std::shared_ptr<Room> walkOnFrom(const Room& r, bool east, int fit, bool 
 	std::shared_ptr<Room> next;
 	float bestd = 1e9f;
 	for (auto& [n, door] : const_cast<Room&>(r).getDoors()) {
-		if (door.perm < fit || (dry && n->type == 2))
+		if (door.perm < fit || (dry && n->deepWater()))
 			continue;
 		float s = seamShift(*n, rc, w);
 		if (east ? n->x_left + s + 2 < r.x_right : n->x_right + s > r.x_left + 2)
@@ -565,6 +565,12 @@ static std::shared_ptr<Room> senseRoom(Agent* a, float cx, float cy, float& sx) 
 					return r;
 				return world.map->roomAt(fx, cy);
 			}
+			// wading: the middle is in the air above shallow water, but the
+			// creature walks the water's bed; its senses of direction (smell,
+			// walls, water ahead) are the bed's (the pond's bed is the way to
+			// the cave behind its waterfall, owner 2026-11-10)
+			if (auto r = sc->footRoom(); r && r->shallowWater())
+				return r;
 		}
 	return world.map->roomAt(cx, cy);
 }
@@ -784,7 +790,7 @@ MindPerception oldCreature::buildPerception() {
 			}
 			// water ahead on either side (to stay out of seas when walking)
 			for (auto& [n, door] : here->getDoors()) {
-				if (door.perm < fit || n->type != 2)
+				if (door.perm < fit || !n->deepWater())
 					continue;
 				if (westOf(*n))
 					p.waterWest = true;
@@ -808,7 +814,7 @@ MindPerception oldCreature::buildPerception() {
 				// where would the fall end? follow open floors down a few rooms
 				std::shared_ptr<Room> r = n;
 				for (int depth = 0; r && depth < 3; depth++) {
-					if (r->type == 2) {
+					if (r->deepWater()) {
 						(west ? p.waterWest : p.waterEast) = true;
 						break;
 					}
@@ -849,11 +855,17 @@ MindPerception oldCreature::buildPerception() {
 			// water: the way to the nearest dry room through open doors
 			// in water when the middle is, or the feet are (wading in a shallow
 			// pond, the middle stays in the air room above it)
+			// (wading on the bed of shallow water with the head above it is
+			// walking, not being in water: the pond's bed is the way to the
+			// cave behind its waterfall)
+			p.breath = breathLeft();
 			p.inWater = here->type == 2;
 			if (!p.inWater)
 				if (std::shared_ptr<Room> feet = world.map->roomAt(sx, parentagent->y + parentagent->getHeight() - 2))
 					p.inWater = feet->type == 2;
-			p.breath = breathLeft();
+			if (p.inWater && !here->deepWater())
+				if (std::shared_ptr<Room> feet = world.map->roomAt(sx, parentagent->y + parentagent->getHeight() - 2); feet && feet->shallowWater() && p.breath >= 1.0f)
+					p.inWater = false;
 			if (p.inWater) {
 				struct Step {
 					std::shared_ptr<Room> room;

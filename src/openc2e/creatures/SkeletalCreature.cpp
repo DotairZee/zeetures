@@ -701,7 +701,7 @@ void SkeletalCreature::snapDownFoot() {
 					// creature's poses, so the mind's own check missed some: a norn
 					// walked off the incubator bank into the pond and was trapped at
 					// its far end (regression batch reg5).
-					if (engine.version == 2 && thisroom->type == 2 && downfootroom->type != 2)
+					if (engine.version == 2 && thisroom->deepWater() && downfootroom->type != 2)
 						continue;
 					// A neighbouring floor far above the foot is a wall, not a step. Without
 					// this, a creature at an edge whose level exit is closed to it (e.g. the

@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <algorithm>
+
 #include "common/Color.h"
 #include "physics.h"
 
@@ -66,6 +68,18 @@ class Room {
 
 	// C2: smell of food spreading through the room system (World::tickFoodScent)
 	float foodscent = 0, foodscentnext = 0;
+
+	// C2: water too deep to wade (owner, 2026-11-10: the path to the cave
+	// behind the pond's waterfall runs along the pond's bed). Creatures do
+	// not walk from dry ground into water, nor does the mind count a way
+	// through it; water no deeper than WADE_DEPTH px (only the pond by the
+	// incubator, room 19, 53 px; an adult's head stays above it) is walked
+	// through like ground. Breathing is judged as always, by the head.
+	static constexpr unsigned int WADE_DEPTH = 55;
+	bool deepWater() const {
+		return type == 2 && std::max(y_left_floor, y_right_floor) - std::min(y_left_ceiling, y_right_ceiling) > WADE_DEPTH;
+	}
+	bool shallowWater() const { return type == 2 && !deepWater(); }
 
 	bool containsPoint(float x, float y);
 	bool containsPoint(Point p);
