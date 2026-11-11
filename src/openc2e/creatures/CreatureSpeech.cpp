@@ -21,6 +21,7 @@
 #include "Agent.h"
 #include "Bubble.h"
 #include "Engine.h"
+#include "PathResolver.h"
 #include "VoiceData.h"
 #include "World.h"
 #include "common/Random.h"
@@ -32,7 +33,9 @@
 #include <cmath>
 #include <cstdlib>
 #include <fmt/core.h>
+#include <fstream>
 #include <map>
+#include <sstream>
 #include <vector>
 
 namespace {
@@ -124,7 +127,61 @@ struct Wording {
 
 std::map<int, AgentRef> bubbles; // each speaker's bubble, by UNID
 
+// the player's settings file: "key value" lines
+std::filesystem::path settingsFile() {
+	return getUserDataDir() / "settings.txt";
+}
+
+std::string readSetting(const std::string& key) {
+	std::ifstream in(settingsFile());
+	std::string line;
+	while (std::getline(in, line)) {
+		std::istringstream l(line);
+		std::string k, v;
+		if (l >> k >> v && k == key)
+			return v;
+	}
+	return "";
+}
+
+void writeSetting(const std::string& key, const std::string& value) {
+	std::vector<std::string> lines;
+	{
+		std::ifstream in(settingsFile());
+		std::string line;
+		while (std::getline(in, line)) {
+			std::istringstream l(line);
+			std::string k;
+			if (!(l >> k && k == key))
+				lines.push_back(line);
+		}
+	}
+	lines.push_back(key + " " + value);
+	std::ofstream out(settingsFile());
+	for (auto& l : lines)
+		out << l << "\n";
+}
+
+int s_bubbles_shown = -1; // -1: not read yet
+
 } // namespace
+
+bool speechBubblesShown() {
+	if (s_bubbles_shown < 0)
+		s_bubbles_shown = readSetting("speech-bubbles") == "0" ? 0 : 1;
+	return s_bubbles_shown == 1;
+}
+
+void setSpeechBubblesShown(bool shown) {
+	s_bubbles_shown = shown ? 1 : 0;
+	writeSetting("speech-bubbles", shown ? "1" : "0");
+	if (!shown) {
+		for (auto& b : bubbles)
+			if (b.second)
+				b.second->kill();
+		bubbles.clear();
+	}
+}
 
 std::string nativeWord(Agent* creature, const std::string& word) {
 	if (word.empty())
@@ -364,13 +421,16 @@ float voicePace(int stage) {
 void creatureSays(Agent* creature, int stage, const Utterance& u) {
 	if (!creature || u.shown.empty() || engine.version >= 3)
 		return;
-	// one bubble at a time for each speaker
+	// one bubble at a time for each speaker (none with View > Speech
+	// Bubbles off)
 	auto it = bubbles.find(creature->getUNID());
 	if (it != bubbles.end() && it->second)
 		it->second->kill();
-	Bubble* b = Bubble::newBubble(creature, true, u.shown);
-	b->setTimeout(35); // 3.5 s
-	bubbles[creature->getUNID()] = AgentRef(b);
+	if (speechBubblesShown()) {
+		Bubble* b = Bubble::newBubble(creature, true, u.shown);
+		b->setTimeout(35); // 3.5 s
+		bubbles[creature->getUNID()] = AgentRef(b);
+	}
 	hearWords(creature, u.learned, HEAR_CREATURE);
 	try {
 		creature->speak(u.spoken.empty() ? u.shown : u.spoken, voicePitch(stage), voicePace(stage));

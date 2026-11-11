@@ -81,6 +81,13 @@ struct Utterance {
 };
 Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c);
 
+// View > Speech Bubbles: whether creatures' speech shows in bubbles (the
+// voice and learning go on either way). Remembered in the user data
+// folder's settings.txt ("speech-bubbles 0" or 1). Turning it off clears
+// the bubbles showing.
+bool speechBubblesShown();
+void setSpeechBubblesShown(bool shown);
+
 // A life stage's voice: pitch (playback rate, 1 = as recorded) and pace
 // (syllables per usual time, 1 = as the voice file says).
 float voicePitch(int stage);

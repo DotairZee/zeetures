@@ -1,3 +1,4 @@
+#include "creatures/CreatureSpeech.h"
 #include "C2ToolBar.h"
 
 #include "AgentInjector.h"
@@ -173,6 +174,12 @@ static void DrawC2MenuBar() {
 			ImGui::MenuItem("Text Labels", nullptr, false, false);
 			ImGui::EndMenu();
 		}
+		// not in C2's menu; openc2e addition (owner, 2026-11-11)
+		bool bubbles = speechBubblesShown();
+		if (ImGui::MenuItem("Speech Bubbles", nullptr, &bubbles))
+			setSpeechBubblesShown(bubbles);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Creatures' words in bubbles (their voices go on; Bibble under File > Sound)");
 		bool statusbar = IsC2StatusBarShown();
 		if (ImGui::MenuItem("Status Bar", nullptr, &statusbar))
 			SetC2StatusBarShown(statusbar);
