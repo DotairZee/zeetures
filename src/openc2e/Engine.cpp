@@ -480,7 +480,8 @@ void Engine::update() {
 				ca->getCreature()->die();
 	// developer aid: OPENC2E_TEST_CLICK="N,X,Y" clicks the hand's left
 	// button at world position X,Y at world tick N, through the hand's own
-	// event handling (a mouse move there, then the button down and up)
+	// event handling (a mouse move there, then the button down and up);
+	// "N,X,Y,right" clicks the right button (pick up or drop)
 	if (static const char* k = getenv("OPENC2E_TEST_CLICK"); k && world.hand()) {
 		int n = 0, cx = 0, cy = 0;
 		if (sscanf(k, "%d,%d,%d", &n, &cx, &cy) == 3 && world.tickcount == (unsigned int)n) {
@@ -496,7 +497,7 @@ void Engine::update() {
 			BackendEvent e{};
 			hand->moveTo(cx - (hand->pointerX() - hand->x), cy - (hand->pointerY() - hand->y));
 			e.type = eventmousebuttondown;
-			e.button = buttonleft;
+			e.button = strstr(k, "right") ? buttonright : buttonleft;
 			hand->handleEvent(e);
 			e.type = eventmousebuttonup;
 			hand->handleEvent(e);
