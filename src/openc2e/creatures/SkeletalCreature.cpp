@@ -527,6 +527,17 @@ bool SkeletalCreature::headTop(float& hx, float& hy) {
 	return true;
 }
 
+bool SkeletalCreature::headBox(float& left, float& top, float& right, float& bottom, int& view) {
+	if (!images[1])
+		return false;
+	left = x + partx[1] + adjustx;
+	top = y + party[1] + adjusty;
+	right = left + images[1]->width(pose[1]);
+	bottom = top + images[1]->height(pose[1]);
+	view = (int)pose[1];
+	return true;
+}
+
 int SkeletalCreature::attachmentY(unsigned int part, unsigned int id) {
 	return party[part] + att[part].attachments[pose[part]][1 + (id * 2)] + adjusty;
 }

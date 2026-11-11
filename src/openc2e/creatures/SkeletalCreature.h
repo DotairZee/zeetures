@@ -120,6 +120,9 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// the middle of the top of the head picture, in world coordinates (for
 	// the halo); false when there is no head picture
 	bool headTop(float& hx, float& hy);
+	// the head picture's box in the world, and its view (C1/C2: 0-3 facing
+	// right, 4-7 facing left, 8 toward the viewer, 9 away)
+	bool headBox(float& left, float& top, float& right, float& bottom, int& view);
 	// the push hand: slide along the ground for a few ticks (dir 1 east,
 	// -1 west), fast at first, easing off; walls and floors as for walking
 	void shove(int dir) {

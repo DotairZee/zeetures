@@ -528,6 +528,9 @@ void c2Creature::updateUnderwater() {
 		return;
 	}
 	bubbletimer = rand_int32(12, 40);
+	static const bool fastBubbles = getenv("OPENC2E_TEST_BUBBLES") != nullptr; // developer aid: a bubble every few ticks
+	if (fastBubbles)
+		bubbletimer = 3;
 	if (getenv("OPENC2E_DEBUG_BUBBLES"))
 		if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent))
 			fmt::print("* BUBBLE agent {:.0f},{:.0f} size {}x{} mouth {},{} neck {},{} -> {:.0f},{:.0f}\n", parentagent->x, parentagent->y, parentagent->getWidth(),
@@ -536,8 +539,23 @@ void c2Creature::updateUnderwater() {
 	// (World::tickBreathBubbles; the game's bubble object has no movement
 	// of its own, so bubbles hung where they were blown while the creature
 	// sank or walked on: owner, 2026-11-11)
+	// where the bubble starts (owner, 2026-11-11): just outside the head
+	// picture's bottom corner on the side the creature faces, 3 px out:
+	// bottom-right facing right or toward the viewer, bottom-left facing
+	// left or away. The bubble picture (32 x 48) has its bubble in columns
+	// 8-21 with its bottom at row 42.
+	float bx = headx - 5, by = heady - 5;
+	if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent)) {
+		float l, t, r, b;
+		int view;
+		if (sc->headBox(l, t, r, b, view)) {
+			bool rightSide = view <= 3 || view == 8;
+			bx = rightSide ? r + 3 - 8 : l - 3 - 21;
+			by = b - 42;
+		}
+	}
 	std::string caos = fmt::format("inst new: simp bubs 10 0 8000 0 setv cls2 2 1 27 setv ov01 7777 mvto {} {} mesg writ targ 8",
-		(int)headx - 5, (int)heady - 5);
+		(int)bx, (int)by);
 	std::string result = engine.executeNetwork(caos);
 	if (!result.empty())
 		fmt::print("* Couldn't make a bubble: {}\n", result);
