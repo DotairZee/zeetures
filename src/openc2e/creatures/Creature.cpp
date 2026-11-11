@@ -472,6 +472,7 @@ void c1Creature::tick() {
 		pregnant = 0;
 
 	watchPregnancy();
+	keepInRoomSystem();
 
 	if (dead != 0)
 		die();
@@ -607,6 +608,7 @@ void c2Creature::tick() {
 		pregnant = 0;
 
 	watchPregnancy();
+	keepInRoomSystem();
 
 	if (dead != 0)
 		die();
@@ -686,6 +688,56 @@ void c2eCreature::tick() {
 		die();
 
 	Creature::tick();
+}
+
+// A creature found outside every room (inside the ground, under a floor),
+// not held and not riding, is lifted to the nearest room straight above it,
+// a dry one if there is one within reach, and stood on its floor. An old norn
+// swimming in the underground pond sank through its bed into the rock
+// (owner, 2026-11-11); the floor check in Agent::physicsTick leaves water
+// rooms alone, so nothing brought her back. Checked about twice a second.
+void oldCreature::keepInRoomSystem() {
+#ifndef _CREATURE_STANDALONE
+	if (!parentagent || !world.map || parentagent->carriedby || parentagent->invehicle)
+		return;
+	if (keepcheck > 0) {
+		keepcheck--;
+		return;
+	}
+	keepcheck = 5;
+	Agent* a = parentagent;
+	float cx = a->x + a->getWidth() / 2.0f, cy = a->y + a->getHeight() / 2.0f;
+	if (world.map->roomAt(cx, cy) || world.map->roomAt(cx, a->y + a->getHeight() - 2))
+		return;
+	std::shared_ptr<Room> dry, wet;
+	float found = 0;
+	for (float yy = cy - 10; yy > cy - 800 && !dry; yy -= 10) {
+		std::shared_ptr<Room> r = world.map->roomAt(cx, yy);
+		if (!r)
+			continue;
+		if (r->type == 2) {
+			if (!wet)
+				wet = r;
+		} else {
+			dry = r;
+			found = yy;
+		}
+	}
+	std::shared_ptr<Room> r = dry ? dry : wet;
+	if (!r)
+		return; // nothing above: leave it (the hand can still move it)
+	(void)found;
+	float span = std::max(1.0f, (float)r->x_right - (float)r->x_left);
+	float bottom = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
+	if (r->floorpoints.size() && r->type != 2)
+		bottom = std::min(bottom, r->floorYatX(cx));
+	float oldx = a->x, oldy = a->y;
+	a->moveTo(a->x, bottom - a->getHeight() - 1);
+	a->velx = 0;
+	a->vely = 0;
+	fmt::print("* {} was inside the ground at {:.0f},{:.0f}; lifted to the floor of room {} ({}) at {:.0f},{:.0f}\n",
+		world.history->findMoniker(genome), oldx, oldy, r->id, r->type == 2 ? "water" : "dry", a->x, a->y);
+#endif
 }
 
 void oldCreature::watchPregnancy() {

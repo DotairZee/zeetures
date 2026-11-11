@@ -52,6 +52,8 @@ class oldCreature : public Creature {
 	// pregnancy starting (announced and logged); not on the first tick, when
 	// a creature restored from a save may already be pregnant
 	bool pregnancywatched = false, waspregnant = false;
+	unsigned int keepcheck = 0; // ticks to the next out-of-the-ground check
+	void keepInRoomSystem();
 	unsigned int lastbaby = 0; // the baby's genome name (as BABY holds it) while pregnant: the egg's, once laid
 	void watchPregnancy();
 	unsigned char dead;

@@ -658,7 +658,9 @@ class HomeostatMind : public CreatureMind {
 				hungryTicks = 0; // fed
 		}
 		lastTick = p.tick;
-		if (wasInWater && !p.inWater && lastObjectUse.category >= 0 && p.tick < lastObjectUseTick + prm.exitWindow) {
+		// (outside every room is not out of the water: a norn that sank
+		// through the underground pond's bed learned a button as its exit)
+		if (wasInWater && !p.inWater && p.inRoom && lastObjectUse.category >= 0 && p.tick < lastObjectUseTick + prm.exitWindow) {
 			bool known = false;
 			for (auto& e : exits)
 				if (e.category == lastObjectUse.category && e.decision == lastObjectUse.decision && std::fabs(e.x - lastObjectUse.x) < 200.0f && std::fabs(e.y - lastObjectUse.y) < prm.sameLevel) {
@@ -694,7 +696,8 @@ class HomeostatMind : public CreatureMind {
 			fmt::print("[homeostat] creature {} t{}: in the water; remembers {}@{} at {:.0f},{:.0f} as a flooder\n", p.creatureId, p.tick,
 				actionName(lastObjectUse.decision), lastObjectUse.category, lastObjectUse.x, lastObjectUse.y);
 		}
-		wasInWater = p.inWater;
+		if (p.inRoom)
+			wasInWater = p.inWater;
 		// boat rides
 		if (p.riding && !wasRiding) {
 			rideStartX = p.x;
