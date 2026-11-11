@@ -110,6 +110,10 @@ class oldCreature : public Creature {
 	void feedSensoryCells(); // C2 under a mind: see CreatureAI.cpp
 	void tickInvoluntaryActions(); // under a mind: see CreatureAI.cpp
 	void sayNeed(); // SAYN: see CreatureAI.cpp
+	// words heard and learned: for each word of the game's word list
+	// (engine.wordlist), how familiar it is, 0-255 (known at WORD_KNOWN); see
+	// CreatureSpeech.h. Empty until the first word is heard.
+	std::vector<unsigned char> vocab;
 	int lastNeedSaid = -2;
 	unsigned int lastNeedTick = 0;
 

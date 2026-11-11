@@ -501,6 +501,15 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			// a pregnancy: the baby's genome name (in the user Genetics folder)
 			if (a->babymoniker != 0)
 				out << "baby " << genomeNameFromInt(a->babymoniker) << "\n";
+			// words heard: word-list number:familiarity, for each one heard
+			{
+				std::string words;
+				for (size_t i = 0; i < c->vocab.size(); i++)
+					if (c->vocab[i])
+						words += fmt::format(" {}:{}", i, (int)c->vocab[i]);
+				if (!words.empty())
+					out << "words" << words << "\n";
+			}
 			{
 				std::string mon = world.history->findMoniker(c->getGenome());
 				monikerData& m = world.history->getMoniker(mon);
@@ -608,6 +617,7 @@ struct SavedCreature {
 	bool female = false, selected = false, ageing = false, asleep = false;
 	int variant = 0, stage = 0;
 	std::string baby; // the genome name of the baby she carries, if pregnant
+	std::vector<std::pair<int, int>> words; // word-list number, familiarity
 	float x = 0, y = 0;
 	unsigned int age = 0, ticks = 0;
 	std::vector<int> chemicals;
@@ -714,6 +724,13 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 	if (s.baby.size() == 4) {
 		a->babymoniker = genomeNameToInt(s.baby);
 		c->setPregnant(255);
+	}
+	for (auto& w : s.words) {
+		if (w.first < 0 || w.first > 1000)
+			continue;
+		if (c->vocab.size() <= (size_t)w.first)
+			c->vocab.resize(std::max((size_t)w.first + 1, engine.wordlist.size()), 0);
+		c->vocab[w.first] = (unsigned char)std::clamp(w.second, 0, 255);
 	}
 	for (size_t i = 0; i < s.chemicals.size() && i < 256; i++)
 		c->setChemicalLevel((unsigned char)i, (unsigned char)s.chemicals[i]);
@@ -895,6 +912,14 @@ bool LoadWorldState(const fs::path& worlddir) {
 				l >> c->asleep;
 			else if (key == "baby")
 				l >> c->baby;
+			else if (key == "words") {
+				std::string pair;
+				while (l >> pair) {
+					size_t colon = pair.find(':');
+					if (colon != std::string::npos)
+						c->words.push_back({atoi(pair.substr(0, colon).c_str()), atoi(pair.substr(colon + 1).c_str())});
+				}
+			}
 			else if (key == "moniker")
 				l >> c->moniker;
 			else if (key == "parents") {

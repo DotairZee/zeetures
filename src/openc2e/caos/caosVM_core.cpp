@@ -21,6 +21,9 @@
 #include "PathResolver.h"
 #include "World.h"
 #include "caosVM.h"
+#include "creatures/CreatureAgent.h"
+#include "creatures/CreatureSpeech.h"
+#include "creatures/oldCreature.h"
 #include "common/io/Writer.h"
 #include "common/io/WriterFmt.h"
 #include "common/throw_ifnot.h"
@@ -421,15 +424,20 @@ void v_OC2E_DDIR(caosVM* vm) {
 
 /**
  SYS: CMND (command) menuid (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 
  Do something by providing a menu ID from the original Creatures 1 or Creatures 2 engines. This is obviously limited to the IDs that openc2e is aware of.
+ Known: C2 32777, Instant Vocabulary (the selected creature learns every word; the Stone of Knowledge uses it).
 */
 void c_SYS_CMND(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(menuid)
+	VM_PARAM_INTEGER(menuid)
 
-	// TODO
+	if (engine.version == 2 && menuid == 32777) {
+		CreatureAgent* ca = dynamic_cast<CreatureAgent*>(world.selectedcreature.get());
+		if (ca)
+			learnAllWords(dynamic_cast<oldCreature*>(ca->getCreature()));
+	}
 }
 
 /* vim: set noet: */

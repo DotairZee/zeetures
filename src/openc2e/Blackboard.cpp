@@ -21,6 +21,7 @@
 
 #include "Engine.h"
 #include "World.h" // setFocus
+#include "creatures/CreatureSpeech.h"
 #include "caosValue.h"
 #include "common/backend/Backend.h"
 #include "common/backend/Keycodes.h"
@@ -123,7 +124,10 @@ void Blackboard::stopEditing(bool losingfocus) {
 
 #include "Bubble.h"
 void Blackboard::broadcast(bool audible) {
-	// TODO: blackboard broadcasts
+	// creatures looking at it (or, when it speaks aloud, in earshot) hear
+	// the word and learn it (CreatureSpeech)
+	if (var[0].hasInt() && var[0].getInt() >= 0 && (unsigned int)var[0].getInt() < strings.size())
+		hearMachineWord(this, (int)strings[var[0].getInt()].first, audible);
 
 	if (audible) {
 		Bubble::newBubble(this, true, getText());

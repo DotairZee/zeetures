@@ -30,6 +30,7 @@
 #include "creatures/CompoundCreature.h"
 #include "creatures/SkeletalCreature.h"
 #include "creatures/c2eCreature.h"
+#include "creatures/CreatureSpeech.h"
 #include "creatures/oldCreature.h"
 #include "historyManager.h"
 
@@ -612,15 +613,15 @@ void v_CREA(caosVM* vm) {
 
 /**
  VOCB (command)
- %status stub
+ %status maybe
 
  Makes the target Creature learn all vocabulary words immediately.
 */
 void c_VOCB(caosVM* vm) {
 	VM_VERIFY_SIZE(0)
 
-	vm->getTargCreature();
-	// TODO
+	Creature* c = vm->getTargCreature();
+	learnAllWords(dynamic_cast<oldCreature*>(c));
 }
 
 /**

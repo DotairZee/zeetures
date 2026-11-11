@@ -200,9 +200,11 @@ static void PhotosPage() {
 		big = -1;
 		message.clear();
 	}
-	// developer aid: OPENC2E_TEST_PHOTO=1 takes one photo at once
+	// developer aid: OPENC2E_TEST_PHOTO=N takes one photo once the world has
+	// run N ticks (1: at once)
 	static bool testPhoto = getenv("OPENC2E_TEST_PHOTO") != nullptr;
-	if (testPhoto) {
+	static unsigned int testPhotoTick = testPhoto ? (unsigned int)atoi(getenv("OPENC2E_TEST_PHOTO")) : 0;
+	if (testPhoto && world.worldtickcount >= testPhotoTick) {
 		testPhoto = false;
 		message = takePhoto(a, *m);
 		big = (int)m->photos.size() - 1;

@@ -18,6 +18,8 @@
  */
 
 #include "World.h"
+
+#include "Bubble.h"
 #include "creatures/SkeletalCreature.h"
 #include "WorldSave.h"
 
@@ -655,6 +657,9 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 			auto* p = dynamic_cast<CompoundPart*>(render);
 			Agent* owner = p ? p->getParent() : nullptr;
 			if (skip_hand && owner && owner == (Agent*)world.hand())
+				continue;
+			// a photo (only_creature): no speech bubbles either (owner, 2026-11-11)
+			if (only_creature && owner && dynamic_cast<Bubble*>(owner))
 				continue;
 			if (only_creature && owner && owner != only_creature) {
 				auto isOther = [&](Agent* x) { return x && x != only_creature && dynamic_cast<CreatureAgent*>(x); };

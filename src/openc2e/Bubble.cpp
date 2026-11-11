@@ -18,6 +18,7 @@
  */
 
 #include "Bubble.h"
+#include "creatures/CreatureSpeech.h"
 
 #include "Camera.h"
 #include "Engine.h"
@@ -75,6 +76,8 @@ void Bubble::tick() {
 
 void Bubble::turnIntoSpeech() {
 	newBubble((Agent*)world.hand(), true, getText());
+	// creatures in earshot of the hand hear the words in it (CreatureSpeech)
+	hearSpeech((Agent*)world.hand(), getText(), HEAR_HAND);
 
 	// TODO: announce via shou
 	// TODO: add to speech history

@@ -21,9 +21,15 @@
 #include "Agent.h"
 #include "Bubble.h"
 #include "Engine.h"
+#include "VoiceData.h"
 #include "World.h"
 #include "common/Random.h"
+#include "creatures/CreatureAgent.h"
+#include "creatures/oldCreature.h"
 
+#include <algorithm>
+#include <cctype>
+#include <cmath>
 #include <cstdlib>
 #include <fmt/core.h>
 #include <map>
@@ -31,25 +37,69 @@
 
 namespace {
 
-// a word or two for each C2 drive (0 Pain ... 16 Stress)
-const char* driveWord(int d) {
-	static const char* words[17] = {"hurt", "want fun", "hungry", "cold", "hot", "tired", "sleepy", "lonely", "crowded",
-		"scared", "bored", "angry", "want love", "hurt", "need air", "thirsty", "worried"};
-	return (d >= 0 && d < 17) ? words[d] : "want";
+// the game's word list numbers (C2) for the words our meanings use
+const int W_EAT = 12, W_HIT = 13, W_ME = 16, W_FOOD = 22, W_NORN = 52, W_DRIVE0 = 56, W_ANGRY = 67,
+		  W_FRIENDLY = 68, W_HURT = 69, W_PAIN = 56, W_YES = 73, W_NO = 74, W_LOOK = 75, W_VERY = 77;
+
+bool watching() {
+	static const bool watch = getenv("OPENC2E_WATCH_SPEECH") != nullptr;
+	return watch;
 }
 
-const char* genusWord(int g) {
-	switch (g) {
-		case 1: return "norn";
-		case 2: return "grendel";
-		case 3: return "ettin";
-		default: return "friend";
-	}
+std::string lower(std::string s) {
+	for (auto& ch : s)
+		ch = (char)std::tolower((unsigned char)ch);
+	return s;
 }
 
-std::string pick(std::initializer_list<std::string> options) {
-	std::vector<std::string> v(options);
-	return v[rand_size_t(0, v.size() - 1)];
+std::string trim(const std::string& s) {
+	size_t a = s.find_first_not_of(' '), b = s.find_last_not_of(' ');
+	return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
+}
+
+bool isWord(int w) {
+	return w >= 0 && (size_t)w < engine.wordlist.size() && !trim(engine.wordlist[w]).empty();
+}
+
+oldCreature* creatureOf(Agent* a) {
+	CreatureAgent* ca = dynamic_cast<CreatureAgent*>(a);
+	return ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+}
+
+// (an agent with no picture yet, such as a blackboard just made: its corner)
+float centreX(Agent* a) { return a->x + (a->part(0) ? a->getWidth() / 2.0f : 0.0f); }
+float centreY(Agent* a) { return a->y + (a->part(0) ? a->getHeight() / 2.0f : 0.0f); }
+
+// within earshot of a sound at (x, y)
+bool inEarshot(Agent* listener, float x, float y) {
+	return std::fabs(centreX(listener) - x) <= 350 && std::fabs(centreY(listener) - y) <= 150;
+}
+
+// how readily each life stage takes in words (baby ... senile)
+float stageLearning(int stage) {
+	static const float rate[7] = {0.75f, 1.25f, 1.1f, 1.0f, 0.9f, 0.7f, 0.4f};
+	return (stage >= 0 && stage < 7) ? rate[stage] : 1.0f;
+}
+
+// a word with no voice to speak it: syllables of our own, always the same
+std::string fallbackNative(const std::string& word) {
+	static const char* syl[] = {"ba", "doo", "mi", "bo", "na", "lu"};
+	uint32_t h = 2166136261u;
+	for (char ch : word)
+		h = (h ^ (unsigned char)ch) * 16777619u;
+	std::string out = syl[h % 6];
+	out += "-";
+	out += syl[(h >> 8) % 6];
+	return out;
+}
+
+// the word as the creature's bubble shows it: the learned word, or its own
+// tongue's
+std::string showWord(Agent* creature, oldCreature* c, int w) {
+	std::string word = isWord(w) ? trim(engine.wordlist[w]) : std::string();
+	if (knowsWord(c, w))
+		return word;
+	return nativeWord(creature, word);
 }
 
 // meaning "kind:a:b" split
@@ -66,64 +116,239 @@ std::vector<std::string> parts(const std::string& m) {
 	return out;
 }
 
+// one way of putting a meaning: its words and which one carries it
+struct Wording {
+	std::vector<int> words;
+	int key; // index into words
+};
+
 std::map<int, AgentRef> bubbles; // each speaker's bubble, by UNID
 
 } // namespace
 
-std::string phraseFor(const std::string& meaning, int stage) {
+std::string nativeWord(Agent* creature, const std::string& word) {
+	if (word.empty())
+		return "";
+	if (!creature || !creature->voice || !*creature->voice)
+		return fallbackNative(lower(word));
+	std::string out;
+	for (auto& e : creature->voice->GetSyllablesFor(word)) {
+		// the game's syllable sounds are named for the syllable, then where
+		// it falls in a word (Doh0, Doh1, DohE; Do_0 for "do")
+		std::string syl = lower(e.name.substr(0, 3));
+		syl.erase(std::remove(syl.begin(), syl.end(), '_'), syl.end());
+		if (syl.empty())
+			continue;
+		out += (out.empty() ? "" : "-") + syl;
+	}
+	return out.empty() ? fallbackNative(lower(word)) : out;
+}
+
+bool knowsWord(oldCreature* c, int word) {
+	return c && word >= 0 && (size_t)word < c->vocab.size() && c->vocab[word] >= WORD_KNOWN;
+}
+
+int wordsKnown(oldCreature* c) {
+	int n = 0;
+	for (size_t i = 0; c && i < c->vocab.size(); i++)
+		n += c->vocab[i] >= WORD_KNOWN && isWord((int)i);
+	return n;
+}
+
+void hearWord(oldCreature* c, int word, int amount) {
+	if (!c || !isWord(word) || !c->isAlive() || c->isAsleep())
+		return;
+	if (c->vocab.size() < engine.wordlist.size())
+		c->vocab.resize(engine.wordlist.size(), 0);
+	bool knew = c->vocab[word] >= WORD_KNOWN;
+	int v = c->vocab[word] + (int)std::lround(amount * stageLearning((int)c->getStage()));
+	c->vocab[word] = (unsigned char)std::min(v, 255);
+	if (watching() && !knew && c->vocab[word] >= WORD_KNOWN)
+		fmt::print("* LEARNS \"{}\" ({} words known)\n", trim(engine.wordlist[word]), wordsKnown(c));
+}
+
+void learnAllWords(oldCreature* c) {
+	if (!c)
+		return;
+	c->vocab.assign(engine.wordlist.size(), 255);
+	if (watching())
+		fmt::print("* LEARNS every word ({})\n", wordsKnown(c));
+}
+
+void hearSpeech(Agent* speaker, const std::string& text, int amount) {
+	if (!speaker || engine.version >= 3 || engine.wordlist.empty())
+		return;
+	// the words in the text: lower case, punctuation as spaces, each padded
+	std::string t = " ";
+	for (char ch : lower(text))
+		t += std::isalnum((unsigned char)ch) || (unsigned char)ch >= 128 ? ch : ' ';
+	t += " ";
+	std::vector<int> heard;
+	for (size_t w = 0; w < engine.wordlist.size(); w++) {
+		std::string word = lower(trim(engine.wordlist[w]));
+		if (word.empty())
+			continue;
+		if (t.find(" " + word + " ") != std::string::npos)
+			heard.push_back((int)w);
+	}
+	hearWords(speaker, heard, amount);
+}
+
+void hearWords(Agent* speaker, const std::vector<int>& heard, int amount) {
+	if (!speaker || heard.empty() || engine.version >= 3)
+		return;
+	float sx = centreX(speaker), sy = centreY(speaker);
+	for (auto& a : world.agents) {
+		if (!a || a.get() == speaker || a->isDying())
+			continue;
+		oldCreature* c = creatureOf(a.get());
+		if (!c || !inEarshot(a.get(), sx, sy))
+			continue;
+		for (int w : heard)
+			hearWord(c, w, amount);
+	}
+}
+
+void hearMachineWord(Agent* machine, int word, bool aloud) {
+	if (!machine || engine.version >= 3 || !isWord(word))
+		return;
+	float mx = centreX(machine), my = centreY(machine);
+	for (auto& a : world.agents) {
+		if (!a || a->isDying())
+			continue;
+		oldCreature* c = creatureOf(a.get());
+		if (!c)
+			continue;
+		bool looking = c->getAttentionFocus() == AgentRef(machine) ||
+					   (std::fabs(centreX(a.get()) - mx) <= 150 && std::fabs(centreY(a.get()) - my) <= 120);
+		if (looking)
+			hearWord(c, word, HEAR_MACHINE);
+		else if (aloud && inEarshot(a.get(), mx, my))
+			hearWord(c, word, HEAR_MACHINE_FAR);
+	}
+}
+
+Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c) {
+	Utterance u;
+	if (!creature || !c)
+		return u;
 	std::vector<std::string> p = parts(meaning);
 	const std::string& kind = p[0];
 	int a = p.size() > 1 ? atoi(p[1].c_str()) : 0;
 	int b = p.size() > 2 ? atoi(p[2].c_str()) : 0;
-
-	// babies: sounds, not words
-	if (stage <= 0) {
-		if (kind == "ow")
-			return pick({"waah!", "wah!", "eee!"});
-		if (kind == "yum")
-			return pick({"mmm", "nom nom"});
-		if (kind == "grr")
-			return "nnngh!";
-		if (kind == "greet")
-			return pick({"ba!", "da!", "ooh"});
-		if (kind == "need")
-			return pick({"waah", "mama", "eh eh"});
-		return pick({"ba ba", "goo", "da da", "ma ma", "ga"});
-	}
-	// children: single words
-	if (stage == 1) {
-		if (kind == "ow")
-			return pick({"ow!", "owie!"});
-		if (kind == "yum")
-			return "yum!";
-		if (kind == "grr")
-			return "grr!";
-		if (kind == "love")
-			return "hee";
-		if (kind == "greet")
-			return pick({"hi!", fmt::format("{}!", genusWord(a))});
-		if (kind == "need")
-			return std::string(driveWord(a)) + (b > 200 ? "!" : "");
-		return pick({"la la", "hm", "ooh"});
-	}
+	int stage = (int)c->getStage();
 	std::string trail = stage >= 6 ? "..." : "";
-	if (kind == "ow")
-		return pick({"ow!", "ouch!", "ow ow!"});
-	if (kind == "yum")
-		return pick({"yum!", "food good", "mmm, good"});
-	if (kind == "grr")
-		return pick({"grr!", "me angry", "go away!"});
-	if (kind == "love")
-		return pick({"mm, love", "love you", "nice"});
-	if (kind == "greet")
-		return fmt::format("hi {}{}", genusWord(a), trail);
-	if (kind == "need") {
-		std::string w = driveWord(a);
-		bool want = w.rfind("want", 0) == 0 || w.rfind("need", 0) == 0;
-		std::string very = (b > 200 && !want) ? "very " : "";
-		return fmt::format("me {}{}{}", very, w, trail.empty() ? (b > 200 ? "!" : "") : trail);
+
+	// says the given words: learned ones as words, the rest in its own tongue
+	auto say = [&](const std::vector<int>& words, const std::string& end) {
+		for (int w : words) {
+			if (!isWord(w))
+				continue;
+			std::string shown = showWord(creature, c, w);
+			if (shown.empty())
+				continue;
+			u.shown += (u.shown.empty() ? "" : " ") + shown;
+			u.spoken += (u.spoken.empty() ? "" : " ") + trim(engine.wordlist[w]);
+			if (knowsWord(c, w))
+				u.learned.push_back(w);
+		}
+		if (!u.shown.empty())
+			u.shown += trail.empty() ? end : trail;
+	};
+
+	// babies: cries, and the sounds of their own tongue, no words
+	if (stage <= 0) {
+		if (kind == "ow") {
+			u.shown = u.spoken = rand_float(0, 1) < 0.5f ? "waah!" : "eee!";
+			return u;
+		}
+		if (kind == "yum" || kind == "love") {
+			u.shown = u.spoken = "mmm";
+			return u;
+		}
+		if (kind == "grr") {
+			u.shown = u.spoken = "nnngh!";
+			return u;
+		}
+		// one short word of its tongue, not yet meaning anything
+		static const int shortwords[] = {W_ME, W_EAT, W_HIT, W_YES, W_NO, 6, 5, 8, 21, 29, 34, 57, 60};
+		int w = shortwords[rand_size_t(0, sizeof(shortwords) / sizeof(int) - 1)];
+		if (isWord(w)) {
+			u.spoken = trim(engine.wordlist[w]);
+			u.shown = nativeWord(creature, u.spoken);
+		}
+		return u;
 	}
-	return pick({"hm", "la la", "ah"}) + trail;
+
+	std::vector<Wording> ways;
+	std::string end;
+	if (kind == "need") {
+		if (a < 0 || a > 16)
+			return u;
+		std::vector<int> w = {W_ME};
+		if (b > 200)
+			w.push_back(W_VERY);
+		w.push_back(W_DRIVE0 + a);
+		ways.push_back({w, (int)w.size() - 1});
+		end = b > 200 ? "!" : "";
+	} else if (kind == "ow") {
+		ways = {{{W_PAIN}, 0}, {{W_HURT}, 0}, {{W_ME, W_HURT}, 1}};
+		end = "!";
+	} else if (kind == "yum") {
+		ways = {{{W_FOOD}, 0}, {{W_EAT, W_FOOD}, 1}, {{W_YES, W_FOOD}, 1}};
+		end = "!";
+	} else if (kind == "grr") {
+		ways = {{{W_ME, W_ANGRY}, 1}, {{W_NO}, 0}, {{W_HIT}, 0}};
+		end = "!";
+	} else if (kind == "love") {
+		ways = {{{W_FRIENDLY}, 0}, {{W_YES}, 0}, {{W_ME, W_FRIENDLY}, 1}};
+	} else if (kind == "greet") {
+		if (a < 1 || a > 3)
+			return u;
+		ways = {{{W_NORN + a - 1}, 0}, {{W_LOOK, W_NORN + a - 1}, 1}};
+		end = "!";
+	} else {
+		// nothing in particular: trying out a word it knows, or chatter in
+		// its own tongue
+		std::vector<int> known;
+		for (size_t w = 0; w < c->vocab.size(); w++)
+			if (knowsWord(c, (int)w) && isWord((int)w))
+				known.push_back((int)w);
+		if (!known.empty() && rand_float(0, 1) < 0.35f) {
+			say({known[rand_size_t(0, known.size() - 1)]}, "?");
+			return u;
+		}
+		std::vector<int> chatter;
+		int n = (int)rand_size_t(1, stage == 1 ? 1 : 3);
+		while ((int)chatter.size() < n) {
+			int w = (int)rand_size_t(0, engine.wordlist.size() ? engine.wordlist.size() - 1 : 0);
+			if (isWord(w) && !knowsWord(c, w))
+				chatter.push_back(w);
+			if (engine.wordlist.empty())
+				break;
+		}
+		say(chatter, "");
+		return u;
+	}
+
+	// the wording it knows most of (ties at random)
+	int best = 0, bestscore = -1;
+	for (size_t i = 0; i < ways.size(); i++) {
+		int score = 0;
+		for (size_t j = 0; j < ways[i].words.size(); j++)
+			score += knowsWord(c, ways[i].words[j]) ? ((int)j == ways[i].key ? 4 : 1) : 0;
+		score = score * 8 + (int)rand_size_t(0, 7);
+		if (score > bestscore) {
+			bestscore = score;
+			best = (int)i;
+		}
+	}
+	const Wording& way = ways[best];
+	if (stage == 1)
+		say({way.words[way.key]}, end); // children: the one word
+	else
+		say(way.words, end);
+	return u;
 }
 
 float voicePitch(int stage) {
@@ -136,22 +361,22 @@ float voicePace(int stage) {
 	return (stage >= 0 && stage < 7) ? pace[stage] : 1.0f;
 }
 
-void creatureSays(Agent* creature, int stage, const std::string& phrase) {
-	if (!creature || phrase.empty() || engine.version >= 3)
+void creatureSays(Agent* creature, int stage, const Utterance& u) {
+	if (!creature || u.shown.empty() || engine.version >= 3)
 		return;
 	// one bubble at a time for each speaker
 	auto it = bubbles.find(creature->getUNID());
 	if (it != bubbles.end() && it->second)
 		it->second->kill();
-	Bubble* b = Bubble::newBubble(creature, true, phrase);
+	Bubble* b = Bubble::newBubble(creature, true, u.shown);
 	b->setTimeout(35); // 3.5 s
 	bubbles[creature->getUNID()] = AgentRef(b);
+	hearWords(creature, u.learned, HEAR_CREATURE);
 	try {
-		creature->speak(phrase, voicePitch(stage), voicePace(stage));
+		creature->speak(u.spoken.empty() ? u.shown : u.spoken, voicePitch(stage), voicePace(stage));
 	} catch (std::exception&) {
 		// no voice for this creature: the bubble alone
 	}
-	static const bool watch = getenv("OPENC2E_WATCH_SPEECH") != nullptr;
-	if (watch)
-		fmt::print("* SAYS {} {} {} (stage {}): \"{}\"\n", (int)creature->family, (int)creature->genus, creature->getUNID(), stage, phrase);
+	if (watching())
+		fmt::print("* SAYS {} {} {} (stage {}): \"{}\" ({})\n", (int)creature->family, (int)creature->genus, creature->getUNID(), stage, u.shown, u.spoken);
 }

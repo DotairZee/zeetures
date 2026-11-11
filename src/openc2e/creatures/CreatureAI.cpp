@@ -115,7 +115,7 @@ void oldCreature::sayNeed() {
 		return;
 	lastNeedSaid = best;
 	lastNeedTick = ticks;
-	creatureSays(parentagent, (int)stage, best < 0 ? phraseFor("babble", (int)stage) : phraseFor(fmt::format("need:{}:{}", best, level), (int)stage));
+	creatureSays(parentagent, (int)stage, best < 0 ? phraseFor("babble", parentagent, this) : phraseFor(fmt::format("need:{}:{}", best, level), parentagent, this));
 }
 
 void oldCreature::tickBrain() {
@@ -1082,7 +1082,7 @@ void oldCreature::tickMind() {
 	}
 
 	if (!out.say.empty())
-		creatureSays(parentagent, (int)stage, phraseFor(out.say, (int)stage));
+		creatureSays(parentagent, (int)stage, phraseFor(out.say, parentagent, this));
 
 	if (out.expression >= 0 && out.expression < 6) {
 		if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent))
