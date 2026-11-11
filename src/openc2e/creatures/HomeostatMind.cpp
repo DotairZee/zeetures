@@ -183,6 +183,12 @@ struct Params {
 	float scentFollowShare = 0.5f;
 	float scentStronger = 1.1f; // a side must smell this much stronger than here
 	float scentFloorStep = 300.0f; // how far up or down a floor change aims
+	// Scents with behaviour rules (pheromones.txt): an urge tied to a drive
+	// is worth relieving that drive by this much times the rule's weight
+	// (then scaled like food smell, scentFollowShare); one with no drive is
+	// worth its weight times this.
+	float pheromoneRelief = 0.4f;
+	float pheromoneWantScale = 0.1f;
 	float floorChangeDiscount = 0.5f; // share of the target's value for each step toward it
 	float atPlace = 50.0f; // close enough to a lift's position to use it
 	float sameLevel = 120.0f; // heights this close count as the same floor
@@ -403,6 +409,7 @@ struct Candidate {
 	int seekCategory = -1; // >= 0: travelling toward where this category was last seen
 	bool chain = false; // a step toward something else (changing floors): no drive learning
 	bool scent = false; // following food smell
+	std::string urge; // following or avoiding a scent (pheromones.txt): which, for logging
 	bool food = false; // heading for a remembered food place
 	bool forage = false; // searching for food
 	bool escape = false; // getting out of water
@@ -1890,6 +1897,7 @@ class HomeostatMind : public CreatureMind {
 		addEscape(p, d, D, canWest, canEast, out);
 		addFoodSeek(p, d, D, canWest, canEast, out);
 		addScentFollow(p, d, D, canWest, canEast, out);
+		addScentUrges(p, d, D, canWest, canEast, out);
 		addForage(p, d, D, canWest, canEast, out);
 	}
 
@@ -1940,6 +1948,71 @@ class HomeostatMind : public CreatureMind {
 			addFloorChange(p, want, p.y + best->kind * prm.scentFloorStep, -1, canWest, canEast, out);
 			for (size_t i = before; i < out.size(); i++)
 				out[i].scent = true;
+		}
+	}
+
+	// Scent urges (pheromones.txt): follow a scent toward its strongest side,
+	// or move away from it, as food smell is followed.
+	void addScentUrges(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		for (auto& u : p.scentUrges) {
+			float want;
+			if (u.drive >= 0 && u.drive < NUM_DRIVES) {
+				Expectation typical;
+				typical.delta[u.drive] = -prm.pheromoneRelief * u.weight;
+				want = predictedRelief(d, D, typical) * prm.scentFollowShare;
+			} else
+				want = u.weight * prm.pheromoneWantScale;
+			static const bool watch = getenv("OPENC2E_WATCH_SCENTS") != nullptr;
+			if (watch && p.tick % 20 == 0)
+				fmt::print("[homeostat] creature {} t{}: scent {} {} want {:.3f} here {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f}\n", p.creatureId, p.tick,
+					u.scent, u.avoid ? "avoid" : "follow", want, u.here, u.west, u.east, u.up, u.down);
+			if (want < prm.seekMinWant)
+				continue;
+			auto walk = [&](int kind) {
+				if (waterAhead(p, kind) || (kind == 10 && !canWest) || (kind == 11 && !canEast) || isBlocked(p, kind) || cliffAhead(p, kind))
+					return;
+				Candidate c{-1, kind, 0, want, 0, want};
+				c.chain = true;
+				c.scent = true;
+				c.urge = (u.avoid ? "avoid:" : "follow:") + u.scent;
+				out.push_back(c);
+			};
+			if (!u.avoid) {
+				float threshold = u.here * prm.scentStronger + 0.01f;
+				struct Side {
+					float scent;
+					int kind; // 10 west, 11 east, -1 up, 1 down
+				};
+				Side sides[4] = {{u.west, 10}, {u.east, 11}, {u.up, -1}, {u.down, 1}};
+				const Side* best = nullptr;
+				for (auto& side : sides)
+					if (side.scent > threshold && (!best || side.scent > best->scent))
+						best = &side;
+				if (!best)
+					continue;
+				if (best->kind == 10 || best->kind == 11)
+					walk(best->kind);
+				else {
+					size_t before = out.size();
+					addFloorChange(p, want, p.y + best->kind * prm.scentFloorStep, -1, canWest, canEast, out);
+					for (size_t i = before; i < out.size(); i++) {
+						out[i].scent = true;
+						out[i].urge = "follow:" + u.scent;
+					}
+				}
+			} else {
+				// away: if the scent is here or stronger on some side, walk
+				// toward the weaker of west and east
+				float strongest = std::max({u.here, u.west, u.east, u.up, u.down});
+				if (strongest < 0.02f)
+					continue;
+				if (u.west < u.east)
+					walk(10);
+				else if (u.east < u.west)
+					walk(11);
+				else
+					walk(std::uniform_int_distribution<int>(0, 1)(rng) ? 10 : 11); // even both ways: either
+			}
 		}
 	}
 
@@ -2266,7 +2339,7 @@ class HomeostatMind : public CreatureMind {
 			if (p.drives[i] >= 64)
 				needs += fmt::format(" {} {}", DRIVE_NAMES[i], (int)p.drives[i]);
 		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f} | at {:.0f},{:.0f} | restless {:.2f} | food map {}\n",
-			p.creatureId, p.tick, choice.boatCall ? fmt::format("callboat:{}", actionName(choice.decision)) : choice.escape ? fmt::format("escape:{}", actionName(choice.decision)) : choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
+			p.creatureId, p.tick, !choice.urge.empty() ? fmt::format("{}:{}", choice.urge, actionName(choice.decision)) : choice.boatCall ? fmt::format("callboat:{}", actionName(choice.decision)) : choice.escape ? fmt::format("escape:{}", actionName(choice.decision)) : choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
 			choice.category, choice.want, choice.novelty,
 			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown, p.x, p.y, std::clamp(hungryTicks / prm.restlessRamp, 0.0f, 1.0f),
 			[&] { std::string m; for (auto& fp : foodPlaces) m += fmt::format(" {:.0f},{:.0f}x{:.2f}", fp.x, fp.y, fp.confidence); return m.empty() ? std::string(" none") : m; }());

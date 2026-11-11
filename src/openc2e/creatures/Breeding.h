@@ -62,5 +62,16 @@ std::string genomeNameFromInt(int value);
 // she conceived.
 bool tryConceive(CreatureAgent* a, CreatureAgent* b);
 
+// Close kin (owner, 2026-11-11: no incest unless there is no other choice):
+// one descends from the other (parent, grandparent ...) or they share a
+// parent, by the family records (monikers' mother and father).
+bool closeKin(const std::string& monikerA, const std::string& monikerB);
+// Kin recognition, as many animals do it by individual scent: two creatures
+// are barred as mates when they are close kin and either of them has an
+// unrelated partner alive (its own kind, the other sex, adolescent to old).
+// Barred pairs do not conceive, and do not count for each other as the other
+// sex in sight (so they arouse no mating chemistry).
+bool kinBarred(CreatureAgent* a, CreatureAgent* b);
+
 // A life stage's share of full fertility (0 baby ... 6 senile).
 float stageFertility(int stage);

@@ -104,6 +104,17 @@ struct MindPerception {
 	// food smell (C2, World::tickFoodScent): in this room, and the strongest
 	// through the doors on each side
 	float scentHere = 0, scentWest = 0, scentEast = 0, scentUp = 0, scentDown = 0;
+	// C2: urges from smelled scents (pheromones.txt; creatures/Pheromones.h):
+	// follow a scent up its gradient or move away from it. drive >= 0: worth
+	// relieving that drive by `weight`; -1: a fixed want of `weight`.
+	struct ScentUrge {
+		std::string scent;
+		bool avoid = false;
+		int drive = -1;
+		float weight = 1.0f;
+		float here = 0, west = 0, east = 0, up = 0, down = 0;
+	};
+	std::vector<ScentUrge> scentUrges;
 	// water (C2 room type 2): whether the creature is in it, and which way the
 	// nearest dry room lies through open doors (10 west, 11 east, -1 up,
 	// 1 down, 0 none found) and how many rooms away

@@ -79,6 +79,8 @@ class Room {
 
 	// C2: smell of food spreading through the room system (World::tickFoodScent)
 	float foodscent = 0, foodscentnext = 0;
+	// C2: the scents of pheromones.txt, by channel (creatures/Pheromones.h)
+	std::vector<float> scent, scentnext;
 
 	// C2: water too deep to wade (owner, 2026-11-10: the path to the cave
 	// behind the pond's waterfall runs along the pond's bed). Creatures do

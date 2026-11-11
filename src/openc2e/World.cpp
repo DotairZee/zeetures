@@ -20,6 +20,7 @@
 #include "World.h"
 
 #include "Bubble.h"
+#include "creatures/Pheromones.h"
 #include "creatures/SkeletalCreature.h"
 #include "WorldSave.h"
 
@@ -347,6 +348,7 @@ void World::tick() {
 	world.map->tick();
 	if (engine.version == 2) {
 		tickFoodScent();
+		Pheromones::tick();
 		tickClimate();
 	}
 	if (engine.version < 3)

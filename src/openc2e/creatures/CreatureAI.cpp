@@ -17,6 +17,8 @@
  *
  */
 
+#include "creatures/Pheromones.h"
+#include "creatures/Breeding.h"
 #include "CreatureAgent.h"
 #include "SkeletalCreature.h"
 #include "caosScript.h"
@@ -67,6 +69,8 @@ void oldCreature::feedSensoryCells() {
 			auto* ca = dynamic_cast<CreatureAgent*>(a.get());
 			if (!ca || !ca->getCreature() || !ca->getCreature()->isAlive() || ca->getCreature()->isFemale() == female)
 				continue;
+			if (kinBarred(parent, ca))
+				continue; // close kin, with someone else to choose (Breeding.h)
 			if (agentInSight(AgentRef(a))) {
 				present = true;
 				break;
@@ -732,6 +736,10 @@ void oldCreature::handleStimulus(const StimulusEvent& s) {
 		return;
 	StimulusEvent felt = s;
 	applyStimulusChemistry(felt);
+	// a creature harmed or helped may mark whoever did it with a scent
+	// (pheromones.txt mark rules)
+	if (engine.version == 2 && felt.source)
+		Pheromones::felt(parentagent, this, felt.source.get(), felt.feltChem, felt.feltAmount);
 	if (pendingstimuli.size() < 64)
 		pendingstimuli.push_back(felt);
 }
@@ -872,6 +880,33 @@ MindPerception oldCreature::buildPerception() {
 				else
 					continue;
 				*side = std::max(*side, n->foodscent);
+			}
+			// urges from smelled scents, with the same senses of direction
+			for (auto& u : Pheromones::urgesFor(parentagent, this)) {
+				MindPerception::ScentUrge su;
+				su.scent = Pheromones::channelName(u.channel);
+				su.avoid = u.avoid;
+				su.drive = u.drive;
+				su.weight = u.weight;
+				auto level = [&](const Room& r) { return (size_t)u.channel < r.scent.size() ? r.scent[u.channel] : 0.0f; };
+				su.here = level(*here);
+				for (auto& [n, door] : here->getDoors()) {
+					if (door.perm < fit)
+						continue;
+					float* side;
+					if (westOf(*n))
+						side = &su.west;
+					else if (eastOf(*n))
+						side = &su.east;
+					else if (std::max(n->y_left_floor, n->y_right_floor) <= ceiling + 2)
+						side = &su.up;
+					else if (std::min(n->y_left_ceiling, n->y_right_ceiling) + 2 >= floor)
+						side = &su.down;
+					else
+						continue;
+					*side = std::max(*side, level(*n));
+				}
+				p.scentUrges.push_back(su);
 			}
 			// water ahead on either side (to stay out of seas when walking)
 			for (auto& [n, door] : here->getDoors()) {

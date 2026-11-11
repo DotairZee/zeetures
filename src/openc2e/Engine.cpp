@@ -18,6 +18,9 @@
  */
 
 #include "Engine.h"
+
+#include "creatures/Pheromones.h"
+#include "historyManager.h"
 #include "creatures/Breeding.h"
 
 #include <climits>
@@ -500,6 +503,22 @@ void Engine::update() {
 			fmt::print("* TEST CLICK at {},{}: selected genus {} (before: genus {})\n", cx, cy, world.selectedcreature ? (int)world.selectedcreature->genus : -1, before);
 		}
 	}
+	// developer aid: OPENC2E_TEST_KIN=N, at world tick N, prints for each
+	// pair of living creatures whether they are close kin and barred as mates
+	if (static const char* k = getenv("OPENC2E_TEST_KIN"); k && world.tickcount == (unsigned int)atoi(k)) {
+		std::vector<CreatureAgent*> all;
+		for (auto& a : world.agents)
+			if (auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr; ca && ca->getCreature()->isAlive())
+				all.push_back(ca);
+		for (size_t i = 0; i < all.size(); i++)
+			for (size_t j = i + 1; j < all.size(); j++) {
+				std::string mi = world.history->findMoniker(all[i]->getCreature()->getGenome());
+				std::string mj = world.history->findMoniker(all[j]->getCreature()->getGenome());
+				fmt::print("* TEST KIN {} {} and {} {}: kin {} barred {}\n", mi, all[i]->getCreature()->isFemale() ? "F" : "M", mj,
+					all[j]->getCreature()->isFemale() ? "F" : "M", closeKin(mi, mj) ? 1 : 0, kinBarred(all[i], all[j]) ? 1 : 0);
+			}
+	}
+
 	// developer aid: OPENC2E_TEST_MATE=N, at world tick N, has the first
 	// grown female and male of a genus mate (MATE's path: tryConceive)
 	if (static const char* k = getenv("OPENC2E_TEST_MATE"); k && world.tickcount == (unsigned int)atoi(k)) {
@@ -1530,6 +1549,10 @@ bool Engine::initialSetup() {
 		WorldSave::LoadWorldState(currentworlddir);
 		worldready = true;
 	}
+
+	// C2: the scents and their rules (pheromones.txt), read again for each world
+	if (version == 2)
+		Pheromones::load();
 
 	// C2: objects built into every world (owner, 2026-11-09): the agents
 	// named in the Additions folder's builtin-cobs.txt are injected from the

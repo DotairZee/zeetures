@@ -18,6 +18,7 @@
  */
 
 #include "Breeding.h"
+#include <set>
 
 #include "Agent.h"
 #include "Engine.h"
@@ -264,6 +265,75 @@ float stageFertility(int stage) {
 	return (stage >= 0 && stage < 7) ? share[stage] : 0.0f;
 }
 
+namespace {
+
+std::set<std::string> ancestorsOf(const std::string& moniker) {
+	std::set<std::string> out;
+	std::vector<std::string> todo{moniker};
+	for (int depth = 0; depth < 12 && !todo.empty(); depth++) {
+		std::vector<std::string> next;
+		for (auto& m : todo) {
+			if (m.empty() || !world.history->hasMoniker(m))
+				continue;
+			monikerData& d = world.history->getMoniker(m);
+			for (const std::string* parent : {&d.mother, &d.father})
+				if (!parent->empty() && out.insert(*parent).second)
+					next.push_back(*parent);
+		}
+		todo.swap(next);
+	}
+	return out;
+}
+
+std::string monikerOf(CreatureAgent* a) {
+	oldCreature* c = a ? dynamic_cast<oldCreature*>(a->getCreature()) : nullptr;
+	return c ? world.history->findMoniker(c->getGenome()) : std::string();
+}
+
+} // namespace
+
+bool closeKin(const std::string& a, const std::string& b) {
+	if (a.empty() || b.empty() || a == b)
+		return false;
+	std::set<std::string> ancA = ancestorsOf(a), ancB = ancestorsOf(b);
+	if (ancA.count(b) || ancB.count(a))
+		return true; // one descends from the other
+	if (!world.history->hasMoniker(a) || !world.history->hasMoniker(b))
+		return false;
+	monikerData& da = world.history->getMoniker(a);
+	monikerData& db = world.history->getMoniker(b);
+	auto shared = [](const std::string& x, const std::string& y) { return !x.empty() && x == y; };
+	return shared(da.mother, db.mother) || shared(da.father, db.father) || shared(da.mother, db.father) || shared(da.father, db.mother);
+}
+
+bool kinBarred(CreatureAgent* a, CreatureAgent* b) {
+	std::string ma = monikerOf(a), mb = monikerOf(b);
+	if (!closeKin(ma, mb))
+		return false;
+	// an unrelated partner for either of them?
+	for (CreatureAgent* self : {a, b}) {
+		Agent* body = dynamic_cast<Agent*>(self);
+		oldCreature* cs = dynamic_cast<oldCreature*>(self->getCreature());
+		std::string ms = monikerOf(self);
+		if (!body || !cs)
+			continue;
+		for (auto& other : world.agents) {
+			if (!other || other.get() == body || other->isDying() || other->genus != body->genus)
+				continue;
+			CreatureAgent* ca = dynamic_cast<CreatureAgent*>(other.get());
+			oldCreature* co = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+			if (!co || ca == a || ca == b || !co->isAlive() || co->isFemale() == cs->isFemale())
+				continue;
+			int stage = (int)co->getStage();
+			if (stage < 2 || stage > 5)
+				continue;
+			if (!closeKin(ms, monikerOf(ca)))
+				return true;
+		}
+	}
+	return false; // no one else: kin may breed
+}
+
 bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	if (!a || !b || engine.version != 2 || a == b)
 		return false;
@@ -283,6 +353,8 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	const char* why = nullptr;
 	if (mumBody->babymoniker != 0 || mum->getPregnant() != 0)
 		why = "she is already pregnant";
+	else if (kinBarred(a, b))
+		why = "close kin, and an unrelated partner is alive";
 	else if (!test && mum->getFertile() == 0)
 		why = "she is not fertile";
 	else if (!test && dad->getFertile() == 0)
