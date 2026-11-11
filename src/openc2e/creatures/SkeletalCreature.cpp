@@ -31,6 +31,7 @@
 
 #include "BreedSlots.h"
 #include "common/Random.h"
+#include "creatures/oldCreature.h"
 
 #include "Creature.h"
 #include "Engine.h"
@@ -1059,7 +1060,19 @@ void SkeletalCreature::tick() {
 			setGaitGene(creature->getGait());
 
 			// TODO: we should only do this if we're moving :-P
-			gaitTick();
+			// C2: a walking pace by life stage (owner, 2026-11-10: vigor
+			// with age): the walk's steps come at stagePace() of the usual
+			// rate (a step every other tick), slow in infancy and old age,
+			// briskest as a youth
+			if (engine.version == 2) {
+				paceCredit += stagePace((int)creature->getStage());
+				while (paceCredit >= 1.0f) {
+					paceCredit -= 1.0f;
+					gaitTick();
+					stepTiredness();
+				}
+			} else
+				gaitTick();
 		}
 
 		approaching = false;
@@ -1125,6 +1138,26 @@ void SkeletalCreature::physicsTick() {
 			fmt::print("* WATCH POS t{} unid {} genus {} foot ({:.0f}, {:.0f}) room {} falling {}\n",
 				world.tickcount, unid, (int)genus, footx, footy, downfootroom ? (int)downfootroom->id : -1, (bool)falling);
 	}
+}
+
+// A life stage's walking pace, as a share of the usual (0 baby ... 6 senile).
+float SkeletalCreature::stagePace(int stage) {
+	static const float pace[7] = {0.6f, 0.85f, 1.0f, 1.1f, 1.0f, 0.75f, 0.55f};
+	return (stage >= 0 && stage < 7) ? pace[stage] : 1.0f;
+}
+
+// Old creatures tire sooner (owner, 2026-11-10: vigor with age): each step
+// of a walk adds a little Tiredness (C2 chemical 6, which a creature's genes
+// turn into the Tiredness drive and, past 174, the tired walk) with a chance
+// that grows with age: none until old, 0.15 when old, 0.35 when senile.
+void SkeletalCreature::stepTiredness() {
+	static const float chance[7] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.15f, 0.35f};
+	int stage = (int)creature->getStage();
+	if (stage < 0 || stage > 6 || chance[stage] <= 0.0f)
+		return;
+	if (auto* oc = dynamic_cast<oldCreature*>(creature))
+		if (rand_float(0, 1) < chance[stage])
+			oc->addChemical(6, 1);
 }
 
 void SkeletalCreature::gaitTick() {
@@ -1242,12 +1275,15 @@ int SkeletalCreature::handleClick(float clickx, float clicky) {
 
 // C2: a creature carries in the hand on the viewer's side, drawn in front
 // of its body: facing right its right forearm (part 10) is drawn over the
-// body and its left (9) behind, facing left the other way round; facing
-// toward or away from the viewer both are behind it. Before, everything was
-// held in the left hand and drawn behind the body, so a toy gun jumped from
-// the creature's hands to behind it as it turned (owner, 2026-11-10).
+// body and its left (9) behind, facing left the other way round. Before,
+// everything was held in the left hand and drawn behind the body, so a toy
+// gun jumped from the creature's hands to behind it as it turned (owner,
+// 2026-11-10). Facing the viewer (posedirection 2) the hands are in front of
+// the body too, so what it holds is in front; only facing away (3) is it
+// behind (owner, 2026-11-10: the gun still flicked behind an ettin turning
+// to face the viewer).
 bool SkeletalCreature::carriesInFront() const {
-	return engine.version == 2 && (posedirection == 0 || posedirection == 1);
+	return engine.version == 2 && posedirection != 3;
 }
 
 std::pair<int, int> SkeletalCreature::getCarryPoint() {

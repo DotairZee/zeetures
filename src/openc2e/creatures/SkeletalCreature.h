@@ -63,6 +63,9 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	std::string dataString(unsigned int _stage, bool sprite, unsigned int dataspecies, unsigned int databreed);
 
 	unsigned int gaiti;
+	float paceCredit = 0; // C2: walking pace by life stage (stagePace)
+	static float stagePace(int stage);
+	void stepTiredness();
 	creatureGaitGene* gaitgene;
 
 	std::pair<int, int> getCarryPoint();

@@ -406,8 +406,19 @@ unsigned int c1Creature::getGait() {
 unsigned int c2Creature::getGait() {
 	unsigned int gait = 0;
 
+	// the courting walk (gait 13, which a norn's genes set from its sex drive
+	// chemical) comes readily as a youth or adult, less as an adolescent or
+	// when old, never as a baby, child or when senile (owner, 2026-11-10:
+	// vigor with age)
+	static const float courting[7] = {0.0f, 0.0f, 0.6f, 1.0f, 1.0f, 0.4f, 0.0f};
+	auto level = [&](unsigned int i) {
+		float v = gaitloci[i];
+		if (i == 13 && (int)stage >= 0 && (int)stage < 7)
+			v *= courting[(int)stage];
+		return v;
+	};
 	for (unsigned int i = 1; i < 16; i++)
-		if (gaitloci[i] > gaitloci[gait])
+		if (level(i) > level(gait))
 			gait = i;
 
 	return gait;
