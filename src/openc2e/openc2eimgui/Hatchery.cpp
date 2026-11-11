@@ -209,18 +209,11 @@ bool LayC2Egg(const std::vector<std::vector<uint8_t>>& genomes, int gender, int 
 	return true;
 }
 
-// the Hatchery's breed choice: -1 as in the egg, else species * 1000 + slot
-static int s_hatchery_breed = -1;
-
 static void TakeC2Egg(size_t index) {
 	C2EggInfo& egg = s_c2eggs[index];
 	if (egg.taken)
 		return;
 	std::vector<std::vector<uint8_t>> genomes = egg.genomes;
-	if (s_hatchery_breed >= 0)
-		if (const BreedInfo* b = FindBreed(s_hatchery_breed / 1000, s_hatchery_breed % 1000))
-			for (auto& g : genomes)
-				g = GenomeWithBreed(g, *b);
 	// tokens 4 characters, unique per Hatchery egg: q + 2 digits + m/d
 	std::string err;
 	if (!LayC2Egg(genomes, egg.gender, egg.frame, fmt::format("q{:02d}", (int)index % 100), err)) {
@@ -391,28 +384,8 @@ void DrawHatchery() {
 			}
 			ImGui::SetCursorScreenPos(p + ImVec2(0, 275));
 			ImGui::Dummy(ImVec2(0, 0));
-			// breed: the eggs as laid, or every egg taken from now on in a breed
-			{
-				std::string cur = "As in the egg";
-				if (s_hatchery_breed >= 0)
-					if (const BreedInfo* b = FindBreed(s_hatchery_breed / 1000, s_hatchery_breed % 1000))
-						cur = BreedLabel(*b);
-				ImGui::SetNextItemWidth(250);
-				if (ImGui::BeginCombo("Breed", cur.c_str())) {
-					if (ImGui::Selectable("As in the egg", s_hatchery_breed < 0))
-						s_hatchery_breed = -1;
-					for (auto& b : KnownBreeds()) {
-						if (!b.parts.count('a') || !b.parts.count('b'))
-							continue; // needs at least a head and a body
-						int key = b.species * 1000 + b.slot;
-						if (ImGui::Selectable(BreedLabel(b).c_str(), key == s_hatchery_breed))
-							s_hatchery_breed = key;
-					}
-					ImGui::EndCombo();
-				}
-				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("Eggs you take from now on hatch in this breed (the parts it has).\nBreeds are listed in the Breeder's Kit.");
-			}
+			// (the breed dropdown, "As in the egg", was removed: unclear;
+			// owner, 2026-11-11. Breeds are chosen in the Breeder's Kit.)
 			// egg locator (owner, 2026-11-11): each click goes to the next
 			// unhatched egg in the world
 			{
