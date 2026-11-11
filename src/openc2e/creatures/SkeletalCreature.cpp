@@ -538,6 +538,78 @@ bool SkeletalCreature::headBox(float& left, float& top, float& right, float& bot
 	return true;
 }
 
+namespace {
+// a head picture's visible box and, on each side, the middle height of its
+// outermost column (the snout tip, facing that way): worked out once per
+// picture and frame
+struct HeadShape {
+	int l = 0, t = 0, r = 0, b = 0, tipRight = 0, tipLeft = 0;
+	bool ok = false;
+};
+HeadShape headShape(const creaturesImage* img, unsigned int frame) {
+	static std::map<std::pair<const creaturesImage*, unsigned int>, HeadShape> cache;
+	auto key = std::make_pair(img, frame);
+	if (auto it = cache.find(key); it != cache.end())
+		return it->second;
+	HeadShape s;
+	int w = (int)img->width(frame), h = (int)img->height(frame);
+	s.l = w;
+	s.t = h;
+	s.r = -1;
+	s.b = -1;
+	for (int y = 0; y < h; y++)
+		for (int x = 0; x < w; x++)
+			if (!img->transparentAt(frame, x, y)) {
+				s.l = std::min(s.l, x);
+				s.r = std::max(s.r, x);
+				s.t = std::min(s.t, y);
+				s.b = std::max(s.b, y);
+			}
+	if (s.r >= s.l && s.b >= s.t) {
+		auto middle = [&](int x) {
+			int sum = 0, n = 0;
+			for (int y = 0; y < h; y++)
+				if (!img->transparentAt(frame, x, y)) {
+					sum += y;
+					n++;
+				}
+			return n ? sum / n : s.b;
+		};
+		s.tipRight = middle(s.r);
+		s.tipLeft = middle(s.l);
+		s.r += 1;
+		s.b += 1;
+		s.ok = true;
+	}
+	cache[key] = s;
+	return s;
+}
+} // namespace
+
+bool SkeletalCreature::bubbleSpot(float& bx, float& by) {
+	if (!images[1] || pose[1] >= images[1]->numframes())
+		return false;
+	unsigned int view = pose[1];
+	HeadShape s = headShape(images[1].get(), view);
+	if (!s.ok)
+		return false;
+	bool right = view <= 3 || view == 8;
+	float y = right ? s.tipRight : s.tipLeft;
+	// looking up: higher (slightly up: 45% of the head's height from its
+	// top; fully up: 25%), and at least as high as the head's mouth point
+	if (view == 2 || view == 6 || view == 3 || view == 7) {
+		float share = (view == 2 || view == 6) ? 0.45f : 0.25f;
+		y = std::min(y, s.t + share * (s.b - s.t));
+		if (att[1].nolines > view && att[1].noattachments[view] >= 4)
+			y = std::min(y, (float)att[1].attachments[view][3]);
+	}
+	float headx = x + partx[1] + adjustx, heady = this->y + party[1] + adjusty;
+	// the bubble picture has its bubble in columns 8-21, its bottom at row 42
+	bx = headx + (right ? s.r + 3 - 8 : s.l - 3 - 21);
+	by = heady + y - 42 + 4;
+	return true;
+}
+
 int SkeletalCreature::attachmentY(unsigned int part, unsigned int id) {
 	return party[part] + att[part].attachments[pose[part]][1 + (id * 2)] + adjusty;
 }

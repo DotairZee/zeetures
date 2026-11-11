@@ -123,6 +123,12 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// the head picture's box in the world, and its view (C1/C2: 0-3 facing
 	// right, 4-7 facing left, 8 toward the viewer, 9 away)
 	bool headBox(float& left, float& top, float& right, float& bottom, int& view);
+	// where a breath bubble's picture (bubs, 32 x 48) goes, in the world
+	// (owner, 2026-11-11): 3 px outside the head's visible edge on the side
+	// it faces (right facing right or toward the viewer, left facing left
+	// or away), level with its snout tip; looking up, as high as the mouth
+	// point or a share of the head's height from its top if higher
+	bool bubbleSpot(float& bx, float& by);
 	// the push hand: slide along the ground for a few ticks (dir 1 east,
 	// -1 west), fast at first, easing off; walls and floors as for walking
 	void shove(int dir) {

@@ -539,22 +539,12 @@ void c2Creature::updateUnderwater() {
 	// (World::tickBreathBubbles; the game's bubble object has no movement
 	// of its own, so bubbles hung where they were blown while the creature
 	// sank or walked on: owner, 2026-11-11)
-	// where the bubble starts (owner, 2026-11-11): just outside the head
-	// picture on the side the creature faces, 3 px out, a fifth of the
-	// head's height up from its bottom corner:
-	// bottom-right facing right or toward the viewer, bottom-left facing
-	// left or away. The bubble picture (32 x 48) has its bubble in columns
-	// 8-21 with its bottom at row 42.
+	// where the bubble starts (owner, 2026-11-11): beside the head on the
+	// side it faces, at its snout (SkeletalCreature::bubbleSpot); a creature
+	// without a skeleton, near its middle top
 	float bx = headx - 5, by = heady - 5;
-	if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent)) {
-		float l, t, r, b;
-		int view;
-		if (sc->headBox(l, t, r, b, view)) {
-			bool rightSide = view <= 3 || view == 8;
-			bx = rightSide ? r + 3 - 8 : l - 3 - 21;
-			by = b - 0.3f * (b - t) - 42; // 30% of the head's height up from its bottom (owner)
-		}
-	}
+	if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent))
+		sc->bubbleSpot(bx, by);
 	std::string caos = fmt::format("inst new: simp bubs 10 0 8000 0 setv cls2 2 1 27 setv ov01 7777 mvto {} {} mesg writ targ 8",
 		(int)bx, (int)by);
 	std::string result = engine.executeNetwork(caos);
