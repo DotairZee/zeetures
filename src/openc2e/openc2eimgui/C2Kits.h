@@ -7,7 +7,9 @@
 // minimized, and where they sit, is kept between sessions (kits.ini in the
 // user data folder).
 
+#include <memory>
 #include <string>
+#include <vector>
 
 class Agent;
 
@@ -28,6 +30,19 @@ void OpenC2KitAt(const char* id, const char* page);
 // (pregnancy); right-click dismisses it. As many of the newest as fit in
 // room (pixels), the rest behind a "+N" that opens the life log.
 void DrawLifeNotices(float room);
+
+// Eggs in the world (C2: family 2, genus 5) that have not hatched, in the
+// world's order. An egg holds its baby's genome name (OBV0, four letters);
+// KitEggOf finds the unhatched egg with that genome, KitHatchedFrom the
+// creature that hatched from it. Also a few words on whether and why an egg
+// is waiting ("in water: it hatches once it is on dry land"), and moving
+// the camera to an agent without selecting it.
+std::vector<std::shared_ptr<Agent>> KitUnhatchedEggs();
+std::string KitEggGenome(Agent* egg);
+std::shared_ptr<Agent> KitEggOf(const std::string& genome);
+std::shared_ptr<Agent> KitHatchedFrom(const std::string& genome);
+std::string KitEggState(Agent* egg);
+void KitLookAt(const std::shared_ptr<Agent>& a);
 
 // Draws every open kit (call once a frame, C2 only).
 void DrawC2Kits();

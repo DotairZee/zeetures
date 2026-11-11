@@ -167,6 +167,29 @@ int s_bubbles_shown = -1; // -1: not read yet
 
 } // namespace
 
+std::string readPlayerSetting(const std::string& key) {
+	return readSetting(key);
+}
+
+void writePlayerSetting(const std::string& key, const std::string& value) {
+	writeSetting(key, value);
+}
+
+static int s_autosave_minutes = -1; // -1: not read yet
+
+int autosaveMinutes() {
+	if (s_autosave_minutes < 0) {
+		std::string v = readSetting("autosave-minutes");
+		s_autosave_minutes = v.empty() ? 5 : std::max(0, atoi(v.c_str()));
+	}
+	return s_autosave_minutes;
+}
+
+void setAutosaveMinutes(int minutes) {
+	s_autosave_minutes = std::max(0, minutes);
+	writeSetting("autosave-minutes", std::to_string(s_autosave_minutes));
+}
+
 bool speechBubblesShown() {
 	if (s_bubbles_shown < 0)
 		s_bubbles_shown = readSetting("speech-bubbles") == "0" ? 0 : 1;

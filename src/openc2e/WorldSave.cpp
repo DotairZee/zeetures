@@ -473,7 +473,8 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	// known, old age, moniker, then the name
 	for (auto& e : world.history->lifelog)
 		out << "life " << e.kind << " " << e.tick << " " << e.genus << " " << (e.female ? 1 : 0) << " " << e.stage << " " << e.age << " "
-			<< (e.ageknown ? 1 : 0) << " " << (e.oldage ? 1 : 0) << " " << (e.moniker.empty() ? "-" : e.moniker) << " " << escapeLine(e.name) << "\n";
+			<< (e.ageknown ? 1 : 0) << " " << (e.oldage ? 1 : 0) << " " << (e.moniker.empty() ? "-" : e.moniker) << " " << escapeLine(e.name) << "\n"
+			<< (e.child.empty() ? "" : "life-egg " + e.child + "\n"); // (belongs to the line before)
 
 	int ncreatures = 0, neggs = 0;
 	for (auto& a : world.agents) {
@@ -877,6 +878,9 @@ bool LoadWorldState(const fs::path& worlddir) {
 				le.name = unescapeLine(restOfLine(l));
 				lifelog.push_back(le);
 			}
+		} else if (key == "life-egg") {
+			if (!lifelog.empty())
+				l >> lifelog.back().child;
 		} else if (key == "names") {
 			int genus;
 			unsigned int n;

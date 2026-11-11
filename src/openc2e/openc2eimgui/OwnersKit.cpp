@@ -288,6 +288,7 @@ static const char* kindWord(int kind) {
 	switch (kind) {
 		case lifeLogEntry::birth: return "Born";
 		case lifeLogEntry::death: return "Died";
+		case lifeLogEntry::eggLaid: return "Egg laid";
 		default: return "Pregnant";
 	}
 }
@@ -318,6 +319,14 @@ static std::string entryDetail(const lifeLogEntry& e) {
 			age = age.substr(0, age.find(" ("));
 			return fmt::format("{}, aged {}{}, {}{}", who, e.ageknown ? "" : "at least ", age, stageWord(e.stage), e.oldage ? ": old age" : "");
 		}
+		case lifeLogEntry::eggLaid: {
+			std::string s = fmt::format("laid by a {}, {}", who, stageWord(e.stage));
+			if (auto egg = KitEggOf(e.child))
+				s += fmt::format("; the egg is at {:.0f}, {:.0f}, {}", egg->x, egg->y, KitEggState(egg.get()));
+			else if (KitHatchedFrom(e.child))
+				s += "; it has hatched";
+			return s;
+		}
 		default: return fmt::format("{}, {}", who, stageWord(e.stage));
 	}
 }
@@ -333,6 +342,17 @@ static std::shared_ptr<Agent> entryBody(const lifeLogEntry& e) {
 }
 
 static void followEntry(const lifeLogEntry& e) {
+	// an egg: go to the egg wherever it is now, or the baby once it hatched
+	if (e.kind == lifeLogEntry::eggLaid) {
+		if (auto egg = KitEggOf(e.child)) {
+			KitLookAt(egg);
+			return;
+		}
+		if (auto baby = KitHatchedFrom(e.child)) {
+			KitGoTo(baby);
+			return;
+		}
+	}
 	auto body = entryBody(e);
 	if (!body) { // gone: its line in the log is all there is
 		OpenC2KitAt("owners", "Life log");
@@ -448,25 +468,37 @@ void DrawLifeNotices(float room) {
 	for (int i = first; i < (int)s_notices.size(); i++) {
 		auto& e = s_notices[i];
 		ImVec4 col = e.kind == lifeLogEntry::birth ? ImVec4(0.20f, 0.52f, 0.25f, 1) : e.kind == lifeLogEntry::death ? ImVec4(0.30f, 0.30f, 0.36f, 1)
+																: e.kind == lifeLogEntry::eggLaid			? ImVec4(0.62f, 0.50f, 0.18f, 1)
 																										  : ImVec4(0.70f, 0.30f, 0.50f, 1);
 		ImGui::PushStyleColor(ImGuiCol_Button, col);
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(col.x + 0.12f, col.y + 0.12f, col.z + 0.12f, 1));
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(col.x + 0.2f, col.y + 0.2f, col.z + 0.2f, 1));
 		if (ImGui::SmallButton(label(e, i).c_str())) {
 			followEntry(e);
-			remove = i;
+			// (an egg notice stays until the egg hatches or it is dismissed:
+			// the egg may move again)
+			if (e.kind != lifeLogEntry::eggLaid)
+				remove = i;
 		}
 		ImGui::PopStyleColor(3);
 		if (ImGui::IsItemHovered()) {
 			const char* kit = e.kind == lifeLogEntry::pregnancy ? "Breeder's" : "Owner's";
-			ImGui::SetTooltip("%s %s\n%s\nClick to go to it and open the %s Kit; right-click to dismiss.",
-				kindWord(e.kind), KitDateText(e.tick).c_str(), entryDetail(e).c_str(), kit);
+			if (e.kind == lifeLogEntry::eggLaid)
+				ImGui::SetTooltip("%s %s\n%s\nClick to go to the egg (or the baby, once it hatches); right-click to dismiss.",
+					kindWord(e.kind), KitDateText(e.tick).c_str(), entryDetail(e).c_str());
+			else
+				ImGui::SetTooltip("%s %s\n%s\nClick to go to it and open the %s Kit; right-click to dismiss.",
+					kindWord(e.kind), KitDateText(e.tick).c_str(), entryDetail(e).c_str(), kit);
 		}
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
 			remove = i;
 	}
 	if (remove >= 0)
 		s_notices.erase(s_notices.begin() + remove);
+	// egg notices go once the egg has hatched (the life log keeps them)
+	s_notices.erase(std::remove_if(s_notices.begin(), s_notices.end(), [](const lifeLogEntry& e) {
+		return e.kind == lifeLogEntry::eggLaid && !e.child.empty() && !KitEggOf(e.child) && KitHatchedFrom(e.child);
+	}), s_notices.end());
 }
 
 // ---- Family tree, with each member's photos ---------------------------------------

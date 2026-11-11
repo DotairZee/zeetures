@@ -14,10 +14,15 @@
 #include "common/backend/Backend.h"
 #include "creatures/CreatureAgent.h"
 #include "creatures/oldCreature.h"
+#include "AgentHelpers.h"
+#include "Room.h"
+#include "SpritePart.h"
+#include "caosValue.h"
 #include "fileformats/ImageUtils.h"
 #include "fileformats/genomeFile.h"
 
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <tuple>
@@ -447,6 +452,81 @@ void KitGoTo(const std::shared_ptr<Agent>& a) {
 	int cx = (int)(a->x + a->getWidth() / 2.0f) - (int)engine.camera->getWidth() / 2;
 	int cy = (int)(a->y + a->getHeight() / 2.0f) - (int)engine.camera->getHeight() / 2;
 	engine.camera->moveToGlobal(cx, cy, jump);
+}
+
+void KitLookAt(const std::shared_ptr<Agent>& a) {
+	if (!a)
+		return;
+	engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+	int cx = (int)(a->x + a->getWidth() / 2.0f) - (int)engine.camera->getWidth() / 2;
+	int cy = (int)(a->y + a->getHeight() / 2.0f) - (int)engine.camera->getHeight() / 2;
+	engine.camera->moveToGlobal(cx, cy, jump);
+}
+
+// ---- eggs ------------------------------------------------------------------------
+
+std::string KitEggGenome(Agent* egg) {
+	if (!egg || !egg->var[0].hasInt() || egg->var[0].getInt() == 0)
+		return "";
+	int v = egg->var[0].getInt();
+	std::string name((const char*)&v, 4);
+	for (char ch : name)
+		if (!std::isalnum((unsigned char)ch))
+			return "";
+	return name;
+}
+
+std::vector<std::shared_ptr<Agent>> KitUnhatchedEggs() {
+	std::vector<std::shared_ptr<Agent>> out;
+	for (auto& a : world.agents) {
+		if (!a || a->isDying() || a->family != 2 || a->genus != 5)
+			continue;
+		// hatched: an empty shell waiting to be removed (C2's egg scripts:
+		// norn eggs pose 7, the grendel and ettin eggs pose 10 and on)
+		int pose = -1;
+		if (auto* sp = dynamic_cast<SpritePart*>(a->part(0)))
+			pose = sp->getPose();
+		if ((a->species == 4 && pose >= 10) || (a->species != 4 && pose == 7))
+			continue;
+		out.push_back(a);
+	}
+	return out;
+}
+
+std::shared_ptr<Agent> KitEggOf(const std::string& genome) {
+	if (genome.empty())
+		return nullptr;
+	for (auto& a : KitUnhatchedEggs())
+		if (KitEggGenome(a.get()) == genome)
+			return a;
+	return nullptr;
+}
+
+std::shared_ptr<Agent> KitHatchedFrom(const std::string& genome) {
+	if (genome.empty())
+		return nullptr;
+	for (auto& [mon, m] : world.history->all()) {
+		Agent* a = m.owner.get();
+		if (!a || a->isDying())
+			continue;
+		for (auto& ev : m.events)
+			if (ev.eventno == 2 && ev.monikers[1] == genome)
+				return AgentRef(a).lock();
+	}
+	return nullptr;
+}
+
+std::string KitEggState(Agent* egg) {
+	if (!egg)
+		return "";
+	if (egg->carriedby)
+		return "being carried";
+	auto room = roomContainingAgent(AgentRef(egg));
+	if (room && room->type == 2)
+		return "in water: it hatches once it is on dry land";
+	if (egg->timerrate == 0)
+		return "not counting down (it hatches in the incubator)";
+	return "counting down to hatching";
 }
 
 // ---- shelves of COBs (Doctor, Aphrodisiacs) -------------------------------------

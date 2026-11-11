@@ -1419,7 +1419,7 @@ void c_LTCY(caosVM* vm) {
  mutation, our own recipe) and kept in the user Genetics folder under a new
  four-letter name, which she carries as BABY until the world's egg-laying
  script lays it in an egg. Her pregnant locus is set, so her genes' pregnancy
- chemistry runs. OPENC2E_TEST_CONCEIVE=1 (developer aid) skips the fertility
+ chemistry runs. OPENC2E_TEST_CONCEIVE=1 (developer aid) skips the liking, fertility
  checks. C2 only for now.
 */
 void c_MATE(caosVM* vm) {

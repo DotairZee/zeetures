@@ -131,6 +131,18 @@ static void DrawC2MenuBar() {
 			ImGui::SetTooltip("Saves your creatures (bodies and minds) and eggs. Other objects still start as in the world's original file.");
 		if (ImGui::MenuItem("Save World As...", nullptr, false, !engine.currentworlddir.empty()))
 			s_open_save_as = true;
+		// openc2e addition (owner, 2026-11-11): saves every few minutes
+		if (ImGui::BeginMenu("Autosave")) {
+			int cur = autosaveMinutes();
+			for (int m : {1, 5, 10, 15, 30})
+				if (ImGui::MenuItem(fmt::format("Every {} minute{}", m, m == 1 ? "" : "s").c_str(), nullptr, cur == m))
+					setAutosaveMinutes(m);
+			if (ImGui::MenuItem("Only when quitting", nullptr, cur == 0))
+				setAutosaveMinutes(0);
+			ImGui::EndMenu();
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("How often the world saves itself (it always saves when you quit).");
 		ImGui::Separator();
 		ImGui::MenuItem("Export Current Creature...", nullptr, false, false);
 		ImportCreatureMenuItem();
@@ -488,7 +500,7 @@ void DrawC2Toolbar() {
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Help: how to play here, and what this version adds");
 		if (ImageButton(icon_web, true))
-			SDL_OpenURL("https://github.com/openc2e/openc2e");
+			SDL_OpenURL("https://openc2e.github.io/");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("openc2e on the web (the open-source engine this runs on)");
 		ImGui::Separator();

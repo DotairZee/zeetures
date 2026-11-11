@@ -91,6 +91,17 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 bool speechBubblesShown();
 void setSpeechBubblesShown(bool shown);
 
+// The player's settings file (settings.txt in the user data folder, "key
+// value" lines), for any setting.
+std::string readPlayerSetting(const std::string& key);
+void writePlayerSetting(const std::string& key, const std::string& value);
+
+// Autosave: minutes between automatic saves of the open world (0: only on
+// quit and when switching worlds). 5 unless the player chose otherwise
+// (owner, 2026-11-11).
+int autosaveMinutes();
+void setAutosaveMinutes(int minutes);
+
 // Speech History (the toolbar's list): the last things creatures and the
 // hand said, newest first.
 struct SpokenLine {

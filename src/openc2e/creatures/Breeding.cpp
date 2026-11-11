@@ -356,7 +356,7 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 		why = "she is already pregnant";
 	else if (kinBarred(a, b))
 		why = "close kin, and an unrelated partner is alive";
-	else if (Relationships::mateFactor(a, b) <= 0.0f)
+	else if (!test && Relationships::mateFactor(a, b) <= 0.0f)
 		why = "they dislike or fear each other";
 	else if (!test && mum->getFertile() == 0)
 		why = "she is not fertile";

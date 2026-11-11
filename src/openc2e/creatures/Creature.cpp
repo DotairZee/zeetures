@@ -699,9 +699,28 @@ void oldCreature::watchPregnancy() {
 		}
 #endif
 	}
-	// the pregnancy over: she has laid her egg
-	if (pregnancywatched && !now && waspregnant && isAlive())
-		world.history->tell(world.history->findMoniker(genome), storyEntry::laidEgg);
+	if (now && parentagent && parentagent->babymoniker != 0)
+		lastbaby = parentagent->babymoniker;
+	// the pregnancy over: she has laid her egg. The status bar announces it
+	// and goes to the egg (owner, 2026-11-11: a laid egg was lost). The egg
+	// carries the baby's genome name (OBV0, from BABY, which the world's
+	// laying script clears just before it makes the egg)
+	if (pregnancywatched && !now && waspregnant && isAlive()) {
+		std::string mon = world.history->findMoniker(genome);
+		world.history->tell(mon, storyEntry::laidEgg);
+#ifndef _CREATURE_STANDALONE
+		std::string child = lastbaby ? std::string((const char*)&lastbaby, 4) : "";
+		if (world.history->hasMoniker(mon)) {
+			size_t before = world.history->notices.size();
+			world.history->logLife(lifeLogEntry::eggLaid, mon, (int)stage);
+			if (world.history->notices.size() > before) {
+				world.history->notices.back().child = child;
+				world.history->lifelog.back().child = child;
+			}
+		}
+#endif
+		lastbaby = 0;
+	}
 	waspregnant = now;
 	pregnancywatched = true;
 }

@@ -63,6 +63,7 @@
 #include "openc2eimgui/Openc2eImGui.h"
 #include "Scriptorium.h"
 #include "WorldSave.h"
+#include "creatures/CreatureSpeech.h"
 #include "openc2eimgui/WorldChooser.h"
 #include "creatures/CreatureMind.h"
 #include "prayManager.h"
@@ -472,6 +473,22 @@ void Engine::update() {
 
 	// tick the world
 	world.tick();
+
+	// C1/C2: save the open world every few minutes of play (File > Autosave;
+	// 5 by default, owner 2026-11-11: a crash had lost an hour). Not with
+	// --no-autosave (test runs).
+	if (version < 3 && worldready && autosave && !currentworlddir.empty()) {
+		static unsigned int s_last_autosave = tickdata;
+		int minutes = autosaveMinutes();
+		if (minutes > 0 && tickdata - s_last_autosave >= (unsigned int)minutes * 60000u) {
+			s_last_autosave = tickdata;
+			std::string err;
+			if (WorldSave::SaveWorldState(currentworlddir, err))
+				fmt::print("* Autosaved world '{}' (every {} min)\n", currentworld, minutes);
+			else
+				fmt::print(stderr, "Autosave failed: {}\n", err);
+		}
+	}
 	// developer aid: OPENC2E_TEST_KILL=N kills the selected creature at world
 	// tick N (headless; OPENC2E_TEST_DEATH needs the Owner's Kit drawn)
 	if (static const char* k = getenv("OPENC2E_TEST_KILL"); k && world.tickcount == (unsigned int)atoi(k) && world.selectedcreature)
@@ -543,6 +560,22 @@ void Engine::update() {
 				he = ca;
 		}
 		fmt::print("* TEST MATE: {}\n", tryConceive(she, he) ? "conceived" : "no");
+	}
+	// developer aid: OPENC2E_TEST_LAY=N, at world tick N, has the first
+	// pregnant creature lay her egg now (the world's egg-laying involuntary
+	// action, creature event 65)
+	if (static const char* k = getenv("OPENC2E_TEST_LAY"); k && world.tickcount == (unsigned int)atoi(k)) {
+		bool laid = false;
+		for (auto& a : world.agents) {
+			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
+			if (!ca || !ca->getCreature()->isAlive() || a->babymoniker == 0)
+				continue;
+			laid = a->queueScript(65);
+			fmt::print("* TEST LAY: {} at {:.0f},{:.0f}: {}\n", world.history->findMoniker(ca->getCreature()->getGenome()), a->x, a->y, laid ? "laying" : "no script");
+			break;
+		}
+		if (!laid)
+			fmt::print("* TEST LAY: no pregnant creature\n");
 	}
 	if (getenv("OPENC2E_DUMP_AGENT_EVERY_TICK")) {
 		fmt::print("* Tick {}\n", world.tickcount);
@@ -1611,6 +1644,68 @@ bool Engine::initialSetup() {
 			for (auto& f : files) {
 				fmt::print("* Running world addition {}\n", f.filename().string());
 				world.executeInitScript(f);
+			}
+		}
+	}
+
+	// C1/C2: patches to the world's own scripts, applied on the player's
+	// machine to the player's own copy (the project ships only the recipe):
+	// "script-patches.txt" in the Additions folders, in blocks of
+	//   scrp <family> <genus> <species> <event>
+	//   find <text in the script>
+	//   replace <text to put there>
+	// Lines starting with * or # are notes. A patch whose text is not found
+	// (already applied, or a different game version) is reported and skipped.
+	if (version < 3) {
+		std::vector<fs::path> files{getUserDataDir() / "Additions" / "script-patches.txt"};
+		if (!currentworlddir.empty())
+			files.push_back(fs::path(currentworlddir) / "Additions" / "script-patches.txt");
+		for (auto& path : files) {
+			if (!fs::exists(path))
+				continue;
+			std::ifstream in(path);
+			std::string line;
+			int f = -1, g = -1, sp = -1, ev = -1;
+			std::string find;
+			while (std::getline(in, line)) {
+				if (!line.empty() && line.back() == '\r')
+					line.pop_back();
+				if (line.empty() || line[0] == '*' || line[0] == '#')
+					continue;
+				std::istringstream l(line);
+				std::string key;
+				l >> key;
+				std::string rest;
+				std::getline(l >> std::ws, rest);
+				if (key == "scrp") {
+					std::istringstream r(rest);
+					r >> f >> g >> sp >> ev;
+					find.clear();
+				} else if (key == "find") {
+					find = rest;
+				} else if (key == "replace" && f >= 0 && !find.empty()) {
+					auto sc = world.scriptorium->getScript(f, g, sp, ev);
+					size_t at = sc ? sc->code.find(find) : std::string::npos;
+					if (at == std::string::npos) {
+						fmt::print("* Script patch for scrp {} {} {} {}: text not found (already patched, or another version); skipped\n", f, g, sp, ev);
+						continue;
+					}
+					std::string code = sc->code;
+					code.replace(at, find.size(), rest);
+					std::string text = fmt::format("scrp {} {} {} {} {}", f, g, sp, ev, code);
+					if (text.find("endm") == std::string::npos)
+						text += " endm";
+					try {
+						caosScript patched(engine.gametype, path.filename().string());
+						patched.parse(text);
+						caosVM vm(0);
+						patched.installScripts();
+						vm.runEntirely(patched.installer);
+						fmt::print("* Patched scrp {} {} {} {} ({})\n", f, g, sp, ev, path.filename().string());
+					} catch (Exception& e) {
+						fmt::print(stderr, "* Script patch for scrp {} {} {} {} failed: {}\n", f, g, sp, ev, e.prettyPrint());
+					}
+				}
 			}
 		}
 	}

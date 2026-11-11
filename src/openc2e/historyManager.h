@@ -131,7 +131,8 @@ class monikerData {
 struct lifeLogEntry {
 	enum { birth = 0,
 		death = 1,
-		pregnancy = 2 };
+		pregnancy = 2,
+		eggLaid = 3 }; // a mother laid her egg (the status bar's notice goes to the egg)
 	int kind = birth;
 	unsigned int tick = 0; // world tick count
 	std::string moniker;
@@ -142,6 +143,7 @@ struct lifeLogEntry {
 	unsigned int age = 0; // world ticks lived, for a death
 	bool ageknown = true; // false: counted from when this world first saw it
 	bool oldage = false; // died at the end of its senile stage
+	std::string child; // eggLaid: the genome name of the baby in the egg (its egg's OBV0), or empty
 };
 
 class historyManager {

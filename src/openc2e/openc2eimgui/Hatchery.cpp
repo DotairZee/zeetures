@@ -22,6 +22,9 @@
 
 
 #include "Breeds.h"
+#include "Agent.h"
+#include "C2Kits.h"
+#include "historyManager.h"
 #include "Engine.h"
 #include "creatures/BreedSlots.h"
 #include "common/io/FileWriter.h"
@@ -379,7 +382,7 @@ void DrawHatchery() {
 				if (ImGui::InvisibleButton("egg", ImVec2(tex.width, tex.height)))
 					TakeC2Egg(i);
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("%s egg (%s)\nClick to place it in the world, then put it in the incubator to hatch.",
+					ImGui::SetTooltip("%s egg (%s)\nClick to place it in the world. It hatches where it lies, or sooner in the incubator.",
 						egg.gender == 2 ? "Female" : egg.gender == 1 ? "Male" : "Unknown-sex", egg.moniker.c_str());
 				ImGui::PopID();
 			}
@@ -406,6 +409,32 @@ void DrawHatchery() {
 				}
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("Eggs you take from now on hatch in this breed (the parts it has).\nBreeds are listed in the Breeder's Kit.");
+			}
+			// egg locator (owner, 2026-11-11): each click goes to the next
+			// unhatched egg in the world
+			{
+				static size_t s_egg_next = 0;
+				static std::string s_egg_line;
+				auto eggs = KitUnhatchedEggs();
+				std::string label = eggs.empty() ? "No eggs in the world" : fmt::format("Find eggs ({})", eggs.size());
+				ImGui::BeginDisabled(eggs.empty());
+				if (ImGui::Button(label.c_str()) && !eggs.empty()) {
+					size_t i = s_egg_next % eggs.size();
+					auto& egg = eggs[i];
+					KitLookAt(egg);
+					std::string genome = KitEggGenome(egg.get());
+					const char* kind = egg->species == 4 ? "grendel or ettin egg" : "egg";
+					s_egg_line = fmt::format("{} of {}: {}{} at {:.0f}, {:.0f}, {}", i + 1, eggs.size(), kind, genome.empty() ? "" : " (genome " + genome + ")",
+						egg->x, egg->y, KitEggState(egg.get()));
+					s_egg_next = i + 1;
+				}
+				ImGui::EndDisabled();
+				if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+					ImGui::SetTooltip("Each click goes to the next egg in the world that has not hatched.");
+				if (!s_egg_line.empty()) {
+					ImGui::SameLine();
+					ImGui::TextWrapped("%s", s_egg_line.c_str());
+				}
 			}
 			if (!s_import_message.empty())
 				ImGui::TextUnformatted(s_import_message.c_str());
