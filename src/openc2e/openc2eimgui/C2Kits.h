@@ -31,7 +31,8 @@ void OpenC2KitAt(const char* id, const char* page);
 // room (pixels), the rest behind a "+N" that opens the life log.
 void DrawLifeNotices(float room);
 
-// Eggs in the world (C2: family 2, genus 5) that have not hatched, in the
+// Creatures' eggs in the world (C2: 2 5 2, laid or taken from the Hatchery;
+// not the world's own grendel and ettin eggs) that have not hatched, in the
 // world's order. An egg holds its baby's genome name (OBV0, four letters);
 // KitEggOf finds the unhatched egg with that genome, KitHatchedFrom the
 // creature that hatched from it. Also a few words on whether and why an egg

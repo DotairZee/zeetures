@@ -419,7 +419,6 @@ void DrawHatchery() {
 				static size_t s_egg_next = 0;
 				static std::string s_egg_line;
 				auto eggs = KitUnhatchedEggs();
-				size_t creatureEggs = std::count_if(eggs.begin(), eggs.end(), [](auto& e) { return e->species != 4; });
 				std::string label = eggs.empty() ? "No eggs in the world" : fmt::format("Find eggs ({})", eggs.size());
 				ImGui::BeginDisabled(eggs.empty());
 				// developer aid: OPENC2E_TEST_FIND_EGG=1 presses it once
@@ -434,15 +433,14 @@ void DrawHatchery() {
 					auto& egg = eggs[i];
 					KitLookAt(egg);
 					std::string genome = KitEggGenome(egg.get());
-					const char* kind = egg->species == 4 ? "grendel or ettin egg" : "egg";
+					const char* kind = "egg";
 					s_egg_line = fmt::format("{} of {}: {}{} at {:.0f}, {:.0f}, {}", i + 1, eggs.size(), kind, genome.empty() ? "" : " (genome " + genome + ")",
 						egg->x, egg->y, KitEggState(egg.get()));
 					s_egg_next = i + 1;
 				}
 				ImGui::EndDisabled();
 				if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-					ImGui::SetTooltip("Each click goes to the next egg in the world that has not hatched:\n%zu laid by creatures first, then %zu grendel and ettin eggs.",
-						creatureEggs, eggs.size() - creatureEggs);
+					ImGui::SetTooltip("Each click goes to the next creature's egg in the world that has not hatched\n(laid or taken from here; not the world's own grendel and ettin eggs).");
 				if (!s_egg_line.empty()) {
 					ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 320);
 					ImGui::TextUnformatted(s_egg_line.c_str());

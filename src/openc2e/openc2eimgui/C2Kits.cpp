@@ -482,21 +482,19 @@ std::string KitEggGenome(Agent* egg) {
 std::vector<std::shared_ptr<Agent>> KitUnhatchedEggs() {
 	std::vector<std::shared_ptr<Agent>> out;
 	for (auto& a : world.agents) {
-		if (!a || a->isDying() || a->family != 2 || a->genus != 5)
+		// creatures' eggs only (2 5 2: laid by a creature or taken from the
+		// Hatchery); not the world's own grendel and ettin eggs (2 5 3 and
+		// 2 5 4, which it makes itself; owner, 2026-11-11)
+		if (!a || a->isDying() || a->family != 2 || a->genus != 5 || a->species != 2)
 			continue;
-		// hatched: an empty shell waiting to be removed (C2's egg scripts:
-		// norn eggs pose 7, the grendel and ettin eggs pose 10 and on)
+		// hatched: an empty shell waiting to be removed (pose 7)
 		int pose = -1;
 		if (auto* sp = dynamic_cast<SpritePart*>(a->part(0)))
 			pose = sp->getPose();
-		if ((a->species == 4 && pose >= 10) || (a->species != 4 && pose == 7))
+		if (pose == 7)
 			continue;
 		out.push_back(a);
 	}
-	// creatures' eggs (with a baby's genome) before the grendel and ettin eggs
-	std::stable_sort(out.begin(), out.end(), [](const std::shared_ptr<Agent>& x, const std::shared_ptr<Agent>& y) {
-		return (x->species != 4) > (y->species != 4);
-	});
 	return out;
 }
 
