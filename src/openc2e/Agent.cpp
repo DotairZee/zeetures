@@ -1074,7 +1074,16 @@ void Agent::physicsTickC2() {
 		std::shared_ptr<Room> r = world.map->roomAt(cx, bottom - 1);
 		if (r && r->floorpoints.size() && r->floorvalue == 0 && size > r->floorvalue) {
 			float floory = r->floorYatX(cx);
-			if (bottom > floory + 1 && floory > r->y_left_ceiling)
+			// Not where water lies under the room: there the line is a
+			// boardwalk over it, not the top of the ground, and what is under
+			// the line came up out of the water (fish leaping at the surface
+			// were set on the boardwalk over the sea by the airlock, room 14
+			// over room 123; owner, 2026-11-10)
+			float span = std::max(1.0f, (float)r->x_right - (float)r->x_left);
+			float roombottom = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
+			std::shared_ptr<Room> under = world.map->roomAt(cx, roombottom + 1);
+			bool overWater = under && under != r && under->type == 2;
+			if (!overWater && bottom > floory + 1 && floory > r->y_left_ceiling)
 				moveTo(x, floory - getHeight());
 		}
 	}
