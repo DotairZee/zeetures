@@ -105,6 +105,14 @@ struct Params {
 	float learningRate = 0.3f; // delta rule
 	float individualPrior = 3.0f; // dealings with an individual before its own record counts half
 	float retreatFear = 0.3f; // a creature feared this much, close by, is backed away from
+	// Temperament's signature behaviours (owner, 2026-11-11: traits must show),
+	// each per unit of the trait's z-score: the bold drawn to strangers and the
+	// shy put off (scaled by how strange), the shy backing away from strangers
+	// close by, the sociable going toward company (more toward the liked), the
+	// hot-tempered hitting sooner (more when angry), the energetic pacing about
+	// and the placid settling when nothing presses.
+	float strangerBias = 0.02f, shyRetreat = 0.015f, socialFollow = 0.012f, temperHit = 0.03f, energyPace = 0.006f;
+	int hitDecision = 13;
 	// temperament (reactivity): outcomes worse than expected are learned at
 	// this share of the rate, better ones at this share
 	float worseLearning = 1.0f, betterLearning = 1.0f;
@@ -457,7 +465,7 @@ class HomeostatMind : public CreatureMind {
 	std::string name() const override { return "homeostat"; }
 
 	void born(const MindPerception& p) override {
-		applyTemperament(p.temperament);
+		applyTemperament(p.temperament, p.creatureId);
 		rng.seed((unsigned int)p.creatureId);
 		std::string acts;
 		for (auto& a : *p.actions)
@@ -555,7 +563,7 @@ class HomeostatMind : public CreatureMind {
 	// least half its weight however bold the creature.
 	std::array<float, 7> appliedTemperament{};
 	bool temperamentApplied = false;
-	void applyTemperament(const std::array<float, 7>& z) {
+	void applyTemperament(const std::array<float, 7>& z, int creatureId = 0) {
 		if (temperamentApplied && z == appliedTemperament)
 			return;
 		temperamentApplied = true;
@@ -585,14 +593,14 @@ class HomeostatMind : public CreatureMind {
 		// steadiness (6): sticks with what it is doing
 		prm.commitment *= f(6, 0.5f);
 		if (getenv("OPENC2E_WATCH_CREATURES"))
-			fmt::print("[homeostat] temperament z {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f}: fear w {:.2f} lonely w {:.2f} bored w {:.2f} anger w {:.2f} "
+			fmt::print("[homeostat] creature {} temperament z {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f}: fear w {:.2f} lonely w {:.2f} bored w {:.2f} anger w {:.2f} "
 					   "curiosity {:.3f} commitment {:.3f} worse/better learning {:.2f}/{:.2f}\n",
-				z[0], z[1], z[2], z[3], z[4], z[5], z[6], prm.weights[FEAR], prm.weights[LONELY], prm.weights[BORED], prm.weights[ANGER],
+				creatureId, z[0], z[1], z[2], z[3], z[4], z[5], z[6], prm.weights[FEAR], prm.weights[LONELY], prm.weights[BORED], prm.weights[ANGER],
 				prm.curiosity, prm.commitment, prm.worseLearning, prm.betterLearning);
 	}
 
 	MindOutput tick(const MindPerception& p) override {
-		applyTemperament(p.temperament);
+		applyTemperament(p.temperament, p.creatureId);
 		MindOutput out = tickChoose(p);
 		out.say = chooseSpeech(p, normalize(p.drives));
 		return out;
@@ -1438,6 +1446,12 @@ class HomeostatMind : public CreatureMind {
 			}
 			if (inEpisodeJustEnded && category == current.category && decision == current.decision)
 				c.score += prm.commitment;
+			const auto& z = appliedTemperament;
+			if (who && !who->who.empty()) {
+				c.score += prm.strangerBias * z[0] * (1.0f - who->familiarity); // boldness
+				if (decision == prm.hitDecision)
+					c.score += prm.temperHit * z[4] * (0.3f + d[ANGER]); // temper
+			}
 			out.push_back(c);
 		};
 		for (auto& a : *p.actions) {
@@ -1457,6 +1471,46 @@ class HomeostatMind : public CreatureMind {
 					continue;
 				add(-1, a.decision, 0.0f, 0.0f);
 			}
+		}
+		// temperament: the shy back away from strangers close by; the sociable
+		// go toward company; the energetic pace about when nothing presses
+		{
+			const auto& z = appliedTemperament;
+			const SeenAgent* company = nullptr;
+			float best = -1e9f;
+			for (auto& s : p.visible) {
+				if (s.who.empty())
+					continue;
+				if (z[0] < -0.5f && s.familiarity < 0.2f && s.distance < 250.0f) {
+					int dir = s.x < p.x ? 11 : 10;
+					if (!waterAhead(p, dir) && !wallAhead(p, dir)) {
+						Candidate c{-1, dir, 0, prm.shyRetreat * -z[0] * (1.0f - s.familiarity), 0, 0};
+						c.score = c.want;
+						c.chain = true;
+						c.who = "shy of " + s.who;
+						out.push_back(c);
+					}
+				}
+				float liked = s.affinity + 0.5f * s.familiarity - s.fear;
+				if (s.reachable && s.distance > 150.0f && liked > best) {
+					best = liked;
+					company = &s;
+				}
+			}
+			if (company && z[3] > 0.3f && company->fear < prm.retreatFear) {
+				int dir = company->x < p.x ? 10 : 11;
+				if (!waterAhead(p, dir) && !wallAhead(p, dir) && !isBlocked(p, dir)) {
+					Candidate c{-1, dir, 0, prm.socialFollow * z[3] * (0.5f + std::max(0.0f, company->affinity)), 0, 0};
+					c.score = c.want;
+					c.chain = true;
+					c.who = "toward " + company->who;
+					out.push_back(c);
+				}
+			}
+			if (D < 0.25f)
+				for (auto& c : out)
+					if (c.category < 0 && (c.decision == 26 || c.decision == 27))
+						c.score += prm.energyPace * z[2];
 		}
 		// a feared creature close by: back away from it
 		for (auto& s : p.visible) {
