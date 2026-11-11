@@ -1094,6 +1094,29 @@ static void BreedsPage() {
 		ImGui::PopTextWrapPos();
 
 		bool canLay = b->parts.count('a') && b->parts.count('b');
+		// the egg's sex (owner, 2026-11-11): either at random, or the one
+		// chosen, among the sexes the breed has parts for
+		static int s_eggSex = 0; // 0 either, 1 male, 2 female (as the egg carries it)
+		if (s_eggSex == 1 && !b->male)
+			s_eggSex = 0;
+		if (s_eggSex == 2 && !b->female)
+			s_eggSex = 0;
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted("Egg:");
+		ImGui::SameLine();
+		ImGui::RadioButton("Either##eggsex", &s_eggSex, 0);
+		ImGui::SameLine();
+		if (!b->female)
+			ImGui::BeginDisabled();
+		ImGui::RadioButton("Female##eggsex", &s_eggSex, 2);
+		if (!b->female)
+			ImGui::EndDisabled();
+		ImGui::SameLine();
+		if (!b->male)
+			ImGui::BeginDisabled();
+		ImGui::RadioButton("Male##eggsex", &s_eggSex, 1);
+		if (!b->male)
+			ImGui::EndDisabled();
 		if (!canLay)
 			ImGui::BeginDisabled();
 		if (ImGui::Button("Lay an egg of this breed")) {
@@ -1104,8 +1127,11 @@ static void BreedsPage() {
 				std::string err;
 				static int s_laid = 0;
 				genome = GenomeWithBreed(genome, *b);
-				if (LayC2Egg({genome}, rand_int32(1, 2), rand_int32(0, 10), fmt::format("b{:02d}", s_laid++ % 100), err))
-					s_breed_message = fmt::format("Laid an egg of {} by the incubator.", BreedLabel(*b));
+				int sex = s_eggSex;
+				if (sex == 0) // either: at random among the sexes it has
+					sex = b->male && b->female ? rand_int32(1, 2) : b->female ? 2 : b->male ? 1 : rand_int32(1, 2);
+				if (LayC2Egg({genome}, sex, rand_int32(0, 10), fmt::format("b{:02d}", s_laid++ % 100), err))
+					s_breed_message = fmt::format("Laid a {} egg of {} by the incubator.", sex == 2 ? "female" : "male", BreedLabel(*b));
 				else
 					s_breed_message = "Couldn't lay the egg: " + err;
 			}
