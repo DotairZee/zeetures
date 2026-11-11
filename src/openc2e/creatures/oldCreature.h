@@ -22,8 +22,10 @@
 
 #include "Creature.h"
 #include "CreatureMind.h"
+#include "Relationships.h"
 
 #include <cassert>
+#include <map>
 #include <memory>
 
 // c1/c2
@@ -114,6 +116,9 @@ class oldCreature : public Creature {
 	// (engine.wordlist), how familiar it is, 0-255 (known at WORD_KNOWN); see
 	// CreatureSpeech.h. Empty until the first word is heard.
 	std::vector<unsigned char> vocab;
+	// what it feels about each creature it has met, by moniker
+	// (creatures/Relationships.h); saved with the world
+	std::map<std::string, Bond> bonds;
 	int lastNeedSaid = -2;
 	unsigned int lastNeedTick = 0;
 

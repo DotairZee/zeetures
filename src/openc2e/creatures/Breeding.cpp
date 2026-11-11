@@ -18,6 +18,7 @@
  */
 
 #include "Breeding.h"
+#include "Relationships.h"
 #include <set>
 
 #include "Agent.h"
@@ -355,6 +356,8 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 		why = "she is already pregnant";
 	else if (kinBarred(a, b))
 		why = "close kin, and an unrelated partner is alive";
+	else if (Relationships::mateFactor(a, b) <= 0.0f)
+		why = "they dislike or fear each other";
 	else if (!test && mum->getFertile() == 0)
 		why = "she is not fertile";
 	else if (!test && dad->getFertile() == 0)
@@ -363,7 +366,8 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	// the body chemistry as openc2e runs it, a norn's fertility (105) rarely
 	// climbs high enough for her genes to make her receptive (2026-11-10)
 	else if (!test && rand_float(0, 1) > (mum->getFertile() / 255.0f) * (0.5f + 0.5f * mum->getReceptive() / 255.0f) *
-											   stageFertility((int)mum->getStage()) * stageFertility((int)dad->getStage()))
+											   stageFertility((int)mum->getStage()) * stageFertility((int)dad->getStage()) *
+											   Relationships::mateFactor(a, b))
 		why = "chance";
 	std::string mumMon = world.history->findMoniker(mum->getGenome());
 	std::string dadMon = world.history->findMoniker(dad->getGenome());
@@ -380,6 +384,7 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 		return false;
 	mumBody->babymoniker = genomeNameToInt(name);
 	mum->setPregnant(255);
+	Relationships::conceived(mumAgent, dadAgent);
 	fmt::print("* MATE {} and {}: conceived, genome {} ({} genes: {} from her, {} from him, {} crossovers, {} mutations, {} duplications, {} losses)\n",
 		mumMon, dadMon, name, rep.genes, rep.fromMum, rep.fromDad, rep.crossovers, rep.mutations, rep.duplications, rep.deletions);
 	return true;

@@ -310,6 +310,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/creatures/Breeding.cpp
 	src/openc2e/creatures/CreatureSpeech.cpp
 	src/openc2e/creatures/Pheromones.cpp
+	src/openc2e/creatures/Relationships.cpp
 	src/openc2e/creatures/Creature.cpp
 	src/openc2e/creatures/CreatureAgent.cpp
 	src/openc2e/creatures/CreatureAI.cpp
@@ -356,6 +357,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/openc2eimgui/HealthKit.cpp
 	src/openc2e/openc2eimgui/ObservationKit.cpp
 	src/openc2e/openc2eimgui/OwnersKit.cpp
+	src/openc2e/openc2eimgui/RelationshipsPage.cpp
 	src/openc2e/openc2eimgui/ScienceKit.cpp
 	src/openc2e/openc2eimgui/C2ScrollBars.cpp
 	src/openc2e/openc2eimgui/C2StatusBar.cpp

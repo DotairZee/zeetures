@@ -738,8 +738,11 @@ void oldCreature::handleStimulus(const StimulusEvent& s) {
 	applyStimulusChemistry(felt);
 	// a creature harmed or helped may mark whoever did it with a scent
 	// (pheromones.txt mark rules)
-	if (engine.version == 2 && felt.source)
+	if (engine.version == 2 && felt.source) {
 		Pheromones::felt(parentagent, this, felt.source.get(), felt.feltChem, felt.feltAmount);
+		// and its feeling for whoever did it moves (Relationships.h)
+		Relationships::felt(parentagent, this, felt.source.get(), felt.feltChem, felt.feltAmount);
+	}
 	if (pendingstimuli.size() < 64)
 		pendingstimuli.push_back(felt);
 }

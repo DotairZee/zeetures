@@ -1139,6 +1139,10 @@ void DrawOwnersKit() {
 			FamilyPage();
 			ImGui::EndTabItem();
 		}
+		if (KitTab("Relationships")) {
+			RelationshipsPage();
+			ImGui::EndTabItem();
+		}
 		if (KitTab("Life log")) {
 			LifeLogPage();
 			ImGui::EndTabItem();
