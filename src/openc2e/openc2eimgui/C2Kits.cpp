@@ -1,6 +1,7 @@
 #include "C2Kits.h"
 
 #include "C2KitsInternal.h"
+#include "Hatchery.h"
 #include "ChemicalNamesManager.h"
 #include "Engine.h"
 #include "PathResolver.h"
@@ -153,6 +154,8 @@ static void OpenTestKits() {
 			break;
 		}
 	std::string list = s;
+	if (list.find("hatchery") != std::string::npos)
+		SetHatcheryOpen(true);
 	for (auto& k : s_kits)
 		if (list.find(k.id) != std::string::npos) {
 			OpenC2Kit(k.id);
@@ -490,6 +493,10 @@ std::vector<std::shared_ptr<Agent>> KitUnhatchedEggs() {
 			continue;
 		out.push_back(a);
 	}
+	// creatures' eggs (with a baby's genome) before the grendel and ettin eggs
+	std::stable_sort(out.begin(), out.end(), [](const std::shared_ptr<Agent>& x, const std::shared_ptr<Agent>& y) {
+		return (x->species != 4) > (y->species != 4);
+	});
 	return out;
 }
 
@@ -525,7 +532,7 @@ std::string KitEggState(Agent* egg) {
 	if (room && room->type == 2)
 		return "in water: it hatches once it is on dry land";
 	if (egg->timerrate == 0)
-		return "not counting down (it hatches in the incubator)";
+		return "not counting down yet";
 	return "counting down to hatching";
 }
 

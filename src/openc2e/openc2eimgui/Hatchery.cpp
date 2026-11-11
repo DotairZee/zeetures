@@ -311,7 +311,10 @@ void DrawHatchery() {
 							   (engine.version == 2 ? ImGuiWindowFlags_MenuBar : 0) |
 								   ImGuiWindowFlags_NoScrollbar |
 								   ImGuiWindowFlags_NoScrollWithMouse |
-								   ImGuiWindowFlags_NoCollapse)) {
+								   ImGuiWindowFlags_NoCollapse |
+								   // fits what it holds (a remembered smaller size
+								   // hid the Find eggs button, 2026-11-11)
+								   ImGuiWindowFlags_AlwaysAutoResize)) {
 		if (!s_hatchery_loaded) {
 			LoadHatchery();
 		}
@@ -416,9 +419,17 @@ void DrawHatchery() {
 				static size_t s_egg_next = 0;
 				static std::string s_egg_line;
 				auto eggs = KitUnhatchedEggs();
+				size_t creatureEggs = std::count_if(eggs.begin(), eggs.end(), [](auto& e) { return e->species != 4; });
 				std::string label = eggs.empty() ? "No eggs in the world" : fmt::format("Find eggs ({})", eggs.size());
 				ImGui::BeginDisabled(eggs.empty());
-				if (ImGui::Button(label.c_str()) && !eggs.empty()) {
+				// developer aid: OPENC2E_TEST_FIND_EGG=1 presses it once
+				static bool s_test_find = getenv("OPENC2E_TEST_FIND_EGG") != nullptr;
+				bool pressed = ImGui::Button(label.c_str());
+				if (s_test_find && !eggs.empty()) {
+					s_test_find = false;
+					pressed = true;
+				}
+				if (pressed && !eggs.empty()) {
 					size_t i = s_egg_next % eggs.size();
 					auto& egg = eggs[i];
 					KitLookAt(egg);
@@ -430,10 +441,12 @@ void DrawHatchery() {
 				}
 				ImGui::EndDisabled();
 				if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-					ImGui::SetTooltip("Each click goes to the next egg in the world that has not hatched.");
+					ImGui::SetTooltip("Each click goes to the next egg in the world that has not hatched:\n%zu laid by creatures first, then %zu grendel and ettin eggs.",
+						creatureEggs, eggs.size() - creatureEggs);
 				if (!s_egg_line.empty()) {
-					ImGui::SameLine();
-					ImGui::TextWrapped("%s", s_egg_line.c_str());
+					ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 320);
+					ImGui::TextUnformatted(s_egg_line.c_str());
+					ImGui::PopTextWrapPos();
 				}
 			}
 			if (!s_import_message.empty())
