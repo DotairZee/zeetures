@@ -1087,7 +1087,11 @@ void Agent::physicsTickC2() {
 	if (suffercollisions() && sufferphysics()) {
 		float cx = x + getWidth() / 2.0f, bottom = y + getHeight();
 		std::shared_ptr<Room> r = world.map->roomAt(cx, bottom - 1);
-		if (r && r->floorpoints.size() && r->floorvalue == 0 && size > r->floorvalue) {
+		// (not in water: a water room's floor line is a bed for creatures to
+		// wade along, and near the banks it rises to the surface; fish
+		// swimming there were set on it, out of the water, and stuck at the
+		// pond's edge by the waterfall; owner, 2026-11-10)
+		if (r && r->type != 2 && r->floorpoints.size() && r->floorvalue == 0 && size > r->floorvalue) {
 			float floory = r->floorYatX(cx);
 			// Not where water lies under the room: there the line is a
 			// boardwalk over it, not the top of the ground, and what is under
