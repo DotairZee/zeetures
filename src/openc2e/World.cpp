@@ -47,6 +47,7 @@
 #include "common/io/FileReader.h"
 #include "common/throw_ifnot.h"
 #include "creatures/CreatureAgent.h"
+#include "creatures/oldCreature.h"
 #include "fileformats/genomeFile.h"
 #include "historyManager.h"
 #include "imageManager.h"
@@ -392,6 +393,34 @@ void World::tick() {
 	// pocket). The world has about 30 of them; a room whose doorways a script
 	// opens and shuts (an airlock) is not one unless both were shut at the
 	// start and still are.
+	// C2: a metabolism stalled with fuel in store is restarted. Every organ
+	// needs ATP to run, so a creature whose ATP reaches 0 can neither digest
+	// what it eats nor burn its fat to make more: it stays at 0 for good,
+	// starving with food in its stomach (owner, 2026-11-10: a grendel ate
+	// berries and was never satiated; it had starch 255, fat 255, ATP 0; the
+	// Home ettin did the same). When a living creature has no ATP but has
+	// fuel (glucose, glycogen, starch, fatty acid, fat), it gets its genome's
+	// starting ATP, as a creature from an older save does at load; every 100
+	// ticks at most.
+	if (engine.version == 2 && tickcount % 100 == 61) {
+		for (auto& a : agents) {
+			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
+			auto* c = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+			if (!c || !c->isAlive() || c->getChemical(99) != 0)
+				continue;
+			int fuel = c->getChemical(70) + c->getChemical(71) + c->getChemical(72) + c->getChemical(73) + c->getChemical(74);
+			if (fuel < 20)
+				continue;
+			unsigned char atp = 200;
+			for (auto& gn : c->getGenome()->genes)
+				if (auto* ic = dynamic_cast<bioInitialConcentrationGene*>(gn.get()))
+					if (ic->chemical == 99)
+						atp = ic->quantity;
+			c->setChemicalLevel(99, atp);
+			fmt::print("* Restarted the metabolism of a {} (genus {}): ATP 0 -> {} with fuel {} in store\n", c->isFemale() ? "female" : "male", (int)a->genus, (int)atp, fuel);
+		}
+	}
+
 	if (engine.version == 2 && map && tickcount % 100 == 37) {
 		static const bool watchRescue = getenv("OPENC2E_WATCH_SUNK") != nullptr;
 		if (!sealedRoomsKnown) {
@@ -470,6 +499,20 @@ Agent* World::agentAt(unsigned int x, unsigned int y, bool obey_all_transparency
 		return p->getParent();
 	else
 		return 0;
+}
+
+// The topmost creature whose picture's box contains the point (C1/C2
+// selection by clicking: see PointerAgent), whatever is drawn over it.
+Agent* World::creatureAt(int x, int y) {
+	for (auto p : zorder) {
+		Agent* parent = p->getParent();
+		if (!parent || parent == theHand || parent->family != 4 || !dynamic_cast<CreatureAgent*>(parent))
+			continue;
+		int ax = x - (int)parent->x, ay = y - (int)parent->y;
+		if (ax >= p->x && ax <= p->x + (int)p->getWidth() && ay >= p->y && ay <= p->y + (int)p->getHeight())
+			return parent;
+	}
+	return nullptr;
 }
 
 CompoundPart* World::partAt(unsigned int x, unsigned int y, bool obey_all_transparency, bool needs_mouseable, bool needs_clickable) {

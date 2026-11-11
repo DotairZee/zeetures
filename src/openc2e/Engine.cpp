@@ -474,6 +474,32 @@ void Engine::update() {
 		if (auto* ca = dynamic_cast<CreatureAgent*>(world.selectedcreature.get()))
 			if (ca->getCreature()->isAlive())
 				ca->getCreature()->die();
+	// developer aid: OPENC2E_TEST_CLICK="N,X,Y" clicks the hand's left
+	// button at world position X,Y at world tick N, through the hand's own
+	// event handling (a mouse move there, then the button down and up)
+	if (static const char* k = getenv("OPENC2E_TEST_CLICK"); k && world.hand()) {
+		int n = 0, cx = 0, cy = 0;
+		if (sscanf(k, "%d,%d,%d", &n, &cx, &cy) == 3 && world.tickcount == (unsigned int)n) {
+			int prevsel = world.selectedcreature ? (int)world.selectedcreature->genus : -1;
+			if (CompoundPart* hit = world.partAt(cx, cy, true, false, true))
+				fmt::print("* TEST CLICK hits {} {} {} plane {}\n", (int)hit->getParent()->family, (int)hit->getParent()->genus, hit->getParent()->species, hit->getParent()->getZOrder());
+			else
+				fmt::print("* TEST CLICK hits nothing\n");
+			for (auto& a : world.agents)
+				if (a && a->family == 4)
+					fmt::print("* TEST CLICK creature genus {} at {:.0f},{:.0f} {}x{}\n", (int)a->genus, a->x, a->y, a->getWidth(), a->getHeight());
+			auto* hand = dynamic_cast<PointerAgent*>(world.hand());
+			BackendEvent e{};
+			hand->moveTo(cx - (hand->pointerX() - hand->x), cy - (hand->pointerY() - hand->y));
+			e.type = eventmousebuttondown;
+			e.button = buttonleft;
+			hand->handleEvent(e);
+			e.type = eventmousebuttonup;
+			hand->handleEvent(e);
+			std::string before = fmt::format("{}", prevsel);
+			fmt::print("* TEST CLICK at {},{}: selected genus {} (before: genus {})\n", cx, cy, world.selectedcreature ? (int)world.selectedcreature->genus : -1, before);
+		}
+	}
 	// developer aid: OPENC2E_TEST_MATE=N, at world tick N, has the first
 	// grown female and male of a genus mate (MATE's path: tryConceive)
 	if (static const char* k = getenv("OPENC2E_TEST_MATE"); k && world.tickcount == (unsigned int)atoi(k)) {

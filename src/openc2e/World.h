@@ -115,6 +115,7 @@ class World {
 	void setFocus(class CompoundPart* p);
 
 	Agent* agentAt(unsigned int x, unsigned int y, bool obey_all_transparency = true, bool needs_mouseable = false);
+	Agent* creatureAt(int x, int y);
 	CompoundPart* partAt(unsigned int x, unsigned int y, bool obey_all_transparency = true, bool needs_mouseable = false, bool needs_activateable = false);
 	class PointerAgent* hand() {
 		return theHand;

@@ -243,6 +243,13 @@ void PointerAgent::handleEvent(BackendEvent& event) {
 		// do our custom handling
 		if (event.button == buttonleft) {
 			CompoundPart* a = world.partAt(x, y, true, false, true);
+			// C1/C2: clicking a creature selects it, also where something is
+			// drawn over it (its speech bubble, what it carries, the hand's
+			// typing bubble when teaching it a word; owner, 2026-11-10: a
+			// click with the teach hand should select)
+			if (engine.version < 3 && !(a && dynamic_cast<CreatureAgent*>(a->getParent())))
+				if (Agent* c = world.creatureAt(x, y))
+					world.selectCreature(AgentRef(c).lock());
 			if (a) {
 				Agent* parent = a->getParent();
 
