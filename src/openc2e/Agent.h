@@ -172,6 +172,8 @@ class Agent : public std::enable_shared_from_this<Agent> {
 	bool frozen : 1;
 	bool visible : 1;
 	bool displaycore : 1;
+	bool outofroomsystem = false; // physics found it outside the room map (see markOutOfRoomSystem)
+	void markOutOfRoomSystem();
 
 	int clac[3];
 	int clik;

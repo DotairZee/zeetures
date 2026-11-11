@@ -705,7 +705,7 @@ void Agent::physicsTick() {
 
 			std::shared_ptr<Room> ourRoom = world.map->roomAt(srcx, srcy);
 			if (!ourRoom) {
-				if (!displaycore) { // TODO: ugh, displaycore is a horrible thing to use for this
+				if (!outofroomsystem) {
 					// we're out of the room system, physics bug, but let's try MVSFing back in to cover for fuzzie's poor programming skills
 					static bool tryingmove;
 					tryingmove = false; // avoid infinite loop
@@ -717,9 +717,9 @@ void Agent::physicsTick() {
 					}
 
 					// didn't work!
-					unhandledException(fmt::format("out of room system at ({}, {})", srcx, srcy), false);
+					unhandledException(fmt::format("{} out of room system at ({}, {})", identify(), srcx, srcy), false);
 				}
-				displaycore = true;
+				markOutOfRoomSystem();
 				falling = false;
 				return; // out of room system
 			}
@@ -897,10 +897,10 @@ void Agent::findCollisionInDirection(unsigned int i, class MetaRoom* m, Point sr
 	}
 
 	if (!room) { // out of room system
-		if (!displaycore)
-			unhandledException(fmt::format("out of room system at ({}, {})", src.x, src.y), false);
+		if (!outofroomsystem)
+			unhandledException(fmt::format("{} out of room system at ({}, {})", identify(), src.x, src.y), false);
 		falling = false;
-		displaycore = true;
+		markOutOfRoomSystem();
 		return;
 	}
 
@@ -1050,6 +1050,17 @@ void Agent::findCollisionInDirection(unsigned int i, class MetaRoom* m, Point sr
 	}
 }
 
+// An object found outside the room map (its physics stops until it is back
+// in). The core box is drawn for it only on request (OPENC2E_SHOW_CORES, or
+// the CAOS debug command): it used to be drawn for good, a magenta diamond
+// round the object that players saw (owner, 2026-11-11).
+void Agent::markOutOfRoomSystem() {
+	outofroomsystem = true;
+	static const bool show = getenv("OPENC2E_SHOW_CORES") != nullptr;
+	if (show)
+		displaycore = true;
+}
+
 void Agent::physicsTickC2() {
 	int dx = round(velx), dy = round(vely);
 
@@ -1112,13 +1123,17 @@ void Agent::physicsTickC2() {
 
 	bool collided = false;
 
+	// back inside the room map: no longer out of it
+	if (outofroomsystem && validInRoomSystem())
+		outofroomsystem = false;
+
 	if (suffercollisions()) {
 		MetaRoom* m = world.map->metaRoomAt(x, y);
 		if (!m) {
-			if (!displaycore)
-				unhandledException(fmt::format("out of room system at ({}, {})", x, y), false);
+			if (!outofroomsystem)
+				unhandledException(fmt::format("{} out of room system at ({}, {})", identify(), x, y), false);
 			falling = false;
-			displaycore = true;
+			markOutOfRoomSystem();
 			return;
 		}
 
