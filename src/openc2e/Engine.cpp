@@ -19,6 +19,7 @@
 
 #include "Engine.h"
 
+#include "Blackboard.h"
 #include "creatures/Pheromones.h"
 #include "historyManager.h"
 #include "creatures/Breeding.h"
@@ -503,6 +504,14 @@ void Engine::update() {
 			fmt::print("* TEST CLICK at {},{}: selected genus {} (before: genus {})\n", cx, cy, world.selectedcreature ? (int)world.selectedcreature->genus : -1, before);
 		}
 	}
+	// developer aid: OPENC2E_TEST_BLACKBOARDS=N, at world tick N, lists the
+	// world's blackboards (teaching machines): classifier, place, attributes
+	if (static const char* k = getenv("OPENC2E_TEST_BLACKBOARDS"); k && world.tickcount == (unsigned int)atoi(k))
+		for (auto& a : world.agents)
+			if (a && dynamic_cast<Blackboard*>(a.get()))
+				fmt::print("* BLACKBOARD {} {} {} at {:.0f},{:.0f} size {}x{} attr {}\n", (int)a->family, (int)a->genus, a->species, a->x, a->y,
+					a->getWidth(), a->getHeight(), (int)a->attr);
+
 	// developer aid: OPENC2E_TEST_KIN=N, at world tick N, prints for each
 	// pair of living creatures whether they are close kin and barred as mates
 	if (static const char* k = getenv("OPENC2E_TEST_KIN"); k && world.tickcount == (unsigned int)atoi(k)) {

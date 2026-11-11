@@ -38,7 +38,7 @@ class oldCreature;
 // same). The voice speaks every word that way, learned or not; learning
 // changes what the bubble shows.
 const int WORD_KNOWN = 128;
-const int HEAR_MACHINE = 48; // a learning machine's word, looked at or close by
+const int HEAR_MACHINE = 64; // a learning machine's word, looked at or close by (one press, two hearings, teaches it)
 const int HEAR_MACHINE_FAR = 32; // a learning machine's word, heard from further off
 const int HEAR_HAND = 48; // a word the hand typed
 const int HEAR_CREATURE = 24; // a word another creature said

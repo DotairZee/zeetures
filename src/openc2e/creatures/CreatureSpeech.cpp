@@ -270,17 +270,33 @@ void hearMachineWord(Agent* machine, int word, bool aloud) {
 	if (!machine || engine.version >= 3 || !isWord(word))
 		return;
 	float mx = centreX(machine), my = centreY(machine);
+	// the machine's edges (a teaching computer is 157 px wide)
+	float left = machine->x, right = machine->x + (machine->part(0) ? machine->getWidth() : 0.0f);
+	float top = machine->y, bottom = machine->y + (machine->part(0) ? machine->getHeight() : 0.0f);
 	for (auto& a : world.agents) {
 		if (!a || a->isDying())
 			continue;
 		oldCreature* c = creatureOf(a.get());
-		if (!c)
+		if (!c || !c->isAlive() || c->isAsleep())
 			continue;
-		bool looking = c->getAttentionFocus() == AgentRef(machine) ||
-					   (std::fabs(centreX(a.get()) - mx) <= 150 && std::fabs(centreY(a.get()) - my) <= 120);
-		if (looking)
+		float cx = centreX(a.get()), cy = centreY(a.get());
+		float dx = std::max({0.0f, left - cx, cx - right}), dy = std::max({0.0f, top - cy, cy - bottom});
+		bool looking = c->getAttentionFocus() == AgentRef(machine) || (dx <= 120 && dy <= 80);
+		if (looking) {
 			hearWord(c, word, HEAR_MACHINE);
-		else if (aloud && inEarshot(a.get(), mx, my))
+			// being taught, it says the word back: in its own tongue until it
+			// has learned it, then the word itself (as C2's creatures repeat
+			// what the machine shows)
+			int stage = (int)c->getStage();
+			if (stage >= 1) {
+				Utterance u;
+				u.spoken = trim(engine.wordlist[word]);
+				u.shown = knowsWord(c, word) ? u.spoken : nativeWord(a.get(), u.spoken);
+				if (knowsWord(c, word))
+					u.learned.push_back(word);
+				creatureSays(a.get(), stage, u);
+			}
+		} else if (aloud && inEarshot(a.get(), mx, my))
 			hearWord(c, word, HEAR_MACHINE_FAR);
 	}
 }
