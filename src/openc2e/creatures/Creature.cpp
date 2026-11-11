@@ -528,8 +528,16 @@ void c2Creature::updateUnderwater() {
 		return;
 	}
 	bubbletimer = rand_int32(12, 40);
-	std::string caos = fmt::format("inst new: simp bubs 10 0 8000 0 setv cls2 2 1 27 mvto {} {} mesg writ targ 8",
-		(int)headx - 6, (int)heady - 12);
+	if (getenv("OPENC2E_DEBUG_BUBBLES"))
+		if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent))
+			fmt::print("* BUBBLE agent {:.0f},{:.0f} size {}x{} mouth {},{} neck {},{} -> {:.0f},{:.0f}\n", parentagent->x, parentagent->y, parentagent->getWidth(),
+				parentagent->getHeight(), sc->attachmentX(1, 1), sc->attachmentY(1, 1), sc->attachmentX(1, 0), sc->attachmentY(1, 0), headx, heady);
+	// marked as a breath bubble (OV01 7777): the world makes those rise
+	// (World::tickBreathBubbles; the game's bubble object has no movement
+	// of its own, so bubbles hung where they were blown while the creature
+	// sank or walked on: owner, 2026-11-11)
+	std::string caos = fmt::format("inst new: simp bubs 10 0 8000 0 setv cls2 2 1 27 setv ov01 7777 mvto {} {} mesg writ targ 8",
+		(int)headx - 5, (int)heady - 5);
 	std::string result = engine.executeNetwork(caos);
 	if (!result.empty())
 		fmt::print("* Couldn't make a bubble: {}\n", result);

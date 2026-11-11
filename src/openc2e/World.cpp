@@ -350,6 +350,7 @@ void World::tick() {
 	if (engine.version == 2) {
 		tickFoodScent();
 		Pheromones::tick();
+		tickBreathBubbles();
 		Relationships::tick();
 		tickClimate();
 	}
@@ -991,6 +992,25 @@ void World::tickClimate() {
 	for (size_t i = 0; i < rooms.size(); i++) {
 		rooms[i]->tempf = next[i];
 		rooms[i]->temp = (int)std::lround(next[i]);
+	}
+}
+
+// Breath bubbles (2 1 27 marked OV01 7777 by c2Creature::updateUnderwater)
+// rise about 2 px a tick, wobbling a little, and pop when they leave the
+// water or after about 10 seconds.
+void World::tickBreathBubbles() {
+	for (auto& a : agents) {
+		if (!a || a->isDying() || a->family != 2 || a->genus != 1 || a->species != 27)
+			continue;
+		if (!a->var[1].hasInt() || a->var[1].getInt() != 7777)
+			continue;
+		int age = a->var[2].hasInt() ? a->var[2].getInt() + 1 : 1;
+		a->var[2].setInt(age);
+		float wobble = (age / 6) % 2 == 0 ? 0.5f : -0.5f;
+		a->moveTo(a->x + wobble, a->y - 2.0f);
+		std::shared_ptr<Room> r = map ? map->roomAt(a->x + a->getWidth() / 2.0f, a->y + a->getHeight() / 2.0f) : nullptr;
+		if (!r || r->type != 2 || age > 100)
+			a->kill();
 	}
 }
 

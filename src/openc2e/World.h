@@ -143,6 +143,7 @@ class World {
 
 	void tick();
 	void tickFoodScent(); // C2: food smell spreading through the room system
+	void tickBreathBubbles(); // C2: creatures' breath bubbles rise and pop at the surface
 	void tickClimate(); // C2: room temperatures (heat spreading, heat sources)
 	// only_creature: draw no creature but this one, nor anything another
 	// creature carries (the Owner's Kit camera)
