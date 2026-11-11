@@ -874,6 +874,9 @@ MindPerception oldCreature::buildPerception() {
 	p.currentDecision = decn;
 	p.x = cx;
 	p.y = cy;
+	if (world.map)
+		if (MetaRoom* m = world.map->wrappingMetaRoomNear(cx, cy))
+			p.wrapWidth = (float)m->width();
 	p.riding = (bool)parentagent->invehicle;
 	if (engine.version == 2 && world.map) {
 		float sx = cx;

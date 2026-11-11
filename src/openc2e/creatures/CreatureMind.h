@@ -104,6 +104,10 @@ struct MindPerception {
 	int currentAttention = -1; // category index, or -1
 	int currentDecision = -1; // decision index, or -1
 	float x = 0, y = 0; // the creature's centre, in world pixels
+	// the world wraps east-west this many pixels around (C1/C2: the far west
+	// edge joins the far east); 0 for none. Distances across the seam are
+	// the short way round.
+	float wrapWidth = 0;
 	bool riding = false; // carried by a vehicle (a lift, a boat)
 	// food smell (C2, World::tickFoodScent): in this room, and the strongest
 	// through the doors on each side

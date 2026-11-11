@@ -254,6 +254,17 @@ struct Params {
 	unsigned int forageStuckTicks = 60;
 	float foodTripGain = 100.0f;
 	unsigned int foodTripTicks = 300, foodCooldown = 600;
+	// Futile steps: an action on an object that ends "stalled" (never got any
+	// nearer) with the creature no more than futileMove pixels from where it
+	// began, futileAfter times in a row, is not offered again within
+	// futileNear pixels of that spot for futileTicks. (A norn at the eastern
+	// shore chose "row west" on a boat it could not reach thirty times while
+	// it starved; steps toward a destination learn nothing themselves, so
+	// nothing else ever told it to stop.)
+	int futileAfter = 3;
+	float futileMove = 30.0f;
+	float futileNear = 400.0f;
+	unsigned int futileTicks = 1500;
 
 	// Moving attention on: an object used this many times in a row with no
 	// benefit (no drop in overall drive, no ride to another floor) is passed
@@ -600,6 +611,7 @@ class HomeostatMind : public CreatureMind {
 	}
 
 	MindOutput tick(const MindPerception& p) override {
+		wrapW = p.wrapWidth;
 		applyTemperament(p.temperament, p.creatureId);
 		MindOutput out = tickChoose(p);
 		out.say = chooseSpeech(p, normalize(p.drives));
@@ -669,19 +681,19 @@ class HomeostatMind : public CreatureMind {
 		if (p.riding && !wasRiding) {
 			rideStartX = p.x;
 			rideDecision = (current.category == prm.boatCategory) ? current.decision : -1;
-		} else if (!p.riding && wasRiding && rideDecision >= 0 && std::fabs(p.x - rideStartX) > prm.boatRide) {
+		} else if (!p.riding && wasRiding && rideDecision >= 0 && std::fabs(dxTo(p, rideStartX)) > prm.boatRide) {
 			BoatLink& bl = boatLinks[rideDecision];
 			bl.decision = rideDecision;
-			bl.dx = (bl.dx * bl.rides + (p.x - rideStartX)) / (bl.rides + 1);
+			bl.dx = (bl.dx * bl.rides + (-dxTo(p, rideStartX))) / (bl.rides + 1);
 			bl.rides++;
-			fmt::print("[homeostat] creature {} t{}: boat ride with {} took it {:.0f} px\n", p.creatureId, p.tick, actionName(rideDecision), p.x - rideStartX);
+			fmt::print("[homeostat] creature {} t{}: boat ride with {} took it {:.0f} px\n", p.creatureId, p.tick, actionName(rideDecision), -dxTo(p, rideStartX));
 		}
 		// travel links: a device use followed by a ride (or a floor change)
 		// that ends somewhere quite different
 		if (pendingLink.category >= 0) {
 			if (p.riding)
 				pendingRode = true;
-			float moved = std::fabs(p.x - pendingLink.fromX) + std::fabs(p.y - pendingLink.fromY);
+			float moved = std::fabs(dxTo(p, pendingLink.fromX)) + std::fabs(p.y - pendingLink.fromY);
 			bool landed = pendingRode ? !p.riding : std::fabs(p.y - pendingLink.fromY) > prm.minRide;
 			if (landed && moved >= prm.linkMove && p.tick < pendingLinkTick + prm.linkWindow) {
 				bool known = false;
@@ -774,7 +786,7 @@ class HomeostatMind : public CreatureMind {
 				foodInSight = true;
 			}
 		for (auto& fp : foodPlaces) {
-			if (std::fabs(fp.x - p.x) < prm.foodArrived && std::fabs(fp.y - p.y) < prm.sameLevel && !foodInSight &&
+			if (std::fabs(dxTo(p, fp.x)) < prm.foodArrived && std::fabs(fp.y - p.y) < prm.sameLevel && !foodInSight &&
 				p.tick >= fp.checked + prm.foodRecheckTicks) {
 				fp.confidence *= 0.5f; // came here and found nothing (for now)
 				fp.checked = p.tick;
@@ -896,7 +908,7 @@ class HomeostatMind : public CreatureMind {
 				}
 			}
 			if (finished || objectGone || stalled || episodeTicks >= limit) {
-				endEpisode(p, d, D, finished ? "finished" : objectGone ? "object gone" : stalled ? "stalled" : "time");
+				endEpisode(p, d, D, finished ? "finished" : objectGone ? "object gone" : stalled ? "stalled" : "time", stalled);
 			} else {
 				return out; // let the current action run
 			}
@@ -919,7 +931,7 @@ class HomeostatMind : public CreatureMind {
 
 		// Choose the next action.
 		std::vector<Candidate> candidates = evaluate(p, d, D);
-		bool badSleepHere = p.tick < badSleepUntil && std::fabs(p.x - badSleepX) < prm.badSleepNear && std::fabs(p.y - badSleepY) < prm.sameLevel;
+		bool badSleepHere = p.tick < badSleepUntil && std::fabs(dxTo(p, badSleepX)) < prm.badSleepNear && std::fabs(p.y - badSleepY) < prm.sameLevel;
 		if (p.tick < noSleepUntil || badSleepHere || p.inWater) // (never sleep in water)
 			candidates.erase(std::remove_if(candidates.begin(), candidates.end(),
 								 [&](const Candidate& c) { return c.category < 0 && c.decision == prm.sleepDecision; }),
@@ -927,6 +939,11 @@ class HomeostatMind : public CreatureMind {
 		if (!p.inWater && !flooders.empty())
 			candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](const Candidate& c) { return isFlooder(p, c.category, c.decision); }),
 				candidates.end());
+		if (!futile.empty()) {
+			futile.erase(std::remove_if(futile.begin(), futile.end(), [&](const Futile& f) { return p.tick >= f.until; }), futile.end());
+			candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](const Candidate& c) { return isFutile(p, c.category, c.decision); }),
+				candidates.end());
+		}
 		if (candidates.empty())
 			return out;
 		Candidate choice = pick(candidates, D);
@@ -1270,6 +1287,15 @@ class HomeostatMind : public CreatureMind {
 	int foodTrip = -1; // index in foodPlaces of the place being headed for
 	float foodTripBest = 0;
 	unsigned int foodTripSince = 0;
+	float foodTripFromX = 0, foodTripFromY = 0; // where the creature was at the last progress
+	struct Futile {
+		int category = -1, decision = -1;
+		float x = 0, y = 0;
+		unsigned int until = 0;
+	};
+	std::vector<Futile> futile; // object actions that got nowhere from here
+	int futileInARow = 0;
+	int futileCategory = -1, futileDecision = -1;
 	std::map<int, float> scents; // strongest edible scent smelled, by category
 	bool riding = false;
 	float rideFromX = 0, rideFromY = 0;
@@ -1304,9 +1330,26 @@ class HomeostatMind : public CreatureMind {
 	};
 	Blocked blocked[2]; // [0] west, [1] east
 
+	// East-west distances the short way round a wrapping world (C2's joins
+	// its far west edge to its far east): wrapD folds a difference into
+	// (-W/2, W/2]; dxTo is how far east x lies from the creature (negative:
+	// west).
+	float wrapW = 0;
+	float wrapD(float d) const {
+		if (wrapW <= 0)
+			return d;
+		d = std::fmod(d, wrapW);
+		if (d > wrapW / 2)
+			d -= wrapW;
+		else if (d <= -wrapW / 2)
+			d += wrapW;
+		return d;
+	}
+	float dxTo(const MindPerception& p, float x) const { return wrapD(x - p.x); }
+
 	bool isBlocked(const MindPerception& p, int decision) const {
 		const Blocked& b = blocked[decision == 10 ? 0 : 1];
-		return p.tick < b.until && std::fabs(p.x - b.x) < prm.blockedNear;
+		return p.tick < b.until && std::fabs(dxTo(p, b.x)) < prm.blockedNear;
 	}
 	float mood = 0.0f; // short-term affect: fast-following, decaying average of reward
 	int lastFace = -1;
@@ -1482,7 +1525,7 @@ class HomeostatMind : public CreatureMind {
 				if (s.who.empty())
 					continue;
 				if (z[0] < -0.5f && s.familiarity < 0.2f && s.distance < 250.0f) {
-					int dir = s.x < p.x ? 11 : 10;
+					int dir = dxTo(p, s.x) < 0 ? 11 : 10;
 					if (!waterAhead(p, dir) && !wallAhead(p, dir)) {
 						Candidate c{-1, dir, 0, prm.shyRetreat * -z[0] * (1.0f - s.familiarity), 0, 0};
 						c.score = c.want;
@@ -1498,7 +1541,7 @@ class HomeostatMind : public CreatureMind {
 				}
 			}
 			if (company && z[3] > 0.3f && company->fear < prm.retreatFear) {
-				int dir = company->x < p.x ? 10 : 11;
+				int dir = dxTo(p, company->x) < 0 ? 10 : 11;
 				if (!waterAhead(p, dir) && !wallAhead(p, dir) && !isBlocked(p, dir)) {
 					Candidate c{-1, dir, 0, prm.socialFollow * z[3] * (0.5f + std::max(0.0f, company->affinity)), 0, 0};
 					c.score = c.want;
@@ -1516,7 +1559,7 @@ class HomeostatMind : public CreatureMind {
 		for (auto& s : p.visible) {
 			if (s.who.empty() || s.fear < prm.retreatFear || s.distance > 400.0f)
 				continue;
-			int dir = s.x < p.x ? 11 : 10;
+			int dir = dxTo(p, s.x) < 0 ? 11 : 10;
 			if (waterAhead(p, dir) || wallAhead(p, dir))
 				continue;
 			Expectation away;
@@ -1552,8 +1595,8 @@ class HomeostatMind : public CreatureMind {
 
 	void rememberFood(float x, float y, unsigned int tick, float confidence, bool meal) {
 		for (auto& fp : foodPlaces)
-			if (std::fabs(fp.x - x) < prm.foodMerge && std::fabs(fp.y - y) < prm.sameLevel) {
-				fp.x = (fp.x * 3.0f + x) / 4.0f;
+			if (std::fabs(wrapD(fp.x - x)) < prm.foodMerge && std::fabs(fp.y - y) < prm.sameLevel) {
+				fp.x = fp.x + wrapD(x - fp.x) / 4.0f; // (the short way round)
 				fp.tick = tick;
 				fp.confidence = std::max(fp.confidence, confidence);
 				fp.meals += meal ? 1 : 0;
@@ -1603,10 +1646,13 @@ class HomeostatMind : public CreatureMind {
 		// progress on the current trip
 		if (foodTrip >= 0 && foodTrip < (int)foodPlaces.size()) {
 			FoodPlace& t = foodPlaces[foodTrip];
-			float dist = std::fabs(t.x - p.x) + std::fabs(t.y - p.y);
-			if (dist < foodTripBest - prm.foodTripGain) {
+			float dist = std::fabs(dxTo(p, t.x)) + std::fabs(t.y - p.y);
+			bool moved = std::fabs(dxTo(p, foodTripFromX)) + std::fabs(p.y - foodTripFromY) > prm.foodTripGain * 0.5f;
+			if (dist < foodTripBest - prm.foodTripGain && moved) {
 				foodTripBest = dist;
 				foodTripSince = p.tick;
+				foodTripFromX = p.x;
+				foodTripFromY = p.y;
 			} else if (p.tick > foodTripSince + prm.foodTripTicks) {
 				t.confidence *= 0.5f; // out of reach from here, for now
 				t.cooldownUntil = p.tick + prm.foodCooldown;
@@ -1616,7 +1662,7 @@ class HomeostatMind : public CreatureMind {
 		for (auto& fp : foodPlaces) {
 			if (p.tick < fp.cooldownUntil)
 				continue;
-			float dx = std::fabs(fp.x - p.x), dy = std::fabs(fp.y - p.y);
+			float dx = std::fabs(dxTo(p, fp.x)), dy = std::fabs(fp.y - p.y);
 			bool same = dy < prm.sameLevel;
 			if (same && dx < prm.foodArrived)
 				continue; // here already
@@ -1643,13 +1689,15 @@ class HomeostatMind : public CreatureMind {
 			int idx = (int)(fp - foodPlaces.data());
 			if (idx != foodTrip) {
 				foodTrip = idx;
-				foodTripBest = std::fabs(fp->x - p.x) + std::fabs(fp->y - p.y);
+				foodTripBest = std::fabs(dxTo(p, fp->x)) + std::fabs(fp->y - p.y);
 				foodTripSince = p.tick;
+				foodTripFromX = p.x;
+				foodTripFromY = p.y;
 			}
 		};
 		if (bestSame && wantSame >= prm.seekMinWant && wantSame >= wantOther) {
 			startTrip(bestSame);
-			int decision = bestSame->x < p.x ? 10 : 11;
+			int decision = dxTo(p, bestSame->x) < 0 ? 10 : 11;
 			if (waterAhead(p, decision)) {
 				Candidate t{};
 				t.food = true;
@@ -1657,7 +1705,7 @@ class HomeostatMind : public CreatureMind {
 				return;
 			}
 			if (!((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision) || cliffAhead(p, decision, bestSame->y))) {
-				Candidate c{-1, decision, std::fabs(bestSame->x - p.x), wantSame, 0, wantSame};
+				Candidate c{-1, decision, std::fabs(dxTo(p, bestSame->x)), wantSame, 0, wantSame};
 				c.chain = true;
 				c.food = true;
 				out.push_back(c);
@@ -1694,7 +1742,7 @@ class HomeostatMind : public CreatureMind {
 			const TravelLink* bestLink = nullptr;
 			float bestStale = 3000.0f; // ticks since visited
 			for (auto& tl : travelLinks) {
-				if (std::fabs(tl.fromX - p.x) > prm.linkNear || std::fabs(tl.fromY - p.y) > prm.sameLevel)
+				if (std::fabs(dxTo(p, tl.fromX)) > prm.linkNear || std::fabs(tl.fromY - p.y) > prm.sameLevel)
 					continue;
 				auto it = visited.find({(int)std::floor(tl.toX / prm.visitBinWidth), (int)std::floor(tl.toY / prm.visitBinHeight)});
 				float stale = it == visited.end() ? 100000.0f : (float)(p.tick - it->second);
@@ -1717,7 +1765,7 @@ class HomeostatMind : public CreatureMind {
 				addBoatInstead(p, dir, want, t, out);
 			}
 		if (forageHeading != 0 && p.tick > forageStartTick + prm.forageStuckTicks) {
-			float progress = forageHeading == 10 ? forageStartX - p.x : p.x - forageStartX;
+			float progress = forageHeading == 10 ? dxTo(p, forageStartX) : -dxTo(p, forageStartX);
 			if (progress < prm.foragePass) {
 				forageStuckFlips++;
 				int other = forageHeading == 10 ? 11 : 10;
@@ -1842,7 +1890,7 @@ class HomeostatMind : public CreatureMind {
 			// (the boat call switches; lift buttons too, harmlessly)
 			const CallButton* known = nullptr;
 			for (auto& cb : callButtons)
-				if (std::fabs(cb.x - p.x) < 300.0f && std::fabs(cb.y - p.y) < prm.sameLevel)
+				if (std::fabs(dxTo(p, cb.x)) < 300.0f && std::fabs(cb.y - p.y) < prm.sameLevel)
 					known = &cb;
 			if (known && known->failed > known->worked)
 				reachableButton = false; // this button does not call boats
@@ -1872,9 +1920,9 @@ class HomeostatMind : public CreatureMind {
 	bool addLinkToward(const MindPerception& p, float goalX, float goalY, float want, Candidate tmpl, std::vector<Candidate>& out) {
 		const TravelLink* best = nullptr;
 		float bestGain = prm.linkGain;
-		float here = std::fabs(goalX - p.x) + std::fabs(goalY - p.y) * 2.0f;
+		float here = std::fabs(dxTo(p, goalX)) + std::fabs(goalY - p.y) * 2.0f;
 		for (auto& tl : travelLinks) {
-			if (std::fabs(tl.fromX - p.x) > prm.linkNear || std::fabs(tl.fromY - p.y) > prm.sameLevel)
+			if (std::fabs(dxTo(p, tl.fromX)) > prm.linkNear || std::fabs(tl.fromY - p.y) > prm.sameLevel)
 				continue;
 			bool reachable = false;
 			for (auto& sa : p.visible)
@@ -1924,7 +1972,7 @@ class HomeostatMind : public CreatureMind {
 		};
 		// a remembered exit in view and near
 		for (auto& e : exits) {
-			if (std::fabs(e.x - p.x) > prm.exitNear || std::fabs(e.y - p.y) > prm.sameLevel || !isVisible(p, e.category) || shownTried(e.category))
+			if (std::fabs(dxTo(p, e.x)) > prm.exitNear || std::fabs(e.y - p.y) > prm.sameLevel || !isVisible(p, e.category) || shownTried(e.category))
 				continue;
 			Candidate c{e.category, e.decision, 0, worth * prm.exitBonus, 0, worth * prm.exitBonus};
 			c.escape = true;
@@ -1974,7 +2022,7 @@ class HomeostatMind : public CreatureMind {
 		// every device in view already tried: search the room, walking away
 		// from them (the other way if that side is closed)
 		if (!offered && triedSeen > 0) {
-			int away = (triedX / triedSeen) < p.x ? 11 : 10;
+			int away = dxTo(p, triedX / triedSeen) < 0 ? 11 : 10;
 			for (int dir : {away, away == 10 ? 11 : 10}) {
 				if ((dir == 10 && !canWest) || (dir == 11 && !canEast) || isBlocked(p, dir))
 					continue;
@@ -1988,11 +2036,19 @@ class HomeostatMind : public CreatureMind {
 
 	// A device that once flooded the creature, used the same way near the
 	// same place
+	bool isFutile(const MindPerception& p, int category, int decision) const {
+		if (category < 0)
+			return false;
+		for (auto& f : futile)
+			if (f.category == category && f.decision == decision && std::fabs(dxTo(p, f.x)) < prm.futileNear && std::fabs(p.y - f.y) < prm.sameLevel)
+				return true;
+		return false;
+	}
 	bool isFlooder(const MindPerception& p, int category, int decision) const {
 		if (category < 0)
 			return false;
 		for (auto& f : flooders)
-			if (f.category == category && f.decision == decision && std::fabs(f.x - p.x) < prm.flooderNear && std::fabs(f.y - p.y) < prm.sameLevel)
+			if (f.category == category && f.decision == decision && std::fabs(dxTo(p, f.x)) < prm.flooderNear && std::fabs(f.y - p.y) < prm.sameLevel)
 				return true;
 		return false;
 	}
@@ -2020,7 +2076,7 @@ class HomeostatMind : public CreatureMind {
 		for (auto& [category, place] : places) {
 			if (isVisible(p, category))
 				continue;
-			float dx = place.x - p.x, dy = place.y - p.y;
+			float dx = dxTo(p, place.x), dy = place.y - p.y;
 			if (std::fabs(dy) > prm.seekMaxHeight) {
 				offLevel.push_back(category);
 				continue;
@@ -2182,11 +2238,11 @@ class HomeostatMind : public CreatureMind {
 	void addFloorChange(const MindPerception& p, float want, float targetY, int target, bool canWest, bool canEast, std::vector<Candidate>& out) {
 		float direction = targetY > p.y ? 1.0f : -1.0f; // +1 down, -1 up
 		auto walkTo = [&](float x) {
-			int decision = x < p.x ? 10 : 11;
+			int decision = dxTo(p, x) < 0 ? 10 : 11;
 			if ((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision))
 				return;
-			Candidate c{-1, decision, std::fabs(x - p.x), want, 0, 0};
-			c.score = want - prm.seekDistanceCost * std::fabs(x - p.x);
+			Candidate c{-1, decision, std::fabs(dxTo(p, x)), want, 0, 0};
+			c.score = want - prm.seekDistanceCost * std::fabs(dxTo(p, x));
 			c.seekCategory = target;
 			c.chain = true;
 			out.push_back(c);
@@ -2213,12 +2269,12 @@ class HomeostatMind : public CreatureMind {
 		for (auto& l : links) {
 			if (std::fabs(l.fromY - p.y) > prm.sameLevel || (l.toY - l.fromY) * direction <= 0)
 				continue;
-			if (!link || std::fabs(l.x - p.x) < std::fabs(link->x - p.x))
+			if (!link || std::fabs(dxTo(p, l.x)) < std::fabs(dxTo(p, link->x)))
 				link = &l;
 		}
-		bool liftHere = lift && std::fabs(lift->x - p.x) < prm.atPlace * 1.5f && std::fabs(lift->y - p.y) < prm.sameLevel;
+		bool liftHere = lift && std::fabs(dxTo(p, lift->x)) < prm.atPlace * 1.5f && std::fabs(lift->y - p.y) < prm.sameLevel;
 		if (link) {
-			if (std::fabs(link->x - p.x) > prm.atPlace)
+			if (std::fabs(dxTo(p, link->x)) > prm.atPlace)
 				walkTo(link->x);
 			else if (liftHere)
 				actOn(prm.liftCategory, link->decision, 1.0f);
@@ -2228,7 +2284,7 @@ class HomeostatMind : public CreatureMind {
 		}
 		// no link yet: go to the nearest lift and try what it does
 		if (lift) {
-			if (std::fabs(lift->x - p.x) > prm.atPlace)
+			if (std::fabs(dxTo(p, lift->x)) > prm.atPlace)
 				walkTo(lift->x);
 			else if (liftHere) {
 				actOn(prm.liftCategory, 1, 0.6f);
@@ -2242,7 +2298,7 @@ class HomeostatMind : public CreatureMind {
 	}
 	bool dudButtonAt(const MindPerception& p) const {
 		for (auto& d : dudButtons)
-			if (p.tick < d.until && std::fabs(d.x - p.x) < prm.dudButtonNear && std::fabs(d.y - p.y) < prm.sameLevel)
+			if (p.tick < d.until && std::fabs(dxTo(p, d.x)) < prm.dudButtonNear && std::fabs(d.y - p.y) < prm.sameLevel)
 				return true;
 		return false;
 	}
@@ -2368,7 +2424,7 @@ class HomeostatMind : public CreatureMind {
 	}
 
 	// 1 and 2: reward and learning at the end of an episode.
-	void endEpisode(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, const char* why) {
+	void endEpisode(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, const char* why, bool stalled = false) {
 		if (current.decision == prm.eatDecision && current.category >= 0 && felt[HUNGER] < -0.05f)
 		{
 			rememberFood(p.x, p.y, p.tick, 1.0f, true); // a meal here eased hunger
@@ -2385,11 +2441,29 @@ class HomeostatMind : public CreatureMind {
 		}
 		float reward = startD - D;
 
+		// an object action that keeps getting nowhere: stop offering it here
+		if (current.category >= 0) {
+			bool stayed = std::fabs(dxTo(p, startX)) < prm.futileMove && std::fabs(p.y - startY) < prm.futileMove;
+			if (stalled && stayed) {
+				bool same = current.category == futileCategory && current.decision == futileDecision;
+				futileInARow = same ? futileInARow + 1 : 1;
+				futileCategory = current.category;
+				futileDecision = current.decision;
+				if (futileInARow >= prm.futileAfter) {
+					futile.push_back({current.category, current.decision, p.x, p.y, p.tick + prm.futileTicks});
+					futileInARow = 0;
+					fmt::print("[homeostat] creature {} t{}: {}@{} gets nowhere from {:.0f},{:.0f}; not tried here for a while\n", p.creatureId, p.tick,
+						actionName(current.decision), current.category, p.x, p.y);
+				}
+			} else
+				futileInARow = 0;
+		}
+
 		// an object that keeps doing nothing: notice another of its kind
 		// (not for steps toward a destination, such as pressing a lift's call
 		// button: their benefit comes later, from the ride)
 		if (current.category >= 0 && episodeAgent && !current.chain && !current.food && !current.forage && !current.scent) {
-			bool moved = std::fabs(p.y - startY) > prm.minRide || std::fabs(p.x - startX) > 300.0f;
+			bool moved = std::fabs(p.y - startY) > prm.minRide || std::fabs(dxTo(p, startX)) > 300.0f;
 			if (reward < prm.passOverReward && !moved) {
 				uselessInARow = (episodeAgent == lastUselessAgent) ? uselessInARow + 1 : 1;
 				lastUselessAgent = episodeAgent;
@@ -2418,7 +2492,7 @@ class HomeostatMind : public CreatureMind {
 		}
 
 		if ((current.decision == 10 || current.decision == 11) && current.category < 0 && (current.seekCategory >= 0 || current.chain) &&
-			std::fabs(p.x - startX) < prm.blockedMove) {
+			std::fabs(dxTo(p, startX)) < prm.blockedMove) {
 			blocked[current.decision == 10 ? 0 : 1] = {p.x, p.tick + prm.blockedTicks};
 			fmt::print("[homeostat] creature {} t{}: the way {} is blocked at x {:.0f}\n", p.creatureId, p.tick,
 				current.decision == 10 ? "west" : "east", p.x);
