@@ -552,7 +552,7 @@ void c2Creature::updateUnderwater() {
 		if (sc->headBox(l, t, r, b, view)) {
 			bool rightSide = view <= 3 || view == 8;
 			bx = rightSide ? r + 3 - 8 : l - 3 - 21;
-			by = b - 0.2f * (b - t) - 42; // 20% of the head's height up from its bottom (owner)
+			by = b - 0.3f * (b - t) - 42; // 30% of the head's height up from its bottom (owner)
 		}
 	}
 	std::string caos = fmt::format("inst new: simp bubs 10 0 8000 0 setv cls2 2 1 27 setv ov01 7777 mvto {} {} mesg writ targ 8",
