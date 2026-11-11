@@ -428,8 +428,17 @@ void oldLobe::connect() {
 
 	for (unsigned int type = 0; type < 2; type++) {
 		oldLobe* src = parent->getLobeByTissue(dend_info[type]->srclobe);
-		// TODO: fix srclobe for all dendrites to be within range (srclobe = srclobe % lobes.size())
-		assert(src);
+		if (!src) {
+			// A bred genome can name a source lobe it does not have (a
+			// crossover or mutation moved the dendrite's source, or the lobe
+			// gene was lost): leave those dendrites unconnected rather than
+			// stop the game. (A moved egg's baby crashed the engine here as it
+			// hatched, 2026-11-11.)
+			fmt::print("* Brain: a lobe's dendrites name source lobe {}, which this genome lacks; left unconnected\n", (int)dend_info[type]->srclobe);
+			for (auto& n : neurons)
+				n.dendrites[type].clear();
+			continue;
+		}
 
 		// TODO: handle src->neurons.size() being empty? or rather, maybe should never let that happen
 
