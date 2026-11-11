@@ -1,5 +1,6 @@
 #include "AgentInjector.h"
 
+#include "C2Kits.h"
 #include "C2KitsInternal.h"
 #include "CobManager.h"
 #include "PathResolver.h"
@@ -28,6 +29,8 @@ static size_t s_object_selected_index = 0;
 static CobManager s_object_injector;
 
 static bool s_agent_injector_open = false;
+static bool s_agent_injector_minimized = false; // C2: a chip on the status bar, like the kits
+static bool s_agent_injector_focus = false;
 
 // ---- importing objects (owner, 2026-11-09) -------------------------------------
 // COB files, and zips of them (with any loose sprites or sounds), are copied
@@ -195,6 +198,20 @@ bool IsAgentInjectorEnabled() {
 
 void SetAgentInjectorOpen(bool is_open) {
 	s_agent_injector_open = is_open;
+	if (is_open)
+		s_agent_injector_minimized = false; // opened again from the toolbar: shown
+}
+
+// C2: minimized to a chip on the status bar, like the kits (owner, 2026-11-11)
+void DrawAgentInjectorChip() {
+	if (engine.version != 2 || !s_agent_injector_open || !s_agent_injector_minimized)
+		return;
+	if (ImGui::Button("Agent Injector##chip")) {
+		s_agent_injector_minimized = false;
+		s_agent_injector_focus = true;
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("Restore the Agent Injector");
 }
 
 void DrawAgentInjector() {
@@ -243,7 +260,21 @@ void DrawAgentInjector() {
 			start = end + 1;
 		}
 	}
+	// developer aid: with OPENC2E_OPEN_KITS, OPENC2E_KITS_MINIMIZED starts it minimized
+	static bool s_test_min = getenv("OPENC2E_KITS_MINIMIZED") != nullptr;
+	if (s_test_min && s_agent_injector_open) {
+		s_test_min = false;
+		s_agent_injector_minimized = true;
+	}
+	if (s_agent_injector_minimized)
+		return;
+	if (s_agent_injector_open && s_agent_injector_focus) {
+		ImGui::SetNextWindowFocus();
+		s_agent_injector_focus = false;
+	}
 	if (ImGuiUtils::BeginWindow("Agent Injector", &s_agent_injector_open)) {
+		if (engine.version == 2 && KitTitleMinimizeButton())
+			s_agent_injector_minimized = true;
 		if (!s_read_agents) {
 			s_object_injector.update();
 			hideListed();

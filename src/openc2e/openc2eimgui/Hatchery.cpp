@@ -54,6 +54,8 @@ using namespace ImGuiUtils;
 namespace Openc2eImgui {
 
 static bool s_hatchery_open = false;
+static bool s_hatchery_minimized = false;
+static bool s_hatchery_focus = false;
 static bool s_hatchery_loaded = false;
 
 static Texture s_hatcherybackground;
@@ -293,6 +295,20 @@ bool IsHatcheryEnabled() {
 
 void SetHatcheryOpen(bool value) {
 	s_hatchery_open = value;
+	if (value)
+		s_hatchery_minimized = false; // opened again from the toolbar: shown
+}
+
+// C2: minimized to a chip on the status bar, like the kits (owner, 2026-11-11)
+void DrawHatcheryChip() {
+	if (engine.version != 2 || !s_hatchery_open || !s_hatchery_minimized)
+		return;
+	if (ImGui::Button("Hatchery##chip")) {
+		s_hatchery_minimized = false;
+		s_hatchery_focus = true;
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("Restore the Hatchery");
 }
 
 void DrawHatchery() {
@@ -300,7 +316,17 @@ void DrawHatchery() {
 		return;
 	}
 
-	if (s_hatchery_open && ImGui::Begin("Hatchery", &s_hatchery_open,
+	// developer aid: with OPENC2E_OPEN_KITS, OPENC2E_KITS_MINIMIZED starts it minimized
+	static bool s_test_min = getenv("OPENC2E_KITS_MINIMIZED") != nullptr;
+	if (s_test_min && s_hatchery_open) {
+		s_test_min = false;
+		s_hatchery_minimized = true;
+	}
+	if (s_hatchery_open && !s_hatchery_minimized && s_hatchery_focus) {
+		ImGui::SetNextWindowFocus();
+		s_hatchery_focus = false;
+	}
+	if (s_hatchery_open && !s_hatchery_minimized && ImGui::Begin("Hatchery", &s_hatchery_open,
 							   (engine.version == 2 ? ImGuiWindowFlags_MenuBar : 0) |
 								   ImGuiWindowFlags_NoScrollbar |
 								   ImGuiWindowFlags_NoScrollWithMouse |
@@ -308,6 +334,8 @@ void DrawHatchery() {
 								   // fits what it holds (a remembered smaller size
 								   // hid the Find eggs button, 2026-11-11)
 								   ImGuiWindowFlags_AlwaysAutoResize)) {
+		if (engine.version == 2 && KitTitleMinimizeButton())
+			s_hatchery_minimized = true;
 		if (!s_hatchery_loaded) {
 			LoadHatchery();
 		}

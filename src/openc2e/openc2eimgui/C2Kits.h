@@ -48,8 +48,13 @@ void KitLookAt(const std::shared_ptr<Agent>& a);
 // Draws every open kit (call once a frame, C2 only).
 void DrawC2Kits();
 
-// Draws the chips for minimized kits, in the status bar's horizontal row.
+// Draws the chips for minimized kits, in the status bar's horizontal row
+// (and the Hatchery's, when it is minimized).
 void DrawC2KitChips();
+
+// The kits' minimize button, for other windows (the Hatchery): call just
+// after Begin; true when pressed.
+bool KitTitleMinimizeButton();
 
 // Celsius or Fahrenheit for every temperature shown (status bar and kits);
 // clicking a temperature switches it.

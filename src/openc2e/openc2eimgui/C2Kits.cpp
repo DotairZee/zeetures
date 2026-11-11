@@ -2,6 +2,7 @@
 
 #include "C2KitsInternal.h"
 #include "Hatchery.h"
+#include "AgentInjector.h"
 #include "ChemicalNamesManager.h"
 #include "Engine.h"
 #include "PathResolver.h"
@@ -156,6 +157,8 @@ static void OpenTestKits() {
 	std::string list = s;
 	if (list.find("hatchery") != std::string::npos)
 		SetHatcheryOpen(true);
+	if (list.find("injector") != std::string::npos)
+		SetAgentInjectorOpen(true);
 	for (auto& k : s_kits)
 		if (list.find(k.id) != std::string::npos) {
 			OpenC2Kit(k.id);
@@ -932,9 +935,15 @@ void DrawC2Kits() {
 	}
 }
 
+bool KitTitleMinimizeButton() {
+	return TitleMinimizeButton();
+}
+
 void DrawC2KitChips() {
 	if (engine.version != 2)
 		return;
+	DrawHatcheryChip();
+	DrawAgentInjectorChip();
 	for (auto& k : s_kits) {
 		auto& st = s_state[k.id];
 		if (!st.open || !st.minimized)
