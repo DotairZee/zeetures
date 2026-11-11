@@ -20,6 +20,9 @@
 
 #pragma once
 
+#include "AgentRef.h"
+
+#include <deque>
 #include <string>
 #include <vector>
 
@@ -87,6 +90,19 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 // the bubbles showing.
 bool speechBubblesShown();
 void setSpeechBubblesShown(bool shown);
+
+// Speech History (the toolbar's list): the last things creatures and the
+// hand said, newest first.
+struct SpokenLine {
+	AgentRef speaker; // a creature, or the hand
+	std::string text; // as shown
+	unsigned int tick = 0; // world tick count
+};
+const std::deque<SpokenLine>& speechHistory();
+void recordSpeech(Agent* speaker, const std::string& text);
+// The hand says a line again (Speech History's "say" button): a bubble, and
+// creatures in earshot hear it (HEAR_HAND).
+void handSays(const std::string& text);
 
 // A life stage's voice: pitch (playback rate, 1 = as recorded) and pace
 // (syllables per usual time, 1 = as the voice file says).

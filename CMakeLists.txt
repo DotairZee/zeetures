@@ -360,6 +360,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/openc2eimgui/OwnersKit.cpp
 	src/openc2e/openc2eimgui/RelationshipsPage.cpp
 	src/openc2e/openc2eimgui/ChroniclesKit.cpp
+	src/openc2e/openc2eimgui/HelpWindow.cpp
 	src/openc2e/openc2eimgui/ScienceKit.cpp
 	src/openc2e/openc2eimgui/C2ScrollBars.cpp
 	src/openc2e/openc2eimgui/C2StatusBar.cpp

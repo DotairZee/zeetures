@@ -1,5 +1,10 @@
-#include "creatures/CreatureSpeech.h"
 #include "C2ToolBar.h"
+
+#include "C2KitsInternal.h"
+#include "HelpWindow.h"
+#include "creatures/CreatureSpeech.h"
+
+#include <SDL3/SDL_misc.h>
 
 #include "AgentInjector.h"
 #include "C2Kits.h"
@@ -470,12 +475,22 @@ void DrawC2Toolbar() {
 		if (ImageButton(icon_play, world.paused)) {
 			world.paused = false;
 		};
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			ImGui::SetTooltip("Play: let the world run");
 		if (ImageButton(icon_pause, !world.paused)) {
 			world.paused = true;
 		}
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			ImGui::SetTooltip("Pause: stop the world");
 		ImGui::Separator();
-		ImageButton(icon_help, false);
-		ImageButton(icon_web, false);
+		if (ImageButton(icon_help, true))
+			SetHelpOpen(true);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Help: how to play here, and what this version adds");
+		if (ImageButton(icon_web, true))
+			SDL_OpenURL("https://github.com/openc2e/openc2e");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("openc2e on the web (the open-source engine this runs on)");
 		ImGui::Separator();
 		}
 		if (s_show_pointer) {
@@ -533,6 +548,8 @@ void DrawC2Toolbar() {
 		if (ImageButton(icon_hatchery, IsHatcheryEnabled())) {
 			SetHatcheryOpen(true);
 		};
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			ImGui::SetTooltip("Hatchery: choose eggs to hatch");
 		if (ImageButton(icon_ownerskit, IsC2KitAvailable("owners")))
 			OpenC2Kit("owners");
 		if (ImGui::IsItemHovered())
@@ -560,7 +577,12 @@ void DrawC2Toolbar() {
 		if (ImageButton(icon_agent_injector, IsAgentInjectorEnabled())) {
 			SetAgentInjectorOpen(true);
 		}
-		ImageButton(icon_unknown_maybe_historykit, false);
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			ImGui::SetTooltip("Agent Injector: add objects to the world");
+		if (ImageButton(icon_unknown_maybe_historykit, IsC2KitAvailable("chronicles")))
+			OpenC2Kit("chronicles");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Chronicles Kit");
 		ImageButton(icon_unknown_maybe_ecologykit, false);
 		}
 
@@ -577,10 +599,27 @@ void DrawC2Toolbar() {
 		// ImGui::GetCurrentWindow()->DC.LayoutType = ImGuiLayoutType_Vertical;
 		ImGui::Text("Speech History:");
 		ImGui::SetNextItemWidth(150);
-		if (ImGui::BeginCombo("##Speech History:", "")) {
+		// what creatures and the hand said lately (newest first); pick a
+		// line and the lips button has the hand say it again
+		static std::string s_line;
+		if (ImGui::BeginCombo("##Speech History:", s_line.c_str())) {
+			const auto& hist = speechHistory();
+			if (hist.empty())
+				ImGui::TextDisabled("Nothing said yet");
+			for (size_t i = 0; i < hist.size(); i++) {
+				const auto& h = hist[i];
+				std::string who = !h.speaker ? "someone" : h.speaker.get() == (Agent*)world.hand() ? "You" : KitCreatureName(h.speaker.get());
+				if (ImGui::Selectable(fmt::format("{}: {}##{}", who, h.text, i).c_str(), false))
+					s_line = h.text;
+			}
 			ImGui::EndCombo();
 		}
-		ImageButton(icon_say);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Speech History: what creatures and you said lately");
+		if (ImageButton(icon_say, !s_line.empty()))
+			handSays(s_line);
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			ImGui::SetTooltip("Say: the hand says the chosen line again (creatures nearby hear it)");
 		ImGui::Separator();
 
 		ImGui::Text("Places:");
@@ -593,7 +632,10 @@ void DrawC2Toolbar() {
 		if (s_place >= (int)world.favoriteplaces.size() || (s_place < (int)world.favoriteplaces.size() && world.favoriteplaces[s_place].name.empty()))
 			s_place = places.empty() ? 0 : places[0];
 		const char* preview = places.empty() ? "" : world.favoriteplaces[s_place].name.c_str();
-		if (ImGui::BeginCombo("##Places:", preview)) {
+		bool placesOpen = ImGui::BeginCombo("##Places:", preview);
+		if (ImGui::IsItemHovered() && !placesOpen)
+			ImGui::SetTooltip("Places: your favorite places; pick one to go there");
+		if (placesOpen) {
 			for (int i : places) {
 				if (ImGui::Selectable(world.favoriteplaces[i].name.c_str(), i == s_place)) {
 					s_place = i;
@@ -604,6 +646,8 @@ void DrawC2Toolbar() {
 		}
 		if (ImageButton(icon_go, !places.empty()))
 			GoToFavoritePlace(s_place);
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			ImGui::SetTooltip("Go: move the view to the chosen place");
 		// zoom, as a dropdown beside Places (owner, 2026-11-09; also
 		// Ctrl+wheel and the View menu)
 		ImGui::Text("Zoom:");

@@ -15,7 +15,7 @@
 namespace Openc2eImgui {
 
 struct BreedInfo {
-	int species = 0; // 0 norn, 1 grendel, 2 ettin, 3 the fourth C2 species slot (the picture set its files are in)
+	int species = 0; // 0 norn, 1 grendel, 2 ettin, 3 geat (C2's fourth species set): the picture set its files are in
 	// what kind of creature it is, from its genome's genus gene (0 norn, 1
 	// grendel, 2 ettin), or -1 if not known. Not always its picture set: a
 	// creature's look is chosen by its appearance genes, so pack authors
@@ -35,6 +35,10 @@ struct BreedInfo {
 	bool imported = false;
 	std::string name, source, genome;
 	int origSlot = -1; // the slot its pack used, when it was moved to a free one
+	// the picture set its pack used, when it was moved to another (a norn
+	// breed its authors filed in the grendel or geat set); the old files are
+	// kept there for creatures hatched before, and not listed as a breed
+	int origSpecies = -1;
 	std::vector<std::string> files; // installed files, relative to the user data folder
 };
 
@@ -64,6 +68,17 @@ std::vector<uint8_t> GenomeWithSlotMoved(const std::vector<uint8_t>& genome, int
 // ... with several moves at once, {species, from slot} -> to slot (each gene
 // moves at most once, so one move's new slot is never moved again)
 std::vector<uint8_t> GenomeWithSlotsMoved(const std::vector<uint8_t>& genome, const std::map<std::pair<int, int>, int>& moves);
+// The same, moving between picture sets too: (set, slot) -> (set, slot).
+std::vector<uint8_t> GenomeWithBreedsMoved(const std::vector<uint8_t>& genome, const std::map<std::pair<int, int>, std::pair<int, int>>& moves);
+// The genus a genome's genus gene gives (0 norn, 1 grendel, 2 ettin), or -1.
+int GenomeGenus(const std::vector<uint8_t>& genome);
+// A norn breed whose pack filed its pictures in another set: copies its
+// pictures and body data into the norn set at `slot`, rewrites its genomes
+// and eggs to match, and records the move (the old files stay, for
+// creatures hatched before). The default slot: its own letter if free in
+// the norn set, else that letter followed by a, b ... ("ka").
+int DefaultNornSlotFor(const BreedInfo& b);
+bool MoveBreedToNornSet(const BreedInfo& b, int slot, std::string& err);
 // the {species, slot} pairs a C2 genome's appearance genes use
 std::set<std::pair<int, int>> GenomeAppearanceSlots(const std::vector<uint8_t>& genome);
 

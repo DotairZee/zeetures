@@ -444,6 +444,32 @@ float voicePace(int stage) {
 	return (stage >= 0 && stage < 7) ? pace[stage] : 1.0f;
 }
 
+namespace {
+std::deque<SpokenLine> s_history;
+}
+
+const std::deque<SpokenLine>& speechHistory() {
+	return s_history;
+}
+
+void recordSpeech(Agent* speaker, const std::string& text) {
+	if (!speaker || text.empty())
+		return;
+	s_history.push_front({AgentRef(speaker), text, world.worldtickcount});
+	while (s_history.size() > 40)
+		s_history.pop_back();
+}
+
+void handSays(const std::string& text) {
+	Agent* hand = (Agent*)world.hand();
+	if (!hand || text.empty() || engine.version >= 3)
+		return;
+	Bubble* b = Bubble::newBubble(hand, true, text);
+	b->setTimeout(35);
+	hearSpeech(hand, text, HEAR_HAND);
+	recordSpeech(hand, text);
+}
+
 void creatureSays(Agent* creature, int stage, const Utterance& u) {
 	if (!creature || u.shown.empty() || engine.version >= 3)
 		return;
@@ -458,6 +484,7 @@ void creatureSays(Agent* creature, int stage, const Utterance& u) {
 		bubbles[creature->getUNID()] = AgentRef(b);
 	}
 	hearWords(creature, u.learned, HEAR_CREATURE);
+	recordSpeech(creature, u.shown);
 	try {
 		creature->speak(u.spoken.empty() ? u.shown : u.spoken, voicePitch(stage), voicePace(stage));
 	} catch (std::exception&) {

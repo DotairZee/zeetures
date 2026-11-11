@@ -22,6 +22,16 @@ namespace Openc2eImgui {
 
 // The genus gene (the first gene: "gene", type 2, subtype 1, five header
 // bytes, then the genus: 0 norn, 1 grendel, 2 ettin) of a genome file, or -1.
+int GenomeGenus(const std::vector<uint8_t>& d) {
+	for (size_t i = 0; i + 12 < d.size(); i++)
+		if (d[i] == 'g' && d[i + 1] == 'e' && d[i + 2] == 'n' && d[i + 3] == 'e') {
+			if (d[i + 4] == 2 && d[i + 5] == 1 && d[i + 11] <= 2)
+				return d[i + 11];
+			return -1;
+		}
+	return -1;
+}
+
 static int genomeGenus(const std::filesystem::path& file) {
 	std::ifstream in(file, std::ios::binary);
 	if (!in)
@@ -41,7 +51,7 @@ const char* BreedSpeciesName(int species) {
 		case 0: return "Norn";
 		case 1: return "Grendel";
 		case 2: return "Ettin";
-		default: return "Species 4";
+		default: return "Geat"; // C2's fourth species set (owner, 2026-11-11)
 	}
 }
 
@@ -175,6 +185,16 @@ std::vector<BreedInfo>& KnownBreeds(bool rescan) {
 			if (!x.empty())
 				b.files.push_back(x);
 		b.origSlot = f.size() > 6 && !f[6].empty() ? breedSlotFromName(f[6]) : -1;
+		b.origSpecies = f.size() > 7 && !f[7].empty() ? std::atoi(f[7].c_str()) : -1;
+	}
+	// the old files of a breed moved to another set are kept for creatures
+	// hatched before, but are not a breed of their own
+	for (auto it = found.begin(); it != found.end();) {
+		bool left = false;
+		for (auto& [k, b] : found)
+			left |= b.imported && b.origSpecies >= 0 && it->first == std::make_pair(b.origSpecies, b.origSlot >= 0 ? b.origSlot : b.slot) &&
+					!it->second.imported;
+		it = left ? found.erase(it) : std::next(it);
 	}
 	// names for the game's own breeds, from the user data folder's
 	// breed-names.txt ("species|slot|name"; kept out of the engine: the
@@ -224,8 +244,9 @@ void SaveBreedRegistry() {
 		std::string files;
 		for (auto& f : b.files)
 			files += (files.empty() ? "" : ";") + f;
-		out << fmt::format("{}|{}|{}|{}|{}|{}|{}\n", b.species, breedSlotName(b.slot), b.name, b.source, b.genome, files,
-			b.origSlot >= 0 && b.origSlot != b.slot ? breedSlotName(b.origSlot) : "");
+		out << fmt::format("{}|{}|{}|{}|{}|{}|{}|{}\n", b.species, breedSlotName(b.slot), b.name, b.source, b.genome, files,
+			b.origSlot >= 0 && (b.origSlot != b.slot || b.origSpecies >= 0) ? breedSlotName(b.origSlot) : "",
+			b.origSpecies >= 0 ? std::to_string(b.origSpecies) : "");
 	}
 }
 
@@ -303,6 +324,131 @@ std::vector<uint8_t> GenomeWithBreed(const std::vector<uint8_t>& genome, const B
 		a.variant = (uint8_t)b.slot;
 		return true;
 	});
+}
+
+std::vector<uint8_t> GenomeWithBreedsMoved(const std::vector<uint8_t>& genome, const std::map<std::pair<int, int>, std::pair<int, int>>& moves) {
+	if (moves.empty())
+		return genome;
+	return editGenome(genome, [&](creatureAppearanceGene& a) {
+		auto it = moves.find({(int)a.species, (int)a.variant});
+		if (it == moves.end())
+			return false;
+		a.species = (uint8_t)it->second.first;
+		a.variant = (uint8_t)it->second.second;
+		return true;
+	});
+}
+
+int DefaultNornSlotFor(const BreedInfo& b) {
+	auto taken = [&](int slot) {
+		for (auto& k : KnownBreeds())
+			if (k.group() == 0 && k.slot == slot && &k != &b && !(k.species == b.species && k.slot == b.slot))
+				if (k.species == 0)
+					return true;
+		return FindBreed(0, slot) != nullptr;
+	};
+	if (!taken(b.slot))
+		return b.slot;
+	// keeping its letter in a two-letter slot: that letter followed by a, b
+	// ... ("g" -> "ga"); slots end at "iv" (a genome stores a slot as one
+	// byte), so for letters past i, a, b ... followed by it ("k" -> "ak")
+	if (b.slot < 26) {
+		for (int second = 0; second < 26; second++) {
+			int s = 26 + b.slot * 26 + second;
+			if (s < BREED_SLOTS && !taken(s))
+				return s;
+		}
+		for (int first = 0; first < 26; first++) {
+			int s = 26 + first * 26 + b.slot;
+			if (s < BREED_SLOTS && !taken(s))
+				return s;
+		}
+	}
+	for (int s = 0; s < BREED_SLOTS; s++)
+		if (!taken(s))
+			return s;
+	return -1;
+}
+
+bool MoveBreedToNornSet(const BreedInfo& orig, int slot, std::string& err) {
+	namespace fs = std::filesystem;
+	BreedInfo b = orig;
+	if (!b.imported || b.species == 0 || slot < 0 || slot >= BREED_SLOTS) {
+		err = "not an imported breed in another set";
+		return false;
+	}
+	if (FindBreed(0, slot)) {
+		err = "norn slot " + breedSlotName(slot) + " is taken";
+		return false;
+	}
+	fs::path main = getUserDataDir();
+	std::map<std::pair<int, int>, std::pair<int, int>> moves{{{b.species, b.slot}, {0, slot}}};
+	auto readAll = [](const fs::path& p) {
+		std::ifstream in(p, std::ios::binary);
+		return std::vector<uint8_t>((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	};
+	std::vector<std::string> added;
+	for (auto& rel : b.files) {
+		fs::path p = main / rel;
+		std::string name = p.filename().string();
+		char part;
+		int species, stage, s;
+		bool female;
+		std::string ext = to_ascii_lowercase(p.extension().string());
+		if (ParseBreedFileName(name, part, species, female, stage, s) && species == b.species && s == b.slot) {
+			// a body-part picture or body data: a copy under the norn set's name
+			std::string stem = fmt::format("{}{}{}{}", part, female ? 4 : 0, stage, breedSlotName(slot));
+			fs::path dest = p.parent_path() / (stem + ext);
+			std::error_code ec;
+			fs::copy_file(p, dest, fs::copy_options::overwrite_existing, ec);
+			if (ec) {
+				err = "couldn't copy " + name + ": " + ec.message();
+				return false;
+			}
+			added.push_back(fs::relative(dest, main, ec).string());
+		} else if (ext == ".gen" || ext == ".egg") {
+			// its genomes and eggs now name the norn slot
+			std::vector<uint8_t> d = readAll(p), out;
+			if (ext == ".gen")
+				out = GenomeWithBreedsMoved(d, moves);
+			else {
+				out = d;
+				if (d.size() >= 30 && std::memcmp(d.data(), "eggf", 4) == 0) {
+					out.assign(d.begin(), d.begin() + 26);
+					size_t pos = 26;
+					while (pos + 4 <= d.size()) {
+						uint32_t len = d[pos] | (d[pos + 1] << 8) | (d[pos + 2] << 16) | ((uint32_t)d[pos + 3] << 24);
+						if (len < 4 || pos + 4 + len > d.size() || std::memcmp(&d[pos + 4], "dna", 3) != 0)
+							break;
+						std::vector<uint8_t> g(d.begin() + pos + 4, d.begin() + pos + 4 + len);
+						g = GenomeWithBreedsMoved(g, moves);
+						uint32_t n = (uint32_t)g.size();
+						out.insert(out.end(), {(uint8_t)n, (uint8_t)(n >> 8), (uint8_t)(n >> 16), (uint8_t)(n >> 24)});
+						out.insert(out.end(), g.begin(), g.end());
+						pos += 4 + len;
+					}
+					out.insert(out.end(), d.begin() + pos, d.end());
+				}
+			}
+			if (out != d) {
+				std::ofstream o(p, std::ios::binary);
+				o.write((const char*)out.data(), out.size());
+			}
+		}
+	}
+	// the registry: now a norn breed at `slot`, moved from its set and slot
+	for (auto& k : KnownBreeds())
+		if (k.species == orig.species && k.slot == orig.slot && k.imported) {
+			k.origSpecies = k.species;
+			k.origSlot = k.origSlot >= 0 ? k.origSlot : k.slot;
+			k.species = 0;
+			k.slot = slot;
+			k.kind = 0;
+			k.files.insert(k.files.end(), added.begin(), added.end());
+		}
+	SaveBreedRegistry();
+	KnownBreeds(true);
+	return true;
 }
 
 std::vector<uint8_t> GenomeWithSlotMoved(const std::vector<uint8_t>& genome, int species, int from, int to) {

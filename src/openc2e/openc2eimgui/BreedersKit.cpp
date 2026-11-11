@@ -147,6 +147,10 @@ struct ImportFile {
 
 struct ImportGroup {
 	int species = 0, slot = 0, target = 0;
+	// the set the pack filed it in, when a norn breed filed in another set
+	// is installed in the norn set instead (species is then 0)
+	int fromSpecies = -1;
+	int srcSpecies() const { return fromSpecies >= 0 ? fromSpecies : species; }
 	std::vector<size_t> files;
 	bool install = true;
 	// checks made when the pack is read: its own slot is taken (clash); a
@@ -446,7 +450,7 @@ static int firstFreeSlot(int species, const ImportPlan* plan, const ImportGroup*
 	return -1;
 }
 
-static std::string renamed(const std::string& name, int target);
+static std::string renamed(const std::string& name, int target, int species = -1);
 static std::vector<uint8_t> eggWithGenomes(const std::vector<uint8_t>& egg, const std::function<std::vector<uint8_t>(const std::vector<uint8_t>&)>& fn);
 
 // an installed breed file (the game's folders or the user's), by name;
@@ -588,6 +592,14 @@ static void planImport(const std::vector<std::string>& picked) {
 		plan->files.push_back(std::move(g));
 		plan->genomes.push_back(plan->files.size() - 1);
 	}
+	// a norn breed (by its first genome) filed in another picture set goes
+	// to the norn set (owner, 2026-11-11); a clash there asks for a letter
+	if (!plan->genomes.empty() && GenomeGenus(plan->files[plan->genomes[0]].data) == 0)
+		for (auto& g : plan->groups)
+			if (g.species != 0) {
+				g.fromSpecies = g.species;
+				g.species = 0;
+			}
 	for (auto& g : plan->groups) {
 		findSameBreed(*plan, g);
 		if (!slotFree(g.species, g.target, plan.get(), &g)) {
@@ -605,9 +617,11 @@ static void planImport(const std::vector<std::string>& picked) {
 	s_plan = std::move(plan);
 }
 
-static std::string renamed(const std::string& name, int target) {
+static std::string renamed(const std::string& name, int target, int species) {
 	fs::path p(name);
 	std::string stem = to_ascii_lowercase(p.stem().string());
+	if (species >= 0 && stem.size() >= 3 && stem[1] >= '0' && stem[1] <= '7')
+		stem[1] = (char)('0' + species + (stem[1] >= '4' ? 4 : 0)); // into another set, the same sex
 	return stem.substr(0, 3) + breedSlotName(target) + to_ascii_lowercase(p.extension().string());
 }
 
@@ -641,15 +655,15 @@ static void installPlan(ImportPlan& plan) {
 		fs::create_directories(d, ec);
 	// every move at once, so a gene moved to a slot another breed of the
 	// pack is leaving is not moved again
-	std::map<std::pair<int, int>, int> moves;
+	std::map<std::pair<int, int>, std::pair<int, int>> moves;
 	for (auto& grp : plan.groups)
-		if (grp.install && grp.target >= 0 && grp.target != grp.slot)
-			moves[{grp.species, grp.slot}] = grp.target;
+		if (grp.install && grp.target >= 0 && (grp.target != grp.slot || grp.srcSpecies() != grp.species))
+			moves[{grp.srcSpecies(), grp.slot}] = {grp.species, grp.target};
 	for (auto& q : plan.slotQuestions)
 		if (q.remap)
-			moves[{q.species, q.slot}] = q.movedTo;
+			moves[{q.species, q.slot}] = {q.species, q.movedTo};
 	auto moveSlots = [&](const std::vector<uint8_t>& g) {
-		return GenomeWithSlotsMoved(g, moves);
+		return GenomeWithBreedsMoved(g, moves);
 	};
 	auto write = [&](const fs::path& dir, std::string name, const std::vector<uint8_t>& data, std::vector<std::string>& files) {
 		fs::path dest = dir / name;
@@ -697,11 +711,12 @@ static void installPlan(ImportPlan& plan) {
 		b.name = plan.name;
 		b.source = plan.source;
 		b.genome = genomeName;
-		b.origSlot = g.target != g.slot ? g.slot : -1;
+		b.origSlot = g.target != g.slot || g.fromSpecies >= 0 ? g.slot : -1;
+		b.origSpecies = g.fromSpecies;
 		for (size_t i : g.files) {
 			auto& f = plan.files[i];
 			bool att = to_ascii_lowercase(fs::path(f.name).extension().string()) == ".att";
-			write(att ? bodyData : images, renamed(f.name, g.target), f.data, b.files);
+			write(att ? bodyData : images, renamed(f.name, g.target, g.fromSpecies >= 0 ? g.species : -1), f.data, b.files);
 		}
 		b.files.insert(b.files.end(), shared.begin(), shared.end());
 		added.push_back(b);
@@ -718,6 +733,7 @@ static void installPlan(ImportPlan& plan) {
 				k.genome = b.genome;
 				k.files = b.files;
 				k.origSlot = b.origSlot;
+				k.origSpecies = b.origSpecies;
 				merged = true;
 			}
 		if (!merged)
@@ -1019,6 +1035,23 @@ static void BreedsPage() {
 		sel_slot = breeds[0].slot;
 	}
 
+	// developer aid: OPENC2E_MOVE_NORN_BREEDS=1 moves every imported norn
+	// breed filed in another set into the norn set, at its default letter
+	static bool movedNorns = false;
+	if (!movedNorns && getenv("OPENC2E_MOVE_NORN_BREEDS")) {
+		movedNorns = true;
+		std::vector<BreedInfo> todo;
+		for (auto& b : KnownBreeds())
+			if (b.imported && b.kind == 0 && b.species != 0)
+				todo.push_back(b);
+		for (auto& b : todo) {
+			std::string err;
+			int slot = DefaultNornSlotFor(b);
+			bool ok = MoveBreedToNornSet(b, slot, err);
+			fmt::print("* MOVE NORN BREED {} ({} {}) -> norn {}: {}\n", b.name, BreedSpeciesName(b.species), breedSlotName(b.slot), breedSlotName(slot), ok ? "done" : err);
+		}
+	}
+
 	// the list, by species
 	ImGui::BeginChild("list", ImVec2(230, 330), ImGuiChildFlags_Borders);
 	for (int sp = 0; sp < 4; sp++) {
@@ -1100,6 +1133,39 @@ static void BreedsPage() {
 		if (b->kind >= 0 && b->kind != b->species)
 			ImGui::TextDisabled("Its pictures are filed in the %s set (slot %s): the pack's authors put them there.", BreedSpeciesName(b->species),
 				breedSlotName(b->slot).c_str());
+		if (b->origSpecies >= 0)
+			ImGui::TextDisabled("Moved from the %s set, slot %s; the old files are kept for creatures hatched before.", BreedSpeciesName(b->origSpecies),
+				breedSlotName(b->origSlot >= 0 ? b->origSlot : b->slot).c_str());
+		// a norn breed filed in another set: move it into the norn set
+		// (owner, 2026-11-11)
+		if (b->imported && b->kind == 0 && b->species != 0) {
+			static char letter[8] = "";
+			static const BreedInfo* forBreed = nullptr;
+			if (forBreed != b) {
+				forBreed = b;
+				int d = DefaultNornSlotFor(*b);
+				std::snprintf(letter, sizeof(letter), "%s", d >= 0 ? breedSlotName(d).c_str() : "");
+			}
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted("Move to the norn set as");
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(50);
+			ImGui::InputText("##nornletter", letter, sizeof(letter));
+			ImGui::SameLine();
+			if (ImGui::Button("Move")) {
+				int slot = breedSlotFromName(letter);
+				std::string err;
+				if (slot < 0)
+					s_breed_message = "That is not a slot letter (a-z, then aa ... iv).";
+				else if (MoveBreedToNornSet(*b, slot, err)) {
+					s_breed_message = fmt::format("Moved to norn slot {}.", breedSlotName(slot));
+					sel_species = 0;
+					sel_slot = slot;
+					forBreed = nullptr;
+				} else
+					s_breed_message = "Couldn't move it: " + err;
+			}
+		}
 		if (b->imported && b->origSlot >= 0 && b->origSlot != b->slot)
 			ImGui::TextDisabled("Moved from slot %s (taken here); its files and genomes were changed to match.", breedSlotName(b->origSlot).c_str());
 		ImGui::PopTextWrapPos();

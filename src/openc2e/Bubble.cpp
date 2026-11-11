@@ -78,6 +78,7 @@ void Bubble::turnIntoSpeech() {
 	newBubble((Agent*)world.hand(), true, getText());
 	// creatures in earshot of the hand hear the words in it (CreatureSpeech)
 	hearSpeech((Agent*)world.hand(), getText(), HEAR_HAND);
+	recordSpeech((Agent*)world.hand(), getText());
 
 	// TODO: announce via shou
 	// TODO: add to speech history
