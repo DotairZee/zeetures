@@ -103,6 +103,8 @@ struct Params {
 	float driveExpM = 2.0f;
 	std::array<float, NUM_DRIVES> weights;
 	float learningRate = 0.3f; // delta rule
+	float individualPrior = 3.0f; // dealings with an individual before its own record counts half
+	float retreatFear = 0.3f; // a creature feared this much, close by, is backed away from
 	// temperament (reactivity): outcomes worse than expected are learned at
 	// this share of the rate, better ones at this share
 	float worseLearning = 1.0f, betterLearning = 1.0f;
@@ -413,6 +415,8 @@ struct Candidate {
 	bool chain = false; // a step toward something else (changing floors): no drive learning
 	bool scent = false; // following food smell
 	std::string urge; // following or avoiding a scent (pheromones.txt): which, for logging
+	AgentRef target; // a particular creature this acts on (individuals), or none
+	std::string who; // its moniker
 	bool food = false; // heading for a remembered food place
 	bool forage = false; // searching for food
 	bool escape = false; // getting out of water
@@ -981,6 +985,8 @@ class HomeostatMind : public CreatureMind {
 
 		if (choice.category >= 0)
 			out.attentionCategory = choice.category;
+		if (choice.target)
+			out.attentionAgent = choice.target;
 		out.decision = choice.decision;
 		return out;
 	}
@@ -1004,6 +1010,15 @@ class HomeostatMind : public CreatureMind {
 			if (e.prior > 0)
 				s += fmt::format("prior {} {} {}\n", key / 64 - 1, key % 64, e.prior);
 		}
+		for (auto& [who, decisions] : individuals)
+			for (auto& [decision, e] : decisions) {
+				if (e.count <= 0)
+					continue;
+				s += fmt::format("individual {} {} {}", who, decision, e.count);
+				for (float f : e.delta)
+					s += fmt::format(" {}", f);
+				s += "\n";
+			}
 		for (auto& [decision, e] : innateDefaults) {
 			s += fmt::format("innate {} {}", decision, e.prior);
 			for (float f : e.delta)
@@ -1119,7 +1134,16 @@ class HomeostatMind : public CreatureMind {
 			else if (what == "habituation")
 				for (float& f : habituation)
 					l >> f;
-			else if (what == "expect") {
+			else if (what == "individual") {
+				std::string who;
+				int decision;
+				Expectation e;
+				l >> who >> decision >> e.count;
+				for (float& f : e.delta)
+					l >> f;
+				if (l)
+					individuals[who][decision] = e;
+			} else if (what == "expect") {
 				int category, decision;
 				Expectation e;
 				l >> category >> decision >> e.count;
@@ -1181,6 +1205,12 @@ class HomeostatMind : public CreatureMind {
   private:
 	Params prm;
 	std::map<int, Expectation> expectations; // key: (category + 1) * 64 + decision
+	// Individuals (owner, 2026-11-11): what acting on a particular creature
+	// did, by its moniker and the decision, alongside what acting on its kind
+	// did. A stranger is judged by its kind; the more a creature has dealt
+	// with an individual, the more its own record counts (weight n / (n +
+	// individualPrior)), as a prototype gives way to known examples.
+	std::map<std::string, std::map<int, Expectation>> individuals;
 	std::map<int, Expectation> innateDefaults; // by decision: instincts about any object
 	std::set<std::string> appliedInstincts;
 	int activeInstincts = 0, dormantInstincts = 0;
@@ -1365,13 +1395,31 @@ class HomeostatMind : public CreatureMind {
 		float survival = std::max({d[PAIN], d[HUNGER], d[COLD], d[HOT], d[INJURY], d[SUFFOCATE], d[THIRST]});
 		float curiosity = prm.curiosity * (1.0f + prm.boredomCuriosityGain * d[BORED]) * std::clamp(1.0f + 10.0f * valence, 0.2f, 1.5f)
 			* (1.0f - prm.survivalCuriosityDamp * std::clamp(survival, 0.0f, 1.0f));
-		auto add = [&](int category, int decision, float distance, float edible) {
+		auto add = [&](int category, int decision, float distance, float edible, const SeenAgent* who = nullptr) {
 			// what smells of poison is never eaten (a grendel's single bite of
 			// the game's cyanide berries was enough to collapse it)
 			if (decision == prm.eatDecision && edible < 0.0f)
 				return;
-			Expectation& e = expectation(category, decision);
+			Expectation& kind = expectation(category, decision);
+			Expectation blend = kind;
+			int known = kind.count;
 			Candidate c{category, decision, distance, 0, 0, 0};
+			if (who && !who->who.empty()) {
+				// a particular creature: its own record, as far as it goes
+				// (looked up, not made: only dealings make a memory)
+				const Expectation* own = nullptr;
+				if (auto it = individuals.find(who->who); it != individuals.end())
+					if (auto jt = it->second.find(decision); jt != it->second.end())
+						own = &jt->second;
+				known = own ? own->count : 0;
+				float w = known / (known + prm.individualPrior);
+				if (own)
+					for (int i = 0; i < NUM_DRIVES; i++)
+						blend.delta[i] = (1.0f - w) * kind.delta[i] + w * own->delta[i];
+				c.target = who->agent;
+				c.who = who->who;
+			}
+			const Expectation& e = blend;
 			c.want = predictedRelief(d, D, e);
 			// What does not smell of food is not expected to ease hunger (a
 			// seed among fruit; the smell is read from what eating does), though
@@ -1381,7 +1429,7 @@ class HomeostatMind : public CreatureMind {
 				unscented.delta[HUNGER] = 0.0f;
 				c.want = predictedRelief(d, D, unscented);
 			}
-			c.novelty = curiosity / std::sqrt(1.0f + e.count);
+			c.novelty = curiosity / std::sqrt(1.0f + known);
 			c.score = c.want + c.novelty - prm.distanceCost * distance;
 			if (category >= 0 && category < (int)habituation.size()) {
 				// 4. habituation scales the pull of an object
@@ -1396,7 +1444,7 @@ class HomeostatMind : public CreatureMind {
 			if (a.needsObject) {
 				for (auto& s : p.visible)
 					if (s.reachable && (s.activatable || (a.decision != 1 && a.decision != 2 && a.decision != 3)))
-						add(s.category, a.decision, s.distance, s.edible);
+						add(s.category, a.decision, s.distance, s.edible, s.who.empty() ? nullptr : &s);
 			} else {
 				// plain wandering never walks off dry land into water (food,
 				// forage and seeking trips already check; the pond's new ramp let
@@ -1409,6 +1457,21 @@ class HomeostatMind : public CreatureMind {
 					continue;
 				add(-1, a.decision, 0.0f, 0.0f);
 			}
+		}
+		// a feared creature close by: back away from it
+		for (auto& s : p.visible) {
+			if (s.who.empty() || s.fear < prm.retreatFear || s.distance > 400.0f)
+				continue;
+			int dir = s.x < p.x ? 11 : 10;
+			if (waterAhead(p, dir) || wallAhead(p, dir))
+				continue;
+			Expectation away;
+			away.delta[FEAR] = -0.3f * s.fear;
+			Candidate c{-1, dir, 0, predictedRelief(d, D, away), 0, 0};
+			c.score = c.want;
+			c.chain = true;
+			c.who = "away from " + s.who;
+			out.push_back(c);
 		}
 		addSeekCandidates(p, d, D, out);
 		inEpisodeJustEnded = false;
@@ -2329,6 +2392,17 @@ class HomeostatMind : public CreatureMind {
 				}
 			}
 			e.count++;
+			// and from the particular creature acted on
+			if (!current.who.empty() && current.target) {
+				Expectation& own = individuals[current.who][current.decision];
+				float r = prm.learningRate * 1.5f; // a single individual: learned a little faster than a kind
+				for (int i = 0; i < NUM_DRIVES; i++) {
+					float target = feltAny[i] ? std::clamp(startDrives[i] + felt[i], 0.0f, 1.0f) - startDrives[i] : effect[i];
+					float share = feltAny[i] ? 1.0f : prm.unfeltLearningShare;
+					own.delta[i] += r * share * (target > own.delta[i] ? prm.worseLearning : prm.betterLearning) * (target - own.delta[i]);
+				}
+				own.count++;
+			}
 		}
 
 		// Mood follows how much better or worse this went than just letting
@@ -2387,7 +2461,7 @@ class HomeostatMind : public CreatureMind {
 				needs += fmt::format(" {} {}", DRIVE_NAMES[i], (int)p.drives[i]);
 		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f} | at {:.0f},{:.0f} | restless {:.2f} | food map {}\n",
 			p.creatureId, p.tick, !choice.urge.empty() ? fmt::format("{}:{}", choice.urge, actionName(choice.decision)) : choice.boatCall ? fmt::format("callboat:{}", actionName(choice.decision)) : choice.escape ? fmt::format("escape:{}", actionName(choice.decision)) : choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
-			choice.category, choice.want, choice.novelty,
+			choice.who.empty() ? fmt::format("{}", choice.category) : fmt::format("{}:{}", choice.category, choice.who), choice.want, choice.novelty,
 			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown, p.x, p.y, std::clamp(hungryTicks / prm.restlessRamp, 0.0f, 1.0f),
 			[&] { std::string m; for (auto& fp : foodPlaces) m += fmt::format(" {:.0f},{:.0f}x{:.2f}", fp.x, fp.y, fp.confidence); return m.empty() ? std::string(" none") : m; }());
 	}

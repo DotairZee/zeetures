@@ -24,6 +24,7 @@
 #include "caosScript.h"
 #include "Engine.h"
 #include "World.h"
+#include "historyManager.h"
 #include "Map.h"
 #include "MetaRoom.h"
 #include "Room.h"
@@ -817,10 +818,7 @@ MindPerception oldCreature::buildPerception() {
 
 	float cx = parentagent->x + parentagent->getWidth() / 2.0f;
 	float cy = parentagent->y + parentagent->getHeight() / 2.0f;
-	for (unsigned int i = 0; i < chosenagents.size(); i++) {
-		AgentRef a = chosenagents[i];
-		if (!a)
-			continue;
+	auto see = [&](AgentRef a, unsigned int i) {
 		float ax = a->x + a->getWidth() / 2.0f;
 		float ay = a->y + a->getHeight() / 2.0f;
 		// walking only moves the creature sideways, and it must touch the object
@@ -840,8 +838,34 @@ MindPerception oldCreature::buildPerception() {
 		// world's creature-on-creature scripts), whatever its attributes
 		if (dynamic_cast<CreatureAgent*>(a.get()))
 			activatable = true;
-		p.visible.push_back({(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay, edibleScent(a.get()), reachable, activatable});
-	}
+		SeenAgent sa{(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay, edibleScent(a.get()), reachable, activatable};
+		// another creature: who it is and what this one feels about it
+		if (auto* ca = dynamic_cast<CreatureAgent*>(a.get()); ca && engine.version == 2)
+			if (auto* oc = dynamic_cast<oldCreature*>(ca->getCreature())) {
+				sa.who = world.history->findMoniker(oc->getGenome());
+				if (const Bond* b = Relationships::bondOf(this, sa.who)) {
+					sa.affinity = b->affinity;
+					sa.fear = b->fear;
+					sa.familiarity = b->familiarity;
+				}
+			}
+		p.visible.push_back(sa);
+	};
+	for (unsigned int i = 0; i < chosenagents.size(); i++)
+		if (chosenagents[i])
+			see(chosenagents[i], i);
+	// C2: every other creature in sight too, not only the one noticed for
+	// its kind, so the mind can tell individuals apart
+	if (engine.version == 2 && mind)
+		for (auto& a : world.agents) {
+			if (!a || a.get() == parentagent || a->isDying() || a->category < 0 || a->category >= (int)chosenagents.size())
+				continue;
+			auto* ca = dynamic_cast<CreatureAgent*>(a.get());
+			if (!ca || !ca->getCreature() || !ca->getCreature()->isAlive() || chosenagents[a->category] == AgentRef(a))
+				continue;
+			if (agentInSight(AgentRef(a)))
+				see(AgentRef(a), (unsigned int)a->category);
+		}
 
 	p.stimuli = pendingstimuli;
 	p.actions = &mindactions;
@@ -1137,6 +1161,12 @@ void oldCreature::tickMind() {
 	int olddecn = decn;
 	if (out.attentionCategory >= 0 && out.attentionCategory < (int)chosenagents.size())
 		attn = out.attentionCategory;
+	// a particular creature chosen: attend to that one
+	if (out.attentionAgent && out.attentionAgent->category >= 0 && out.attentionAgent->category < (int)chosenagents.size() &&
+		agentInSight(out.attentionAgent)) {
+		chosenagents[out.attentionAgent->category] = out.attentionAgent;
+		attn = out.attentionAgent->category;
+	}
 	if (out.decision >= 0)
 		decn = out.decision;
 	if (attn >= 0 && attn < (int)chosenagents.size())
