@@ -1029,9 +1029,17 @@ static void BreedsPage() {
 			continue;
 		if (!ImGui::TreeNodeEx(BreedSpeciesName(sp), ImGuiTreeNodeFlags_DefaultOpen, "%s (%d breeds)", BreedSpeciesName(sp), n))
 			continue;
-		for (auto& b : breeds) {
-			if (b.group() != sp)
-				continue;
+		// in order of slot letter (breeds filed in other picture sets among
+		// them; two may share a letter from different sets)
+		std::vector<const BreedInfo*> inGroup;
+		for (auto& b : breeds)
+			if (b.group() == sp)
+				inGroup.push_back(&b);
+		std::stable_sort(inGroup.begin(), inGroup.end(), [](const BreedInfo* x, const BreedInfo* y) {
+			return x->slot != y->slot ? x->slot < y->slot : x->species < y->species;
+		});
+		for (const BreedInfo* bp : inGroup) {
+			const BreedInfo& b = *bp;
 			std::string label = b.name.empty() ? fmt::format("Breed {}", breedSlotName(b.slot)) : fmt::format("{}  ({})", b.name, breedSlotName(b.slot));
 			if (b.inUser && (!b.inGame || b.inOverrides))
 				label += "  *";

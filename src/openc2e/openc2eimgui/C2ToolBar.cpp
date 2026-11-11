@@ -240,6 +240,8 @@ static void DrawC2MenuBar() {
 			OpenC2Kit("owners");
 		if (ImGui::MenuItem("Observation Kit", nullptr, false, IsC2KitAvailable("observation")))
 			OpenC2Kit("observation");
+		if (ImGui::MenuItem("Chronicles Kit", nullptr, false, IsC2KitAvailable("chronicles")))
+			OpenC2Kit("chronicles");
 		ImGui::EndMenu();
 	}
 	if (ImGui::BeginMenu("Creatures")) {

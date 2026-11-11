@@ -105,6 +105,9 @@ void KitAlarmsWrite(ImGuiTextBuffer* buf);
 // a page tab (ImGui::BeginTabItem; the test aid can pick one)
 bool KitTab(const char* label);
 void RelationshipsPage(); // Owner's Kit (RelationshipsPage.cpp)
+void LifeStoryPage(); // Owner's Kit (ChroniclesKit.cpp)
+void WorldHistoryPage(); // Chronicles Kit (OwnersKit.cpp)
+void DrawChroniclesKit();
 
 void DrawHealthKit();
 void DrawScienceKit();

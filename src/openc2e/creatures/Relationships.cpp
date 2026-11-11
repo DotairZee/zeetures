@@ -96,6 +96,18 @@ void relabel(Bond& b) {
 		b.enemy = false;
 }
 
+// relabels, and tells the creature's story of a new friend, enemy or fear
+void relabelAndTell(const std::string& self, const std::string& other, Bond& b, bool wasFeared) {
+	bool wasFriend = b.friend_, wasEnemy = b.enemy;
+	relabel(b);
+	if (!wasFriend && b.friend_)
+		world.history->tell(self, storyEntry::befriended, other);
+	if (!wasEnemy && b.enemy)
+		world.history->tell(self, storyEntry::enemy, other);
+	if (!wasFeared && b.fear > 0.5f)
+		world.history->tell(self, storyEntry::fears, other);
+}
+
 struct Living {
 	Agent* body;
 	CreatureAgent* ca;
@@ -164,6 +176,7 @@ void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 
 	// making up after a fight counts double for a while
 	if (x > 0 && b.lastHarm && now - b.lastHarm < 600)
 		x *= 2.0f;
+	bool wasFeared = b.fear > 0.5f;
 	move(b, x);
 	b.fear = std::clamp(b.fear + fear, 0.0f, 1.0f);
 	b.lastContact = now;
@@ -179,7 +192,7 @@ void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 
 	if (harm > 0)
 		b.lastHarm = now;
 	b.events[what]++;
-	relabel(b);
+	relabelAndTell(monikerOf(c), them, b, wasFeared);
 	if (watching())
 		fmt::print("* BOND {} -> {}: {} ({:+.3f}) recent {:+.2f} affinity {:+.2f} fear {:.2f}\n", monikerOf(c), them, what, x, b.recent,
 			b.affinity, b.fear);
@@ -225,7 +238,7 @@ void tick() {
 				b.affinity *= b.mate ? 0.9999f : 0.9995f;
 				b.familiarity *= 0.9998f;
 			}
-			relabel(b);
+			relabelAndTell(me.moniker, them.moniker, b, true);
 		}
 		// a friend nearby eases fear and stress; a mate away is missed; a
 		// liked partner stirs desire

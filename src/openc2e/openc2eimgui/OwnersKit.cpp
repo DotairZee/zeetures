@@ -183,6 +183,7 @@ static std::string takePhoto(Agent* a, monikerData& m) {
 	if (!target->saveToFile((dir / file).string()))
 		return "Couldn't save the photo.";
 	m.photos.push_back("photos/" + file);
+	world.history->tell(m.getName(), storyEntry::photo);
 	return "Photo taken.";
 }
 
@@ -344,10 +345,11 @@ static void followEntry(const lifeLogEntry& e) {
 		OpenC2KitAt("owners", "Registration");
 }
 
-static void LifeLogPage() {
+// The world's history (Chronicles Kit; was the Owner's Kit's life log)
+void WorldHistoryPage() {
 	auto& log = world.history->lifelog;
 	if (log.empty()) {
-		ImGui::TextDisabled("No births, deaths or pregnancies yet. They are logged here as they happen.");
+		ImGui::TextDisabled("No births, deaths or pregnancies yet. They are recorded here as they happen.");
 		return;
 	}
 	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
@@ -1208,8 +1210,8 @@ void DrawOwnersKit() {
 			RelationshipsPage();
 			ImGui::EndTabItem();
 		}
-		if (KitTab("Life log")) {
-			LifeLogPage();
+		if (KitTab("Life Story")) {
+			LifeStoryPage();
 			ImGui::EndTabItem();
 		}
 		ImGui::EndTabBar();

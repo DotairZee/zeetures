@@ -55,6 +55,31 @@ enum monikerstatus { referenced = 1,
 	deadandkilled = 6,
 	unreferenced = 7 };
 
+// One line of a creature's own life story (Owner's Kit Life Story; owner,
+// 2026-11-11). Kept with the world. `other` is another creature's moniker
+// when the line is about one; `detail` a word, number or life stage.
+struct storyEntry {
+	enum {
+		born = 0, // hatched (its parents are in the records)
+		stage, // reached life stage `detail`
+		pregnant, // became pregnant; `other` the father
+		fathered, // a mate of his became pregnant; `other` the mother
+		laidEgg, // laid her egg
+		childHatched, // `other`, its child, hatched
+		firstWord, // `detail` its first learned word
+		words, // knew `detail` words
+		allWords, // learned every word at once (Stone of Knowledge)
+		befriended, // became friends with `other`
+		enemy, // came to dislike `other`
+		fears, // came to fear `other`
+		photo, // was photographed
+		died
+	};
+	unsigned int tick = 0; // world tick count
+	int kind = born;
+	std::string other, detail;
+};
+
 class monikerData {
 	friend class historyManager;
 
@@ -85,6 +110,8 @@ class monikerData {
 	int diedstage = -1;
 	// its parents' monikers (set by a conceived or spliced event; kept with the world)
 	std::string mother, father;
+	// its own life story, from 2026-11-11 on (storyEntry)
+	std::vector<storyEntry> story;
 
 	void init(std::string, std::shared_ptr<genomeFile>);
 	// the records of a creature no longer in the world (restored from a save)
@@ -136,6 +163,8 @@ class historyManager {
 	monikerData& addRecord(const std::string& moniker, unsigned char genus, int gender);
 	// records a birth, death or pregnancy (unless quiet)
 	void logLife(int kind, const std::string& moniker, int stage, bool oldage = false);
+	// adds a line to a creature's life story (unless quiet)
+	void tell(const std::string& moniker, int kind, const std::string& other = "", const std::string& detail = "");
 
 	std::string newMoniker(std::shared_ptr<genomeFile>);
 	bool hasMoniker(std::string);

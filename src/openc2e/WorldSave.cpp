@@ -527,6 +527,8 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 				out << "born " << m.borntick << " " << (m.bornknown ? 1 : 0) << "\n";
 				for (auto& ph : m.photos)
 					out << "photo " << escapeLine(ph) << "\n";
+				for (auto& e : m.story)
+					out << "story " << e.tick << " " << e.kind << " " << (e.other.empty() ? "-" : e.other) << " " << escapeLine(e.detail) << "\n";
 				if (!m.notes.empty())
 					out << "notes " << escapeLine(m.notes) << "\n";
 			}
@@ -591,6 +593,8 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 		out << "died " << m.diedtick << " " << m.diedstage << "\n";
 		for (auto& ph : m.photos)
 			out << "photo " << escapeLine(ph) << "\n";
+		for (auto& e : m.story)
+			out << "story " << e.tick << " " << e.kind << " " << (e.other.empty() ? "-" : e.other) << " " << escapeLine(e.detail) << "\n";
 		if (!m.notes.empty())
 			out << "notes " << escapeLine(m.notes) << "\n";
 		out << "end\n";
@@ -634,6 +638,7 @@ struct SavedCreature {
 	bool registered = false, hasborn = false, bornknown = false;
 	unsigned int born = 0;
 	std::vector<std::string> photos;
+	std::vector<storyEntry> story; // its life story
 	std::string moniker, mother, father; // as saved (monikers used to be new each load)
 	// a record only (a creature that has died): its kind, sex and death
 	bool record = false;
@@ -719,8 +724,13 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 		world.history->getMoniker(moniker).transferCreature(a);
 	}
 
-	for (int i = 0; i < s.stage; i++)
-		c->ageCreature(); // also updates genes and appearance for each stage
+	{
+		bool wasquiet = world.history->quiet;
+		world.history->quiet = true; // stages reached before, not now
+		for (int i = 0; i < s.stage; i++)
+			c->ageCreature(); // also updates genes and appearance for each stage
+		world.history->quiet = wasquiet;
+	}
 	if (s.ageing) {
 		bool wasquiet = world.history->quiet;
 		world.history->quiet = true; // not a new birth
@@ -785,6 +795,7 @@ static void restoreCreature(const fs::path& savedir, const SavedCreature& s, boo
 	m.name = s.name;
 	m.mother = s.mother;
 	m.father = s.father;
+	m.story = s.story;
 	m.registered = s.registered;
 	m.photos = s.photos;
 	m.notes = s.notes;
@@ -962,6 +973,14 @@ bool LoadWorldState(const fs::path& worlddir) {
 				c->hasborn = true;
 			} else if (key == "photo")
 				c->photos.push_back(unescapeLine(restOfLine(l)));
+			else if (key == "story") {
+				storyEntry e;
+				l >> e.tick >> e.kind >> e.other;
+				if (e.other == "-")
+					e.other.clear();
+				e.detail = unescapeLine(restOfLine(l));
+				c->story.push_back(e);
+			}
 			else if (key == "notes")
 				c->notes = unescapeLine(restOfLine(l));
 			else if (key == "chemicals") {
@@ -1029,6 +1048,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 		m.name = r.name;
 		m.registered = r.registered;
 		m.photos = r.photos;
+		m.story = r.story;
 		m.notes = r.notes;
 		m.borntick = r.born;
 		m.bornknown = r.bornknown;

@@ -24,6 +24,7 @@
 #include "PathResolver.h"
 #include "VoiceData.h"
 #include "World.h"
+#include "historyManager.h"
 #include "common/Random.h"
 #include "creatures/CreatureAgent.h"
 #include "creatures/oldCreature.h"
@@ -220,14 +221,23 @@ void hearWord(oldCreature* c, int word, int amount) {
 	bool knew = c->vocab[word] >= WORD_KNOWN;
 	int v = c->vocab[word] + (int)std::lround(amount * stageLearning((int)c->getStage()));
 	c->vocab[word] = (unsigned char)std::min(v, 255);
-	if (watching() && !knew && c->vocab[word] >= WORD_KNOWN)
-		fmt::print("* LEARNS \"{}\" ({} words known)\n", trim(engine.wordlist[word]), wordsKnown(c));
+	if (!knew && c->vocab[word] >= WORD_KNOWN) {
+		int n = wordsKnown(c);
+		std::string mon = world.history->findMoniker(c->getGenome());
+		if (n == 1)
+			world.history->tell(mon, storyEntry::firstWord, "", trim(engine.wordlist[word]));
+		else if (n == 10 || n == 25 || n == 50)
+			world.history->tell(mon, storyEntry::words, "", std::to_string(n));
+		if (watching())
+			fmt::print("* LEARNS \"{}\" ({} words known)\n", trim(engine.wordlist[word]), n);
+	}
 }
 
 void learnAllWords(oldCreature* c) {
 	if (!c)
 		return;
 	c->vocab.assign(engine.wordlist.size(), 255);
+	world.history->tell(world.history->findMoniker(c->getGenome()), storyEntry::allWords);
 	if (watching())
 		fmt::print("* LEARNS every word ({})\n", wordsKnown(c));
 }

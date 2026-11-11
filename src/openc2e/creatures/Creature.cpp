@@ -197,6 +197,7 @@ void Creature::ageCreature() {
 	parent->creatureAged();
 #ifndef _CREATURE_STANDALONE
 	world.history->getMoniker(world.history->findMoniker(genome)).addEvent(4, "", ""); // aged event
+	world.history->tell(world.history->findMoniker(genome), storyEntry::stage, "", std::to_string((int)stage));
 #endif
 }
 
@@ -233,6 +234,11 @@ void Creature::born() {
 			if (m.name.empty())
 				m.name = world.history->nextDefaultName(m.genus);
 			world.history->logLife(lifeLogEntry::birth, mon, (int)stage);
+			world.history->tell(mon, storyEntry::born);
+			// and in each parent's story: a child of theirs hatched
+			for (const std::string* p : {&m.mother, &m.father})
+				if (!p->empty())
+					world.history->tell(*p, storyEntry::childHatched, mon);
 		}
 	}
 #endif
@@ -255,6 +261,7 @@ void Creature::die() {
 			m.diedtick = world.worldtickcount;
 			m.diedstage = (int)stage;
 			world.history->logLife(lifeLogEntry::death, mon, (int)stage, diedofoldage);
+			world.history->tell(mon, storyEntry::died, "", diedofoldage ? "old age" : "");
 		}
 	}
 #endif
@@ -675,6 +682,9 @@ void oldCreature::watchPregnancy() {
 		}
 #endif
 	}
+	// the pregnancy over: she has laid her egg
+	if (pregnancywatched && !now && waspregnant && isAlive())
+		world.history->tell(world.history->findMoniker(genome), storyEntry::laidEgg);
 	waspregnant = now;
 	pregnancywatched = true;
 }

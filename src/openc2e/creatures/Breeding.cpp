@@ -385,6 +385,8 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	mumBody->babymoniker = genomeNameToInt(name);
 	mum->setPregnant(255);
 	Relationships::conceived(mumAgent, dadAgent);
+	world.history->tell(mumMon, storyEntry::pregnant, dadMon);
+	world.history->tell(dadMon, storyEntry::fathered, mumMon);
 	fmt::print("* MATE {} and {}: conceived, genome {} ({} genes: {} from her, {} from him, {} crossovers, {} mutations, {} duplications, {} losses)\n",
 		mumMon, dadMon, name, rep.genes, rep.fromMum, rep.fromDad, rep.crossovers, rep.mutations, rep.duplications, rep.deletions);
 	return true;

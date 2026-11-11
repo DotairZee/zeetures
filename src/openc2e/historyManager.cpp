@@ -258,6 +258,17 @@ void historyManager::delMoniker(std::string s) {
 
 /* vim: set noet: */
 
+void historyManager::tell(const std::string& mon, int kind, const std::string& other, const std::string& detail) {
+	if (quiet || mon.empty() || !hasMoniker(mon))
+		return;
+	storyEntry e;
+	e.tick = world.worldtickcount;
+	e.kind = kind;
+	e.other = other;
+	e.detail = detail;
+	getMoniker(mon).story.push_back(e);
+}
+
 void historyManager::logLife(int kind, const std::string& mon, int stage, bool oldage) {
 	if (quiet || !hasMoniker(mon))
 		return;
