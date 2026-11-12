@@ -2905,11 +2905,25 @@ class HomeostatMind : public CreatureMind {
 				futileInARow = same ? futileInARow + 1 : 1;
 				futileCategory = current.category;
 				futileDecision = current.decision;
+				// the object lies past water it can't breathe in, on the side
+				// it was heading: once is enough (owner, 2026-11-12: a norn
+				// stood at the pond's edge for about two minutes reaching for
+				// food floating in it, three tries for each kind it saw)
+				bool pastWater = false;
+				if (episodeAgent && !p.inWater && !p.breathesWater)
+					for (auto& v : p.visible)
+						if (v.agent == episodeAgent) {
+							float dx = dxTo(p, v.x);
+							pastWater = (dx < 0 && p.waterWest) || (dx > 0 && p.waterEast);
+							break;
+						}
+				if (pastWater)
+					futileInARow = prm.futileAfter;
 				if (futileInARow >= prm.futileAfter) {
 					futile.push_back({current.category, current.decision, p.x, p.y, p.tick + prm.futileTicks});
 					futileInARow = 0;
-					fmt::print("[homeostat] creature {} t{}: {}@{} gets nowhere from {:.0f},{:.0f}; not tried here for a while\n", p.creatureId, p.tick,
-						actionName(current.decision), current.category, p.x, p.y);
+					fmt::print("[homeostat] creature {} t{}: {}@{} gets nowhere from {:.0f},{:.0f}{}; not tried here for a while\n", p.creatureId, p.tick,
+						actionName(current.decision), current.category, p.x, p.y, pastWater ? " (it lies past water)" : "");
 				}
 			} else
 				futileInARow = 0;
