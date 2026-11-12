@@ -40,6 +40,7 @@
 #include "MetaRoom.h"
 #include "PathResolver.h"
 #include "PointerAgent.h"
+#include "BirthPortrait.h"
 #include "Room.h"
 #include "SFCFile.h"
 #include "Scriptorium.h"
@@ -346,6 +347,8 @@ void World::tick() {
 	tickcount++;
 	worldtickcount++;
 
+	BirthPortrait::tick(); // portraits of creatures that have just hatched
+
 	if (engine.version == 2) {
 		if (worldtickcount % 3600 == 0) {
 			timeofday++;
@@ -620,7 +623,7 @@ std::shared_ptr<Agent> World::lookupUNID(int unid) {
 	return unidmap[unid].lock();
 }
 
-void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent* only_creature) {
+void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent* only_creature, bool bare) {
 	assert(surface);
 	surface->renderClear();
 
@@ -692,6 +695,8 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 			auto* p = dynamic_cast<CompoundPart*>(render);
 			Agent* owner = p ? p->getParent() : nullptr;
 			if (skip_hand && owner && owner == (Agent*)world.hand())
+				continue;
+			if (bare && only_creature && owner != only_creature)
 				continue;
 			// a photo (only_creature): no speech bubbles either (owner, 2026-11-11)
 			if (only_creature && owner && dynamic_cast<Bubble*>(owner))

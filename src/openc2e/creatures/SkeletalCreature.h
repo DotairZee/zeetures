@@ -94,6 +94,22 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	void recalculateSkeleton();
 
 	unsigned int getPose(unsigned int i) { return pose[i]; }
+	// everything posing changes, to put a creature back exactly as it was
+	// after posing it for a picture (portraits)
+	struct PoseMemo {
+		unsigned int pose[17], posedirection, facialexpression;
+		bool eyesclosed, calculated, downfoot_left;
+		int blinkticks, oldfootx, oldfooty, lastgoodfootx, lastgoodfooty;
+		int width, height, adjustx, adjusty, partx[17], party[17];
+		float x, y;
+	};
+	PoseMemo memoPose() const;
+	void restorePose(const PoseMemo& m);
+	// poses for a picture without moving: the feet are not kept in place
+	void poseInPlace(const std::string& s) {
+		calculated = false;
+		setPose(s);
+	}
 	void setPose(unsigned int p);
 	void setPose(std::string s);
 	void setPoseGene(unsigned int p);

@@ -971,6 +971,52 @@ void SkeletalCreature::snapDownFoot() {
 	}
 }
 
+SkeletalCreature::PoseMemo SkeletalCreature::memoPose() const {
+	PoseMemo m;
+	std::copy(pose, pose + 17, m.pose);
+	m.posedirection = posedirection;
+	m.facialexpression = facialexpression;
+	m.eyesclosed = eyesclosed;
+	m.calculated = calculated;
+	m.downfoot_left = downfoot_left;
+	m.blinkticks = blinkticks;
+	m.oldfootx = oldfootx;
+	m.oldfooty = oldfooty;
+	m.lastgoodfootx = lastgoodfootx;
+	m.lastgoodfooty = lastgoodfooty;
+	m.width = width;
+	m.height = height;
+	m.adjustx = adjustx;
+	m.adjusty = adjusty;
+	std::copy(partx, partx + 17, m.partx);
+	std::copy(party, party + 17, m.party);
+	m.x = x;
+	m.y = y;
+	return m;
+}
+
+void SkeletalCreature::restorePose(const PoseMemo& m) {
+	std::copy(m.pose, m.pose + 17, pose);
+	posedirection = m.posedirection;
+	facialexpression = m.facialexpression;
+	eyesclosed = m.eyesclosed;
+	calculated = m.calculated;
+	downfoot_left = m.downfoot_left;
+	blinkticks = m.blinkticks;
+	oldfootx = m.oldfootx;
+	oldfooty = m.oldfooty;
+	lastgoodfootx = m.lastgoodfootx;
+	lastgoodfooty = m.lastgoodfooty;
+	width = m.width;
+	height = m.height;
+	adjustx = m.adjustx;
+	adjusty = m.adjusty;
+	std::copy(m.partx, m.partx + 17, partx);
+	std::copy(m.party, m.party + 17, party);
+	x = m.x;
+	y = m.y;
+}
+
 void SkeletalCreature::setPose(unsigned int p) {
 	posedirection = 0;
 	for (int i = 0; i < SkeletalPartCount(); i++)

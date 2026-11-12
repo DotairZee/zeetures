@@ -147,7 +147,9 @@ class World {
 	void tickClimate(); // C2: room temperatures (heat spreading, heat sources)
 	// only_creature: draw no creature but this one, nor anything another
 	// creature carries (the Owner's Kit camera)
-	void drawWorld(class Camera* cam, RenderTarget* surface, bool skip_hand = false, Agent* only_creature = nullptr);
+	// bare (with only_creature): that creature alone on the background, no
+	// objects either (birth portraits)
+	void drawWorld(class Camera* cam, RenderTarget* surface, bool skip_hand = false, Agent* only_creature = nullptr, bool bare = false);
 
 	int newUNID(Agent* whofor);
 	void setUNID(Agent* whofor, int unid);

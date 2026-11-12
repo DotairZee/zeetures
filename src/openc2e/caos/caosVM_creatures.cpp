@@ -22,6 +22,7 @@
 #include "Map.h"
 #include "AgentHelpers.h"
 #include "World.h"
+#include "BirthPortrait.h"
 #include "WorldSave.h"
 #include "caosVM.h"
 #include "common/Random.h"
@@ -1321,6 +1322,7 @@ void c_NEW_CREA_c1(caosVM* vm) {
 			if (m.name.empty())
 				m.name = world.history->nextDefaultName(m.genus);
 			world.history->logLife(lifeLogEntry::birth, mon, (int)c->getStage());
+			BirthPortrait::schedule(AgentRef(a)); // its portrait, once placed
 		}
 	}
 
