@@ -319,7 +319,10 @@ static std::string entryDetail(const lifeLogEntry& e) {
 		case lifeLogEntry::death: {
 			std::string age = KitAgeText(e.age);
 			age = age.substr(0, age.find(" ("));
-			return fmt::format("{}, aged {}{}, {}{}", who, e.ageknown ? "" : "at least ", age, stageWord(e.stage), e.oldage ? ": old age" : "");
+			// what it died of, in plain words (owner, 2026-11-11); entries
+			// from before causes were kept only know old age
+			std::string cause = !e.cause.empty() ? e.cause : e.oldage ? "old age" : "cause not recorded";
+			return fmt::format("{}, aged {}{}, {}: {}", who, e.ageknown ? "" : "at least ", age, stageWord(e.stage), cause);
 		}
 		case lifeLogEntry::unconscious: return fmt::format("a {}, {}: out of energy. Mend the cause soon (out of water, fed, a Health Kit injection)", who, stageWord(e.stage));
 		case lifeLogEntry::cameRound: return fmt::format("a {}, {}: came round", who, stageWord(e.stage));

@@ -260,8 +260,14 @@ void Creature::die() {
 			m.died = true;
 			m.diedtick = world.worldtickcount;
 			m.diedstage = (int)stage;
+			std::string cause = diedofoldage ? "old age" : !diedof.empty() ? diedof : "unknown causes";
+			size_t before = world.history->notices.size();
 			world.history->logLife(lifeLogEntry::death, mon, (int)stage, diedofoldage);
-			world.history->tell(mon, storyEntry::died, "", diedofoldage ? "old age" : diedof);
+			if (world.history->notices.size() > before) {
+				world.history->notices.back().cause = cause;
+				world.history->lifelog.back().cause = cause;
+			}
+			world.history->tell(mon, storyEntry::died, "", cause);
 		}
 	}
 #endif
@@ -474,8 +480,13 @@ void c1Creature::tick() {
 	watchPregnancy();
 	keepInRoomSystem();
 
-	if (dead != 0)
+	if (dead != 0) {
+		// the genome's own death signal (C2's "dead" locus): its chemistry
+		// says it is dead
+		if (diedof.empty())
+			diedof = "illness";
 		die();
+	}
 
 	Creature::tick();
 }
@@ -631,8 +642,13 @@ void c2Creature::tick() {
 	watchPregnancy();
 	keepInRoomSystem();
 
-	if (dead != 0)
+	if (dead != 0) {
+		// the genome's own death signal (C2's "dead" locus): its chemistry
+		// says it is dead
+		if (diedof.empty())
+			diedof = "illness";
 		die();
+	}
 
 	Creature::tick();
 }

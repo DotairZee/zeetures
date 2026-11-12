@@ -148,6 +148,7 @@ struct lifeLogEntry {
 	bool ageknown = true; // false: counted from when this world first saw it
 	bool oldage = false; // died at the end of its senile stage
 	std::string child; // eggLaid: the genome name of the baby in the egg (its egg's OBV0), or empty
+	std::string cause; // death: what it died of, in plain words ("old age", "starvation", "drowning", ...), or empty (not recorded)
 };
 
 class historyManager {
