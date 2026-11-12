@@ -85,6 +85,12 @@ void DrawC2StatusBar() {
 			ImGuiUtils::Image(s_season_icons_texs[world.season]);
 		}
 
+		// the day of the season (openc2e addition, owner 2026-11-11): C2's
+		// seasons are four days long
+		ImGui::Text("Day %u", world.dayofseason % 4 + 1);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Day %u of the season's 4", world.dayofseason % 4 + 1);
+
 		ImGui::Text("Year: %03i", world.year);
 
 		static std::array<Texture, 5> s_timeofday_icons_texs;
