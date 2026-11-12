@@ -359,6 +359,12 @@ struct Params {
 	unsigned int boatFlip = 300; // ...for this long
 
 	float blockedMove = 3.0f; // moved less than this in a walking episode (walking covers about 10)
+	// past this Tiredness the genome's tired walk sets in (C2: drive above
+	// 174 of 255), a shuffle of a few pixels a step: then only a much
+	// smaller move counts as blocked (a starving, worn-out norn by the far
+	// east lift shuffled 3-5 px a walk, took both ways for walls and rested
+	// 335 times in a row; owner, 2026-11-11)
+	float tiredWalk = 174.0f / 255.0f, tiredBlockedShare = 0.2f;
 	float blockedNear = 40.0f; // still this close to where it got stuck
 	unsigned int blockedTicks = 600;
 
@@ -2777,8 +2783,9 @@ class HomeostatMind : public CreatureMind {
 			drift[i] += prm.driftRate * (change[i] / ticks - drift[i]);
 		}
 
+		float blockedMove = prm.blockedMove * (d[TIRED] >= prm.tiredWalk ? prm.tiredBlockedShare : 1.0f);
 		if ((current.decision == 10 || current.decision == 11) && current.category < 0 && (current.seekCategory >= 0 || current.chain) &&
-			std::fabs(dxTo(p, startX)) < prm.blockedMove) {
+			std::fabs(dxTo(p, startX)) < blockedMove) {
 			blocked[current.decision == 10 ? 0 : 1] = {p.x, p.tick + prm.blockedTicks};
 			if (current.route)
 				for (auto& e : placeMap[cellOf(p.x, p.y)])
