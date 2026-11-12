@@ -61,6 +61,25 @@ void shoveCreature(Agent* a, int dir) {
 		sc->shove(dir);
 }
 
+// The hand's shove, as real C2 plays it (watched 2026-11-11, poses read
+// over DDE about six times a second while the owner pushed a grendel): a
+// shove west, the hand pressing on the creature's right, is frames 8, 9, 8
+// of the hand sprite (the palm turned west), about half a second; a shove
+// east is frames 1, 2 (the hand turned east). Then the usual pointer.
+void PointerAgent::playShove(int dir) {
+	auto* sp = dynamic_cast<SpritePart*>(part(0));
+	if (engine.version != 2 || !sp)
+		return;
+	if (pushAnimAt >= pushAnim.size())
+		prePushPose = sp->getPose();
+	if (dir < 0)
+		pushAnim = {8, 8, 9, 9, 8, 8};
+	else
+		pushAnim = {1, 1, 2, 2, 2};
+	pushAnimAt = 0;
+	sp->setPose(pushAnim[0]);
+}
+
 void PointerAgent::finishInit() {
 	Agent::finishInit();
 
@@ -168,27 +187,18 @@ void PointerAgent::tick() {
 		}
 		agent_under_pointer = parent;
 
-		// The push hand (C2; owner, 2026-11-11, from C2's own hand sprite):
-		// while the Pointer toolbar's push is on, the hand holds the edge-on
-		// shoving pose (syst frame 9), and over a creature it shows which way
-		// a click would shove it, with the sprite's arrows (frame 14, east,
-		// to the hand's right; frame 13, west, to its left), as C2 shows the
-		// angel and devil. Overlay codes -4 (east) and -3 (west).
+		// The push hand (C2; owner, 2026-11-11). As watched in real C2:
+		// while the Pointer toolbar's push is on, the hand stays the usual
+		// pointer, and over a creature it shows which way a click would
+		// shove it, with the sprite's arrows (frame 14, east, to the hand's
+		// right; frame 13, west, to its left), as C2 shows the angel and
+		// devil. Overlay codes -4 (east) and -3 (west). A click plays the
+		// shove (playShove).
 		bool pushing = engine.version == 2 && world.handPush && !carrying;
-		if (engine.version == 2)
-			if (auto* sp = dynamic_cast<SpritePart*>(part(0))) {
-				if (pushing) {
-					if (!pushPosed) {
-						prePushPose = sp->getPose();
-						pushPosed = true;
-					}
-					if (sp->getPose() != 9)
-						sp->setPose(9);
-				} else if (pushPosed) {
-					sp->setPose(prePushPose);
-					pushPosed = false;
-				}
-			}
+		if (pushAnimAt < pushAnim.size()) {
+			if (auto* sp = dynamic_cast<SpritePart*>(part(0)))
+				sp->setPose(++pushAnimAt < pushAnim.size() ? pushAnim[pushAnimAt] : prePushPose);
+		}
 		if (pushing) {
 			int want = 0;
 			if (a && parent && dynamic_cast<CreatureAgent*>(parent) && !parent->carriedby && !parent->invehicle)
@@ -388,7 +398,9 @@ void PointerAgent::handleEvent(BackendEvent& event) {
 						// creature shoves it away from where the hand pressed, a
 						// short hop sideways, instead of tickling or slapping it
 						if (engine.version < 3 && world.handPush && dynamic_cast<CreatureAgent*>(parent) && !parent->carriedby && !parent->invehicle) {
-							shoveCreature(parent, x < parent->x + parent->getWidth() / 2.0f ? 1 : -1);
+							int dir = x < parent->x + parent->getWidth() / 2.0f ? 1 : -1;
+							shoveCreature(parent, dir);
+							playShove(dir);
 							return;
 						}
 						// if the agent isn't paused, tell it to handle a click

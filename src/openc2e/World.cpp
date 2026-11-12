@@ -310,6 +310,13 @@ void World::tick() {
 		if (sscanf(hp, "%f %f", &hx, &hy) == 2 && hand()) {
 			handPush = true;
 			hand()->moveTo(hx, hy);
+			// (and plays the shove west at tick 100, east at 120, printing
+			// the hand's pose each tick)
+			if (tickcount == 100 || tickcount == 120)
+				hand()->playShove(tickcount == 100 ? -1 : 1);
+			if (tickcount >= 100 && tickcount < 130)
+				if (auto* sp = dynamic_cast<SpritePart*>(hand()->part(0)))
+					fmt::print("* TEST SHOVE tick {} pose {}\n", tickcount, sp->getPose());
 		}
 	}
 	// developer aid: OPENC2E_TEST_HAND_INVISIBLE="x y" turns the toolbar's

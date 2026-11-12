@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "SimpleAgent.h"
 #include "common/backend/BackendEvent.h"
 
@@ -30,9 +32,16 @@ class PointerAgent : public SimpleAgent {
   private:
 	DullPart* overlay;
 	int overlayTimer;
-	// C2 push hand: the pose it had before push mode (restored after)
-	bool pushPosed = false;
+	// C2 push hand: the shove animation playing (poses, one per tick), and
+	// the pose to go back to after it
+	std::vector<unsigned int> pushAnim;
+	size_t pushAnimAt = 0;
 	unsigned int prePushPose = 0;
+
+  public:
+	void playShove(int dir); // dir 1 east, -1 west
+
+  private:
 
   protected:
 	int hotspotx, hotspoty;
