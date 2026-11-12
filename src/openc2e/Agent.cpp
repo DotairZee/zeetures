@@ -38,7 +38,9 @@
 #include "common/io/FileReader.h"
 #include "common/throw_ifnot.h"
 
+#include <array>
 #include <cassert>
+#include <tuple>
 #include <fmt/core.h>
 #include <memory>
 
@@ -367,7 +369,26 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 			vm = world.getVM(this);
 		}
 
-		if (vm->fireScript(s, event == 9, from)) {
+		bool fired = vm->fireScript(s, event == 9, from);
+		// developer aid: OPENC2E_TIMER_STATS=N prints, N ticks into the session, each
+		// kind's timer rate and how many of its timer events ran or were
+		// skipped because the last run had not finished
+		if (event == 9) {
+			static const char* ts = getenv("OPENC2E_TIMER_STATS");
+			if (ts) {
+				static std::map<std::tuple<int, int, int>, std::array<long, 3>> stats;
+				auto& st = stats[{family, genus, species}];
+				st[fired ? 0 : 1]++;
+				st[2] = timerrate;
+				static bool printed = false;
+				if (!printed && world.tickcount >= (unsigned int)atoi(ts)) {
+					printed = true;
+					for (auto& [k, v] : stats)
+						fmt::print("* TIMER {} {} {} rate {} ran {} skipped {}\n", std::get<0>(k), std::get<1>(k), std::get<2>(k), v[2], v[0], v[1]);
+				}
+			}
+		}
+		if (fired) {
 			lastScript = event;
 			zotstack();
 			vm->setVariables(one, two);

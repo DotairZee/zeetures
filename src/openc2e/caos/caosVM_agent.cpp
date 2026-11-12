@@ -1797,8 +1797,17 @@ void c_DROP(caosVM* vm) {
 	valid_agent(vm->targ);
 
 	// TODO: what exactly are we meant to do here? firing the script directly is perhaps not right, but drops must be instant
-	if (vm->targ->carrying) // TODO: valid?
-		vm->targ->carrying->fireScript(5, vm->targ, caosValue(), caosValue());
+	if (vm->targ->carrying) { // TODO: valid?
+		// C2 runs a creature's drop on the carried object's own script, so
+		// the object can be dropping itself: firing its dropped script now
+		// would replace the script running on this very VM mid-command (the
+		// egg's "stack imbalance in DROP" each time a creature put one down).
+		// Then it runs from the world's script queue, at the next tick.
+		if (vm->targ->carrying.get() == vm->owner.get())
+			world.queueScript(5, vm->targ->carrying, vm->targ, caosValue(), caosValue());
+		else
+			vm->targ->carrying->fireScript(5, vm->targ, caosValue(), caosValue());
+	}
 
 	// TODO: only creatures in c1 (and c2?)
 }

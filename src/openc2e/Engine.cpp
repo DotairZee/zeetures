@@ -19,6 +19,8 @@
 
 #include "Engine.h"
 
+#include <SDL3/SDL_events.h>
+
 #include "Blackboard.h"
 #include "creatures/Pheromones.h"
 #include "historyManager.h"
@@ -457,11 +459,11 @@ static void dumpAgents() {
 		if (!a || a->family != f || a->genus != g || a->species != sp)
 			continue;
 		fmt::print("* Agent {} {} {} at ({}, {}) zorder {}\n", f, g, sp, a->x, a->y, a->getZOrder());
+		// every part, of simple agents too (their one part is part 0)
 		auto* c = dynamic_cast<CompoundAgent*>(a.get());
-		if (!c)
-			continue;
-		for (unsigned int i = 0; i < c->partCount(); i++) {
-			CompoundPart* cp = c->part(i);
+		unsigned int parts = c ? c->partCount() : (a->part(0) ? 1 : 0);
+		for (unsigned int i = 0; i < parts; i++) {
+			CompoundPart* cp = c ? c->part(i) : a->part(0);
 			auto* p = dynamic_cast<SpritePart*>(cp);
 			if (!p)
 				continue;
@@ -527,6 +529,44 @@ void Engine::update() {
 			fmt::print("* TEST CLICK at {},{}: selected genus {} (before: genus {})\n", cx, cy, world.selectedcreature ? (int)world.selectedcreature->genus : -1, before);
 		}
 	}
+	// developer aid: OPENC2E_TEST_MIDDLE_DRAG=N: from tick N, a middle-button
+	// drag across the view sent as the system's own mouse events (through the
+	// backend and the interface, as a real one comes): the button down, a
+	// move each tick for 40 ticks, then the button up
+	// ("N,ZOOM,FILE" sets that zoom first and saves pictures mid-drag and
+	// after it, FILE-during.bmp and FILE-after.bmp)
+	if (static const char* k = getenv("OPENC2E_TEST_MIDDLE_DRAG"); k) {
+		static unsigned int last = 0;
+		unsigned int n = (unsigned int)atoi(k), t = world.tickcount;
+		float z = 0;
+		char shot[400] = "";
+		sscanf(k, "%*d,%f,%399s", &z, shot);
+		if (t == n && z > 0)
+			setZoom(z);
+		if (shot[0] && t != last && (t == n + 20 || t == n + 50))
+			get_backend()->requestScreenshot(fmt::format("{}-{}.bmp", shot, t == n + 20 ? "during" : "after"));
+		if (t != last && t >= n && t <= n + 41) {
+			last = t;
+			float x = 500.0f + (t - n) * 6, y = 380.0f + (t - n) * 2;
+			SDL_Event ev{};
+			if (t == n || t == n + 41) {
+				ev.type = t == n ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
+				ev.button.button = SDL_BUTTON_MIDDLE;
+				ev.button.down = t == n;
+				ev.button.x = x;
+				ev.button.y = y;
+			} else {
+				ev.type = SDL_EVENT_MOUSE_MOTION;
+				ev.motion.state = SDL_BUTTON_MASK(SDL_BUTTON_MIDDLE);
+				ev.motion.x = x;
+				ev.motion.y = y;
+				ev.motion.xrel = 6;
+				ev.motion.yrel = 2;
+			}
+			SDL_PushEvent(&ev);
+			fmt::print("* TEST MIDDLE DRAG tick {}: pointer {},{} camera {},{} zoom {}\n", t, world.hand()->pointerX(), world.hand()->pointerY(), camera->getX(), camera->getY(), zoom);
+		}
+	}
 	// developer aid: OPENC2E_TEST_BLACKBOARDS=N, at world tick N, lists the
 	// world's blackboards (teaching machines): classifier, place, attributes
 	if (static const char* k = getenv("OPENC2E_TEST_BLACKBOARDS"); k && world.tickcount == (unsigned int)atoi(k))
@@ -565,6 +605,22 @@ void Engine::update() {
 				he = ca;
 		}
 		fmt::print("* TEST MATE: {}\n", tryConceive(she, he) ? "conceived" : "no");
+	}
+	// developer aid: OPENC2E_TEST_EGG_DROP=N: at session tick N a creature
+	// egg (2 5 2, no genome) appears by the incubator, and 10 ticks later it
+	// gets the dropped event (5) from the hand, as when the hand puts it down
+	if (static const char* k = getenv("OPENC2E_TEST_EGG_DROP"); k) {
+		unsigned int n = (unsigned int)atoi(k);
+		if (world.tickcount == n) {
+			std::string err = executeNetwork("new: simp eggs 8 0 2000 0\nsetv cls2 2 5 2\nsetv attr 195\nmvto 5100 750\nsetv grav 1\n");
+			fmt::print("* TEST EGG DROP: egg made{}\n", err.empty() ? "" : ": " + err);
+		} else if (world.tickcount == n + 10) {
+			for (auto& a : world.agents)
+				if (a && a->family == 2 && a->genus == 5 && a->species == 2) {
+					fmt::print("* TEST EGG DROP: dropped event: {}\n", a->queueScript(5, world.hand()) ? "ran" : "no script");
+					break;
+				}
+		}
 	}
 	// developer aid: OPENC2E_TEST_LAY=N, at world tick N, has the first
 	// pregnant creature lay her egg now (the world's egg-laying involuntary
