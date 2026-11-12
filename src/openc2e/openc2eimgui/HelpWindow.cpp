@@ -50,11 +50,15 @@ void DrawHelpWindow() {
 		"Close kin do not breed while another partner is alive. Scents (pheromones.txt in your openc2e folder) help mates find each other. "
 		"The Breeder's Kit lists breeds and lays an egg of a breed and sex you choose.");
 	Section("The kits",
+		"Tools menu or the applet toolbar; a kit minimises to a chip on the status bar.\n"
+		"Hatchery: hatch eggs.\n"
 		"Owner's Kit: a creature's registration, photos, family, temperament, relationships and life story.\n"
-		"Health, Science and Breeder's Kits: its body, chemistry and breeding.\n"
+		"Health Kit: its fitness, drives and medicine. Graveyard Kit: the stones of those who have died.\n"
+		"Breeder's and Science Kits: breeding, breeds, body, genes and chemistry.\n"
+		"Mind Kit: what it feels, is weighing, has learned and remembers.\n"
 		"Observation Kit: every creature at a glance, with alarms.\n"
-		"Chronicles Kit: the world's history and statistics.\n"
-		"Agent Injector: add objects. Hatchery: hatch eggs.");
+		"Agent Injector: add objects. Chronicles Kit: the world's history and statistics.\n"
+		"Ecology Kit: the world's rooms (light, warmth, air, soil), rooms to watch, and a census.");
 	Section("Saving",
 		"The world is saved when you quit or switch worlds (or File > Save World): creatures with their minds, words, bonds and stories, and eggs. "
 		"Other objects start as in the world's own file each time.");

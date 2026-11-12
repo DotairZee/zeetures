@@ -100,6 +100,11 @@ static const char* GenusName(int genus) {
 	}
 }
 
+// This fork's version, shown in Help > About openC2e (raise it for releases)
+#define OPENC2E_FORK_VERSION "0.1.0"
+#define OPENC2E_WEB "https://openc2e.github.io/"
+static bool s_open_about = false;
+
 // Add Favourite Place (the Camera menu or the + by Places) opens the naming
 // popup on the menu bar's next draw
 static bool s_open_add_place = false;
@@ -255,23 +260,31 @@ static void DrawC2MenuBar() {
 		ImGui::EndMenu();
 	}
 	if (ImGui::BeginMenu("Tools")) {
-		if (ImGui::MenuItem("The Hatchery", nullptr, false, IsHatcheryEnabled()))
+		// in the toolbar's order, with its groups (owner, 2026-11-12)
+		if (ImGui::MenuItem("Hatchery", nullptr, false, IsHatcheryEnabled()))
 			SetHatcheryOpen(true);
-		if (ImGui::MenuItem("Agent Injector", nullptr, false, IsAgentInjectorEnabled())) // openc2e's
-			SetAgentInjectorOpen(true);
-		ImGui::Separator();
-		if (ImGui::MenuItem("Health Kit", nullptr, false, IsC2KitAvailable("health")))
-			OpenC2Kit("health");
-		if (ImGui::MenuItem("Science Kit", nullptr, false, IsC2KitAvailable("science")))
-			OpenC2Kit("science");
-		if (ImGui::MenuItem("Breeder's Kit", nullptr, false, IsC2KitAvailable("breeders")))
-			OpenC2Kit("breeders");
 		if (ImGui::MenuItem("Owner's Kit", nullptr, false, IsC2KitAvailable("owners")))
 			OpenC2Kit("owners");
+		if (ImGui::MenuItem("Health Kit", nullptr, false, IsC2KitAvailable("health")))
+			OpenC2Kit("health");
+		if (ImGui::MenuItem("Graveyard Kit", nullptr, false, IsC2KitAvailable("graveyard")))
+			OpenC2Kit("graveyard");
+		ImGui::Separator();
+		if (ImGui::MenuItem("Breeder's Kit", nullptr, false, IsC2KitAvailable("breeders")))
+			OpenC2Kit("breeders");
+		if (ImGui::MenuItem("Science Kit", nullptr, false, IsC2KitAvailable("science")))
+			OpenC2Kit("science");
+		if (ImGui::MenuItem("Mind Kit", nullptr, false, IsC2KitAvailable("mind")))
+			OpenC2Kit("mind");
 		if (ImGui::MenuItem("Observation Kit", nullptr, false, IsC2KitAvailable("observation")))
 			OpenC2Kit("observation");
+		ImGui::Separator();
+		if (ImGui::MenuItem("Agent Injector", nullptr, false, IsAgentInjectorEnabled())) // openc2e's
+			SetAgentInjectorOpen(true);
 		if (ImGui::MenuItem("Chronicles Kit", nullptr, false, IsC2KitAvailable("chronicles")))
 			OpenC2Kit("chronicles");
+		if (ImGui::MenuItem("Ecology Kit", nullptr, false, IsC2KitAvailable("ecology")))
+			OpenC2Kit("ecology");
 		ImGui::EndMenu();
 	}
 	if (ImGui::BeginMenu("Creatures")) {
@@ -311,15 +324,51 @@ static void DrawC2MenuBar() {
 		}
 		ImGui::EndMenu();
 	}
+	// Help: what the toolbar's Help and Web buttons do, in words, and About
+	// (C2's items we cannot offer are left out; owner, 2026-11-12)
 	if (ImGui::BeginMenu("Help")) {
-		ImGui::MenuItem("Help Topics", nullptr, false, false);
-		ImGui::MenuItem("Tip of the Day...", nullptr, false, false);
-		if (ImGui::BeginMenu("Creatures on the Web", false))
-			ImGui::EndMenu();
-		ImGui::MenuItem("Life Kit #1 Help", nullptr, false, false);
+		if (ImGui::MenuItem("Help Topics"))
+			SetHelpOpen(true);
+		if (ImGui::MenuItem("openc2e on the Web"))
+			SDL_OpenURL(OPENC2E_WEB);
 		ImGui::Separator();
-		ImGui::MenuItem("About Creatures 2...", nullptr, false, false);
+		if (ImGui::MenuItem("About openC2e..."))
+			s_open_about = true;
 		ImGui::EndMenu();
+	}
+
+	// About openC2e (developer aid: OPENC2E_OPEN_KITS="about" opens it)
+	static bool s_test_about = getenv("OPENC2E_OPEN_KITS") && strstr(getenv("OPENC2E_OPEN_KITS"), "about");
+	if (s_test_about && world.worldtickcount > 5) {
+		s_test_about = false;
+		s_open_about = true;
+	}
+	if (s_open_about) {
+		ImGui::OpenPopup("About openC2e");
+		s_open_about = false;
+	}
+	if (ImGui::BeginPopupModal("About openC2e", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		ImGui::SetWindowFontScale(1.6f);
+		ImGui::TextUnformatted("openC2e");
+		ImGui::SetWindowFontScale(1.0f);
+		ImGui::Text("Version %s (built %s)", OPENC2E_FORK_VERSION, __DATE__);
+		ImGui::TextUnformatted("by DotairZee");
+		ImGui::Spacing();
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 420);
+		ImGui::TextUnformatted("Creatures 2 with creatures that think for themselves: a mind of their own, words, temperament and "
+							   "relationships, breeding, and a full set of kits.");
+		ImGui::Spacing();
+		ImGui::TextDisabled("A fork of openc2e, the open-source Creatures engine, by its contributors. openc2e is free software "
+							"under the GNU Lesser General Public License 2.1, and so are this fork's changes to it.");
+		ImGui::TextDisabled("The game's art, sounds and worlds come from your own copy of Creatures 2.");
+		ImGui::PopTextWrapPos();
+		ImGui::Spacing();
+		if (ImGui::Button("openc2e on the Web"))
+			SDL_OpenURL(OPENC2E_WEB);
+		ImGui::SameLine();
+		if (ImGui::Button("OK") || ImGui::IsKeyPressed(ImGuiKey_Escape))
+			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
 	}
 
 	// Save World As: a new world folder from the same starting world file,
@@ -513,7 +562,7 @@ void DrawC2Toolbar() {
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Help: how to play here, and what this version adds");
 		if (ImageButton(icon_web, true))
-			SDL_OpenURL("https://openc2e.github.io/");
+			SDL_OpenURL(OPENC2E_WEB);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Web: openc2e on the web (the open-source engine this runs on)");
 		ImGui::Separator();
