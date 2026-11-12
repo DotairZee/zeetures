@@ -744,6 +744,83 @@ void oldCreature::keepInRoomSystem() {
 	keepcheck = 5;
 	Agent* a = parentagent;
 	float cx = a->x + a->getWidth() / 2.0f, cy = a->y + a->getHeight() / 2.0f;
+
+	// A sealed pocket: a room no open door (permeability above 0) joins to
+	// the rest of the world, like room 208 under the incubator lift's shaft,
+	// where a norn lay trapped (owner, 2026-11-11), or the pockets a grendel
+	// and an ettin were found in before. Whatever put the creature there, it
+	// can never walk out: lift it to the floor of the first room above it
+	// that belongs to the world. Rooms are grouped through open doors; the
+	// largest group is the world (refreshed every minute, as additions edit
+	// doors).
+	static std::map<Room*, int> group;
+	static int worldGroup = -1;
+	static unsigned int grouped = UINT_MAX;
+	if (grouped == UINT_MAX || world.tickcount - grouped > 600) {
+		grouped = world.tickcount;
+		group.clear();
+		std::map<int, int> sizes;
+		int g = 0;
+		for (auto& r0 : world.map->getRooms()) {
+			if (group.count(r0.get()))
+				continue;
+			std::vector<std::shared_ptr<Room>> todo = {r0};
+			group[r0.get()] = g;
+			while (!todo.empty()) {
+				auto r = todo.back();
+				todo.pop_back();
+				sizes[g]++;
+				for (auto& d : r->getDoors())
+					if (d.second.perm > 0 && d.first && !group.count(d.first.get())) {
+						group[d.first.get()] = g;
+						todo.push_back(d.first);
+					}
+			}
+			g++;
+		}
+		worldGroup = -1;
+		int most = 0;
+		for (auto& [k, n] : sizes)
+			if (n > most)
+				most = n, worldGroup = k;
+		// developer aid: OPENC2E_LIST_POCKETS lists the rooms outside the world
+		if (getenv("OPENC2E_LIST_POCKETS")) {
+			std::string list;
+			for (auto& [r, k] : group)
+				if (k != worldGroup)
+					list += fmt::format(" {}(group {})", r->id, k);
+			fmt::print("* Room groups: {}, the world {} rooms; outside it:{}\n", g, most, list);
+		}
+	}
+	if (std::shared_ptr<Room> foot = world.map->roomAt(cx, a->y + a->getHeight() - 2)) {
+		// (only a pocket of one or two rooms: a bigger group cut off from the
+		// rest may be somewhere creatures are taken on purpose)
+		int pocketRooms = 0;
+		if (group.count(foot.get()))
+			for (auto& [r, k] : group)
+				pocketRooms += k == group[foot.get()];
+		if (group.count(foot.get()) && group[foot.get()] != worldGroup && pocketRooms <= 2) {
+			for (float yy = a->y + a->getHeight() - 12; yy > a->y - 800; yy -= 10) {
+				std::shared_ptr<Room> r = world.map->roomAt(cx, yy);
+				if (!r || r->type == 2 || !group.count(r.get()) || group[r.get()] != worldGroup)
+					continue;
+				float span = std::max(1.0f, (float)r->x_right - (float)r->x_left);
+				float bottom = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
+				if (r->floorpoints.size())
+					bottom = std::min(bottom, r->floorYatX(cx));
+				float oldx = a->x, oldy = a->y;
+				a->moveTo(a->x, bottom - a->getHeight() - 1);
+				a->velx = 0;
+				a->vely = 0;
+				if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
+					sc->scriptMoved(); // its feet find their room afresh, not the pocket's floor
+				fmt::print("* {} was in a sealed pocket (room {}) at {:.0f},{:.0f}; lifted to the floor of room {} at {:.0f},{:.0f}\n",
+					world.history->findMoniker(genome), foot->id, oldx, oldy, r->id, a->x, a->y);
+				return;
+			}
+		}
+	}
+
 	if (world.map->roomAt(cx, cy) || world.map->roomAt(cx, a->y + a->getHeight() - 2))
 		return;
 	std::shared_ptr<Room> dry, wet;
@@ -772,6 +849,8 @@ void oldCreature::keepInRoomSystem() {
 	a->moveTo(a->x, bottom - a->getHeight() - 1);
 	a->velx = 0;
 	a->vely = 0;
+	if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
+		sc->scriptMoved();
 	fmt::print("* {} was inside the ground at {:.0f},{:.0f}; lifted to the floor of room {} ({}) at {:.0f},{:.0f}\n",
 		world.history->findMoniker(genome), oldx, oldy, r->id, r->type == 2 ? "water" : "dry", a->x, a->y);
 #endif

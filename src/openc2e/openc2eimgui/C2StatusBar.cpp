@@ -103,6 +103,11 @@ void DrawC2StatusBar() {
 		}
 		if (world.timeofday < s_timeofday_icons_texs.size()) {
 			ImGuiUtils::Image(s_timeofday_icons_texs[world.timeofday]);
+			// its name on hover (C2 has none built in; the owner's words,
+			// 2026-11-11)
+			static const char* const s_timeofday_names[5] = {"Dawn", "Morning", "Midday", "Dusk", "Night"};
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", s_timeofday_names[world.timeofday]);
 		}
 
 		static std::array<Texture, 5> s_temperature_icons_texs;
