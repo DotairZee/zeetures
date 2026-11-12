@@ -372,8 +372,10 @@ static void followEntry(const lifeLogEntry& e) {
 	KitGoTo(body);
 	if (e.kind == lifeLogEntry::pregnancy)
 		OpenC2KitAt("breeders", "Reproductive");
-	else
+	else if (e.kind == lifeLogEntry::birth)
 		OpenC2KitAt("owners", "Registration");
+	// fell unconscious or came round: going to it is enough (owner,
+	// 2026-11-12: the Owner's Kit opening there wasn't needed)
 }
 
 // The world's history (Chronicles Kit; was the Owner's Kit's life log)
@@ -500,13 +502,14 @@ void DrawLifeNotices(float room) {
 		}
 		ImGui::PopStyleColor(3);
 		if (ImGui::IsItemHovered()) {
-			const char* kit = e.kind == lifeLogEntry::pregnancy ? "Breeder's" : "Owner's";
-			if (e.kind == lifeLogEntry::eggLaid)
-				ImGui::SetTooltip("%s %s\n%s\nClick to go to the egg (or the baby, once it hatches); right-click to dismiss.",
-					kindWord(e.kind), KitDateText(e.tick).c_str(), entryDetail(e).c_str());
-			else
-				ImGui::SetTooltip("%s %s\n%s\nClick to go to it and open the %s Kit; right-click to dismiss.",
-					kindWord(e.kind), KitDateText(e.tick).c_str(), entryDetail(e).c_str(), kit);
+			// what a click does (followEntry)
+			const char* does = e.kind == lifeLogEntry::eggLaid ? "go to the egg (or the baby, once it hatches)"
+							   : e.kind == lifeLogEntry::death ? "open its page in the Graveyard Kit"
+							   : e.kind == lifeLogEntry::pregnancy ? "go to it and open the Breeder's Kit"
+							   : e.kind == lifeLogEntry::birth ? "go to it and open the Owner's Kit"
+															   : "go to it";
+			ImGui::SetTooltip("%s %s\n%s\nClick to %s; right-click to dismiss.",
+				kindWord(e.kind), KitDateText(e.tick).c_str(), entryDetail(e).c_str(), does);
 		}
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
 			remove = i;

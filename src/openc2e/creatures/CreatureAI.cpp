@@ -952,8 +952,11 @@ MindPerception oldCreature::buildPerception() {
 					p.waterEast = true;
 			}
 			// drops ahead: stepping through a side where the floor beyond is
-			// much lower is a fall (off a dock or a ledge); a fall that lands in
-			// water counts as water ahead
+			// much lower is a fall (off a dock or a ledge); a step, small or
+			// large, that ends in water counts as water ahead (the east dock
+			// ends 24 px above a "floor" that is the sea's surface, open to the
+			// water below: a norn following a smell walked off it and sank;
+			// owner, 2026-11-12)
 			for (auto& [n, door] : here->getDoors()) {
 				if (door.perm < fit || n->type == 2)
 					continue;
@@ -962,10 +965,9 @@ MindPerception oldCreature::buildPerception() {
 					continue;
 				float bx = west ? (float)here->x_left : (float)here->x_right;
 				float drop = n->floorYatX(bx - seamShift(*n, hc, w)) - here->floorYatX(bx);
-				if (drop <= 60.0f)
-					continue;
-				(west ? p.dropWest : p.dropEast) = std::max(west ? p.dropWest : p.dropEast, drop);
-				// where would the fall end? follow open floors down a few rooms
+				if (drop > 60.0f)
+					(west ? p.dropWest : p.dropEast) = std::max(west ? p.dropWest : p.dropEast, drop);
+				// where would the step end? follow open floors down a few rooms
 				std::shared_ptr<Room> r = n;
 				for (int depth = 0; r && depth < 3; depth++) {
 					if (r->deepWater()) {
@@ -978,6 +980,16 @@ MindPerception oldCreature::buildPerception() {
 						if (d2.perm >= fit && std::min(m->y_left_ceiling, m->y_right_ceiling) + 2 >= rfloor)
 							below = m;
 					r = below;
+				}
+			}
+			{
+				static const bool watchwater = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+				static std::map<int, int> lastwater;
+				int now = (p.waterWest ? 1 : 0) | (p.waterEast ? 2 : 0);
+				if (watchwater && lastwater[parentagent->getUNID()] != now) {
+					fmt::print("* WATCH WATER unid {} room {} ({}-{}) water ahead{}{}\n", parentagent->getUNID(), here->id,
+						here->x_left, here->x_right, p.waterWest ? " west" : "", p.waterEast ? " east" : "", now ? "" : ": none");
+					lastwater[parentagent->getUNID()] = now;
 				}
 			}
 			// a wall right ahead: walking that way from where the foot stands
