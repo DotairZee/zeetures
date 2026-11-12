@@ -63,6 +63,7 @@
 #include "imageManager.h"
 #include "openc2eimgui/ImGuiUtils.h"
 #include <imgui.h>
+#include <imgui_internal.h>
 #include "openc2eimgui/Openc2eImGui.h"
 #include "Scriptorium.h"
 #include "WorldSave.h"
@@ -99,6 +100,7 @@
 namespace fs = std::filesystem;
 
 Engine engine;
+static bool s_middleDown = false; // the middle mouse button is held (for the middle-button log)
 
 Engine::Engine() {
 	done = false;
@@ -379,6 +381,22 @@ void Engine::drawWorld() {
 					p->render(main, mx - hand->pointerX(), my - hand->pointerY());
 			}
 		}
+		// while the middle button is held, a line every few frames: whether
+		// the hand was drawn, and if not why (owner, 2026-11-12: the hand
+		// vanishes while panning with the middle button when zoomed; not
+		// reproduced with synthetic input, so read from real use)
+		if (s_middleDown) {
+			static int frame = 0;
+			if (frame++ % 10 == 0) {
+				PointerAgent* hand = world.hand();
+				ImGuiWindow* hw = ImGui::GetCurrentContext()->HoveredWindow;
+				fmt::print("* MIDDLE frame: zoom {} overWindow {} ({}) visible {} hand {},{} camera {},{} on screen {},{} view {}x{} mouse {:.0f},{:.0f}\n",
+					zoom, overWindow, hw ? hw->Name : "-", hand && hand->visible, hand ? hand->pointerX() : 0, hand ? hand->pointerY() : 0,
+					camera->getX(), camera->getY(), hand ? (int)std::lround((hand->pointerX() - (int)camera->getX()) * zoom) : 0,
+					hand ? (int)std::lround((hand->pointerY() - (int)camera->getY()) * zoom) : 0, main->getWidth(), main->getHeight(),
+					ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
+			}
+		}
 	}
 }
 
@@ -605,6 +623,38 @@ void Engine::update() {
 				he = ca;
 		}
 		fmt::print("* TEST MATE: {}\n", tryConceive(she, he) ? "conceived" : "no");
+	}
+	// developer aid: OPENC2E_TEST_WHEEL_PAN="N,ZOOM,FILE": at tick N the zoom
+	// is set and the pointer put at 500,380; then 20 ticks of scrolling (as a
+	// TrackPoint's middle button + stick sends, or a wheel), the pointer not
+	// moving; FILE.bmp is the picture after
+	if (static const char* k = getenv("OPENC2E_TEST_WHEEL_PAN"); k) {
+		static unsigned int last = 0;
+		unsigned int n = (unsigned int)atoi(k), t = world.tickcount;
+		float z = 1;
+		char shot[400] = "";
+		sscanf(k, "%*d,%f,%399s", &z, shot);
+		if (t != last && t >= n && t <= n + 22) {
+			last = t;
+			SDL_Event ev{};
+			if (t == n) {
+				setZoom(z);
+				ev.type = SDL_EVENT_MOUSE_MOTION;
+				ev.motion.x = 500;
+				ev.motion.y = 380;
+			} else if (t <= n + 20) {
+				ev.type = SDL_EVENT_MOUSE_WHEEL;
+				ev.wheel.x = 0.5f;
+				ev.wheel.y = -0.3f;
+				ev.wheel.mouse_x = 500;
+				ev.wheel.mouse_y = 380;
+			}
+			if (ev.type)
+				SDL_PushEvent(&ev);
+			if (t == n + 22 && shot[0])
+				get_backend()->requestScreenshot(fmt::format("{}.bmp", shot));
+			fmt::print("* TEST WHEEL PAN tick {}: hand {},{} camera {},{}\n", t, world.hand()->pointerX(), world.hand()->pointerY(), camera->getX(), camera->getY());
+		}
 	}
 	// developer aid: OPENC2E_TEST_EGG_DROP=N: at session tick N a creature
 	// egg (2 5 2, no genome) appears by the incubator, and 10 ticks later it
@@ -919,6 +969,12 @@ void Engine::handleResizedWindow() {
 void Engine::handleMouseMove(BackendEvent& event) {
 	// move the cursor
 	world.hand()->handleEvent(event);
+	if (event.button & buttonmiddle) { // (the middle-button log; see render)
+		static int n = 0;
+		if (n++ % 10 == 0)
+			fmt::print("* MIDDLE move: at {},{} rel {},{} hand {},{} camera {},{}\n", event.x, event.y, event.xrel, event.yrel,
+				world.hand()->pointerX(), world.hand()->pointerY(), camera->getX(), camera->getY());
+	}
 
 	// notify agents
 	for (std::list<std::shared_ptr<Agent>>::iterator i = world.agents.begin(); i != world.agents.end(); i++) {
@@ -935,6 +991,15 @@ void Engine::handleMouseMove(BackendEvent& event) {
 }
 
 void Engine::handleMouseButton(BackendEvent& event) {
+	if (event.button == buttonmiddle && event.wheel_x == 0 && event.wheel_y == 0)
+		s_middleDown = event.type == eventmousebuttondown;
+	if (event.button == buttonmiddle || ((event.wheel_x != 0 || event.wheel_y != 0) && s_middleDown)) {
+		static int n = 0;
+		if (n++ % 5 == 0 || event.button == buttonmiddle)
+			fmt::print("* MIDDLE button: {} button {} wheel {},{} at {},{} hand {},{} camera {},{}\n",
+				event.type == eventmousebuttondown ? "down" : "up", (int)event.button, event.wheel_x, event.wheel_y, event.x, event.y,
+				world.hand()->pointerX(), world.hand()->pointerY(), camera->getX(), camera->getY());
+	}
 	// C1/C2: wheel and two-finger touchpad scrolling pan the world view in any
 	// direction (their scripts have no use for the wheel). Directions follow
 	// the system's natural-scrolling setting, as SDL reports them.
