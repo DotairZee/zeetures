@@ -74,24 +74,16 @@ void DrawC2StatusBar() {
 
 		ImGui::GetCurrentWindow()->DC.LayoutType = ImGuiLayoutType_Horizontal;
 
-		switch (world.season) {
-			case 0: ImGui::Text("Spring"); break;
-			case 1: ImGui::Text("Summer"); break;
-			case 2: ImGui::Text("Autumn"); break;
-			case 3: ImGui::Text("Winter"); break;
-			default: ImGui::Text("Season %i", world.season); break;
-		}
+		// The left end (owner, 2026-11-11): three pictures, each named on
+		// hover (the season, the time of day, how warm it is with the
+		// temperature), then the day and year as text.
 		if (world.season < s_season_icons_texs.size()) {
 			ImGuiUtils::Image(s_season_icons_texs[world.season]);
+			// (it looks like weather, but it is C2's picture of the season)
+			static const char* const s_season_names[4] = {"Spring", "Summer", "Autumn", "Winter"};
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", s_season_names[world.season]);
 		}
-
-		// the day of the season (openc2e addition, owner 2026-11-11): C2's
-		// seasons are four days long
-		ImGui::Text("Day %u", world.dayofseason % 4 + 1);
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Day %u of the season's 4", world.dayofseason % 4 + 1);
-
-		ImGui::Text("Year: %03i", world.year);
 
 		static std::array<Texture, 5> s_timeofday_icons_texs;
 		if (!s_timeofday_icons_texs[0]) {
@@ -103,8 +95,7 @@ void DrawC2StatusBar() {
 		}
 		if (world.timeofday < s_timeofday_icons_texs.size()) {
 			ImGuiUtils::Image(s_timeofday_icons_texs[world.timeofday]);
-			// its name on hover (C2 has none built in; the owner's words,
-			// 2026-11-11)
+			// (C2 has no names built in; the owner's words)
 			static const char* const s_timeofday_names[5] = {"Dawn", "Morning", "Midday", "Dusk", "Night"};
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", s_timeofday_names[world.timeofday]);
@@ -136,19 +127,23 @@ void DrawC2StatusBar() {
 			}
 			if (tempiconid < s_temperature_icons_texs.size()) {
 				ImGuiUtils::Image(s_temperature_icons_texs[tempiconid]);
+				// (0 = -15 C = 5 F, 48 = 0 C = 32 F, 255 = 65 C = 149 F)
+				int temp_celsius = ((temp * 80) / 255) - 15; // signed: rooms below 0 C are common
+				const char* feel = temp_celsius < 0 ? "Freezing" : temp_celsius < 10 ? "Cold" : temp_celsius < 18 ? "Cool" : temp_celsius < 28 ? "Mild" : temp_celsius < 36 ? "Warm" : "Hot";
+				std::string number = Openc2eImgui::KitFahrenheit() ? fmt::format("{}°F", (int)std::lround(temp_celsius * 9 / 5.0 + 32)) : fmt::format("{}°C", temp_celsius);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s: %s\n(click for %s)", feel, number.c_str(), Openc2eImgui::KitFahrenheit() ? "Celsius" : "Fahrenheit");
+				if (ImGui::IsItemClicked())
+					Openc2eImgui::KitToggleFahrenheit();
 			}
-			int temp_celsius = ((temp * 80) / 255) - 15; // signed: rooms below 0 °C are common
-			if (Openc2eImgui::KitFahrenheit())
-				ImGui::Text("%d°F", (int)std::lround(temp_celsius * 9 / 5.0 + 32));
-			else
-				ImGui::Text("%d°C", temp_celsius);
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("Click for %s", Openc2eImgui::KitFahrenheit() ? "Celsius" : "Fahrenheit");
-			if (ImGui::IsItemClicked())
-				Openc2eImgui::KitToggleFahrenheit();
-			// TODO: fahrenheit calculation + textual version of temperature
-			// (0 = -15C = 5F, 48 = 0C = 32F, 255 = 65C = 149F)
 		}
+
+		// the day of the season (openc2e addition, owner 2026-11-11): C2's
+		// seasons are four days long
+		ImGui::Text("Day %u", world.dayofseason % 4 + 1);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Day %u of the season's 4", world.dayofseason % 4 + 1);
+		ImGui::Text("Year: %03i", world.year);
 
 		static std::array<Texture, 6> s_healthicons_texs;
 		if (!s_healthicons_texs[0]) {

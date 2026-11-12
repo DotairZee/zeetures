@@ -163,6 +163,71 @@ struct MindOutput {
 	std::string say;
 };
 
+// What a mind holds, for the Mind Kit (openc2e addition, owner 2026-11-11):
+// a snapshot drawn on request, in the mind's own terms but plain enough to
+// show. Ages are in mind ticks (about 2.5 a second in C1/C2).
+struct MindView {
+	unsigned int tick = 0; // now
+	std::array<float, 17> drives{}; // 0-1
+	float content = 0; // 0-1: how far from its worst its needs are
+	float x = 0, y = 0; // where it is
+
+	// the options it weighed at its last choice, best first
+	struct Option {
+		int category = -1; // -1: needs no object
+		int decision = 0;
+		std::string who; // a particular creature (moniker), or empty
+		float want = 0; // how much it expects its needs to ease
+		float novelty = 0; // the pull of the untried
+		float score = 0;
+		std::array<float, 17> ease{}; // want, split among the needs it eases
+		int tried = 0; // times it has done this to this kind of thing
+		bool chosen = false;
+		bool food = false, forage = false, route = false, escape = false, scent = false, travel = false;
+	};
+	std::vector<Option> options;
+	unsigned int choseAt = 0; // when it last chose
+	bool busy = false; // still doing what it chose
+
+	// what it has learned: the expected change in each need from doing
+	// something to a kind of thing (or to one creature, `who`)
+	struct Lesson {
+		int category = -1, decision = 0;
+		std::string who;
+		int count = 0;
+		std::array<float, 17> delta{};
+		float value = 0; // how much it eased its needs on the whole, -1..1
+	};
+	std::vector<Lesson> lessons;
+
+	// what it remembers of the world
+	struct Spot {
+		float x = 0, y = 0, w = 0, h = 0;
+		unsigned int last = 0; // last there (0: not known)
+	};
+	std::vector<Spot> visited;
+	struct Food {
+		float x = 0, y = 0, confidence = 0;
+		int meals = 0;
+		unsigned int last = 0;
+	};
+	std::vector<Food> food;
+	struct Ride {
+		float x = 0, fromY = 0, toY = 0;
+		int uses = 0;
+	};
+	std::vector<Ride> rides;
+
+	// how content it has been lately, and its strongest need then
+	struct Moment {
+		unsigned int tick = 0;
+		float content = 0;
+		int strongest = -1;
+		float strength = 0;
+	};
+	std::vector<Moment> mood;
+};
+
 class CreatureMind {
   public:
 	virtual ~CreatureMind() = default;
@@ -171,6 +236,8 @@ class CreatureMind {
 	virtual MindOutput tick(const MindPerception&) = 0;
 	virtual void died(const MindPerception&) {}
 	virtual std::string debugState() const { return {}; }
+	// a snapshot for the Mind Kit; false if this mind has none
+	virtual bool view(MindView&) const { return false; }
 	// World saving: the mind's learned state as text, and restoring it.
 	virtual std::string saveState() const { return {}; }
 	virtual void loadState(const std::string&) {}

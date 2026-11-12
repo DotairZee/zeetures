@@ -41,6 +41,7 @@
 #include <array>
 #include <cmath>
 #include <fmt/core.h>
+#include <deque>
 #include <map>
 #include <queue>
 #include <random>
@@ -638,7 +639,106 @@ class HomeostatMind : public CreatureMind {
 		applyTemperament(p.temperament, p.creatureId);
 		MindOutput out = tickChoose(p);
 		out.say = chooseSpeech(p, normalize(p.drives));
+		// for the Mind Kit: how it feels now, and every 5 ticks (2 s) a
+		// moment of its mood, the last 450 (15 minutes)
+		viewDrives = normalize(p.drives);
+		viewD = overallDrive(viewDrives);
+		viewTick = p.tick;
+		viewX = p.x;
+		viewY = p.y;
+		if (moodLog.empty() || p.tick >= moodLog.back().tick + 5) {
+			int strongest = -1;
+			float most = 0;
+			for (int i = 0; i < NUM_DRIVES; i++)
+				if (viewDrives[i] > most)
+					most = viewDrives[i], strongest = i;
+			moodLog.push_back({p.tick, contentOf(viewD), strongest, most});
+			while (moodLog.size() > 450)
+				moodLog.pop_front();
+		}
 		return out;
+	}
+
+	// 0-1: how far the needs are from all at their worst
+	float contentOf(float D) const {
+		std::array<float, NUM_DRIVES> all; // (its own weights: temperament changes them)
+		all.fill(1.0f);
+		float worst = overallDrive(all);
+		return worst > 0 ? std::clamp(1.0f - D / worst, 0.0f, 1.0f) : 1.0f;
+	}
+
+	bool view(MindView& v) const override {
+		v.tick = viewTick;
+		for (int i = 0; i < NUM_DRIVES && i < 17; i++)
+			v.drives[i] = viewDrives[i];
+		v.content = contentOf(viewD);
+		v.x = viewX;
+		v.y = viewY;
+		v.choseAt = viewChose;
+		v.busy = inEpisode;
+		for (size_t k = 0; k < viewCandidates.size(); k++) {
+			const Candidate& c = viewCandidates[k];
+			MindView::Option o;
+			o.category = c.category;
+			o.decision = c.decision;
+			o.who = c.who;
+			o.want = c.want;
+			o.novelty = c.novelty;
+			o.score = c.score;
+			for (int i = 0; i < NUM_DRIVES && i < 17; i++)
+				o.ease[i] = viewEase[k][i];
+			if (auto it = expectations.find((c.category + 1) * 64 + c.decision); it != expectations.end())
+				o.tried = it->second.count;
+			o.chosen = k == 0;
+			o.food = c.food;
+			o.forage = c.forage;
+			o.route = c.route;
+			o.escape = c.escape;
+			o.scent = c.scent || !c.urge.empty();
+			o.travel = c.seekCategory >= 0 || c.chain;
+			v.options.push_back(o);
+		}
+		auto lesson = [&](int category, int decision, const std::string& who, const Expectation& e) {
+			MindView::Lesson l;
+			l.category = category;
+			l.decision = decision;
+			l.who = who;
+			l.count = e.count;
+			float good = 0;
+			for (int i = 0; i < NUM_DRIVES && i < 17; i++) {
+				l.delta[i] = e.delta[i];
+				good -= prm.weights[i] * e.delta[i];
+			}
+			l.value = std::clamp(good * 2.0f, -1.0f, 1.0f);
+			v.lessons.push_back(l);
+		};
+		for (auto& [key, e] : expectations)
+			if (e.count > 0)
+				lesson(key / 64 - 1, key % 64, "", e);
+		for (auto& [who, byDecision] : individuals)
+			for (auto& [decision, e] : byDecision)
+				if (e.count > 0)
+					lesson(-2, decision, who, e);
+		// where it has been: the place map's cells, with the time it was last
+		// in the wider stretch around each
+		for (auto& [cell, edges] : placeMap) {
+			MindView::Spot sp;
+			sp.x = cell.first * prm.cellWidth;
+			sp.y = cell.second * prm.cellHeight;
+			sp.w = prm.cellWidth;
+			sp.h = prm.cellHeight;
+			float cx = sp.x + sp.w / 2, cy = sp.y + sp.h / 2;
+			if (auto it = visited.find({(int)std::floor(cx / prm.visitBinWidth), (int)std::floor(cy / prm.visitBinHeight)}); it != visited.end())
+				sp.last = it->second;
+			v.visited.push_back(sp);
+		}
+		for (auto& f : foodPlaces)
+			v.food.push_back({f.x, f.y, f.confidence, f.meals, f.tick});
+		for (auto& l : links)
+			v.rides.push_back({l.x, l.fromY, l.toY, l.uses});
+		for (auto& m : moodLog)
+			v.mood.push_back({m.tick, m.content, m.strongest, m.strength});
+		return true;
 	}
 
 	MindOutput tickChoose(const MindPerception& p) {
@@ -649,6 +749,7 @@ class HomeostatMind : public CreatureMind {
 		}
 		std::array<float, NUM_DRIVES> d = normalize(p.drives);
 		float D = overallDrive(d);
+		lastTickForView = p.tick;
 
 		for (auto& h : habituation)
 			h += prm.habituationRecovery * (1.0f - h);
@@ -975,6 +1076,7 @@ class HomeostatMind : public CreatureMind {
 		if (candidates.empty())
 			return out;
 		Candidate choice = pick(candidates, D);
+		noteChoiceForView(candidates, choice, d, D);
 		// Asleep but not choosing to sleep (an interrupted sleep script, or
 		// a world saved mid-sleep): wake up first, or no other action can run.
 		bool chooseSleep = choice.category < 0 && choice.decision == prm.sleepDecision;
@@ -1362,6 +1464,54 @@ class HomeostatMind : public CreatureMind {
 	std::mt19937 rng;
 
 	bool inEpisode = false;
+	// for the Mind Kit (view): the options weighed at the last choice (the
+	// choice first), how each would ease each need, and a mood log
+	std::vector<Candidate> viewCandidates;
+	std::vector<std::array<float, NUM_DRIVES>> viewEase;
+	std::array<float, NUM_DRIVES> viewDrives{};
+	float viewD = 0, viewX = 0, viewY = 0;
+	unsigned int viewChose = 0, viewTick = 0;
+	struct MoodSample {
+		unsigned int tick;
+		float content;
+		int strongest;
+		float strength;
+	};
+	std::deque<MoodSample> moodLog;
+	void noteChoiceForView(const std::vector<Candidate>& candidates, const Candidate& choice, const std::array<float, NUM_DRIVES>& d, float D) {
+		std::vector<Candidate> sorted = candidates;
+		std::sort(sorted.begin(), sorted.end(), [](const Candidate& a, const Candidate& b) { return a.score > b.score; });
+		viewCandidates.clear();
+		viewCandidates.push_back(choice);
+		for (auto& c : sorted) {
+			if (viewCandidates.size() >= 6)
+				break;
+			if (c.category == choice.category && c.decision == choice.decision && c.who == choice.who)
+				continue;
+			viewCandidates.push_back(c);
+		}
+		// each option's expected ease, split among the needs: what easing
+		// each need alone by what it expects would do
+		viewEase.clear();
+		for (auto& c : viewCandidates) {
+			std::array<float, NUM_DRIVES> ease{};
+			auto it = expectations.find((c.category + 1) * 64 + c.decision);
+			float sum = 0;
+			if (it != expectations.end())
+				for (int i = 0; i < NUM_DRIVES; i++) {
+					std::array<float, NUM_DRIVES> after = d;
+					after[i] = std::clamp(d[i] + it->second.delta[i], 0.0f, 1.0f);
+					ease[i] = std::max(0.0f, D - overallDrive(after));
+					sum += ease[i];
+				}
+			float want = std::max(0.0f, c.want);
+			for (auto& e : ease)
+				e = sum > 0 ? e / sum * want : 0.0f;
+			viewEase.push_back(ease);
+		}
+		viewChose = lastTickForView;
+	}
+	unsigned int lastTickForView = 0;
 	float closest = 1e9f; // nearest the creature has been to its target this episode
 	int lastProgress = 0;
 	Candidate current{};

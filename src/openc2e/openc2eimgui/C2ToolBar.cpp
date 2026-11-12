@@ -583,7 +583,12 @@ void DrawC2Toolbar() {
 			OpenC2Kit("science");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Science Kit: body, genes, biochemistry and the syringe");
-		ImageButton(icon_unknown_maybe_neurosciencekit, false);
+		// (C2's Neuroscience Kit button opens our Mind Kit: our creatures
+		// have no neurons to show; owner, 2026-11-11)
+		if (ImageButton(icon_unknown_maybe_neurosciencekit, IsC2KitAvailable("mind")))
+			OpenC2Kit("mind");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Mind Kit: what the creature feels, is weighing, has learned and remembers");
 		if (ImageButton(icon_unknown_maybe_observationkit, IsC2KitAvailable("observation")))
 			OpenC2Kit("observation");
 		if (ImGui::IsItemHovered())

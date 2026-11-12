@@ -23,6 +23,7 @@ namespace Openc2eImgui {
 Texture KitPicture(const std::string& name); // a .bmp drawn as it is
 Texture KitPhotoTexture(const std::filesystem::path& path); // a photo in the world folder (cached)
 void DrawGraveyardKit();
+void DrawMindKit(); // MindKit.cpp
 void OpenGraveyardAt(const std::string& moniker); // the Graveyard Kit at that creature's stone
 const std::vector<Texture>& KitSprites(const std::string& name); // .s16 frames, transparent background
 
