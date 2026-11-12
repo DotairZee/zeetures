@@ -100,7 +100,6 @@
 namespace fs = std::filesystem;
 
 Engine engine;
-static bool s_middleDown = false; // the middle mouse button is held (for the middle-button log)
 
 Engine::Engine() {
 	done = false;
@@ -346,6 +345,24 @@ unsigned int Engine::msUntilTick() {
 	return (ival < 0) ? 0 : ival;
 }
 
+// The hand's x from the view's left edge, in world pixels, the short way
+// round a world that wraps: across Albia's seam (east end joined to west)
+// the view can start near x 8300 while the hand is at x 600, which is
+// 650 px into the view, not 7700 px left of it (owner, 2026-11-12: the hand
+// vanished while panning across the seam at any zoom but 100%, whose world
+// drawing already wraps)
+static int handViewX(Camera* cam, PointerAgent* hand) {
+	int dx = hand->pointerX() - (int)cam->getX();
+	MetaRoom* m = cam->getMetaRoom();
+	if (m && m->wraparound() && m->width() > 0) {
+		int w = (int)m->width();
+		dx = ((dx % w) + w) % w;
+		if (dx > w / 2)
+			dx -= w;
+	}
+	return dx;
+}
+
 void Engine::drawWorld() {
 	// draw the world
 
@@ -375,26 +392,10 @@ void Engine::drawWorld() {
 			main->blitRenderTarget(zoomtarget.get(), Rect2f(0, 0, zw * zoom, zh * zoom));
 			PointerAgent* hand = world.hand();
 			if (hand && hand->visible && !overWindow) {
-				int mx = (int)std::lround((hand->pointerX() - (int)camera->getX()) * zoom);
+				int mx = (int)std::lround(handViewX(camera.get(), hand) * zoom);
 				int my = (int)std::lround((hand->pointerY() - (int)camera->getY()) * zoom);
 				if (CompoundPart* p = hand->part(0))
 					p->render(main, mx - hand->pointerX(), my - hand->pointerY());
-			}
-		}
-		// while the middle button is held, a line every few frames: whether
-		// the hand was drawn, and if not why (owner, 2026-11-12: the hand
-		// vanishes while panning with the middle button when zoomed; not
-		// reproduced with synthetic input, so read from real use)
-		if (s_middleDown) {
-			static int frame = 0;
-			if (frame++ % 10 == 0) {
-				PointerAgent* hand = world.hand();
-				ImGuiWindow* hw = ImGui::GetCurrentContext()->HoveredWindow;
-				fmt::print("* MIDDLE frame: zoom {} overWindow {} ({}) visible {} hand {},{} camera {},{} on screen {},{} view {}x{} mouse {:.0f},{:.0f}\n",
-					zoom, overWindow, hw ? hw->Name : "-", hand && hand->visible, hand ? hand->pointerX() : 0, hand ? hand->pointerY() : 0,
-					camera->getX(), camera->getY(), hand ? (int)std::lround((hand->pointerX() - (int)camera->getX()) * zoom) : 0,
-					hand ? (int)std::lround((hand->pointerY() - (int)camera->getY()) * zoom) : 0, main->getWidth(), main->getHeight(),
-					ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
 			}
 		}
 	}
@@ -969,12 +970,6 @@ void Engine::handleResizedWindow() {
 void Engine::handleMouseMove(BackendEvent& event) {
 	// move the cursor
 	world.hand()->handleEvent(event);
-	if (event.button & buttonmiddle) { // (the middle-button log; see render)
-		static int n = 0;
-		if (n++ % 10 == 0)
-			fmt::print("* MIDDLE move: at {},{} rel {},{} hand {},{} camera {},{}\n", event.x, event.y, event.xrel, event.yrel,
-				world.hand()->pointerX(), world.hand()->pointerY(), camera->getX(), camera->getY());
-	}
 
 	// notify agents
 	for (std::list<std::shared_ptr<Agent>>::iterator i = world.agents.begin(); i != world.agents.end(); i++) {
@@ -991,15 +986,6 @@ void Engine::handleMouseMove(BackendEvent& event) {
 }
 
 void Engine::handleMouseButton(BackendEvent& event) {
-	if (event.button == buttonmiddle && event.wheel_x == 0 && event.wheel_y == 0)
-		s_middleDown = event.type == eventmousebuttondown;
-	if (event.button == buttonmiddle || ((event.wheel_x != 0 || event.wheel_y != 0) && s_middleDown)) {
-		static int n = 0;
-		if (n++ % 5 == 0 || event.button == buttonmiddle)
-			fmt::print("* MIDDLE button: {} button {} wheel {},{} at {},{} hand {},{} camera {},{}\n",
-				event.type == eventmousebuttondown ? "down" : "up", (int)event.button, event.wheel_x, event.wheel_y, event.x, event.y,
-				world.hand()->pointerX(), world.hand()->pointerY(), camera->getX(), camera->getY());
-	}
 	// C1/C2: wheel and two-finger touchpad scrolling pan the world view in any
 	// direction (their scripts have no use for the wheel). Directions follow
 	// the system's natural-scrolling setting, as SDL reports them.
@@ -1009,7 +995,7 @@ void Engine::handleMouseButton(BackendEvent& event) {
 			static float acc = 0;
 			acc += event.wheel_y;
 			if (std::fabs(acc) >= 1.0f) {
-				zoomStep(acc > 0 ? 1 : -1, (int)std::lround((world.hand()->pointerX() - (int)camera->getX()) * zoom),
+				zoomStep(acc > 0 ? 1 : -1, (int)std::lround(handViewX(camera.get(), world.hand()) * zoom),
 					(int)std::lround((world.hand()->pointerY() - (int)camera->getY()) * zoom));
 				acc = 0;
 			}
