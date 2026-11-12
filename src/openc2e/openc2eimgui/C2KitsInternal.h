@@ -47,19 +47,34 @@ Agent* KitCreatureAgent();
 const std::vector<std::string>& KitChemicalNames();
 const std::vector<std::pair<std::string, std::vector<int>>>& KitChemicalGroups();
 
-// For pages that need a creature: when none is selected, draws the kit's
-// cover picture with a note and returns false.
-bool KitNeedsCreature(const char* cover);
+// For pages that need a creature: when none is selected, says so and
+// returns false.
+bool KitNeedsCreature();
 
 // Draws a number in the kit's green LED digits (led.s16: 0-9, 10 blank,
 // 11 minus, 12 degrees C, 13 degrees F, 14 point) from a string of digits,
 // '-', '.', 'C', 'F' and spaces; returns the width drawn.
 float KitLed(ImVec2 p, const std::string& text);
 
-// A horizontal level bar in the kits' style (StatBack.bmp behind,
-// BigBarFront.bmp revealed up to the level), 0-1, with a label on it. A
-// "need" bar starts green and turns red as it fills; otherwise full is green.
+// A horizontal level bar, 0-1, with a label on it: flat, in the window's
+// frame color, filled green, amber or red (KitLevelColor). A "need" bar is
+// green when low and turns red as it fills; otherwise full is green.
 void KitBar(float level, const char* label, float width = 192, bool need = false);
+// The kits' own look (one style for every page; no C2 panel art):
+// green, amber or red for a level 0-1 (a need is good when low)
+ImU32 KitLevelColor(float level, bool need = false);
+// a section heading: warm text with a faint rule under it
+void KitHeading(const char* text);
+// a reading in a small panel: heading, the value large with its unit, a
+// line under it in a color, and optionally a trend line (oldest first)
+void KitStatTile(const char* id, const char* head, const std::string& big, const char* unit, const char* sub, ImU32 subColor, float width, const std::vector<float>* trend = nullptr);
+// a card: a gold-edged panel (as the Family page's cards); size.y 0 fits
+// its contents. Always call KitEndCard.
+bool KitBeginCard(const char* id, ImVec2 size);
+void KitEndCard();
+// the creature's latest photo (Owner's Kit), framed, at that size; a blank
+// frame when it has none
+void KitCreaturePhoto(Agent* a, ImVec2 size);
 
 // Gene notes: the captions and comments C2's genetics files give each gene
 // (Genetics/norn.gno, gren.gno, ettn.gno, by the creature's genus). Notes
@@ -79,10 +94,10 @@ void KitToggleFahrenheit();
 // Applet Data files of one kind in a subfolder ("Medicine", ".cob")
 std::vector<std::string> KitAppletDataFiles(const std::string& sub, const std::string& ext);
 
-// A shelf picture with the COBs of an Applet Data subfolder standing on it
-// (thumbnails; click one to read about it, then add it to the world).
-// shelves: the y of each shelf top; columns: the x of each place on a shelf.
-void KitCobShelf(const char* picture, const char* subfolder, const std::vector<float>& shelves, const std::vector<float>& columns, const char* hint, const char* added);
+// The COBs of an Applet Data subfolder as tiles (each one's own picture and
+// name; click one to read about it, then add it to the world). added: the
+// message after adding, with {} for its name.
+void KitCobShelf(const char* subfolder, const char* hint, const char* added);
 
 // ---- creatures and their records ----
 // every living C1/C2 creature in the world

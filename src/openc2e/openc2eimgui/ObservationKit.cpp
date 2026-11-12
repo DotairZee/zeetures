@@ -29,13 +29,9 @@ namespace Openc2eImgui {
 static void DetailsPage() {
 	auto creatures = KitLivingCreatures();
 	if (creatures.empty()) {
-		Texture t = KitPicture("Applet Data/Observation.bmp");
-		if (t) {
-			ImVec2 p = ImGui::GetCursorScreenPos();
-			DrawTexture(t, p);
-			ImGui::Dummy(ImVec2(t.width, t.height));
-		}
-		ImGui::TextDisabled("No creatures in this world.");
+		ImGui::Dummy(ImVec2(360, 20));
+		KitNote("No creatures in this world.");
+		ImGui::Dummy(ImVec2(360, 20));
 		return;
 	}
 	ImGui::Text("%d creature%s. Click a row to select it; Go to look at it.", (int)creatures.size(), creatures.size() == 1 ? "" : "s");

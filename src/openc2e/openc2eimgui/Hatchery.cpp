@@ -24,6 +24,7 @@
 #include "Breeds.h"
 #include "Agent.h"
 #include "C2Kits.h"
+#include "C2KitsInternal.h"
 #include "historyManager.h"
 #include "Engine.h"
 #include "creatures/BreedSlots.h"
@@ -257,7 +258,6 @@ void LoadHatchery() {
 			e.texture = LoadImageWithTransparentTopLeft(e.name)[0];
 		}
 	} else if (engine.version == 2) {
-		s_hatcherybackground = LoadImageWithTransparentTopLeft("Applet Data/Hatchery.bmp")[0];
 		s_omelette = LoadImageWithTransparentTopLeft("Applet Data/Omelette.s16");
 
 		s_c2eggs.clear();
@@ -387,29 +387,42 @@ void DrawHatchery() {
 				for (auto& f : picked)
 					ImportGenome(f);
 			}
-			// background
-			ImVec2 p = ImGui::GetCursorScreenPos();
-			DrawTexture(s_hatcherybackground, p);
-			ImGui::Dummy(ImVec2(320, 275));
-
-			// eggs: click one to send it into the world
+			// the eggs as tiles (owner, 2026-11-12: the kits' own style, not
+			// C2's incubator picture): each egg's own picture and its sex;
+			// click one to send it into the world
+			const float TW = 96, TH = 92;
+			const int per = 5;
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			int shown = 0;
 			for (size_t i = 0; i < s_c2eggs.size(); ++i) {
 				auto& egg = s_c2eggs[i];
 				if (egg.taken)
 					continue;
-				auto& tex = s_omelette[std::clamp(egg.frame, 0, 16)];
-				DrawTexture(tex, p + ImVec2(egg.x, egg.y));
-				ImGui::SetCursorScreenPos(p + ImVec2(egg.x, egg.y));
+				if (shown++ % per)
+					ImGui::SameLine();
+				ImVec2 at = ImGui::GetCursorScreenPos();
 				ImGui::PushID((int)i);
-				if (ImGui::InvisibleButton("egg", ImVec2(tex.width, tex.height)))
-					TakeC2Egg(i);
-				if (ImGui::IsItemHovered())
+				bool click = ImGui::InvisibleButton("egg", ImVec2(TW, TH));
+				bool hov = ImGui::IsItemHovered();
+				if (hov)
 					ImGui::SetTooltip("%s egg (%s)\nClick to place it in the world. It hatches where it lies, or sooner in the incubator.",
 						egg.gender == 2 ? "Female" : egg.gender == 1 ? "Male" : "Unknown-sex", egg.moniker.c_str());
 				ImGui::PopID();
+				dl->AddRectFilled(at, at + ImVec2(TW, TH), hov ? IM_COL32(38, 40, 48, 255) : IM_COL32(26, 28, 34, 255), 5);
+				dl->AddRect(at, at + ImVec2(TW, TH), hov ? IM_COL32(205, 170, 95, 255) : IM_COL32(70, 72, 80, 255), 5);
+				if (!s_omelette.empty()) {
+					auto& tex = s_omelette[std::clamp(egg.frame, 0, std::min(16, (int)s_omelette.size() - 1))];
+					DrawTexture(tex, at + ImVec2((TW - tex.width) / 2, 8 + (TH - 32 - tex.height) / 2));
+				}
+				const char* sex = egg.gender == 2 ? "female" : egg.gender == 1 ? "male" : "sex unknown";
+				ImU32 col = egg.gender == 2 ? IM_COL32(240, 150, 190, 255) : egg.gender == 1 ? IM_COL32(130, 180, 250, 255) : IM_COL32(170, 170, 170, 255);
+				ImVec2 ts = ImGui::CalcTextSize(sex);
+				dl->AddText(at + ImVec2((TW - ts.x) / 2, TH - ts.y - 6), col, sex);
+				if (click)
+					TakeC2Egg(i);
 			}
-			ImGui::SetCursorScreenPos(p + ImVec2(0, 275));
-			ImGui::Dummy(ImVec2(0, 0));
+			if (!shown)
+				KitNote("The Hatchery is empty. Its eggs come from the Eggs folder, or File > Import Genome.");
 			// (the breed dropdown, "As in the egg", was removed: unclear;
 			// owner, 2026-11-11. Breeds are chosen in the Breeder's Kit.)
 			// egg locator (owner, 2026-11-11): each click goes to the next
@@ -448,17 +461,6 @@ void DrawHatchery() {
 			}
 			if (!s_import_message.empty())
 				ImGui::TextUnformatted(s_import_message.c_str());
-			// TODO: gender markers and animation
-			// TODO: place shadows
-
-			// leftsideimg
-			DrawTexture(s_omelette[18], p + ImVec2(75, 176), 0.5);
-			// rightsideimg
-			DrawTexture(s_omelette[19], p + ImVec2(181, 162), 0.5);
-			// grabberimg
-			DrawTexture(s_omelette[20], p + ImVec2(150, 93));
-			// midsideimg
-			DrawTexture(s_omelette[21], p + ImVec2(141, 177));
 		}
 
 		ImGui::End();

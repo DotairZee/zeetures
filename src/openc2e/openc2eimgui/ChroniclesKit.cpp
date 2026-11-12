@@ -94,7 +94,7 @@ oldCreature* oldOf(Agent* a) {
 } // namespace
 
 void LifeStoryPage() {
-	if (!KitNeedsCreature("Applet Data/Owner.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	Agent* a = KitCreatureAgent();
 	monikerData* m = KitRecordsOf(a);

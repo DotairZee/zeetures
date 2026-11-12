@@ -27,6 +27,7 @@
 #include "fileformats/genomeFile.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
@@ -266,17 +267,12 @@ const std::vector<std::pair<std::string, std::vector<int>>>& KitChemicalGroups()
 	return s_chemnames.getChemicalGroups();
 }
 
-bool KitNeedsCreature(const char* cover) {
+bool KitNeedsCreature() {
 	if (KitCreature())
 		return true;
-	Texture t = KitPicture(cover);
-	if (t) {
-		KitCenterNext((float)t.width);
-		ImVec2 p = ImGui::GetCursorScreenPos();
-		DrawTexture(t, p);
-		ImGui::Dummy(ImVec2(t.width, t.height));
-	}
-	ImGui::TextDisabled("Select a creature to use this page.");
+	ImGui::Dummy(ImVec2(360, 30));
+	KitNote("No creature is selected. Pick one from the list above, or click a creature in the world.");
+	ImGui::Dummy(ImVec2(360, 30));
 	return false;
 }
 
@@ -314,31 +310,111 @@ float KitLed(ImVec2 p, const std::string& text) {
 	return x;
 }
 
+// ---- the kits' own look (owner, 2026-11-12: one style everywhere, not C2's
+// panel art; flat panels, bars and cards in the window's own colors) ----
+
+ImU32 KitLevelColor(float level, bool need) {
+	// green, amber, red: a need is good when low, anything else when high
+	float good = need ? 1.0f - level : level;
+	if (good > 0.7f)
+		return IM_COL32(77, 204, 77, 255);
+	if (good > 0.4f)
+		return IM_COL32(230, 179, 51, 255);
+	return IM_COL32(225, 72, 58, 255);
+}
+
 void KitBar(float level, const char* label, float width, bool need) {
-	Texture back = KitPicture("Applet Data/StatBack.bmp");
-	Texture front = KitPicture("Applet Data/BigBarFront.bmp");
 	ImVec2 p = ImGui::GetCursorScreenPos();
-	float h = back ? (float)back.height : 18.0f;
+	float h = ImGui::GetFrameHeight();
 	ImDrawList* dl = ImGui::GetWindowDrawList();
 	level = std::clamp(level, 0.0f, 1.0f);
-	if (back && front) {
-		dl->AddImage(back.as<ImTextureID>(), p, p + ImVec2(width, h));
-		if (need) // green when low, toward red as it fills
-			dl->AddImage(front.as<ImTextureID>(), p, p + ImVec2(width * level, h), ImVec2(1, 0), ImVec2(1 - level, 1));
-		else
-			dl->AddImage(front.as<ImTextureID>(), p, p + ImVec2(width * level, h), ImVec2(0, 0), ImVec2(level, 1));
-	} else {
-		dl->AddRectFilled(p, p + ImVec2(width, h), IM_COL32(40, 20, 50, 255));
-		dl->AddRectFilled(p, p + ImVec2(width * level, h), IM_COL32(60, 190, 60, 255));
-	}
-	dl->AddRect(p, p + ImVec2(width, h), IM_COL32(0, 0, 0, 160));
+	dl->AddRectFilled(p, p + ImVec2(width, h), ImGui::GetColorU32(ImGuiCol_FrameBg), 2);
+	if (level > 0)
+		dl->AddRectFilled(p, p + ImVec2(std::max(2.0f, width * level), h), KitLevelColor(level, need), 2);
 	if (label && *label) {
 		ImVec2 ts = ImGui::CalcTextSize(label);
 		ImVec2 tp = p + ImVec2(6, (h - ts.y) / 2);
-		dl->AddText(tp + ImVec2(1, 1), IM_COL32(0, 0, 0, 200), label);
+		dl->AddText(tp + ImVec2(1, 1), IM_COL32(0, 0, 0, 170), label);
 		dl->AddText(tp, IM_COL32(255, 255, 255, 255), label);
 	}
 	ImGui::Dummy(ImVec2(width, h));
+}
+
+void KitHeading(const char* text) {
+	ImGui::Spacing();
+	ImGui::TextColored(ImVec4(1.0f, 0.88f, 0.55f, 1), "%s", text);
+	ImVec2 p = ImGui::GetCursorScreenPos();
+	float w = ImGui::GetContentRegionAvail().x;
+	ImGui::GetWindowDrawList()->AddLine(p + ImVec2(0, -2), p + ImVec2(w, -2), IM_COL32(255, 225, 140, 60));
+}
+
+void KitStatTile(const char* id, const char* head, const std::string& big, const char* unit, const char* sub, ImU32 subColor, float width, const std::vector<float>* trend) {
+	const float h = 74;
+	ImVec2 p = ImGui::GetCursorScreenPos();
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	dl->AddRectFilled(p, p + ImVec2(width, h), IM_COL32(26, 28, 34, 255), 5);
+	dl->AddRect(p, p + ImVec2(width, h), IM_COL32(70, 72, 80, 255), 5);
+	dl->AddText(p + ImVec2(9, 6), ImGui::GetColorU32(ImGuiCol_TextDisabled), head);
+	// the reading, at twice the size
+	ImFont* f = ImGui::GetFont();
+	float fs = ImGui::GetFontSize() * 2;
+	dl->AddText(f, fs, p + ImVec2(9, 22), IM_COL32(235, 238, 242, 255), big.c_str());
+	float bw = f->CalcTextSizeA(fs, FLT_MAX, 0, big.c_str()).x;
+	if (unit && *unit)
+		dl->AddText(p + ImVec2(13 + bw, 22 + fs - ImGui::GetFontSize() - 2), ImGui::GetColorU32(ImGuiCol_TextDisabled), unit);
+	if (sub && *sub)
+		dl->AddText(p + ImVec2(9, h - ImGui::GetFontSize() - 6), subColor, sub);
+	// a trend line at the right, newest last
+	if (trend && trend->size() >= 2) {
+		float lo = *std::min_element(trend->begin(), trend->end()), hi = *std::max_element(trend->begin(), trend->end());
+		if (hi - lo < 1e-3f) {
+			lo -= 1;
+			hi += 1;
+		}
+		float x0 = p.x + width - 64, x1 = p.x + width - 9, y0 = p.y + h - 26, y1 = p.y + h - 8;
+		std::vector<ImVec2> pts;
+		for (size_t i = 0; i < trend->size(); i++)
+			pts.push_back(ImVec2(x0 + (x1 - x0) * i / (trend->size() - 1), y1 - (y1 - y0) * ((*trend)[i] - lo) / (hi - lo)));
+		dl->AddPolyline(pts.data(), (int)pts.size(), IM_COL32(110, 160, 230, 255), 0, 2);
+	}
+	ImGui::PushID(id);
+	ImGui::InvisibleButton("tile", ImVec2(width, h));
+	ImGui::PopID();
+}
+
+void KitCreaturePhoto(Agent* a, ImVec2 size) {
+	ImVec2 p = ImGui::GetCursorScreenPos();
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	monikerData* m = a ? KitRecordsOf(a) : nullptr;
+	Texture t = m && !m->photos.empty() ? KitPhotoTexture(engine.currentworlddir / m->photos.back()) : Texture();
+	if (t)
+		dl->AddImage(t.as<ImTextureID>(), p, p + size);
+	else {
+		dl->AddRectFilled(p, p + size, IM_COL32(18, 18, 20, 255));
+		const char* none = "no photo yet";
+		ImVec2 ns = ImGui::CalcTextSize(none);
+		dl->AddText(p + ImVec2((size.x - ns.x) / 2, (size.y - ns.y) / 2), IM_COL32(110, 110, 110, 255), none);
+	}
+	dl->AddRect(p - ImVec2(1, 1), p + size + ImVec2(1, 1), IM_COL32(205, 170, 95, 255));
+	ImGui::Dummy(size);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", t ? "Its latest photo (Owner's Kit, Photos)" : "Take one in the Owner's Kit, Photos");
+}
+
+bool KitBeginCard(const char* id, ImVec2 size) {
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(28, 29, 33, 255));
+	ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(205, 170, 95, 255));
+	ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6);
+	ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 2);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12, 10));
+	bool open = ImGui::BeginChild(id, size, ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding | (size.y == 0 ? ImGuiChildFlags_AutoResizeY : 0));
+	return open;
+}
+
+void KitEndCard() {
+	ImGui::EndChild();
+	ImGui::PopStyleVar(3);
+	ImGui::PopStyleColor(2);
 }
 
 // ---- creatures and their records -----------------------------------------------
@@ -764,49 +840,56 @@ static std::vector<ShelfItem>& shelfItems(const std::string& sub) {
 	return list;
 }
 
-void KitCobShelf(const char* picture, const char* subfolder, const std::vector<float>& shelves, const std::vector<float>& columns, const char* hint, const char* added) {
+void KitCobShelf(const char* subfolder, const char* hint, const char* added) {
 	static std::map<std::string, int> selectedBy;
 	static std::map<std::string, std::string> messageBy;
 	int& selected = selectedBy.try_emplace(subfolder, -1).first->second;
 	std::string& message = messageBy[subfolder];
 	auto& items = shelfItems(subfolder);
-	Texture bg = KitPicture(picture);
-	ImVec2 p = ImGui::GetCursorScreenPos();
-	DrawTexture(bg, p);
-	ImGui::Dummy(ImVec2(bg ? bg.width : 314, bg ? bg.height : 195));
-	ImVec2 after = ImGui::GetCursorScreenPos();
-	size_t per = columns.size();
-	for (size_t i = 0; i < items.size() && i < per * shelves.size(); i++) {
-		auto& m = items[i];
-		float w = m.picture ? (float)m.picture.width : 24, h = m.picture ? (float)m.picture.height : 24;
-		float sc = std::min(1.0f, std::min(80.0f / w, 52.0f / h)); // fit a shelf
-		ImVec2 sz(w * sc, h * sc);
-		ImVec2 at = p + ImVec2(columns[i % per] - sz.x / 2, shelves[i / per] - sz.y);
-		ImGui::SetCursorScreenPos(at);
-		ImGui::PushID((int)i);
-		if (ImGui::InvisibleButton("item", sz))
-			selected = (int)i;
-		bool hov = ImGui::IsItemHovered();
-		ImGui::PopID();
-		ImDrawList* dl = ImGui::GetWindowDrawList();
-		if ((int)i == selected || hov)
-			dl->AddRectFilled(at - 3, at + sz + 3, (int)i == selected ? IM_COL32(255, 230, 120, 90) : IM_COL32(255, 255, 255, 50), 4);
-		if (m.picture)
-			dl->AddImage(m.picture.as<ImTextureID>(), at, at + sz);
-		else
-			dl->AddText(at, IM_COL32(0, 0, 0, 255), m.name.c_str());
-		if (hov)
-			ImGui::SetTooltip("%s", m.name.c_str());
-	}
-	ImGui::SetCursorScreenPos(after);
 	if (items.empty()) {
 		ImGui::TextDisabled("Nothing found in Applet Data/%s.", subfolder);
 		return;
 	}
+	// the items as tiles, four to a row: each one's own picture, its name
+	const float TW = 124, TH = 92;
+	const int per = 4;
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	for (size_t i = 0; i < items.size(); i++) {
+		auto& m = items[i];
+		if (i % per)
+			ImGui::SameLine();
+		ImVec2 at = ImGui::GetCursorScreenPos();
+		ImGui::PushID((int)i);
+		if (ImGui::InvisibleButton("item", ImVec2(TW, TH)))
+			selected = (int)i;
+		bool hov = ImGui::IsItemHovered();
+		ImGui::PopID();
+		bool sel = (int)i == selected;
+		dl->AddRectFilled(at, at + ImVec2(TW, TH), sel ? IM_COL32(48, 44, 30, 255) : hov ? IM_COL32(38, 40, 48, 255) : IM_COL32(26, 28, 34, 255), 5);
+		dl->AddRect(at, at + ImVec2(TW, TH), sel ? IM_COL32(205, 170, 95, 255) : IM_COL32(70, 72, 80, 255), 5, 0, sel ? 2.0f : 1.0f);
+		if (m.picture) {
+			float w = (float)m.picture.width, h = (float)m.picture.height;
+			float sc = std::min(1.0f, std::min((TW - 16) / w, (TH - 30) / h));
+			ImVec2 sz(w * sc, h * sc);
+			ImVec2 ip = at + ImVec2((TW - sz.x) / 2, 6 + (TH - 30 - sz.y) / 2);
+			dl->AddImage(m.picture.as<ImTextureID>(), ip, ip + sz);
+		}
+		// the name, cut to fit
+		std::string name = m.name;
+		while (name.size() > 3 && ImGui::CalcTextSize(name.c_str()).x > TW - 10)
+			name = name.substr(0, name.size() - 4) + "...";
+		ImVec2 ts = ImGui::CalcTextSize(name.c_str());
+		dl->AddText(at + ImVec2((TW - ts.x) / 2, TH - ts.y - 6), IM_COL32(222, 224, 228, 255), name.c_str());
+		if (hov)
+			ImGui::SetTooltip("%s", m.name.c_str());
+	}
+	ImGui::Spacing();
+	const float width = per * TW + (per - 1) * ImGui::GetStyle().ItemSpacing.x;
 	if (selected >= 0 && selected < (int)items.size()) {
 		auto& m = items[selected];
-		ImGui::TextUnformatted(m.name.c_str());
-		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + (bg ? bg.width : 314));
+		KitBeginCard("about", ImVec2(width, 0));
+		ImGui::TextColored(ImVec4(1.0f, 0.88f, 0.55f, 1), "%s", m.name.c_str());
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + width - 24);
 		ImGui::TextDisabled("%s", m.description.c_str());
 		ImGui::PopTextWrapPos();
 		if (ImGui::Button("Add to the world")) {
@@ -818,8 +901,9 @@ void KitCobShelf(const char* picture, const char* subfolder, const std::vector<f
 				message = fmt::format("Couldn't add {}: {}", m.name, e.what());
 			}
 		}
+		KitEndCard();
 	} else {
-		ImGui::TextDisabled("%s", hint);
+		KitNote("%s", hint);
 	}
 	if (!message.empty())
 		ImGui::TextUnformatted(message.c_str());

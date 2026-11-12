@@ -29,7 +29,7 @@ static std::string chemName(int i) {
 // ---- Physical ------------------------------------------------------------------
 
 static void PhysicalPage() {
-	if (!KitNeedsCreature("Applet Data/Science.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	c2Creature* c = KitCreature();
 	auto& organs = c->getOrgans();
@@ -118,7 +118,7 @@ static std::string geneSummary(gene* g) {
 }
 
 static void DnaPage() {
-	if (!KitNeedsCreature("Applet Data/Science.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	c2Creature* c = KitCreature();
 	auto genome = c->getGenome();
@@ -231,7 +231,7 @@ static void sampleChemistry() {
 }
 
 static void BiochemistryPage() {
-	if (!KitNeedsCreature("Applet Data/Science.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	c2Creature* c = KitCreature();
 	static std::vector<int> shown = {99, 72, 172}; // ATP, glycogen, adrenaline
@@ -342,7 +342,7 @@ static const std::vector<Mixture>& mixtures() {
 }
 
 static void SyringePage() {
-	if (!KitNeedsCreature("Applet Data/Science.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	c2Creature* c = KitCreature();
 	static int mode = 0; // 0 a mixture, 1 one chemical
@@ -352,9 +352,6 @@ static void SyringePage() {
 
 	// the syringe, filled to the dose in the mixture's color
 	ImVec2 p = ImGui::GetCursorScreenPos();
-	Texture bg = KitPicture("Applet Data/SyringeBG.bmp");
-	Texture fluid = KitPicture("Applet Data/SyringeFluid.bmp");
-	DrawTexture(bg, p);
 	float fill;
 	ImU32 tint;
 	if (mode == 0 && mix < (int)mixes.size()) {
@@ -384,22 +381,31 @@ static void SyringePage() {
 		shown = 0;
 	else if (since < 1.9f)
 		shown = fill * ease((since - 1.3f) / 0.6f);
+	// our own syringe, drawn: barrel, fluid, plunger, needle
 	ImDrawList* dl = ImGui::GetWindowDrawList();
-	float h = fluid ? fluid.height * shown : 0;
-	if (fluid && shown > 0) {
-		ImVec2 a = p + ImVec2(17, 192 - h);
-		dl->AddImage(fluid.as<ImTextureID>(), a, a + ImVec2(fluid.width, h), ImVec2(0, 1 - shown), ImVec2(1, 1), tint);
+	const float bx0 = 16, bx1 = 48, by0 = 44, by1 = 204; // the barrel's inside
+	const float maxFluid = by1 - by0 - 10;
+	float h = maxFluid * shown;
+	// the plunger: its head resting on the fluid, the rod up through the flange
+	float head = by1 - h - 8;
+	dl->AddRectFilled(p + ImVec2(29, 0), p + ImVec2(35, head), IM_COL32(150, 156, 168, 255));
+	dl->AddRectFilled(p + ImVec2(20, 0), p + ImVec2(44, 6), IM_COL32(170, 176, 188, 255), 2);
+	// the barrel's glass
+	dl->AddRectFilled(p + ImVec2(bx0, by0), p + ImVec2(bx1, by1), IM_COL32(40, 46, 60, 170), 4);
+	if (h > 0)
+		dl->AddRectFilled(p + ImVec2(bx0 + 2, by1 - h), p + ImVec2(bx1 - 2, by1 - 2), (tint & 0x00FFFFFF) | IM_COL32(0, 0, 0, 220), 3);
+	dl->AddRectFilled(p + ImVec2(bx0 + 2, head), p + ImVec2(bx1 - 2, head + 8), IM_COL32(60, 62, 70, 255), 2);
+	// a highlight down the glass, and the dose marks
+	dl->AddRectFilled(p + ImVec2(bx0 + 4, by0 + 6), p + ImVec2(bx0 + 7, by1 - 6), IM_COL32(255, 255, 255, 40), 1);
+	for (int k = 1; k < 10; k++) {
+		float y = by1 - 4 - k * (maxFluid / 10);
+		dl->AddLine(p + ImVec2(bx1 - (k % 5 ? 7 : 12), y), p + ImVec2(bx1 - 1, y), IM_COL32(200, 215, 235, 150));
 	}
-	// the plunger (its head resting on the fluid) and the barrel's glass
-	// front over both, from C2's own pictures; the rod is cut off at the top
-	// of the picture
-	auto& bits = KitSprites("Applet Data/SyringeBits.s16");
-	if (bits.size() >= 2) {
-		dl->PushClipRect(p, p + ImVec2(64, 256), true);
-		DrawTexture(bits[0], p + ImVec2(16, 192 - h - bits[0].height + 1));
-		dl->PopClipRect();
-		DrawTexture(bits[1], p + ImVec2(9, 38));
-	}
+	dl->AddRect(p + ImVec2(bx0, by0), p + ImVec2(bx1, by1), IM_COL32(150, 170, 200, 255), 4, 0, 1.5f);
+	// the finger flange, the hub and the needle
+	dl->AddRectFilled(p + ImVec2(6, by0 - 6), p + ImVec2(58, by0), IM_COL32(150, 170, 200, 255), 2);
+	dl->AddRectFilled(p + ImVec2(26, by1), p + ImVec2(38, by1 + 12), IM_COL32(150, 170, 200, 255), 2);
+	dl->AddLine(p + ImVec2(32, by1 + 12), p + ImVec2(32, 252), IM_COL32(205, 212, 222, 255), 2);
 	ImGui::Dummy(ImVec2(64, 256));
 	ImGui::SameLine();
 

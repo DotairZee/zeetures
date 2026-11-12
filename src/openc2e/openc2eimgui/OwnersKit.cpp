@@ -41,8 +41,23 @@ static const char* stageWord(int st) {
 
 // ---- Registration ------------------------------------------------------------------
 
+static monikerData* recordOf(const std::string& mon);
+static std::string recordName(monikerData* m);
+static unsigned int photoTick(const std::string& file);
+static std::string takePhoto(Agent* a, monikerData& m);
+
+// a seal for a registered birth: our own, drawn (red wax, a ribbon, a tick)
+static void drawSeal(ImDrawList* dl, ImVec2 c, float r) {
+	dl->AddTriangleFilled(c + ImVec2(-r * 0.6f, r * 0.4f), c + ImVec2(-r * 0.15f, r * 0.5f), c + ImVec2(-r * 0.75f, r * 1.7f), IM_COL32(70, 90, 170, 255));
+	dl->AddTriangleFilled(c + ImVec2(r * 0.6f, r * 0.4f), c + ImVec2(r * 0.15f, r * 0.5f), c + ImVec2(r * 0.75f, r * 1.7f), IM_COL32(70, 90, 170, 255));
+	dl->AddCircleFilled(c, r, IM_COL32(150, 24, 28, 255), 24);
+	dl->AddCircleFilled(c - ImVec2(r * 0.15f, r * 0.15f), r * 0.82f, IM_COL32(196, 42, 44, 255), 24);
+	dl->AddCircle(c, r * 0.62f, IM_COL32(120, 16, 20, 255), 24, 1.5f);
+	dl->AddPolyline(std::vector<ImVec2>{c + ImVec2(-r * 0.32f, 0), c + ImVec2(-r * 0.08f, r * 0.26f), c + ImVec2(r * 0.36f, -r * 0.28f)}.data(), 3, IM_COL32(255, 220, 200, 255), 0, 2.5f);
+}
+
 static void RegistrationPage() {
-	if (!KitNeedsCreature("Applet Data/Owner.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	Agent* a = KitCreatureAgent();
 	c2Creature* c = KitCreature();
@@ -51,14 +66,41 @@ static void RegistrationPage() {
 		ImGui::TextDisabled("This creature has no records.");
 		return;
 	}
-	Texture cert = KitPicture("Applet Data/Certificate.bmp");
-	const float textX = ImGui::GetCursorPosX(); // the text below starts at the left
-	KitCenterNext(cert ? (float)cert.width : 320);
-	ImVec2 p = ImGui::GetCursorScreenPos();
-	DrawTexture(cert, p);
-	ImDrawList* dl = ImGui::GetWindowDrawList();
+	const float W = 560;
+	const ImVec4 gold(0.86f, 0.70f, 0.40f, 1), dim = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+	int st = m->died ? m->diedstage : (int)c->getStage();
+	std::string mon = world.history->findMoniker(c->getGenome());
 
-	// the name, written on the certificate
+	KitBeginCard("idcard", ImVec2(W, 0));
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	// its latest photo (the Photos page takes more)
+	const float PW = 168, PH = 126;
+	ImVec2 pp = ImGui::GetCursorScreenPos();
+	int n = (int)m->photos.size();
+	Texture tex = n ? KitPhotoTexture(engine.currentworlddir / m->photos[n - 1]) : Texture();
+	if (tex)
+		dl->AddImage(tex.as<ImTextureID>(), pp, pp + ImVec2(PW, PH));
+	else {
+		dl->AddRectFilled(pp, pp + ImVec2(PW, PH), IM_COL32(18, 18, 20, 255));
+		const char* none = "no photo yet";
+		ImVec2 ns = ImGui::CalcTextSize(none);
+		dl->AddText(pp + ImVec2((PW - ns.x) / 2, (PH - ns.y) / 2), IM_COL32(110, 110, 110, 255), none);
+	}
+	dl->AddRect(pp - ImVec2(1, 1), pp + ImVec2(PW + 1, PH + 1), IM_COL32(205, 170, 95, 255));
+	ImGui::Dummy(ImVec2(PW, PH));
+	if (n) {
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + PW);
+		ImGui::TextDisabled("photo, %s", KitDateText(photoTick(m->photos[n - 1])).c_str());
+		ImGui::PopTextWrapPos();
+	}
+	else if (ImGui::SmallButton("Take a photo"))
+		takePhoto(a, *m);
+	float leftBottom = ImGui::GetCursorPosY();
+
+	// the details, right of the photo
+	ImGui::SetCursorScreenPos(pp + ImVec2(PW + 18, 0));
+	ImGui::BeginGroup();
+	// the name, which the owner may change
 	static char name[64];
 	static monikerData* editing = nullptr;
 	// (and when it was named elsewhere: a default name given to a blank one)
@@ -66,42 +108,61 @@ static void RegistrationPage() {
 		editing = m;
 		std::snprintf(name, sizeof(name), "%s", m->name.c_str());
 	}
-	dl->AddText(p + ImVec2(34, 100), INK, "This is to certify the birth of");
-	ImGui::SetCursorScreenPos(p + ImVec2(30, 118));
-	ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(255, 240, 210, 90));
-	ImGui::PushStyleColor(ImGuiCol_Text, INK);
-	ImGui::SetNextItemWidth(200);
+	ImGui::SetNextItemWidth(W - PW - 60);
 	if (ImGui::InputTextWithHint("##name", "type a name", name, sizeof(name)))
 		m->name = name;
-	ImGui::PopStyleColor(2);
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("Its name (kept with the world)");
+	ImGui::TextColored(gold, "%s %s, %s", c->isFemale() ? "female" : "male", KitSpeciesWord(a), stageWord(st));
+	ImGui::Spacing();
+	auto row = [&](const char* k, const std::string& v) {
+		ImGui::TextColored(dim, "%-10s", k);
+		ImGui::SameLine(0, 4);
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + W - PW - 160);
+		ImGui::TextUnformatted(v.c_str());
+		ImGui::PopTextWrapPos();
+	};
+	row(m->bornknown ? "Born" : "First seen", KitDateText(m->borntick));
+	if (m->died)
+		row("Died", KitDateText(m->diedtick));
+	else
+		row("Age", (m->bornknown ? "" : "at least ") + KitAgeText(KitAgeTicks(*m), false));
+	auto nameOf = [](const std::string& mm) {
+		monikerData* r = recordOf(mm);
+		return r ? recordName(r) : std::string("unknown");
+	};
+	if (m->mother.empty() && m->father.empty())
+		row("Parents", "none: it hatched from an egg laid by the Hatchery or the Breeder's Kit");
+	else
+		row("Parents", fmt::format("{} and {}", m->mother.empty() ? "unknown" : nameOf(m->mother), m->father.empty() ? "unknown" : nameOf(m->father)));
+	std::vector<std::string> kids;
+	for (auto& [k, r] : world.history->all())
+		if (!mon.empty() && (r.mother == mon || r.father == mon))
+			kids.push_back(recordName(&r));
+	std::string kidText;
+	for (size_t i = 0; i < kids.size(); i++)
+		kidText += (i ? (i + 1 == kids.size() ? " and " : ", ") : "") + kids[i];
+	row("Children", kids.empty() ? "none yet" : kidText);
+	row("Moniker", mon);
+	ImGui::EndGroup();
+	float rightBottom = ImGui::GetCursorPosY();
 
-	std::string what = fmt::format("a {} {}", c->isFemale() ? "female" : "male", KitSpeciesWord(a));
-	dl->AddText(p + ImVec2(34, 148), INK, what.c_str());
-	std::string born = fmt::format("{} {}", m->bornknown ? "born" : "first seen", KitDateText(m->borntick));
-	dl->AddText(p + ImVec2(34, 166), INK, born.c_str());
-	std::string age = "age " + KitAgeText(KitAgeTicks(*m), false); // game time on the certificate
-	dl->AddText(p + ImVec2(34, 184), INK, age.c_str());
-	int st = m->died ? m->diedstage : (int)c->getStage();
-	std::string stage = fmt::format("life stage: {}", stageWord(st));
-	dl->AddText(p + ImVec2(34, 202), INK, stage.c_str());
-	std::string mon = "moniker " + world.history->findMoniker(c->getGenome());
-	dl->AddText(p + ImVec2(34, 220), IM_COL32(74, 46, 22, 150), mon.c_str());
-	if (m->died) // the details go below (the seal leaves no room)
-		dl->AddText(p + ImVec2(34, 238), IM_COL32(120, 20, 20, 255), "DECEASED");
-
+	// registration: a button, or the seal
+	ImGui::SetCursorPosY(std::max(leftBottom, rightBottom) + 6);
 	if (m->registered) {
-		dl->AddText(p + ImVec2(34, 262), IM_COL32(160, 20, 20, 255), "REGISTERED");
+		ImVec2 sp = ImGui::GetCursorScreenPos();
+		drawSeal(dl, sp + ImVec2(18, 16), 15);
+		ImGui::SetCursorScreenPos(sp + ImVec2(44, 8));
+		ImGui::TextColored(ImVec4(0.95f, 0.55f, 0.5f, 1), "Registered");
+		ImGui::SetCursorScreenPos(sp + ImVec2(0, 44));
 	} else {
-		ImGui::SetCursorScreenPos(p + ImVec2(30, 258));
 		if (ImGui::Button("Register this birth"))
 			m->registered = true;
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Seal the certificate. The name can still be changed.");
+			ImGui::SetTooltip("Seal its record. The name can still be changed.");
 	}
-	ImGui::SetCursorScreenPos(p + ImVec2(0, cert ? cert.height + 4 : 324));
-	ImGui::SetCursorPosX(textX);
+	KitEndCard();
+
 	if (m->died) {
 		std::string age = KitAgeText(KitAgeTicks(*m), false);
 		KitNoteColored(ImVec4(0.85f, 0.45f, 0.45f, 1), "Died %s, aged %s%s, a%s %s.", KitDateText(m->diedtick).c_str(), m->bornknown ? "" : "at least ",
@@ -187,7 +248,7 @@ static std::string takePhoto(Agent* a, monikerData& m) {
 }
 
 static void PhotosPage() {
-	if (!KitNeedsCreature("Applet Data/Owner.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	Agent* a = KitCreatureAgent();
 	monikerData* m = KitRecordsOf(a);
@@ -219,22 +280,18 @@ static void PhotosPage() {
 		ImGui::TextDisabled("%s", message.c_str());
 	}
 
-	// the album: a film strip of thumbnails, three to a row
-	auto& film = KitSprites("Applet Data/film.s16");
+	// the album: thumbnails in frames, three to a row
 	const float cellW = 136, thumbW = 120, thumbH = 90;
 	ImVec2 p = ImGui::GetCursorScreenPos();
 	ImDrawList* dl = ImGui::GetWindowDrawList();
 	int rows = ((int)m->photos.size() + 2) / 3;
-	float rowH = thumbH + 36;
-	dl->AddRectFilled(p, p + ImVec2(cellW * 3, std::max(1, rows) * rowH), IM_COL32(18, 18, 20, 255));
+	float rowH = thumbH + 22;
 	for (size_t i = 0; i < m->photos.size(); i++) {
 		ImVec2 cell = p + ImVec2(cellW * (i % 3), rowH * (i / 3));
-		if (film.size() > 2) {
-			DrawTexture(film[2], cell);
-			DrawTexture(film[2], cell + ImVec2(0, rowH - 16));
-		}
+		dl->AddRectFilled(cell + ImVec2(2, 2), cell + ImVec2(cellW - 2, rowH - 2), IM_COL32(26, 28, 34, 255), 5);
+		dl->AddRect(cell + ImVec2(2, 2), cell + ImVec2(cellW - 2, rowH - 2), IM_COL32(70, 72, 80, 255), 5);
 		Texture t = KitPhotoTexture(engine.currentworlddir / m->photos[i]);
-		ImVec2 at = cell + ImVec2((cellW - thumbW) / 2, 18);
+		ImVec2 at = cell + ImVec2((cellW - thumbW) / 2, 11);
 		if (t)
 			dl->AddImage(t.as<ImTextureID>(), at, at + ImVec2(thumbW, thumbH));
 		else
@@ -1039,7 +1096,7 @@ static void familyZoom(ImVec2 r0, ImVec2 r1) {
 }
 
 static void FamilyPage() {
-	if (!KitNeedsCreature("Applet Data/Owner.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	Agent* a = KitCreatureAgent();
 	monikerData* m = KitRecordsOf(a);
@@ -1215,7 +1272,7 @@ static void TraitBar(int trait, int percent, const char* label, float width) {
 // traits (creatures/Temperament.h), each where it stands among creatures
 // (50% is average), and a few words for the strongest.
 static void TemperamentPage() {
-	if (!KitNeedsCreature("Applet Data/Owner.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	Agent* a = KitCreatureAgent();
 	auto* ca = dynamic_cast<CreatureAgent*>(a);

@@ -557,7 +557,7 @@ void MoodPage(const MindView& v) {
 
 void DrawMindKit() {
 	KitCreatureHeader();
-	if (!KitNeedsCreature("Applet Data/Owner.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	Agent* a = KitCreatureAgent();
 	c2Creature* c = KitCreature();

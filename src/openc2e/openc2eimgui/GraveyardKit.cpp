@@ -56,15 +56,6 @@ std::string causeOf(const std::string& mon) {
 	return "";
 }
 
-// text centered at y, engraved: a light edge below, dark letters
-void engraved(ImDrawList* dl, ImVec2 origin, float width, float y, float size, const std::string& text, ImU32 col) {
-	ImFont* font = ImGui::GetFont();
-	ImVec2 ts = font->CalcTextSizeA(size, FLT_MAX, width - 40, text.c_str());
-	ImVec2 p(origin.x + (width - ts.x) / 2, origin.y + y);
-	dl->AddText(font, size, ImVec2(p.x + 1, p.y + 1), IM_COL32(168, 168, 154, 230), text.c_str(), nullptr, width - 40);
-	dl->AddText(font, size, p, col, text.c_str(), nullptr, width - 40);
-}
-
 } // namespace
 
 void OpenGraveyardAt(const std::string& moniker) {
@@ -82,10 +73,9 @@ void DrawGraveyardKit() {
 	}
 	auto dead = theDead();
 	if (dead.empty()) {
-		Texture cover = KitPicture("Applet Data/GraveyardCover.bmp");
-		if (cover)
-			ImGui::Image(cover.as<ImTextureID>(), ImVec2((float)cover.width, (float)cover.height));
-		ImGui::TextWrapped("No creature has died in this world yet.");
+		ImGui::Dummy(ImVec2(360, 20));
+		KitNote("No creature has died in this world yet.");
+		ImGui::Dummy(ImVec2(360, 20));
 		return;
 	}
 	int idx = 0;
@@ -96,7 +86,7 @@ void DrawGraveyardKit() {
 	monikerData& m = world.history->getMoniker(s_selected);
 
 	// stepping through the stones, or picking one by name
-	const float W = 360.0f;
+	const float W = 480.0f;
 	if (ImGui::ArrowButton("##prev", ImGuiDir_Left) && idx > 0)
 		s_selected = dead[--idx];
 	if (ImGui::IsItemHovered())
@@ -121,66 +111,57 @@ void DrawGraveyardKit() {
 		ImGui::SetTooltip("Older");
 	monikerData& r = world.history->getMoniker(s_selected);
 
-	// the stone
-	Texture stone = KitPicture("Applet Data/grave.bmp");
-	ImVec2 o = ImGui::GetCursorScreenPos();
-	const float H = stone ? W * stone.height / stone.width : 450.0f;
-	ImDrawList* dl = ImGui::GetWindowDrawList();
-	if (stone)
-		dl->AddImage(stone.as<ImTextureID>(), o, ImVec2(o.x + W, o.y + H));
-	else
-		dl->AddRectFilled(o, ImVec2(o.x + W, o.y + H), IM_COL32(96, 98, 90, 255), 40.0f);
-	ImGui::Dummy(ImVec2(W, H));
-
-	// the photo, set into the stone over the carved emblem
+	// the memorial card: its photo, and what is remembered of it
 	std::string photo = r.gravephoto;
 	if (photo.empty() && !r.photos.empty())
 		photo = r.photos.back();
-	float y = H * 0.24f;
-	if (!photo.empty()) {
-		Texture t = KitPhotoTexture(engine.currentworlddir / photo);
-		if (t) {
-			const float pw = 120, ph = 100;
-			ImVec2 p0(o.x + (W - pw) / 2, o.y + y);
-			// cropped to the frame's shape from the middle of the photo
-			float aspect = (float)t.width / t.height, frame = pw / ph;
-			ImVec2 uv0(0, 0), uv1(1, 1);
-			if (aspect > frame) {
-				float k = frame / aspect;
-				uv0.x = (1 - k) / 2;
-				uv1.x = 1 - uv0.x;
-			} else {
-				float k = aspect / frame;
-				uv0.y = (1 - k) / 2;
-				uv1.y = 1 - uv0.y;
-			}
-			dl->AddRectFilled(ImVec2(p0.x - 6, p0.y - 6), ImVec2(p0.x + pw + 6, p0.y + ph + 6), IM_COL32(70, 72, 64, 255), ph / 2 + 6);
-			dl->AddImageRounded(t.as<ImTextureID>(), p0, ImVec2(p0.x + pw, p0.y + ph), uv0, uv1, IM_COL32_WHITE, ph / 2);
-		}
+	KitBeginCard("memorial", ImVec2(W, 0));
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	const float pw = 160, ph = 120;
+	ImVec2 p0 = ImGui::GetCursorScreenPos();
+	Texture t = photo.empty() ? Texture() : KitPhotoTexture(engine.currentworlddir / photo);
+	if (t)
+		dl->AddImage(t.as<ImTextureID>(), p0, p0 + ImVec2(pw, ph));
+	else {
+		dl->AddRectFilled(p0, p0 + ImVec2(pw, ph), IM_COL32(18, 18, 20, 255));
+		const char* none = "no photo";
+		ImVec2 ns = ImGui::CalcTextSize(none);
+		dl->AddText(p0 + ImVec2((pw - ns.x) / 2, (ph - ns.y) / 2), IM_COL32(110, 110, 110, 255), none);
 	}
-
-	// the words on it
-	ImU32 ink = IM_COL32(30, 32, 27, 255);
-	float ty = H * 0.50f;
-	engraved(dl, o, W, ty, 26, nameOf(r, s_selected), ink);
-	ty += 36;
-	engraved(dl, o, W, ty, 14, std::string(r.bornknown ? "Hatched " : "First seen ") + KitDateText(r.borntick), ink);
-	ty += 19;
-	engraved(dl, o, W, ty, 14, "Died " + KitDateText(r.diedtick), ink);
-	ty += 19;
+	dl->AddRect(p0 - ImVec2(1, 1), p0 + ImVec2(pw + 1, ph + 1), IM_COL32(205, 170, 95, 255));
+	ImGui::Dummy(ImVec2(pw, ph));
+	ImGui::SameLine(0, 16);
+	ImGui::BeginGroup();
+	ImGui::TextColored(ImVec4(1.0f, 0.88f, 0.55f, 1), "%s", nameOf(r, s_selected).c_str());
+	const ImVec4 dim = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+	ImGui::TextColored(dim, "%s", r.bornknown ? "Hatched" : "First seen");
+	ImGui::SameLine(90);
+	ImGui::TextUnformatted(KitDateText(r.borntick).c_str());
+	ImGui::TextColored(dim, "Died");
+	ImGui::SameLine(90);
+	ImGui::TextUnformatted(KitDateText(r.diedtick).c_str());
 	if (r.diedtick > r.borntick) {
 		std::string age = KitAgeText(r.diedtick - r.borntick);
 		age = age.substr(0, age.find(" ("));
-		engraved(dl, o, W, ty, 14, std::string(r.bornknown ? "aged " : "aged at least ") + age, ink);
-		ty += 24;
+		ImGui::TextColored(dim, "Aged");
+		ImGui::SameLine(90);
+		ImGui::Text("%s%s", r.bornknown ? "" : "at least ", age.c_str());
 	}
 	std::string cause = causeOf(s_selected);
 	if (!cause.empty()) {
-		engraved(dl, o, W, ty, 16, "Died of " + cause, ink);
-		ty += 30;
+		ImGui::TextColored(dim, "Cause");
+		ImGui::SameLine(90);
+		ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.55f, 1), "%s", cause.c_str());
 	}
-	if (!r.epitaph.empty())
-		engraved(dl, o, W, ty, 15, "“" + r.epitaph + "”", IM_COL32(22, 24, 20, 255));
+	ImGui::EndGroup();
+	if (!r.epitaph.empty()) {
+		ImGui::Spacing();
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + W - 24);
+		ImGui::TextColored(ImVec4(0.86f, 0.75f, 0.55f, 1), "\xe2\x80\x9c%s\xe2\x80\x9d", r.epitaph.c_str());
+		ImGui::PopTextWrapPos();
+	}
+	KitEndCard();
+	ImGui::Spacing();
 
 	// the owner's words and photo
 	if (s_epitaphFor != s_selected) {

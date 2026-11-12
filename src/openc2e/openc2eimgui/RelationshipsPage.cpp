@@ -74,7 +74,7 @@ std::string eventsText(const Bond* b) {
 } // namespace
 
 void RelationshipsPage() {
-	if (!KitNeedsCreature("Applet Data/Owner.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	Agent* self = KitCreatureAgent();
 	oldCreature* me = oldOf(self);

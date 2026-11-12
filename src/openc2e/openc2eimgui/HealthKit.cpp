@@ -1,5 +1,5 @@
-// The Health Kit (Creatures 2): Fitness, Mind, Drives and Doctor pages.
-// C2's own art from the player's Applet Data; our layout and readings.
+// The Health Kit (Creatures 2): Fitness, Mind, Drives and Doctor pages, in
+// the kits' own style (owner, 2026-11-12: not C2's panel art).
 // "Brain" in C2 showed lobe activity; our creatures run their own mind, so
 // that page is "Mind" here.
 
@@ -11,6 +11,7 @@
 #include "common/Ascii.h"
 #include "creatures/CreatureMind.h"
 #include "creatures/oldCreature.h"
+#include "historyManager.h"
 #include "fileformats/c2cobfile.h"
 #include "common/backend/Backend.h"
 
@@ -45,113 +46,157 @@ static float temperatureOf(c2Creature* c) {
 	return std::clamp(t, 30.0f, 43.0f);
 }
 
+// recent readings of the selected creature, sampled while the page shows
+// (one every 3 s, the last 40: two minutes), for the tiles' trend lines
+struct Trend {
+	Agent* who = nullptr;
+	double last = -1e9;
+	std::vector<float> temp, pulse;
+};
+static Trend s_trend;
+
+static void sampleTrend(Agent* a, float t, int bpm) {
+	if (s_trend.who != a)
+		s_trend = Trend{a};
+	double now = ImGui::GetTime();
+	if (now - s_trend.last < 3.0)
+		return;
+	s_trend.last = now;
+	s_trend.temp.push_back(t);
+	s_trend.pulse.push_back((float)bpm);
+	for (auto* v : {&s_trend.temp, &s_trend.pulse})
+		if (v->size() > 40)
+			v->erase(v->begin());
+}
+
+static std::string organName(c2Creature* c, int i) {
+	auto& organs = c->getOrgans();
+	if (i < 0 || i >= (int)organs.size())
+		return "an organ";
+	if (const KitGeneNote* note = KitNoteFor(organs[i]->getGene()); note && !note->caption.empty())
+		return note->caption;
+	return fmt::format("Organ {}", i + 1);
+}
+
+static float organHealth(c2Creature* c, int i) {
+	auto& o = c->getOrgans()[i];
+	float start = o->getInitialLifeforce();
+	return start > 0 ? std::clamp(o->getShortTermLifeforce() / start, 0.0f, 1.0f) : 1.0f;
+}
+
 static void FitnessPage() {
-	if (!KitNeedsCreature("Applet Data/HealthCover.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	c2Creature* c = KitCreature();
-	Texture bg = KitPicture("Applet Data/Fitness.bmp");
-	KitCenterNext(320);
-	ImVec2 p = ImGui::GetCursorScreenPos();
-	DrawTexture(bg, p);
-	ImGui::Dummy(ImVec2(320, 240));
-	ImDrawList* dl = ImGui::GetWindowDrawList();
-	ImU32 green = IM_COL32(170, 255, 170, 255);
+	Agent* a = KitCreatureAgent();
+	const float W = 540;
+	if (!c->isAlive())
+		KitNoteColored(ImVec4(1, 0.5f, 0.5f, 1), "This creature has died.");
 
-	// the small screen: pulse, with a blip in time with it
-	int bpm = pulseOf(c);
-	std::string s = fmt::format("{:3d}", bpm);
-	dl->AddText(p + ImVec2(33, 20), green, "PULSE");
-	KitLed(p + ImVec2(34, 38), s);
-	if (bpm > 0) {
-		double beat = ImGui::GetTime() * bpm / 60.0;
-		if (beat - std::floor(beat) < 0.18)
-			dl->AddCircleFilled(p + ImVec2(84, 25), 3.0f, green);
-	}
-	dl->AddText(p + ImVec2(56, 76), green, "bpm");
-
-	// the big screen: body temperature
-	float t = temperatureOf(c);
-	dl->AddText(p + ImVec2(28, 142), green, "BODY TEMP");
-	if (KitFahrenheit())
-		KitLed(p + ImVec2(24, 162), fmt::format("{:.1f}F", t * 9 / 5 + 32));
-	else
-		KitLed(p + ImVec2(28, 162), fmt::format("{:.1f}C", t));
-	{
-		ImVec2 keep = ImGui::GetCursorScreenPos();
-		ImGui::SetCursorScreenPos(p + ImVec2(20, 136));
-		if (ImGui::InvisibleButton("tempunits", ImVec2(94, 92)))
-			KitToggleFahrenheit();
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Click for %s", KitFahrenheit() ? "Celsius" : "Fahrenheit");
-		ImGui::SetCursorScreenPos(keep);
-	}
-	const char* feel = t >= 38.5f ? "fever" : t >= 37.8f ? "warm" : t <= 35.5f ? "chilled" : "normal";
-	dl->AddText(p + ImVec2(28, 202), green, feel);
-
-	// the thermometer: hide the red above the level behind glass
-	{
-		float f = std::clamp((t - 33.0f) / 10.0f, 0.0f, 1.0f);
-		float top = 97, bottom = 200;
-		float level = bottom - f * (bottom - top);
-		dl->AddRectFilled(p + ImVec2(285, top), p + ImVec2(299, level), IM_COL32(205, 215, 222, 235), 4.0f);
-	}
-
-	// the X-ray: the organs' state on hover
-	ImGui::SetCursorScreenPos(p + ImVec2(128, 28));
-	ImGui::InvisibleButton("xray", ImVec2(124, 140));
+	// overall: its weakest organ (what failing kills it; the status bar
+	// shows the same)
 	int damaged = 0, weakest = -1;
 	float avg = 1;
 	float h = KitOrganHealth(c, &damaged, &avg, &weakest);
-	std::string weakName = "an organ";
-	if (weakest >= 0 && weakest < (int)c->getOrgans().size())
-		if (const KitGeneNote* note = KitNoteFor(c->getOrgans()[weakest]->getGene()); note && !note->caption.empty())
-			weakName = note->caption;
-	std::string tip = fmt::format("Health is its weakest organ, {}, at {:.0f}% of its life force\n(what failing kills it; the status bar shows the same)\n{} organs, {:.0f}% on average; {} under 75%\nDetails in the Science Kit's Physical page.",
-		weakName, h * 100, (int)c->getOrgans().size(), avg * 100, damaged);
+	std::string weakName = organName(c, weakest);
+	KitHeading("Overall health");
+	KitBar(h, fmt::format("{:.0f}%", h * 100).c_str(), W);
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("%s", tip.c_str());
-	ImGui::SetCursorScreenPos(ImVec2(p.x, p.y + 244));
-	KitBar(h, fmt::format("Health {:.0f}% (weakest organ)", h * 100).c_str(), 320);
+		ImGui::SetTooltip("%d organs, %.0f%% on average; %d under 75%%", (int)c->getOrgans().size(), avg * 100, damaged);
+	std::string lower = weakName;
+	for (auto& ch : lower)
+		ch = (char)std::tolower((unsigned char)ch);
+	if (h >= 0.9f)
+		KitNote("Healthy. Its weakest organ, %s, is at %.0f%%.", weakName.c_str(), h * 100);
+	else if (lower.find("arrow") != std::string::npos)
+		KitNote("Held back by its weakest organ, %s: the ageing clock, which wears down with age in every creature. Nothing to treat.", weakName.c_str());
+	else if (h < 0.4f)
+		KitNoteColored(ImVec4(1, 0.6f, 0.5f, 1), "Held back by its weakest organ, %s, which is failing. The Doctor page's medicines may help.", weakName.c_str());
+	else
+		KitNote("Held back by its weakest organ, %s.", weakName.c_str());
+
+	// the readings
+	float t = temperatureOf(c);
+	int bpm = pulseOf(c);
+	sampleTrend(a, t, bpm);
+	ImGui::Spacing();
+	const float tw = (W - 2 * ImGui::GetStyle().ItemSpacing.x) / 3;
+	const char* feel = t >= 38.5f ? "fever" : t >= 37.8f ? "warm" : t <= 35.5f ? "chilled" : "normal";
+	ImU32 good = IM_COL32(110, 210, 110, 255), warn = IM_COL32(240, 175, 70, 255);
+	bool f = KitFahrenheit();
+	KitStatTile("temp", "Body temperature", fmt::format("{:.1f}", f ? t * 9 / 5 + 32 : t), f ? "\xc2\xb0""F" : "\xc2\xb0""C", feel, std::string(feel) == "normal" ? good : warn, tw, &s_trend.temp);
+	if (ImGui::IsItemClicked())
+		KitToggleFahrenheit();
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("%s", tip.c_str());
-	if (!c->isAlive())
-		ImGui::TextColored(ImVec4(1, 0.5f, 0.5f, 1), "This creature has died.");
+		ImGui::SetTooltip("37 \xc2\xb0""C is normal. Click for %s.\nThe line: the last two minutes with this page open.", f ? "Celsius" : "Fahrenheit");
+	ImGui::SameLine();
+	const char* beat = !c->isAlive() ? "none" : c->isAsleep() ? "asleep" : bpm > 100 ? "racing" : bpm > 75 ? "quickened" : "resting";
+	KitStatTile("pulse", "Pulse", c->isAlive() ? fmt::format("{}", bpm) : "-", "bpm", beat, bpm > 100 ? warn : good, tw, &s_trend.pulse);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("Beats a minute: about 60 at rest, faster with fright or effort, slower asleep.\nThe line: the last two minutes with this page open.");
+	ImGui::SameLine();
+	{
+		static const char* stages[] = {"baby", "child", "adolescent", "youth", "adult", "old", "senile"};
+		int st = (int)c->getStage();
+		monikerData* m = KitRecordsOf(a);
+		std::string age = m ? KitAgeText(KitAgeTicks(*m), false) : std::string();
+		KitStatTile("stage", "Life stage", st >= 0 && st < 7 ? stages[st] : "?", "", age.c_str(), IM_COL32(170, 200, 240, 255), tw);
+	}
+
+	// the weakest organs
+	KitHeading("Weakest organs");
+	auto& organs = c->getOrgans();
+	std::vector<std::pair<float, int>> order;
+	for (int i = 0; i < (int)organs.size(); i++)
+		if (organs[i]->getInitialLifeforce() > 0)
+			order.push_back({organHealth(c, i), i});
+	std::sort(order.begin(), order.end());
+	if (ImGui::BeginTable("weakest", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit, ImVec2(W, 0))) {
+		ImGui::TableSetupColumn("Organ", ImGuiTableColumnFlags_WidthFixed, W - 250);
+		ImGui::TableSetupColumn("Health", ImGuiTableColumnFlags_WidthFixed, 240);
+		ImGui::TableHeadersRow();
+		for (size_t k = 0; k < order.size() && k < 5; k++) {
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::TextWrapped("%s", organName(c, order[k].second).c_str());
+			ImGui::TableNextColumn();
+			KitBar(order[k].first, fmt::format("{:.0f}%", order[k].first * 100).c_str(), 236);
+		}
+		ImGui::EndTable();
+	}
+	ImGui::Spacing();
+	if (ImGui::Button(fmt::format("All {} organs in the Science Kit", (int)organs.size()).c_str()))
+		OpenC2KitAt("science", "Physical");
 }
 
 // ---- Mind ------------------------------------------------------------------------
 
 static void MindPage() {
-	if (!KitNeedsCreature("Applet Data/HealthCover.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	c2Creature* c = KitCreature();
-	Texture bg = KitPicture("Applet Data/Brain.bmp");
-	KitCenterNext(320);
-	ImVec2 p = ImGui::GetCursorScreenPos();
-	DrawTexture(bg, p);
-	ImGui::Dummy(ImVec2(320, 240));
-	ImDrawList* dl = ImGui::GetWindowDrawList();
+	const float W = 540;
 
-	// what it is doing, top
-	std::string doing = DescribeCreatureActivity(KitCreatureAgent());
-	dl->AddRectFilled(p + ImVec2(6, 6), p + ImVec2(314, 30), IM_COL32(0, 0, 20, 170), 3);
-	dl->AddText(p + ImVec2(12, 11), IM_COL32(255, 240, 160, 255), doing.c_str());
+	KitHeading("Doing now");
+	KitBeginCard("doing", ImVec2(W, 0));
+	ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + W - 24);
+	ImGui::TextUnformatted(DescribeCreatureActivity(KitCreatureAgent()).c_str());
+	ImGui::PopTextWrapPos();
+	KitEndCard();
 
-	// what it wants most: the three strongest drives, bottom
+	// what it wants most: the three strongest drives
+	KitHeading("Strongest needs");
 	const auto& names = KitChemicalNames();
 	std::vector<std::pair<int, int>> d;
 	for (int i = 0; i < 17; i++)
 		d.push_back({c->getDrive(i), i});
 	std::sort(d.rbegin(), d.rend());
-	dl->AddRectFilled(p + ImVec2(6, 168), p + ImVec2(314, 234), IM_COL32(0, 0, 20, 170), 3);
-	dl->AddText(p + ImVec2(12, 172), IM_COL32(200, 220, 255, 255), "Strongest needs");
 	for (int k = 0; k < 3; k++) {
-		float y = 190 + k * 14;
 		std::string n = names.size() > (size_t)(d[k].second + 1) ? names[d[k].second + 1] : fmt::format("Drive {}", d[k].second);
-		dl->AddText(p + ImVec2(16, y), IM_COL32(255, 255, 255, 255), n.c_str());
-		float w = 150 * d[k].first / 255.0f;
-		dl->AddRectFilled(p + ImVec2(150, y + 3), p + ImVec2(150 + w, y + 11), IM_COL32(120, 200, 255, 230), 2);
-		dl->AddRect(p + ImVec2(150, y + 3), p + ImVec2(300, y + 11), IM_COL32(120, 200, 255, 120), 2);
+		KitBar(d[k].first / 255.0f, n.c_str(), W, true);
 	}
+	KitNote("All its needs are on the Drives page.");
+	ImGui::Spacing();
 
 	if (c->getMind()) {
 		if (ImGui::Button("Open the Mind Kit"))
@@ -165,7 +210,7 @@ static void MindPage() {
 // ---- Drives ----------------------------------------------------------------------
 
 static void DrivesPage() {
-	if (!KitNeedsCreature("Applet Data/HealthCover.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	c2Creature* c = KitCreature();
 	const auto& names = KitChemicalNames();
@@ -189,8 +234,7 @@ static void DrivesPage() {
 // ---- Doctor ----------------------------------------------------------------------
 
 static void DoctorPage() {
-	// three shelves (their tops at y 66, 128, 178), three medicines on each
-	KitCobShelf("Applet Data/Shelves.bmp", "Medicine", {66, 128, 178}, {60, 157, 254}, "Click a medicine to see what it is.", "{} added. Encourage your creature to take it.");
+	KitCobShelf("Medicine", "Click a medicine to see what it is.", "{} added. Encourage your creature to take it.");
 }
 
 void DrawHealthKit() {

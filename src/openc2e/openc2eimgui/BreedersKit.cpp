@@ -42,66 +42,53 @@ namespace Openc2eImgui {
 // ---- Reproductive --------------------------------------------------------------
 
 static void ReproductivePage() {
-	if (!KitNeedsCreature("Applet Data/SexCover.bmp"))
+	if (!KitNeedsCreature())
 		return;
 	c2Creature* c = KitCreature();
 	Agent* a = KitCreatureAgent();
 	bool female = c->isFemale();
 	int preg = c->getPregnant();
-	(void)a;
 	int genus = c->getGenus() + 1; // the genome's genus: 0 norn, 1 grendel, 2 ettin
 
-	// the figure: norn (male or female), grendel or ettin; pregnant
-	// figures show the egg growing in the womb
-	const char* figure = genus == 2 ? (preg ? "Applet Data/PregGrendel.bmp" : "Applet Data/grendel.bmp")
-		: genus == 3			  ? (preg ? "Applet Data/PregEttin.bmp" : "Applet Data/ettin.bmp")
-		: preg					  ? "Applet Data/pregnant.bmp"
-		: female				  ? "Applet Data/female.bmp"
-								  : "Applet Data/male.bmp";
-	ImVec2 p = ImGui::GetCursorScreenPos();
-	Texture fig = KitPicture(figure);
-	DrawTexture(fig, p);
-	auto& sprites = KitSprites("Applet Data/Reproductive.s16");
-	if (preg && sprites.size() >= 12) {
-		int f = 3 + std::clamp(preg * 9 / 256, 0, 8);
-		ImVec2 at = genus == 1 ? ImVec2(49, 74) : ImVec2(40, 58);
-		DrawTexture(sprites[f], p + at);
-	}
-	if (sprites.size() >= 3)
-		DrawTexture(sprites[female ? 2 : 1], p + ImVec2(4, 4));
-	ImGui::Dummy(ImVec2(108, 170));
-	ImGui::SameLine();
-
+	// its photo, beside the readings
+	const float W = 540, PW = 160, PH = 120, BW = W - PW - 20;
+	KitCreaturePhoto(a, ImVec2(PW, PH));
+	ImGui::SameLine(0, 20);
 	ImGui::BeginGroup();
-	ImGui::Text("%s %s", female ? "Female" : "Male", genus == 2 ? "grendel" : genus == 3 ? "ettin" : "norn");
-	KitBar(c->getDrive(12) / 255.0f, "Sex drive", 220, true);
-	KitBar(c->getFertile() / 255.0f, female ? "Fertility" : "Fertility (sperm)", 220);
+	ImGui::TextColored(ImVec4(0.86f, 0.70f, 0.40f, 1), "%s %s", female ? "Female" : "Male", genus == 2 ? "grendel" : genus == 3 ? "ettin" : "norn");
+	KitBar(c->getDrive(12) / 255.0f, "Sex drive", BW, true);
+	KitBar(c->getFertile() / 255.0f, female ? "Fertility" : "Fertility (sperm)", BW);
+	if (female)
+		KitBar(c->getReceptive() / 255.0f, "Receptiveness", BW);
+	ImGui::EndGroup();
+
+	// pregnancy: how far along
 	if (female) {
-		KitBar(c->getReceptive() / 255.0f, "Receptiveness", 220);
-		KitBar(preg / 255.0f, preg ? "Pregnancy" : "Not pregnant", 220);
+		KitHeading("Pregnancy");
+		if (preg) {
+			KitBar(preg / 255.0f, fmt::format("{:.0f}% of the way to laying", preg * 100.0f / 255).c_str(), W, false);
+			KitNote("The egg grows until it is laid; the Breeder's Kit notice on the status bar follows it.");
+		} else
+			KitNote("Not pregnant.");
 	}
-	ImGui::Spacing();
+
+	// the hormones, as the game groups them
 	const auto& groups = KitChemicalGroups();
 	const char* want = female ? "Female Hormones" : "Male Hormones";
 	for (auto& g : groups) {
 		if (g.first != want)
 			continue;
-		ImGui::TextDisabled("%s", want);
+		KitHeading(want);
 		const auto& names = KitChemicalNames();
-		for (int chem : g.second) {
-			ImGui::SetNextItemWidth(120);
-			ImGui::ProgressBar(c->getChemical(chem) / 255.0f, ImVec2(100, 12), "");
-			ImGui::SameLine();
-			ImGui::Text("%s %d", chem < (int)names.size() ? names[chem].c_str() : "?", (int)c->getChemical(chem));
-		}
+		for (int chem : g.second)
+			KitBar(c->getChemical(chem) / 255.0f, fmt::format("{} {}", chem < (int)names.size() ? names[chem] : std::string("?"), (int)c->getChemical(chem)).c_str(), W);
 	}
-	ImGui::EndGroup();
 }
 
 // ---- Aphrodisiacs ----------------------------------------------------------------
 
 static void AphrodisiacsPage() {
-	KitCobShelf("Applet Data/aphroshelves.bmp", "Aphrodisiacs", {80, 130, 172}, {100, 160, 220}, "Click an aphrodisiac to see what it is.", "{} added. It may put your creatures in the mood.");
+	KitCobShelf("Aphrodisiacs", "Click an aphrodisiac to see what it is.", "{} added. It may put your creatures in the mood.");
 }
 
 // ---- Breeds ----------------------------------------------------------------------

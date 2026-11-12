@@ -773,9 +773,7 @@ void DrawEcologyKit() {
 		s_showFood = getenv("OPENC2E_ECO_FOOD") != nullptr;
 	}
 	if (!world.map) {
-		Texture cover = KitPicture("Applet Data/EcologyCover.bmp");
-		if (cover)
-			ImGui::Image(cover.as<ImTextureID>(), ImVec2((float)cover.width, (float)cover.height));
+		KitNote("No world is loaded.");
 		return;
 	}
 	if (ImGui::BeginTabBar("ecotabs")) {
