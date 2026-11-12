@@ -100,10 +100,23 @@ static const char* GenusName(int genus) {
 	}
 }
 
+// Add Favourite Place (the Camera menu or the + by Places) opens the naming
+// popup on the menu bar's next draw
+static bool s_open_add_place = false;
+
+// a world has six favourite place slots
+static bool HasFreePlace() {
+	if (world.favoriteplaces.size() < 6)
+		return true;
+	for (auto& f : world.favoriteplaces)
+		if (f.name.empty())
+			return true;
+	return false;
+}
+
 // The Creatures 2 menu bar (layout read from the game's own menu resource).
 // Items that openc2e can't do yet are shown grayed out, as C2 itself does.
 static void DrawC2MenuBar() {
-	static bool s_open_add_place = false;
 	static bool s_open_new_world = false;
 	static bool s_open_save_as = false;
 	static bool s_open_save_message = false;
@@ -186,7 +199,7 @@ static void DrawC2MenuBar() {
 			ImGui::MenuItem("Standard", nullptr, &s_show_standard);
 			ImGui::MenuItem("Pointer", nullptr, &s_show_pointer);
 			ImGui::MenuItem("Applets", nullptr, &s_show_applets);
-			ImGui::MenuItem("Favorites", nullptr, &s_show_favorites);
+			ImGui::MenuItem("Favourites", nullptr, &s_show_favorites);
 			ImGui::Separator();
 			ImGui::MenuItem("Text Labels", nullptr, false, false);
 			ImGui::EndMenu();
@@ -228,9 +241,9 @@ static void DrawC2MenuBar() {
 		}
 		if (world.favoriteplaces.size() < 6)
 			hasfree = true;
-		if (ImGui::MenuItem("Add Favorite Place...", nullptr, false, hasfree))
+		if (ImGui::MenuItem("Add Favourite Place...", nullptr, false, hasfree))
 			s_open_add_place = true;
-		if (ImGui::BeginMenu("Remove Favorite Place...", hasnamed)) {
+		if (ImGui::BeginMenu("Remove Favourite Place...", hasnamed)) {
 			for (auto& f : world.favoriteplaces) {
 				if (!f.name.empty() && ImGui::MenuItem(f.name.c_str())) {
 					f.name.clear();
@@ -378,10 +391,10 @@ static void DrawC2MenuBar() {
 
 	// Add Favorite Place: name the current camera position
 	if (s_open_add_place) {
-		ImGui::OpenPopup("Add Favorite Place");
+		ImGui::OpenPopup("Add Favourite Place");
 		s_open_add_place = false;
 	}
-	if (ImGui::BeginPopupModal("Add Favorite Place", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+	if (ImGui::BeginPopupModal("Add Favourite Place", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 		static char s_name[64] = "";
 		ImGui::Text("Name for this place:");
 		if (ImGui::IsWindowAppearing())
@@ -617,7 +630,6 @@ void DrawC2Toolbar() {
 			s_favtoolbaricons_tex = GetTextureFromExeFileWithTransparentTopLeft(0xe5);
 		}
 		TextureRect icon_say{s_favtoolbaricons_tex, 0, 0, 22, 21};
-		TextureRect icon_go{s_favtoolbaricons_tex, 22, 0, 22, 21};
 
 		// ImGui::GetCurrentWindow()->DC.LayoutType = ImGuiLayoutType_Vertical;
 		ImGui::Text("Speech History:");
@@ -657,7 +669,7 @@ void DrawC2Toolbar() {
 		const char* preview = places.empty() ? "" : world.favoriteplaces[s_place].name.c_str();
 		bool placesOpen = ImGui::BeginCombo("##Places:", preview);
 		if (ImGui::IsItemHovered() && !placesOpen)
-			ImGui::SetTooltip("Places: your favorite places; pick one to go there");
+			ImGui::SetTooltip("Places: your favourite places; choose one to go there");
 		if (placesOpen) {
 			for (int i : places) {
 				if (ImGui::Selectable(world.favoriteplaces[i].name.c_str(), i == s_place)) {
@@ -667,10 +679,18 @@ void DrawC2Toolbar() {
 			}
 			ImGui::EndCombo();
 		}
-		if (ImageButton(icon_go, !places.empty()))
-			GoToFavoritePlace(s_place);
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-			ImGui::SetTooltip("Go: move the view to the chosen place");
+		// no Go button: choosing a place goes there; + adds one, as the
+		// Camera menu does (owner, 2026-11-12)
+		{
+			bool free = HasFreePlace();
+			ImGui::BeginDisabled(!free);
+			float side = ImGui::GetFrameHeight(); // square, as tall as the Places list
+			if (ImGui::Button("+##addplace", ImVec2(side, side)))
+				s_open_add_place = true;
+			ImGui::EndDisabled();
+			if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+				ImGui::SetTooltip(free ? "Add a favourite place: name the spot the view shows now" : "All six favourite places are named; remove one in the Camera menu first");
+		}
 		// zoom, as a dropdown beside Places (owner, 2026-11-09; also
 		// Ctrl+wheel and the View menu)
 		ImGui::Text("Zoom:");

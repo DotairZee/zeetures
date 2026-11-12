@@ -1025,7 +1025,7 @@ static bool TitleMinimizeButton() {
 	float pad = std::max(2.0f, sz * 0.25f);
 	w->DrawList->AddLine(ImVec2(bb.Min.x + pad, bb.Max.y - pad - 0.5f), ImVec2(bb.Max.x - pad, bb.Max.y - pad - 0.5f), ImGui::GetColorU32(ImGuiCol_Text), 2.0f);
 	if (hovered)
-		ImGui::SetTooltip("Minimize to the status bar");
+		ImGui::SetTooltip("Minimise to the status bar");
 	ImGui::PopClipRect();
 	return pressed;
 }

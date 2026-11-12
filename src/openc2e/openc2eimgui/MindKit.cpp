@@ -99,6 +99,9 @@ std::string thing(int category) {
 }
 
 std::string nameOf(const std::string& moniker) {
+	// following another ("toward <moniker>", the mind's own key)
+	if (moniker.rfind("toward ", 0) == 0)
+		return "towards " + nameOf(moniker.substr(7));
 	if (world.history && world.history->hasMoniker(moniker)) {
 		auto& m = world.history->getMoniker(moniker);
 		if (!m.name.empty())
@@ -506,7 +509,7 @@ void MoodPage(const MindView& v) {
 		ImGui::TextWrapped("Not enough time has passed to show its mood.");
 		return;
 	}
-	KitNoteColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "How content it has been; the color below is its strongest need at the time.");
+	KitNoteColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "How content it has been; the colour below is its strongest need at the time.");
 	ImDrawList* dl = ImGui::GetWindowDrawList();
 	const float axisW = 74; // room for the y axis's labels
 	ImVec2 o = ImGui::GetCursorScreenPos() + ImVec2(axisW, 6);
