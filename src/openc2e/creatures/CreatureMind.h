@@ -111,6 +111,7 @@ struct MindPerception {
 	bool riding = false; // carried by a vehicle (a lift, a boat)
 	bool carried = false; // held by the hand (or another agent): not moving by itself
 	bool inRoom = true; // inside the room map (false: inside the ground, about to be lifted out)
+	bool breathesWater = false; // amphibious (its genome raises no suffocation under water)
 	// food smell (C2, World::tickFoodScent): in this room, and the strongest
 	// through the doors on each side
 	float scentHere = 0, scentWest = 0, scentEast = 0, scentUp = 0, scentDown = 0;

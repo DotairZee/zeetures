@@ -954,7 +954,7 @@ class HomeostatMind : public CreatureMind {
 		std::vector<Candidate> candidates = evaluate(p, d, D);
 		bool badSleepHere = p.tick < badSleepUntil && std::fabs(dxTo(p, badSleepX)) < prm.badSleepNear && std::fabs(p.y - badSleepY) < prm.sameLevel;
 		bool starvingAwake = d[HUNGER] >= prm.starveAwake && d[SLEEPY] < prm.exhausted && d[TIRED] < prm.exhausted;
-		if (p.tick < noSleepUntil || badSleepHere || p.inWater || starvingAwake) // (never sleep in water)
+		if (p.tick < noSleepUntil || badSleepHere || (p.inWater && !p.breathesWater) || starvingAwake) // (never sleep in water, unless it breathes it)
 			candidates.erase(std::remove_if(candidates.begin(), candidates.end(),
 								 [&](const Candidate& c) { return c.category < 0 && c.decision == prm.sleepDecision; }),
 				candidates.end());
@@ -2226,7 +2226,9 @@ class HomeostatMind : public CreatureMind {
 	}
 
 	void addEscape(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
-		if (!p.inWater)
+		// (a creature that breathes water is at home in it: it leaves for
+		// food and the like, not in a hurry; owner, 2026-11-11, frog norns)
+		if (!p.inWater || p.breathesWater)
 			return;
 		Expectation clear;
 		clear.delta[SUFFOCATE] = -d[SUFFOCATE];

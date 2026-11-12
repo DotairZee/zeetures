@@ -92,6 +92,7 @@ class oldCreature : public Creature {
 	unsigned char getChemical(unsigned char id) { return chemicals[id]; }
 	void setChemicalLevel(unsigned char id, unsigned char v) { chemicals[id] = v; } // world loading
 	virtual float breathLeft() const { return 1.0f; } // 1 = full breath, 0 = none left (under water)
+	virtual bool breathesWater() { return false; } // amphibious (C2: see c2Creature)
 	virtual std::vector<float> getOrganState() { return {}; }
 	virtual void setOrganState(const std::vector<float>&) {}
 
@@ -294,6 +295,16 @@ class c2Creature : public oldCreature {
 	// before its air runs out; surfacing refills the breath in a few seconds.
 	unsigned int breathHeld = 0;
 	static const unsigned int breathTicks = 3000;
+	// Breathes water as well as air: its genome has no emitter on the air
+	// sense (C2: creature, sensorimotor, locus 9), so being under water
+	// raises no suffocation in its body (the Frog Norn pack's genome; every
+	// stock genome has one). Read from the genome once.
+	int waterbreather = -1;
+
+  public:
+	bool breathesWater() override;
+
+  protected:
 	void updateUnderwater();
 	unsigned char gaitloci[16];
 	unsigned char drives[17];

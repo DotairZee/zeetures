@@ -513,6 +513,10 @@ void c2Creature::updateUnderwater() {
 	// carried under the sea blew bubbles (owner, 2026-11-10)
 	if (underwater && parentagent->invehicle)
 		underwater = false;
+	// a creature that breathes water (owner, 2026-11-11: frog norns are
+	// amphibious) keeps its air: no breath held, no bubbles
+	if (underwater && breathesWater())
+		underwater = false;
 	if (underwater) {
 		if (breathHeld < breathTicks)
 			breathHeld++; // holding its breath: the air sense stays as it was
@@ -775,6 +779,20 @@ void oldCreature::watchPregnancy() {
 	}
 	waspregnant = now;
 	pregnancywatched = true;
+}
+
+bool c2Creature::breathesWater() {
+	if (waterbreather < 0) {
+		waterbreather = 0;
+		if (engine.version == 2 && genome) {
+			bool airEmitter = false;
+			for (auto& g : genome->genes)
+				if (auto* e = dynamic_cast<bioEmitterGene*>(g.get()); e && e->organ == 1 && e->tissue == 4 && e->locus == 9)
+					airEmitter = true;
+			waterbreather = airEmitter ? 0 : 1;
+		}
+	}
+	return waterbreather == 1;
 }
 
 void oldCreature::addGene(gene* g) {

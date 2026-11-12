@@ -1013,6 +1013,7 @@ MindPerception oldCreature::buildPerception() {
 			// walking, not being in water: the pond's bed is the way to the
 			// cave behind its waterfall)
 			p.breath = breathLeft();
+			p.breathesWater = breathesWater();
 			p.inWater = here->type == 2;
 			if (!p.inWater)
 				if (std::shared_ptr<Room> feet = world.map->roomAt(sx, parentagent->y + parentagent->getHeight() - 2))
