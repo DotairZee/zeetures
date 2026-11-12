@@ -40,6 +40,8 @@ class creaturesImage;
 struct RenderOptions {
 	uint8_t alpha = 255;
 	bool mirror = false;
+	bool multiply = false; // multiply what is beneath by the texture's colour (a light filter)
+	bool smooth = false; // scale with linear filtering
 	float scale = 1.0;
 	bool override_drawsize = false;
 	int overridden_drawwidth;

@@ -316,7 +316,7 @@ void World::tick() {
 				hand()->playShove(tickcount == 100 ? -1 : 1);
 			if (tickcount >= 100 && tickcount < 130)
 				if (auto* sp = dynamic_cast<SpritePart*>(hand()->part(0)))
-					fmt::print("* TEST SHOVE tick {} pose {}\n", tickcount, sp->getPose());
+					fmt::print("* TEST SHOVE tick {} pose {}{}\n", tickcount, sp->getPose(), hand()->draw_mirrored ? " mirrored" : "");
 		}
 	}
 	// developer aid: OPENC2E_TEST_HAND_INVISIBLE="x y" turns the toolbar's
@@ -653,9 +653,10 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 		// if we're on the second pass, render to the *right* of the normal area
 		surface->renderCreaturesImage(bkgd, 0, destx + m->width(), desty);
 	}
-	// the sky's colour through the day (C2): over the background, under
-	// everything else
-	SkyTint::draw(surface, m, destx, desty);
+	// the light through the day (C2): a filter over everything in the world
+	// but the hand and speech bubbles, drawn just before the first of those
+	// (not in a creature's photo)
+	bool lit = only_creature != nullptr;
 
 	// vehicles and their riders glide between ticks: draw them back along
 	// this tick's move, by the part of the tick not yet elapsed (not for
@@ -679,6 +680,14 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 
 	// render all the agents
 	for (auto render : renders) {
+		if (!lit) {
+			auto* p = dynamic_cast<CompoundPart*>(render);
+			Agent* owner = p ? p->getParent() : nullptr;
+			if (owner && (owner == (Agent*)world.hand() || dynamic_cast<Bubble*>(owner))) {
+				SkyTint::draw(surface, m, destx, desty);
+				lit = true;
+			}
+		}
 		if (skip_hand || only_creature) {
 			auto* p = dynamic_cast<CompoundPart*>(render);
 			Agent* owner = p ? p->getParent() : nullptr;
@@ -708,6 +717,8 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 			}
 		}
 	}
+	if (!lit)
+		SkyTint::draw(surface, m, destx, desty);
 
 	// render port connection lines. TODO: these should be rendered as some kind
 	// of renderable, not directly like this.

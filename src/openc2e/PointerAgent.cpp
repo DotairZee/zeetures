@@ -64,18 +64,18 @@ void shoveCreature(Agent* a, int dir) {
 // The hand's shove, as real C2 plays it (watched 2026-11-11, poses read
 // over DDE about six times a second while the owner pushed a grendel): a
 // shove west, the hand pressing on the creature's right, is frames 8, 9, 8
-// of the hand sprite (the palm turned west), about half a second; a shove
-// east is frames 1, 2 (the hand turned east). Then the usual pointer.
+// of the hand sprite, about half a second, then the usual pointer. C2 has
+// no shove drawn the other way (for a shove east it plays its ordinary
+// click, a finger pressing a button), so a shove east here is the same
+// shove mirrored (owner, 2026-11-11: a nudge with the back of the hand).
 void PointerAgent::playShove(int dir) {
 	auto* sp = dynamic_cast<SpritePart*>(part(0));
 	if (engine.version != 2 || !sp)
 		return;
 	if (pushAnimAt >= pushAnim.size())
 		prePushPose = sp->getPose();
-	if (dir < 0)
-		pushAnim = {8, 8, 9, 9, 8, 8};
-	else
-		pushAnim = {1, 1, 2, 2, 2};
+	pushAnim = {8, 8, 9, 9, 8, 8};
+	draw_mirrored = dir > 0;
 	pushAnimAt = 0;
 	sp->setPose(pushAnim[0]);
 }
@@ -198,18 +198,23 @@ void PointerAgent::tick() {
 		if (pushAnimAt < pushAnim.size()) {
 			if (auto* sp = dynamic_cast<SpritePart*>(part(0)))
 				sp->setPose(++pushAnimAt < pushAnim.size() ? pushAnim[pushAnimAt] : prePushPose);
+			if (pushAnimAt >= pushAnim.size())
+				draw_mirrored = false;
 		}
 		if (pushing) {
 			int want = 0;
 			if (a && parent && dynamic_cast<CreatureAgent*>(parent) && !parent->carriedby && !parent->invehicle)
 				want = x < parent->x + parent->getWidth() / 2.0f ? -4 : -3;
-			if (want != overlayTimer || (want && !overlay)) {
+			// (the arrows are drawn mirrored with the hand during a mirrored
+			// shove, so they take the other arrow then)
+			if (want != overlayTimer || (want && !overlay) || overlayMirrored != draw_mirrored) {
 				if (overlay)
 					delete overlay;
 				overlay = NULL;
 				overlayTimer = 0;
+				overlayMirrored = draw_mirrored;
 				if (want) {
-					overlay = new DullPart(this, 0, "syst", want == -4 ? 14 : 13, want == -4 ? 50 : -28, 14, 1);
+					overlay = new DullPart(this, 0, "syst", (want == -4) != draw_mirrored ? 14 : 13, want == -4 ? 50 : -28, 14, 1);
 					overlayTimer = want;
 				}
 			}

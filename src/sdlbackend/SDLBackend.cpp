@@ -509,6 +509,9 @@ void SDLRenderTarget::renderTexture(const Texture& tex_, Rect2i src, Rect2f dest
 	assert(tex);
 
 	SDL_SetTextureAlphaMod(tex, options.alpha);
+	SDL_SetTextureBlendMode(tex, options.multiply ? SDL_BLENDMODE_MOD : SDL_BLENDMODE_BLEND);
+	if (options.smooth)
+		SDL_SetTextureScaleMode(tex, SDL_SCALEMODE_LINEAR);
 	SDL_FlipMode flip = options.mirror ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
 
 	SDL_FRect srcrect;
@@ -528,7 +531,11 @@ void SDLRenderTarget::renderTexture(const Texture& tex_, Rect2i src, Rect2f dest
 }
 
 void SDLRenderTarget::renderCreaturesImage(creaturesImage& img, unsigned int frame, int x, int y, RenderOptions options) {
-	if (x + numeric_cast<int>(img.width(frame)) <= 0 || x >= numeric_cast<int>(getWidth()) || y + numeric_cast<int>(img.height(frame)) <= 0 || y >= numeric_cast<int>(getHeight())) {
+	// (culled by the size it is drawn at: a stretched image, like the light
+	// filter, is far bigger than its picture)
+	int drawnw = options.override_drawsize ? options.overridden_drawwidth : numeric_cast<int>(img.width(frame));
+	int drawnh = options.override_drawsize ? options.overridden_drawheight : numeric_cast<int>(img.height(frame));
+	if (x + drawnw * options.scale <= 0 || x >= numeric_cast<int>(getWidth()) || y + drawnh * options.scale <= 0 || y >= numeric_cast<int>(getHeight())) {
 		return;
 	}
 

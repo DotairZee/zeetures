@@ -37,6 +37,7 @@ class PointerAgent : public SimpleAgent {
 	std::vector<unsigned int> pushAnim;
 	size_t pushAnimAt = 0;
 	unsigned int prePushPose = 0;
+	bool overlayMirrored = false;
 
   public:
 	void playShove(int dir); // dir 1 east, -1 west
