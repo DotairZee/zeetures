@@ -1102,7 +1102,11 @@ void Agent::physicsTickC2() {
 		// wade along, and near the banks it rises to the surface; fish
 		// swimming there were set on it, out of the water, and stuck at the
 		// pond's edge by the waterfall; owner, 2026-11-10)
-		if (r && r->type != 2 && r->floorpoints.size() && r->floorvalue == 0 && size > r->floorvalue) {
+		// In water only what lies wholly under the bed is lifted (a ball that
+		// sank into the bog's painted earth; owner, 2026-11-11): a fish
+		// swimming near a bank never is.
+		bool buriedInWater = r && r->type == 2 && r->floorpoints.size() && r->floorvalue == 0 && y > r->floorYatX(cx) + 1;
+		if (r && (r->type != 2 || buriedInWater) && r->floorpoints.size() && r->floorvalue == 0 && size > r->floorvalue) {
 			float floory = r->floorYatX(cx);
 			// Not where water lies under the room: there the line is a
 			// boardwalk over it, not the top of the ground, and what is under
