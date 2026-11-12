@@ -126,6 +126,39 @@ float secondsOf(unsigned int ticks) {
 	return ticks / 2.5f;
 }
 
+// text wrapped to a width, each line centred in it
+void centredText(const std::string& text, float width, ImU32 col) {
+	std::vector<std::string> lines;
+	std::string line, word;
+	auto flush = [&]() {
+		if (!word.empty()) {
+			std::string tryLine = line.empty() ? word : line + " " + word;
+			if (!line.empty() && ImGui::CalcTextSize(tryLine.c_str()).x > width) {
+				lines.push_back(line);
+				line = word;
+			} else
+				line = tryLine;
+			word.clear();
+		}
+	};
+	for (char ch : text) {
+		if (ch == ' ')
+			flush();
+		else
+			word += ch;
+	}
+	flush();
+	if (!line.empty())
+		lines.push_back(line);
+	float x0 = ImGui::GetCursorPosX();
+	for (auto& l : lines) {
+		ImGui::SetCursorPosX(x0 + std::max(0.0f, (width - ImGui::CalcTextSize(l.c_str()).x) / 2));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(col));
+		ImGui::TextUnformatted(l.c_str());
+		ImGui::PopStyleColor();
+	}
+}
+
 void sector(ImDrawList* dl, ImVec2 c, float r0, float r1, float a0, float a1, ImU32 col) {
 	const int steps = 8;
 	for (int i = 0; i < steps; i++) {
@@ -162,10 +195,12 @@ const char* mattersWord(float weight, float most) {
 
 void FeelingsPage(const MindView& v) {
 	ImDrawList* dl = ImGui::GetWindowDrawList();
-	ImGui::TextColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "How hard each need is pushing it now: its level times how much it matters to this creature.");
+	// the dial in the middle, the words above and below it centred on it
+	const float W = 440, H = 370;
+	centredText("How hard each need is pushing it now: its level times how much it matters to this creature.", W, DIM);
+	ImGui::Dummy(ImVec2(W, 4));
 	ImVec2 o = ImGui::GetCursorScreenPos();
-	const float W = 460, H = 420;
-	ImVec2 c(o.x + 230, o.y + 200);
+	ImVec2 c(o.x + W / 2, o.y + 185);
 	const float r0 = 52, r1 = 160;
 	float total = 0;
 	std::array<float, 17> pull = pullsOf(v, &total);
@@ -208,13 +243,18 @@ void FeelingsPage(const MindView& v) {
 		ImGui::SetTooltip("%s: %.0f%% (%s); it %s\n%.0f%% of what is pushing it now",
 			NEED_NAMES[i], v.drives[i] * 100, KIND_NAME[NEED_KIND[i]], mattersWord(v.weight[i], most), total > 0 ? pull[i] / total * 100 : 0.0f);
 	}
-	// key and the strongest pulls
-	float ky = o.y + 382;
+	ImGui::Dummy(ImVec2(W, H));
+	// the key, centred under the dial
+	float keyW = 0;
+	for (int k = 0; k < 4; k++)
+		keyW += 18 + ImGui::CalcTextSize(KIND_NAME[k]).x + (k < 3 ? 22 : 0);
+	ImVec2 kp = ImGui::GetCursorScreenPos() + ImVec2((W - keyW) / 2, 2);
 	for (int k = 0; k < 4; k++) {
-		ImVec2 kp(o.x + 30 + k * 105, ky);
 		dl->AddRectFilled(kp, kp + ImVec2(12, 12), KIND_COLOR[k]);
 		dl->AddText(kp + ImVec2(18, -2), DIM, KIND_NAME[k]);
+		kp.x += 18 + ImGui::CalcTextSize(KIND_NAME[k]).x + 22;
 	}
+	ImGui::Dummy(ImVec2(W, 20));
 	std::vector<std::pair<float, int>> order;
 	for (int i = 0; i < 17; i++)
 		order.push_back({pull[i], i});
@@ -224,9 +264,9 @@ void FeelingsPage(const MindView& v) {
 		strongest += fmt::format("{} {} ({:.0f}%)", k ? "," : "", NEED_NAMES[order[k].second], order[k].first / total * 100);
 	if (order[0].first <= 0.01f)
 		strongest = "Nothing is pushing it: all is well.";
-	dl->AddText(ImVec2(o.x + 14, ky + 20), TEXT, strongest.c_str());
-	ImGui::Dummy(ImVec2(W, H));
-	ImGui::TextDisabled("Faint behind each: the need's level. The body's levels are in the Health Kit's Drives.");
+	centredText(strongest, W, TEXT);
+	ImGui::Dummy(ImVec2(W, 2));
+	centredText("Faint behind each: the need's level. The body's levels are in the Health Kit's Drives.", W, DIM);
 }
 
 void ChoosingPage(const MindView& v) {
@@ -526,10 +566,20 @@ void MoodPage(const MindView& v) {
 		ImGui::TextWrapped("Not enough time has passed to show its mood.");
 		return;
 	}
-	ImGui::TextColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "How content it has been (top: content); the color below is its strongest need at the time.");
+	ImGui::TextColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "How content it has been; the color below is its strongest need at the time.");
 	ImDrawList* dl = ImGui::GetWindowDrawList();
-	ImVec2 o = ImGui::GetCursorScreenPos();
-	const float W = 640, H = 220;
+	const float axisW = 74; // room for the y axis's labels
+	ImVec2 o = ImGui::GetCursorScreenPos() + ImVec2(axisW, 6);
+	const float W = 600, H = 220;
+	// the y axis: how content, 0-100%
+	for (int g = 0; g <= 4; g++) {
+		std::string t = fmt::format("{}%", g * 25);
+		ImVec2 ts = ImGui::CalcTextSize(t.c_str());
+		dl->AddText(ImVec2(o.x - ts.x - 6, o.y + H * (1 - g / 4.0f) - ts.y / 2), DIM, t.c_str());
+	}
+	const char* axis = "content";
+	ImVec2 as = ImGui::CalcTextSize(axis);
+	dl->AddText(ImVec2(o.x - as.x - 6, o.y + H / 2 + 12), DIM, axis);
 	dl->AddRectFilled(o, o + ImVec2(W, H), IM_COL32(30, 33, 41, 255));
 	for (int g = 1; g < 4; g++)
 		dl->AddLine(o + ImVec2(0, H * g / 4), o + ImVec2(W, H * g / 4), IM_COL32(48, 52, 64, 255));
@@ -557,7 +607,7 @@ void MoodPage(const MindView& v) {
 	dl->AddText(o + ImVec2(0, H + 20), DIM, span.c_str());
 	ImVec2 ns = ImGui::CalcTextSize("now");
 	dl->AddText(o + ImVec2(W - ns.x, H + 20), DIM, "now");
-	ImGui::Dummy(ImVec2(W, H + 40));
+	ImGui::Dummy(ImVec2(axisW + W, H + 46));
 }
 
 } // namespace
