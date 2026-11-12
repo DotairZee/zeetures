@@ -34,6 +34,9 @@ class Reader;
 class Writer;
 
 class script;
+class caosVM;
+// the VM whose op is running now (for diagnostics), or null
+extern caosVM* g_runningVM;
 
 //#define CAOSDEBUG
 //#define CAOSDEBUGDETAIL

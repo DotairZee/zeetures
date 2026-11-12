@@ -259,6 +259,7 @@ class Agent : public std::enable_shared_from_this<Agent> {
 	bool vmStopped();
 
 	void moveTo(float, float, bool force = false);
+	void logBigMove(float nx, float ny); // C2 diagnostics: a creature moved far in one go
 	bool tryMoveToPlaceAround(float x, float y);
 
 	void setTimerRate(unsigned int r) {

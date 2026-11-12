@@ -47,6 +47,7 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	bool calculated;
 	int oldfootx, oldfooty;
 	int lastgoodfootx, lastgoodfooty; // TODO: sucky code
+	int fallStuck = 0; // ticks falling without moving (part of its box in rock): eased sideways
 	bool downfoot_left;
 	std::shared_ptr<class Room> downfootroom;
 

@@ -602,6 +602,27 @@ static std::shared_ptr<Room> walkOnFrom(const Room& r, bool east, int fit, bool 
 	return next;
 }
 
+// Does stepping off room r on one side end in water (deep water through the
+// doorway, or a floor that opens down into it, a few rooms down)? Used to
+// stop a creature walking up to an object over the end of a dock (it walked
+// off the east dock's end reaching for an object there and sank; 2026-11-12).
+bool walkOffEndsInWater(const Room& r, bool east, int fit) {
+	const float w = wrapWidth();
+	float ns = 0.0f;
+	std::shared_ptr<Room> n = walkOnFrom(r, east, fit, false, true, w, ns);
+	for (int depth = 0; n && depth < 4; depth++) {
+		if (n->deepWater())
+			return true;
+		std::shared_ptr<Room> below;
+		float nf = std::max(n->y_left_floor, n->y_right_floor);
+		for (auto& [m, d2] : n->getDoors())
+			if (d2.perm >= fit && std::min(m->y_left_ceiling, m->y_right_ceiling) + 2 >= nf)
+				below = m;
+		n = below;
+	}
+	return false;
+}
+
 static bool walkableTo(std::shared_ptr<Room> from, float x0, float x1, int fit) {
 	// from dry land, a way through water does not count: the pond's ramp
 	// made the fish in it "reachable" from the bank, and norns walked in after

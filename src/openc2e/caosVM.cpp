@@ -288,6 +288,8 @@ inline void caosVM::runOpCore(script* s, caosOp op) {
 	}
 }
 
+caosVM* g_runningVM = nullptr;
+
 inline void caosVM::runOp() {
 	cip = nip;
 	nip++;
@@ -313,7 +315,15 @@ inline void caosVM::runOp() {
 				dumpStack(this);
 			}
 		}
-		runOpCore(scr.get(), op);
+		caosVM* outer = g_runningVM;
+		g_runningVM = this;
+		try {
+			runOpCore(scr.get(), op);
+		} catch (...) {
+			g_runningVM = outer;
+			throw;
+		}
+		g_runningVM = outer;
 	} catch (caosException& e) {
 		e.trace(currentscript, op.traceindex);
 		stop();

@@ -33,6 +33,7 @@
 #include "VoiceData.h"
 #include "World.h"
 #include "caosVM.h"
+#include "caosScript.h"
 #include "common/audio/AudioBackend.h"
 #include "common/creaturesImage.h"
 #include "common/io/FileReader.h"
@@ -163,6 +164,19 @@ void Agent::zotstack() {
 	vmstack.clear();
 }
 
+void Agent::logBigMove(float nx, float ny) {
+	std::string by = "the engine";
+	if (g_runningVM && g_runningVM->currentscript) {
+		auto& sc = g_runningVM->currentscript;
+		Agent* o = g_runningVM->owner.get();
+		by = fmt::format("script {} {} {} {}{}", sc->fmly, sc->gnus, sc->spcs, sc->scrp,
+			o ? fmt::format(" of {} {} {} at {:.0f},{:.0f}", (int)o->family, (int)o->genus, o->species, o->x, o->y) : std::string(" (no owner: CAOS from outside)"));
+	} else if (carriedby)
+		by = fmt::format("its carrier {} {} {}", (int)carriedby->family, (int)carriedby->genus, carriedby->species);
+	fmt::print("* BIG MOVE {} {} {} unid {} from {:.0f},{:.0f} to {:.0f},{:.0f} by {}{}\n", (int)family, (int)genus, species, unid, x, y, nx, ny, by,
+		invehicle ? fmt::format(" (in vehicle {} {} {})", (int)invehicle->family, (int)invehicle->genus, invehicle->species) : std::string());
+}
+
 void Agent::moveTo(float _x, float _y, bool force) {
 	// Move ourselves to the specified location.
 	wasmoved = true;
@@ -174,6 +188,12 @@ void Agent::moveTo(float _x, float _y, bool force) {
 	// TODO: what if we move while being carried? doomy explosions ensue, that's what!
 	float xoffset = _x - x;
 	float yoffset = _y - y;
+
+	// C2: a creature moved far in one go is logged with what moved it (a
+	// norn went from the land at 5856,557 to the east seabed in 18 ticks and
+	// nothing in the logs said how; owner, 2026-11-12)
+	if (engine.version == 2 && engine.worldready && (std::fabs(xoffset) > 300 || std::fabs(yoffset) > 300) && std::fabs(xoffset) < 4000 && family == 4)
+		logBigMove(_x, _y);
 
 	x = _x;
 	y = _y;

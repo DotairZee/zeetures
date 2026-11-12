@@ -29,6 +29,8 @@
 
 #include "SkeletalCreature.h"
 
+bool walkOffEndsInWater(const Room& r, bool east, int fit); // CreatureAI.cpp
+
 #include "BreedSlots.h"
 #include "common/Random.h"
 #include "creatures/oldCreature.h"
@@ -1176,15 +1178,28 @@ void SkeletalCreature::tick() {
 
 	// TODO: hack!
 	if (!eyesclosed && !creature->isZombie()) {
+		bool edgeStop = false;
 		if (approaching && approachtarget) {
 			// TODO: more sane approaching skillz
 			if (approachtarget->x < x)
 				direction = 3;
 			else
 				direction = 2;
+			// C2: walking up to an object, a creature at its floor's edge
+			// stops there when the next step would end in water it can't
+			// breathe in (it walked off the east dock's end reaching for an
+			// object there, and sank; 2026-11-12). It touches what it can
+			// from the edge.
+			if (engine.version == 2 && downfootroom && downfootroom->type != 2 && !(dynamic_cast<oldCreature*>(creature) && dynamic_cast<oldCreature*>(creature)->breathesWater())) {
+				bool east = direction == 2;
+				float fx = footX();
+				float edge = east ? (float)downfootroom->x_right : (float)downfootroom->x_left;
+				if (std::fabs(fx - edge) < 14.0f && walkOffEndsInWater(*downfootroom, east, std::max(1, size)))
+					edgeStop = true;
+			}
 		}
 
-		if (walking || approaching) {
+		if ((walking || approaching) && !edgeStop) {
 			// TODO: we shouldn't bother with this unless it changed?
 			setGaitGene(creature->getGait());
 
@@ -1230,11 +1245,32 @@ void SkeletalCreature::physicsTick() {
 	// TODO: mmh
 
 	if (engine.version > 1 && falling) {
+		float fx0 = x, fy0 = y;
 		if (validInRoomSystem() || engine.version == 2) {
 			Agent::physicsTick();
 		} else if (!validInRoomSystem()) {
 			falling = false;
 		}
+		// C2: physics checks an object's four corners against the rooms, so a
+		// falling creature with a corner in rock that belongs to no room
+		// cannot move at all, and hangs in the air (a frog norn stepped off
+		// the upper-east deck's end with its left side over the rock under
+		// the deck, x 7670-7745, and hung there; owner, 2026-11-12). After a
+		// few ticks without moving, ease it away from the side in rock.
+		if (engine.version == 2 && falling && !carriedby && !invehicle && x == fx0 && y == fy0) {
+			if (++fallStuck >= 4) {
+				auto inRoom = [](float px, float py) { return (bool)world.map->roomAt(px, py); };
+				float w = getWidth(), h = getHeight();
+				bool leftOut = !inRoom(x + 1, y + 1) || !inRoom(x + 1, y + h - 1);
+				bool rightOut = !inRoom(x + w - 1, y + 1) || !inRoom(x + w - 1, y + h - 1);
+				if (leftOut != rightOut) {
+					moveTo(x + (leftOut ? 3 : -3), y);
+					if (getenv("OPENC2E_WATCH_CREATURES"))
+						fmt::print("* WATCH UNSTICK t{} unid {} at ({:.0f}, {:.0f}): eased {}\n", world.tickcount, unid, x, y, leftOut ? "right" : "left");
+				}
+			}
+		} else
+			fallStuck = 0;
 	}
 
 	if ((engine.version == 1 || !falling) && !carriedby && !invehicle)
