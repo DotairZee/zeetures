@@ -273,8 +273,16 @@ class Agent : public std::enable_shared_from_this<Agent> {
 
 	virtual CompoundPart* part(unsigned int id) = 0;
 
-	unsigned int getWidth() { return part(0)->getWidth(); }
-	unsigned int getHeight() { return part(0)->getHeight(); }
+	// 0 for an agent with no part yet (a vehicle made by NEW: VHCL gets its
+	// picture from NEW: PART; GPAS on one without crashed, 2026-11-12)
+	unsigned int getWidth() {
+		CompoundPart* p = part(0);
+		return p ? p->getWidth() : 0;
+	}
+	unsigned int getHeight() {
+		CompoundPart* p = part(0);
+		return p ? p->getHeight() : 0;
+	}
 	Point const boundingBoxPoint(unsigned int n);
 	Point const boundingBoxPoint(unsigned int n, Point p, float w, float h);
 	std::shared_ptr<class Room> const bestRoomAt(unsigned int x, unsigned int y, unsigned int direction, class MetaRoom* m, std::shared_ptr<Room> exclude);

@@ -477,7 +477,7 @@ static void dumpAgents() {
 	for (auto& a : world.agents) {
 		if (!a || a->family != f || a->genus != g || a->species != sp)
 			continue;
-		fmt::print("* Agent {} {} {} at ({}, {}) zorder {}\n", f, g, sp, a->x, a->y, a->getZOrder());
+		fmt::print("* Agent {} {} {} at ({}, {}) zorder {} ov {} {} {}\n", f, g, sp, a->x, a->y, a->getZOrder(), a->var[0].dump(), a->var[1].dump(), a->var[2].dump());
 		// every part, of simple agents too (their one part is part 0)
 		auto* c = dynamic_cast<CompoundAgent*>(a.get());
 		unsigned int parts = c ? c->partCount() : (a->part(0) ? 1 : 0);
