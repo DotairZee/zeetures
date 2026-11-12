@@ -60,6 +60,7 @@
 #include "fileformats/peFile.h"
 #include "imageManager.h"
 #include "openc2eimgui/ImGuiUtils.h"
+#include <imgui.h>
 #include "openc2eimgui/Openc2eImGui.h"
 #include "Scriptorium.h"
 #include "WorldSave.h"
@@ -352,8 +353,12 @@ void Engine::drawWorld() {
 	if (dorendering || refreshdisplay) {
 		refreshdisplay = false;
 		RenderTarget* main = get_backend()->getMainRenderTarget();
+		// while the mouse is over a kit, the toolbar or any other window, the
+		// hand is not drawn: it went on moving behind the kit (owner,
+		// 2026-11-11)
+		const bool overWindow = ImGui::GetCurrentContext() && ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
 		if (zoom == 1.0f) {
-			world.drawWorld(camera.get(), main);
+			world.drawWorld(camera.get(), main, overWindow);
 		} else {
 			// draw the world at 1:1 into a texture the size of the view in
 			// world pixels, scale that onto the window, then draw the hand on
@@ -365,7 +370,7 @@ void Engine::drawWorld() {
 			main->renderClear();
 			main->blitRenderTarget(zoomtarget.get(), Rect2f(0, 0, zw * zoom, zh * zoom));
 			PointerAgent* hand = world.hand();
-			if (hand && hand->visible) {
+			if (hand && hand->visible && !overWindow) {
 				int mx = (int)std::lround((hand->pointerX() - (int)camera->getX()) * zoom);
 				int my = (int)std::lround((hand->pointerY() - (int)camera->getY()) * zoom);
 				if (CompoundPart* p = hand->part(0))

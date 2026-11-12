@@ -456,13 +456,30 @@ void MapPage(const MindView& v) {
 	dl->AddTriangleFilled(here + ImVec2(0, -9), here + ImVec2(-6, 3), here + ImVec2(6, 3), IM_COL32(255, 255, 255, 255));
 	if (!tip.empty())
 		ImGui::SetTooltip("%s", tip.c_str());
-	// key
+	if (ImGui::IsMouseHoveringRect(here - ImVec2(8, 10), here + ImVec2(8, 5)))
+		ImGui::SetTooltip("Where it is now");
+	// key, each mark drawn as it is on the map
 	ImVec2 k = ImGui::GetCursorScreenPos() + ImVec2(4, 4);
-	const char* labels[4] = {"been there (bright: lately)", "food it remembers", "lift rides it knows", "where it is"};
-	ImU32 cols[4] = {IM_COL32(210, 230, 250, 255), IM_COL32(120, 220, 110, 255), IM_COL32(255, 200, 90, 255), IM_COL32(255, 255, 255, 255)};
+	const char* labels[4] = {"been there (brighter: lately)", "food it remembers", "lift rides it knows", "where it is now"};
 	for (int i = 0; i < 4; i++) {
 		ImVec2 p = k + ImVec2((i % 2) * 300.0f, (i / 2) * 18.0f);
-		dl->AddRectFilled(p, p + ImVec2(10, 10), cols[i]);
+		ImVec2 c = p + ImVec2(5, 5);
+		switch (i) {
+			case 0: // dim to bright, as the dots fade
+				dl->AddRectFilled(c - ImVec2(5, 2), c - ImVec2(1, -2), IM_COL32(60, 90, 150, 255));
+				dl->AddRectFilled(c + ImVec2(1, -2), c + ImVec2(5, 2), IM_COL32(210, 230, 250, 255));
+				break;
+			case 1:
+				dl->AddCircleFilled(c, 5, IM_COL32(120, 220, 110, 255), 16);
+				dl->AddCircle(c, 5, IM_COL32(20, 60, 20, 255), 16);
+				break;
+			case 2:
+				dl->AddLine(c - ImVec2(0, 6), c + ImVec2(0, 6), IM_COL32(255, 200, 90, 255), 2.0f);
+				break;
+			case 3:
+				dl->AddTriangleFilled(c + ImVec2(0, -7), c + ImVec2(-5, 4), c + ImVec2(5, 4), IM_COL32(255, 255, 255, 255));
+				break;
+		}
 		dl->AddText(p + ImVec2(16, -3), DIM, labels[i]);
 	}
 	ImGui::Dummy(ImVec2((float)w, 42));
