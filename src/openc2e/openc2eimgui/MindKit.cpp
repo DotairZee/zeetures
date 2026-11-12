@@ -445,50 +445,10 @@ void LearnedPage(const MindView& v) {
 	ImGui::TextDisabled("Names in pink are creatures it knows one by one.");
 }
 
-// a small picture of a metaroom's background, made once per background
-Texture mapPicture(MetaRoom* m, int& w, int& h) {
-	static std::map<std::string, std::tuple<Texture, int, int>> cache;
-	auto bk = m ? m->getCurrentBackground() : nullptr;
-	if (!bk || bk->images.empty())
-		return {};
-	auto it = cache.find(bk->getName());
-	if (it != cache.end()) {
-		w = std::get<1>(it->second);
-		h = std::get<2>(it->second);
-		return std::get<0>(it->second);
-	}
-	Image rgb = ImageUtils::ToRGB24(bk->images[0]);
-	const int W = rgb.width, H = rgb.height;
-	w = 660;
-	h = std::max(1, (int)std::lround((double)H * w / W));
-	Image out;
-	out.width = w;
-	out.height = h;
-	out.format = if_rgba32;
-	out.data = shared_array<uint8_t>(size_t(w) * h * 4);
-	for (int y = 0; y < h; y++)
-		for (int x = 0; x < w; x++) {
-			int x0 = x * W / w, x1 = std::max(x0 + 1, (x + 1) * W / w), y0 = y * H / h, y1 = std::max(y0 + 1, (y + 1) * H / h);
-			int sum[3] = {0, 0, 0}, n = 0;
-			for (int yy = y0; yy < y1; yy += 2)
-				for (int xx = x0; xx < x1; xx += 2) {
-					const uint8_t* p = rgb.data.data() + (size_t(yy) * W + xx) * 3;
-					sum[0] += p[0], sum[1] += p[1], sum[2] += p[2], n++;
-				}
-			uint8_t* d = out.data.data() + (size_t(y) * w + x) * 4;
-			for (int c = 0; c < 3; c++)
-				d[c] = (uint8_t)(sum[c] / std::max(1, n) * 45 / 100); // dimmed, so the marks stand out
-			d[3] = 255;
-		}
-	Texture t = get_backend()->createTextureFromImage(out);
-	cache[bk->getName()] = {t, w, h};
-	return t;
-}
-
 void MapPage(const MindView& v) {
 	MetaRoom* m = world.map ? world.map->metaRoomAt(v.x, v.y) : nullptr;
 	int w = 0, h = 0;
-	Texture pic = mapPicture(m, w, h);
+	Texture pic = KitMapPicture(m, w, h);
 	if (!m || !pic) {
 		ImGui::TextWrapped("No map to show here.");
 		return;

@@ -43,6 +43,9 @@ class Scriptorium {
 	void addScript(unsigned char family, unsigned char genus, unsigned short species, unsigned short event, std::shared_ptr<script> s);
 	void delScript(unsigned char family, unsigned char genus, unsigned short species, unsigned short event);
 	std::shared_ptr<script> getScript(unsigned char family, unsigned char genus, unsigned short species, unsigned short event);
+	// whether this kind of agent (or its genus) has a script for the event
+	// itself, not one inherited from its family or from every agent
+	bool hasOwnScript(unsigned char family, unsigned char genus, unsigned short species, unsigned short event) const;
 
 	// Developer aid: write every script's classifier, event and source text.
 	void dumpScripts(std::ostream& out);

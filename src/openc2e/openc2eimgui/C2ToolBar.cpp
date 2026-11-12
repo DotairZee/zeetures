@@ -603,7 +603,10 @@ void DrawC2Toolbar() {
 			OpenC2Kit("chronicles");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Chronicles Kit: the world's history and statistics");
-		ImageButton(icon_unknown_maybe_ecologykit, false);
+		if (ImageButton(icon_unknown_maybe_ecologykit, IsC2KitAvailable("ecology")))
+			OpenC2Kit("ecology");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Ecology Kit: the world's rooms (light, warmth, air, soil), watching rooms, and a census");
 		}
 
 		if (s_show_favourites) {

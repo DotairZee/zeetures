@@ -52,6 +52,15 @@ void Scriptorium::delScript(unsigned char family, unsigned char genus, unsigned 
 		scripts.erase(x);
 }
 
+bool Scriptorium::hasOwnScript(unsigned char family, unsigned char genus, unsigned short species, unsigned short event) const {
+	for (unsigned short s : {species, (unsigned short)0}) {
+		auto x = scripts.find(const_cast<Scriptorium*>(this)->calculateValue(family, genus, s));
+		if (x != scripts.end() && x->second.count(event))
+			return true;
+	}
+	return false;
+}
+
 std::shared_ptr<script> Scriptorium::getScript(unsigned char family, unsigned char genus, unsigned short species, unsigned short event) {
 	std::map<unsigned short, std::shared_ptr<script> >& x = getScripts(calculateValue(family, genus, species));
 	if (x.find(event) == x.end()) {

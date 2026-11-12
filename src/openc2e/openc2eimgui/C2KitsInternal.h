@@ -11,6 +11,7 @@
 #include <memory>
 
 class Agent;
+class MetaRoom;
 class c2Creature;
 class gene;
 class monikerData;
@@ -24,6 +25,8 @@ Texture KitPicture(const std::string& name); // a .bmp drawn as it is
 Texture KitPhotoTexture(const std::filesystem::path& path); // a photo in the world folder (cached)
 void DrawGraveyardKit();
 void DrawMindKit(); // MindKit.cpp
+void DrawEcologyKit(); // EcologyKit.cpp
+void EcologyKitTick(); // records the Monitor's pinned rooms, whatever is open
 void OpenGraveyardAt(const std::string& moniker); // the Graveyard Kit at that creature's stone
 const std::vector<Texture>& KitSprites(const std::string& name); // .s16 frames, transparent background
 
@@ -99,6 +102,10 @@ std::string KitDateText(unsigned int worldtick); // "Summer, day 3, year 001"
 float KitOrganHealth(c2Creature* c, int* damaged = nullptr);
 // the favorite place nearest to an agent ("near The Incubator")
 std::string KitWhere(Agent* a);
+std::string KitWhereAt(float x, float y); // the same for a point in the world
+// a small picture (660 px wide, dimmed) of a metaroom's background, made
+// once per background; w and h are its size
+Texture KitMapPicture(MetaRoom* m, int& w, int& h);
 // selects a creature and moves the camera to it
 void KitGoTo(const std::shared_ptr<Agent>& a);
 
