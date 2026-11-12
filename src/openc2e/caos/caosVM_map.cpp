@@ -27,13 +27,34 @@
 #include "caosVM.h"
 #include "common/throw_ifnot.h"
 
+#include <algorithm>
 #include <assert.h>
 #include <fmt/core.h>
 #include <memory>
 
+// The room whose air an object is in, for the room-value commands (TEMP,
+// PRES, WNDX, LITE and so on). An object above every room (C2's clouds rise
+// above the highest rooms as they build up rain; their timer reads WNDX and
+// TEMP there) is in the air of the room below it. Each read used to throw,
+// over a thousand times in a few minutes of play.
+static std::shared_ptr<Room> roomForAirOf(const AgentRef& agent) {
+	std::shared_ptr<Room> r = roomContainingAgent(agent);
+	if (r || engine.version > 2)
+		return r;
+	float cx = agent->x + agent->getWidth() / 2.0f;
+	float cy = std::max(0.0f, agent->y + agent->getHeight() / 2.0f); // above the map's top: from its top
+	MetaRoom* m = world.map->metaRoomAt(cx, cy);
+	if (!m)
+		return r;
+	for (float y = std::max(cy, (float)m->y()); y < (float)(m->y() + m->height()); y += 4.0f)
+		if ((r = m->roomAt(cx, y)))
+			return r;
+	return r;
+}
+
 #define CAOS_LVALUE_TARG_ROOM(name, check, get, set) \
 	CAOS_LVALUE_TARG(name, \
-					 std::shared_ptr<Room> r = roomContainingAgent(vm->targ); \
+					 std::shared_ptr<Room> r = roomForAirOf(vm->targ); \
 					 THROW_IFNOT(r); \
 					 check, \
 					 get, \
@@ -935,7 +956,7 @@ CAOS_LVALUE_ROOM_SIMPLE(PSRC, r->psrc)
 */
 void v_WNDX(caosVM* vm) {
 	valid_agent(vm->targ);
-	std::shared_ptr<Room> r = roomContainingAgent(vm->targ);
+	std::shared_ptr<Room> r = roomForAirOf(vm->targ);
 	THROW_IFNOT(r);
 	vm->result.setInt(r->windx);
 }
@@ -947,7 +968,7 @@ void v_WNDX(caosVM* vm) {
 */
 void v_WNDY(caosVM* vm) {
 	valid_agent(vm->targ);
-	std::shared_ptr<Room> r = roomContainingAgent(vm->targ);
+	std::shared_ptr<Room> r = roomForAirOf(vm->targ);
 	THROW_IFNOT(r);
 	vm->result.setInt(r->windy);
 }
