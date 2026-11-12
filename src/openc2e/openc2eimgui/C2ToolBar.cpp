@@ -451,11 +451,11 @@ void DrawC2Toolbar() {
 			SelectNextCreature();
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Next creature");
+			ImGui::SetTooltip("Next Creature: select the next creature in the world");
 		if (ImageButton(icon_eyeview, (bool)world.selectedcreature))
 			SetEyeViewOpen(!IsEyeViewOpen());
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Creature's eye view");
+			ImGui::SetTooltip("Creature's Eye View: see the world as the selected creature sees it");
 		if (ImageButton(icon_track, (bool)world.selectedcreature)) {
 			// toggle: follow the selected creature, or stop following
 			if (engine.camera->trackedAgent() == world.selectedcreature)
@@ -464,7 +464,7 @@ void DrawC2Toolbar() {
 				engine.camera->trackAgent(world.selectedcreature, 0, 0, flexible, none);
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip(engine.camera->trackedAgent() && engine.camera->trackedAgent() == world.selectedcreature ? "Stop following" : "Follow selected creature");
+			ImGui::SetTooltip(engine.camera->trackedAgent() && engine.camera->trackedAgent() == world.selectedcreature ? "Follow: stop following the selected creature" : "Follow: keep the view on the selected creature");
 		// the halo over the selected creature: the game's own system macro
 		// (world-file script 0 1 0 0) makes or removes the halo object
 		// (2 1 3), whose timer script keeps it over the creature's head
@@ -482,7 +482,7 @@ void DrawC2Toolbar() {
 			}
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip(halo_on ? "Hide the halo" : "Show a halo over the selected creature");
+			ImGui::SetTooltip(halo_on ? "Halo: hide the halo" : "Halo: show a halo over the selected creature");
 		ImGui::Separator();
 		if (ImageButton(icon_play, world.paused)) {
 			world.paused = false;
@@ -502,7 +502,7 @@ void DrawC2Toolbar() {
 		if (ImageButton(icon_web, true))
 			SDL_OpenURL("https://openc2e.github.io/");
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("openc2e on the web (the open-source engine this runs on)");
+			ImGui::SetTooltip("Web: openc2e on the web (the open-source engine this runs on)");
 		ImGui::Separator();
 		}
 		if (s_show_pointer) {
@@ -525,7 +525,7 @@ void DrawC2Toolbar() {
 					sp->setStippled(world.handInvisible);
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip(world.handInvisible ? "Invisible hand: creatures can't see it (click to show it again)" : "Make the hand invisible to creatures");
+			ImGui::SetTooltip(world.handInvisible ? "Invisible Hand: creatures can't see the hand (click to show it again)" : "Invisible Hand: hide the hand from creatures");
 		if (toggled(!world.handPush, icon_teach))
 			world.handPush = false;
 		if (ImGui::IsItemHovered())
@@ -565,26 +565,29 @@ void DrawC2Toolbar() {
 		if (ImageButton(icon_ownerskit, IsC2KitAvailable("owners")))
 			OpenC2Kit("owners");
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Owner's Kit");
+			ImGui::SetTooltip("Owner's Kit: name, photos, family, temperament, relationships and life story");
 		if (ImageButton(icon_healthkit, IsC2KitAvailable("health")))
 			OpenC2Kit("health");
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Health Kit");
-		ImageButton(icon_graveyard, false);
+			ImGui::SetTooltip("Health Kit: fitness, mind, drives and medicine");
+		if (ImageButton(icon_graveyard, IsC2KitAvailable("graveyard")))
+			OpenC2Kit("graveyard");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Graveyard Kit: the gravestones of the creatures that have died");
 		ImGui::Separator();
 		if (ImageButton(icon_unknown_maybe_breederskit, IsC2KitAvailable("breeders")))
 			OpenC2Kit("breeders");
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Breeder's Kit");
+			ImGui::SetTooltip("Breeder's Kit: fertility and pregnancy, aphrodisiacs and breeds");
 		if (ImageButton(icon_unknown_maybe_sciencekit, IsC2KitAvailable("science")))
 			OpenC2Kit("science");
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Science Kit");
+			ImGui::SetTooltip("Science Kit: body, genes, biochemistry and the syringe");
 		ImageButton(icon_unknown_maybe_neurosciencekit, false);
 		if (ImageButton(icon_unknown_maybe_observationkit, IsC2KitAvailable("observation")))
 			OpenC2Kit("observation");
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Observation Kit");
+			ImGui::SetTooltip("Observation Kit: every creature at a glance, and alarms");
 		ImGui::Separator();
 		if (ImageButton(icon_agent_injector, IsAgentInjectorEnabled())) {
 			SetAgentInjectorOpen(true);
@@ -594,7 +597,7 @@ void DrawC2Toolbar() {
 		if (ImageButton(icon_unknown_maybe_historykit, IsC2KitAvailable("chronicles")))
 			OpenC2Kit("chronicles");
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Chronicles Kit");
+			ImGui::SetTooltip("Chronicles Kit: the world's history and statistics");
 		ImageButton(icon_unknown_maybe_ecologykit, false);
 		}
 
@@ -673,7 +676,7 @@ void DrawC2Toolbar() {
 			ImGui::EndCombo();
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Zoom the view (also Ctrl+wheel; Ctrl+0 for actual size)");
+			ImGui::SetTooltip("Zoom: the size of the view (also Ctrl+wheel; Ctrl+0 for actual size)");
 		}
 
 		s_last_c2toolbar_height = ImGui::GetWindowSize().y;

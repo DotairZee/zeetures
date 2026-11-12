@@ -106,6 +106,9 @@ class monikerData {
 	bool registered = false; // birth registered (Owner's Kit)
 	std::vector<std::string> photos; // pictures in the world folder's photos/
 	std::string notes;
+	// the Graveyard Kit: the owner's words for its gravestone, and the photo
+	// chosen for it (one of photos; empty: the newest)
+	std::string epitaph, gravephoto;
 	// its death, if it has died (the dead are not saved; the life log keeps them)
 	bool died = false;
 	unsigned int diedtick = 0; // world tick count

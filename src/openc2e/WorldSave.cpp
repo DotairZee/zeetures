@@ -599,6 +599,10 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			out << "story " << e.tick << " " << e.kind << " " << (e.other.empty() ? "-" : e.other) << " " << escapeLine(e.detail) << "\n";
 		if (!m.notes.empty())
 			out << "notes " << escapeLine(m.notes) << "\n";
+		if (!m.epitaph.empty())
+			out << "epitaph " << escapeLine(m.epitaph) << "\n";
+		if (!m.gravephoto.empty())
+			out << "gravephoto " << escapeLine(m.gravephoto) << "\n";
 		out << "end\n";
 		nrecords++;
 	}
@@ -636,7 +640,7 @@ struct SavedCreature {
 	std::vector<int> chemicals;
 	std::vector<float> organs;
 	// the owner's records (monikerData)
-	std::string name, notes;
+	std::string name, notes, epitaph, gravephoto;
 	bool registered = false, hasborn = false, bornknown = false;
 	unsigned int born = 0;
 	std::vector<std::string> photos;
@@ -991,6 +995,10 @@ bool LoadWorldState(const fs::path& worlddir) {
 			}
 			else if (key == "notes")
 				c->notes = unescapeLine(restOfLine(l));
+			else if (key == "epitaph")
+				c->epitaph = unescapeLine(restOfLine(l));
+			else if (key == "gravephoto")
+				c->gravephoto = unescapeLine(restOfLine(l));
 			else if (key == "chemicals") {
 				int v;
 				while (l >> v)
@@ -1058,6 +1066,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 		m.photos = r.photos;
 		m.story = r.story;
 		m.notes = r.notes;
+		m.epitaph = r.epitaph;
+		m.gravephoto = r.gravephoto;
 		m.borntick = r.born;
 		m.bornknown = r.bornknown;
 		m.died = true;

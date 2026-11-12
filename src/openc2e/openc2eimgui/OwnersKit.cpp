@@ -133,7 +133,7 @@ class PhotoCamera : public Camera {
 
 static std::map<std::string, Texture> s_photos; // by full path
 
-static Texture photoTexture(const fs::path& path) {
+Texture KitPhotoTexture(const fs::path& path) {
 	auto key = path.string();
 	auto it = s_photos.find(key);
 	if (it != s_photos.end())
@@ -234,7 +234,7 @@ static void PhotosPage() {
 			DrawTexture(film[2], cell);
 			DrawTexture(film[2], cell + ImVec2(0, rowH - 16));
 		}
-		Texture t = photoTexture(engine.currentworlddir / m->photos[i]);
+		Texture t = KitPhotoTexture(engine.currentworlddir / m->photos[i]);
 		ImVec2 at = cell + ImVec2((cellW - thumbW) / 2, 18);
 		if (t)
 			dl->AddImage(t.as<ImTextureID>(), at, at + ImVec2(thumbW, thumbH));
@@ -256,7 +256,7 @@ static void PhotosPage() {
 
 	// the chosen photo, full size
 	if (big >= 0 && big < (int)m->photos.size()) {
-		Texture t = photoTexture(engine.currentworlddir / m->photos[big]);
+		Texture t = KitPhotoTexture(engine.currentworlddir / m->photos[big]);
 		if (t)
 			ImGui::Image(t.as<ImTextureID>(), ImVec2(t.width, t.height));
 		ImGui::TextDisabled("Taken %s", KitDateText(photoTick(m->photos[big])).c_str());
@@ -349,6 +349,11 @@ static std::shared_ptr<Agent> entryBody(const lifeLogEntry& e) {
 }
 
 static void followEntry(const lifeLogEntry& e) {
+	// a death: its gravestone (the Graveyard Kit)
+	if (e.kind == lifeLogEntry::death) {
+		OpenGraveyardAt(e.moniker);
+		return;
+	}
 	// an egg: go to the egg wherever it is now, or the baby once it hatched
 	if (e.kind == lifeLogEntry::eggLaid) {
 		if (auto egg = KitEggOf(e.child)) {
@@ -386,7 +391,7 @@ void WorldHistoryPage() {
 		ImGui::TableSetupColumn("", 0, 60);
 		ImGui::TableSetupColumn("Who", 0, 120);
 		ImGui::TableSetupColumn("Details", ImGuiTableColumnFlags_WidthStretch);
-		ImGui::TableSetupColumn("", 0, 30);
+		ImGui::TableSetupColumn("", 0, 44);
 		ImGui::TableHeadersRow();
 		for (int i = (int)log.size() - 1; i >= 0; i--) {
 			auto& e = log[i];
@@ -401,7 +406,12 @@ void WorldHistoryPage() {
 			ImGui::TableNextColumn();
 			ImGui::TextUnformatted(entryDetail(e).c_str());
 			ImGui::TableNextColumn();
-			if (entryBody(e) && ImGui::SmallButton("Go"))
+			if (e.kind == lifeLogEntry::death) {
+				if (ImGui::SmallButton("Grave"))
+					followEntry(e);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Its gravestone in the Graveyard Kit");
+			} else if (entryBody(e) && ImGui::SmallButton("Go"))
 				followEntry(e);
 			ImGui::PopID();
 		}
@@ -668,7 +678,7 @@ static void drawCard(const FamilyCard& c, ImVec2 o, bool interactive, float k) {
 	ImGui::PushID(c.mon.c_str());
 	int n = (int)m->photos.size();
 	ImVec2 tp = at + ImVec2(pad, pad);
-	Texture tex = n ? photoTexture(engine.currentworlddir / m->photos[n - 1]) : Texture();
+	Texture tex = n ? KitPhotoTexture(engine.currentworlddir / m->photos[n - 1]) : Texture();
 	if (tex) {
 		dl->AddImage(tex.as<ImTextureID>(), tp, tp + ImVec2(tw, th));
 		if (n > 1) { // how many there are
@@ -969,7 +979,7 @@ static void familyZoom(ImVec2 r0, ImVec2 r1) {
 	ImVec2 p0(r0.x + ((r1.x - r0.x) - sz.x) / 2, r0.y + 36);
 	auto lerp = [e](ImVec2 from, ImVec2 to) { return ImVec2(from.x + (to.x - from.x) * e, from.y + (to.y - from.y) * e); };
 	ImVec2 a = lerp(s_zoomFrom0, p0), b = lerp(s_zoomFrom1, p0 + sz);
-	Texture tex = photoTexture(engine.currentworlddir / m->photos[s_zoomPhoto]);
+	Texture tex = KitPhotoTexture(engine.currentworlddir / m->photos[s_zoomPhoto]);
 	if (tex)
 		dl->AddImage(tex.as<ImTextureID>(), a, b);
 	else {
@@ -1007,7 +1017,7 @@ static void familyZoom(ImVec2 r0, ImVec2 r1) {
 		float sx = r0.x + ((r1.x - r0.x) - (shown * (tw + gap) - gap)) / 2;
 		for (int i = first; i < first + shown; i++) {
 			ImVec2 q(sx + (i - first) * (tw + gap), cy + capH);
-			Texture th2 = photoTexture(engine.currentworlddir / m->photos[i]);
+			Texture th2 = KitPhotoTexture(engine.currentworlddir / m->photos[i]);
 			if (th2)
 				dl->AddImage(th2.as<ImTextureID>(), q, q + ImVec2(tw, th));
 			else

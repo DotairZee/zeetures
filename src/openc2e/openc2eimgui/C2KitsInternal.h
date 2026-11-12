@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include <filesystem>
 #include <memory>
 
 class Agent;
@@ -20,6 +21,9 @@ namespace Openc2eImgui {
 // The kits' art comes from the player's own Creatures 2 ("Applet Data"),
 // loaded at runtime and never shipped. Pictures are cached by name.
 Texture KitPicture(const std::string& name); // a .bmp drawn as it is
+Texture KitPhotoTexture(const std::filesystem::path& path); // a photo in the world folder (cached)
+void DrawGraveyardKit();
+void OpenGraveyardAt(const std::string& moniker); // the Graveyard Kit at that creature's stone
 const std::vector<Texture>& KitSprites(const std::string& name); // .s16 frames, transparent background
 
 // The files in a zip (stored or deflated), names without folders; false

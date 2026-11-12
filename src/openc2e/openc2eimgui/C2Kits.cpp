@@ -57,6 +57,7 @@ static const KitDef s_kits[] = {
 	{"owners", "Owner's Kit", "Owner's", 2, DrawOwnersKit},
 	{"observation", "Observation Kit", "Observation", 6, DrawObservationKit, true},
 	{"chronicles", "Chronicles Kit", "Chronicles", 8, DrawChroniclesKit, true},
+	{"graveyard", "Graveyard Kit", "Graveyard", 9, DrawGraveyardKit},
 };
 
 struct KitState {
