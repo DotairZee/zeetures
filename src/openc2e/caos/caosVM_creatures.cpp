@@ -548,6 +548,13 @@ void c_DIRN(caosVM* vm) {
  Returns the direction the target Creatures is facing.
 */
 void v_DIRN(caosVM* vm) {
+	// C1/C2: no creature, no direction (0). Object 2 13 2's timer turns it
+	// the way its carrier faces with TARG CARR then DIRN, also while nothing
+	// carries it; that threw "Invalid agent handle" about once a second.
+	if (engine.version < 3 && !dynamic_cast<CreatureAgent*>(vm->targ.get())) {
+		vm->result.setInt(0);
+		return;
+	}
 	CreatureAgent* c = vm->getTargCreatureAgent();
 
 	// C2 creatures turn by their poses, which don't update the direction
