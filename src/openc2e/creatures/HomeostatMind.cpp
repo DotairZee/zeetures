@@ -2006,15 +2006,20 @@ class HomeostatMind : public CreatureMind {
 		float threshold = prm.forageHunger - (prm.forageHunger - prm.forageHungerRestless) * restless;
 		if (d[HUNGER] < threshold)
 			return;
-		for (auto& c : out)
-			if (c.food || c.scent)
-				return; // something better to go on
 		for (auto& s : p.visible)
 			if (s.edible > 0.1f)
 				return;
 		float want = expectedMealRelief(d, D) * prm.forageShare * (1.0f + prm.restlessBoost * restless) * (d[HUNGER] - threshold) / (1.0f - threshold);
 		if (want < prm.seekMinWant)
 			return;
+		// something better to go on: a food trip or a smell worth at least
+		// as much as searching. (Any lead used to stop the search: a norn
+		// starving at the world's bottom-right corner remembered two food
+		// places it had all but given up on (confidence 0.06), so it never
+		// searched, and rested 135 times in a row; owner, 2026-11-11.)
+		for (auto& c : out)
+			if ((c.food || c.scent) && c.want >= want)
+				return;
 		auto open = [&](int dir) { return ((dir == 10 && canWest) || (dir == 11 && canEast)) && !isBlocked(p, dir) && !waterAhead(p, dir) && !cliffAhead(p, dir); };
 		// a known link to somewhere not visited lately: a way to search further
 		{
