@@ -18,6 +18,7 @@
  */
 
 #include "World.h"
+#include "SkyTint.h"
 
 #include "Bubble.h"
 #include "creatures/Pheromones.h"
@@ -301,6 +302,16 @@ void World::tick() {
 		fmt::print("* TEST PUSH at {:.0f},{:.0f}\n", selectedcreature->x, selectedcreature->y);
 	}
 
+	// developer aid: OPENC2E_TEST_HAND_PUSH="x y" turns the toolbar's push
+	// hand on and keeps the hand at that place (for snapshots of its pose
+	// and arrows)
+	if (const char* hp = getenv("OPENC2E_TEST_HAND_PUSH")) {
+		float hx, hy;
+		if (sscanf(hp, "%f %f", &hx, &hy) == 2 && hand()) {
+			handPush = true;
+			hand()->moveTo(hx, hy);
+		}
+	}
 	// developer aid: OPENC2E_TEST_HAND_INVISIBLE="x y" turns the toolbar's
 	// invisible hand on and keeps the hand at that place (for snapshots)
 	if (const char* hi = getenv("OPENC2E_TEST_HAND_INVISIBLE")) {
@@ -635,6 +646,9 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 		// if we're on the second pass, render to the *right* of the normal area
 		surface->renderCreaturesImage(bkgd, 0, destx + m->width(), desty);
 	}
+	// the sky's colour through the day (C2): over the background, under
+	// everything else
+	SkyTint::draw(surface, m, destx, desty);
 
 	// vehicles and their riders glide between ticks: draw them back along
 	// this tick's move, by the part of the tick not yet elapsed (not for

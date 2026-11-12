@@ -339,6 +339,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/renderablezorder.cpp
 	src/openc2e/Room.cpp
 	src/openc2e/Scriptorium.cpp
+	src/openc2e/SkyTint.cpp
 	src/openc2e/SFCFile.cpp
 	src/openc2e/SimpleAgent.cpp
 	src/openc2e/creatures/SkeletalCreature.cpp
