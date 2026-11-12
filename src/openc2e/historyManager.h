@@ -165,6 +165,8 @@ class historyManager {
 	// default names ("Norn 0005"): how many of each genus this world has had
 	std::map<int, unsigned int> namecount;
 	bool namesgiven = false; // the creatures there were at load have their numbers
+	// the Ecology Kit's pinned rooms (room number, pin color 1-7), kept with the world
+	std::vector<std::pair<unsigned int, int>> ecologypins;
 	std::string nextDefaultName(int genus);
 	// every moniker's records, living or not
 	std::map<std::string, monikerData>& all() { return monikers; }

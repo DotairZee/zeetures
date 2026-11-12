@@ -96,7 +96,6 @@ static void ReproductivePage() {
 		}
 	}
 	ImGui::EndGroup();
-	ImGui::TextDisabled("Mating and pregnancy are not built yet (next on the list), so these stay quiet for now.");
 }
 
 // ---- Aphrodisiacs ----------------------------------------------------------------
@@ -841,7 +840,7 @@ static void SlotDialog(ImportPlan& plan) {
 			}
 		} else {
 			ImGui::Text("Put it in the next free slot, %s?", breedSlotName(g.target).c_str());
-			ImGui::TextDisabled("Its files are renamed to the new letter, and the pack's genomes and eggs are changed to match.");
+			KitNote("Its files are renamed to the new letter, and the pack's genomes and eggs are changed to match.");
 			ImGui::Spacing();
 			if (ImGui::Button(fmt::format("Yes, slot {}", breedSlotName(g.target)).c_str())) {
 				g.install = true;
@@ -923,7 +922,7 @@ static void ImportReview() {
 		ImGui::PopID();
 	}
 	if (!plan.genomes.empty() || !plan.eggs.empty() || !plan.notes.empty())
-		ImGui::TextDisabled("Also: %d genome%s, %d note file%s, %d egg%s (breed slots in them follow any move).",
+		KitNote("Also: %d genome%s, %d note file%s, %d egg%s (breed slots in them follow any move).",
 			(int)plan.genomes.size(), plan.genomes.size() == 1 ? "" : "s", (int)plan.notes.size(), plan.notes.size() == 1 ? "" : "s",
 			(int)plan.eggs.size(), plan.eggs.size() == 1 ? "" : "s");
 	if (!plan.cobs.empty())
@@ -1127,14 +1126,14 @@ static void BreedsPage() {
 		ImGui::Text("Ages: %s", ss.c_str());
 		ImGui::Text("%s%s%s", b->male ? "male" : "", b->male && b->female ? " and " : "", b->female ? "female" : "");
 		if (!b->bodyData)
-			ImGui::TextColored(ImVec4(1, 0.7f, 0.4f, 1), "No body data (.att) in this slot: creatures fall back to another breed's.");
+			KitNoteColored(ImVec4(1, 0.7f, 0.4f, 1), "No body data (.att) in this slot: creatures fall back to another breed's.");
 		if (b->imported && !b->source.empty())
 			ImGui::TextDisabled("From %s", b->source.c_str());
 		if (b->kind >= 0 && b->kind != b->species)
-			ImGui::TextDisabled("Its pictures are filed in the %s set (slot %s): the pack's authors put them there.", BreedSpeciesName(b->species),
+			KitNote("Its pictures are filed in the %s set (slot %s): the pack's authors put them there.", BreedSpeciesName(b->species),
 				breedSlotName(b->slot).c_str());
 		if (b->origSpecies >= 0)
-			ImGui::TextDisabled("Moved from the %s set, slot %s; the old files are kept for creatures hatched before.", BreedSpeciesName(b->origSpecies),
+			KitNote("Moved from the %s set, slot %s; the old files are kept for creatures hatched before.", BreedSpeciesName(b->origSpecies),
 				breedSlotName(b->origSlot >= 0 ? b->origSlot : b->slot).c_str());
 		// a norn breed filed in another set: move it into the norn set
 		// (owner, 2026-11-11)
@@ -1167,7 +1166,7 @@ static void BreedsPage() {
 			}
 		}
 		if (b->imported && b->origSlot >= 0 && b->origSlot != b->slot)
-			ImGui::TextDisabled("Moved from slot %s (taken here); its files and genomes were changed to match.", breedSlotName(b->origSlot).c_str());
+			KitNote("Moved from slot %s (taken here); its files and genomes were changed to match.", breedSlotName(b->origSlot).c_str());
 		ImGui::PopTextWrapPos();
 
 		bool canLay = b->parts.count('a') && b->parts.count('b');
@@ -1268,10 +1267,11 @@ static void BreedsPage() {
 	ImGui::SameLine();
 	if (ImGui::Button("Rescan"))
 		KnownBreeds(true);
-	ImGui::TextDisabled("Slots run a-z, then aa, ab ... up to iv (256 for each species).");
+	KitNote("Slots run a-z, then aa, ab ... up to iv (256 for each species).");
 }
 
 void DrawBreedersKit() {
+	KitCreatureHeader();
 	if (ImGui::BeginTabBar("pages")) {
 		if (KitTab("Reproductive")) {
 			ReproductivePage();

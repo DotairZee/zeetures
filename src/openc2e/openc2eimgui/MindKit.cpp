@@ -126,37 +126,13 @@ float secondsOf(unsigned int ticks) {
 	return ticks / 2.5f;
 }
 
-// text wrapped to a width, each line centred in it
-void centredText(const std::string& text, float width, ImU32 col) {
-	std::vector<std::string> lines;
-	std::string line, word;
-	auto flush = [&]() {
-		if (!word.empty()) {
-			std::string tryLine = line.empty() ? word : line + " " + word;
-			if (!line.empty() && ImGui::CalcTextSize(tryLine.c_str()).x > width) {
-				lines.push_back(line);
-				line = word;
-			} else
-				line = tryLine;
-			word.clear();
-		}
-	};
-	for (char ch : text) {
-		if (ch == ' ')
-			flush();
-		else
-			word += ch;
-	}
-	flush();
-	if (!line.empty())
-		lines.push_back(line);
-	float x0 = ImGui::GetCursorPosX();
-	for (auto& l : lines) {
-		ImGui::SetCursorPosX(x0 + std::max(0.0f, (width - ImGui::CalcTextSize(l.c_str()).x) / 2));
-		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(col));
-		ImGui::TextUnformatted(l.c_str());
-		ImGui::PopStyleColor();
-	}
+// text wrapped to a width, from the left
+void wrappedText(const std::string& text, float width, ImU32 col) {
+	ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + width);
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(col));
+	ImGui::TextWrapped("%s", text.c_str());
+	ImGui::PopStyleColor();
+	ImGui::PopTextWrapPos();
 }
 
 void sector(ImDrawList* dl, ImVec2 c, float r0, float r1, float a0, float a1, ImU32 col) {
@@ -195,10 +171,12 @@ const char* mattersWord(float weight, float most) {
 
 void FeelingsPage(const MindView& v) {
 	ImDrawList* dl = ImGui::GetWindowDrawList();
-	// the dial in the middle, the words above and below it centred on it
+	// the dial in the middle of the window, the words at the left
 	const float W = 440, H = 370;
-	centredText("How hard each need is pushing it now: its level times how much it matters to this creature.", W, DIM);
+	wrappedText("How hard each need is pushing it now: its level times how much it matters to this creature.", W, DIM);
 	ImGui::Dummy(ImVec2(W, 4));
+	const float left = ImGui::GetCursorPosX();
+	KitCenterNext(W);
 	ImVec2 o = ImGui::GetCursorScreenPos();
 	ImVec2 c(o.x + W / 2, o.y + 185);
 	const float r0 = 52, r1 = 160;
@@ -244,11 +222,9 @@ void FeelingsPage(const MindView& v) {
 			NEED_NAMES[i], v.drives[i] * 100, KIND_NAME[NEED_KIND[i]], mattersWord(v.weight[i], most), total > 0 ? pull[i] / total * 100 : 0.0f);
 	}
 	ImGui::Dummy(ImVec2(W, H));
-	// the key, centred under the dial
-	float keyW = 0;
-	for (int k = 0; k < 4; k++)
-		keyW += 18 + ImGui::CalcTextSize(KIND_NAME[k]).x + (k < 3 ? 22 : 0);
-	ImVec2 kp = ImGui::GetCursorScreenPos() + ImVec2((W - keyW) / 2, 2);
+	ImGui::SetCursorPosX(left);
+	// the key, at the left
+	ImVec2 kp = ImGui::GetCursorScreenPos() + ImVec2(0, 2);
 	for (int k = 0; k < 4; k++) {
 		dl->AddRectFilled(kp, kp + ImVec2(12, 12), KIND_COLOR[k]);
 		dl->AddText(kp + ImVec2(18, -2), DIM, KIND_NAME[k]);
@@ -264,9 +240,9 @@ void FeelingsPage(const MindView& v) {
 		strongest += fmt::format("{} {} ({:.0f}%)", k ? "," : "", NEED_NAMES[order[k].second], order[k].first / total * 100);
 	if (order[0].first <= 0.01f)
 		strongest = "Nothing is pushing it: all is well.";
-	centredText(strongest, W, TEXT);
+	wrappedText(strongest, W, TEXT);
 	ImGui::Dummy(ImVec2(W, 2));
-	centredText("Faint behind each: the need's level. The body's levels are in the Health Kit's Drives.", W, DIM);
+	wrappedText("Faint behind each: the need's level. The body's levels are in the Health Kit's Drives.", W, DIM);
 }
 
 void ChoosingPage(const MindView& v) {
@@ -276,7 +252,7 @@ void ChoosingPage(const MindView& v) {
 	}
 	ImDrawList* dl = ImGui::GetWindowDrawList();
 	ImVec2 o = ImGui::GetCursorScreenPos();
-	ImGui::TextColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "What it weighed at its last choice (%s ago), and how much each should ease its needs:",
+	KitNoteColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "What it weighed at its last choice (%s ago), and how much each should ease its needs:",
 		secondsText(secondsOf(v.tick - v.choseAt)).c_str());
 	o = ImGui::GetCursorScreenPos();
 	float most = 0.01f;
@@ -396,7 +372,7 @@ void LearnedPage(const MindView& v) {
 		auto order = [](const std::string& w) { for (int d = 0; d < 64; d++) if (w == shortVerb(d)) return d; return 99; };
 		return order(a) < order(b);
 	});
-	ImGui::TextColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "What it expects from each, against its usual result: green better, red worse. Dot size: how often.");
+	KitNoteColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "What it expects from each, against its usual result: green better, red worse. Dot size: how often.");
 	ImDrawList* dl = ImGui::GetWindowDrawList();
 	ImVec2 o = ImGui::GetCursorScreenPos();
 	const float labelW = 120, cw = 58, ch = 26;
@@ -442,7 +418,11 @@ void LearnedPage(const MindView& v) {
 		}
 	}
 	ImGui::Dummy(ImVec2(labelW + cols.size() * cw, 24 + rows.size() * ch));
-	ImGui::TextDisabled("Names in pink are creatures it knows one by one.");
+	bool anyone = false;
+	for (auto& r : rows)
+		anyone |= !rowKey[r.second].second.empty();
+	if (anyone)
+		ImGui::TextDisabled("Names in pink are creatures it knows one by one.");
 }
 
 void MapPage(const MindView& v) {
@@ -526,7 +506,7 @@ void MoodPage(const MindView& v) {
 		ImGui::TextWrapped("Not enough time has passed to show its mood.");
 		return;
 	}
-	ImGui::TextColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "How content it has been; the color below is its strongest need at the time.");
+	KitNoteColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "How content it has been; the color below is its strongest need at the time.");
 	ImDrawList* dl = ImGui::GetWindowDrawList();
 	const float axisW = 74; // room for the y axis's labels
 	ImVec2 o = ImGui::GetCursorScreenPos() + ImVec2(axisW, 6);
@@ -573,6 +553,7 @@ void MoodPage(const MindView& v) {
 } // namespace
 
 void DrawMindKit() {
+	KitCreatureHeader();
 	if (!KitNeedsCreature("Applet Data/Owner.bmp"))
 		return;
 	Agent* a = KitCreatureAgent();
@@ -583,7 +564,6 @@ void DrawMindKit() {
 		ImGui::TextWrapped("%s runs the original brain, which this kit cannot show (start with --mind homeostat).", KitCreatureName(a).c_str());
 		return;
 	}
-	ImGui::Text("%s", KitCreatureName(a).c_str());
 	if (ImGui::BeginTabBar("mindtabs")) {
 		if (KitTab("Feelings")) {
 			FeelingsPage(v);

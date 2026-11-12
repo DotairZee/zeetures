@@ -303,12 +303,10 @@ void SetHatcheryOpen(bool value) {
 void DrawHatcheryChip() {
 	if (engine.version != 2 || !s_hatchery_open || !s_hatchery_minimized)
 		return;
-	if (ImGui::Button("Hatchery##chip")) {
+	if (KitChipButton("Hatchery", 0, "Restore the Hatchery")) {
 		s_hatchery_minimized = false;
 		s_hatchery_focus = true;
 	}
-	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Restore the Hatchery");
 }
 
 void DrawHatchery() {
@@ -420,7 +418,7 @@ void DrawHatchery() {
 				static size_t s_egg_next = 0;
 				static std::string s_egg_line;
 				auto eggs = KitUnhatchedEggs();
-				std::string label = eggs.empty() ? "No eggs in the world" : fmt::format("Find eggs ({})", eggs.size());
+				std::string label = eggs.empty() ? "No creature eggs in the world" : fmt::format("Find eggs ({})", eggs.size());
 				ImGui::BeginDisabled(eggs.empty());
 				// developer aid: OPENC2E_TEST_FIND_EGG=1 presses it once
 				static bool s_test_find = getenv("OPENC2E_TEST_FIND_EGG") != nullptr;

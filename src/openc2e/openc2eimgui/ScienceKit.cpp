@@ -52,7 +52,7 @@ static void PhysicalPage() {
 			bool brain = o->getGene() && o->getGene()->isBrain();
 			const KitGeneNote* note = KitNoteFor(o->getGene());
 			if (note && !note->caption.empty())
-				ImGui::TextUnformatted(note->caption.c_str());
+				ImGui::TextWrapped("%s", note->caption.c_str()); // long names take a second line
 			else
 				ImGui::Text("%s %d", brain ? "Brain organ" : "Organ", (int)i + 1);
 			bool hov = ImGui::IsItemHovered();
@@ -138,8 +138,16 @@ static void DnaPage() {
 		int n = 0;
 		for (auto& k : kinds)
 			n += (int)k.second.size();
-		if (!ImGui::TreeNode(type.c_str(), "%s (%d)", type.c_str(), n))
+		// a creature with its own mind (--mind) never reads its brain lobe
+		// genes: they are kept and passed on, but do nothing
+		bool inert = type == "Brain" && c->getMind();
+		bool open = ImGui::TreeNode(type.c_str(), "%s (%d)%s", type.c_str(), n, inert ? ": inert" : "");
+		if (inert && ImGui::IsItemHovered())
+			ImGui::SetTooltip("Inert: this creature's mind does not use its brain genes.\nThey are still passed on to its young, and would matter to a creature\nrunning the original brain.");
+		if (!open)
 			continue;
+		if (inert)
+			ImGui::TextDisabled("Inert: this creature's mind does not use these genes.");
 		for (auto& [kind, list] : kinds) {
 			if (!ImGui::TreeNode(kind.c_str(), "%s (%d)", kind.c_str(), (int)list.size()))
 				continue;
@@ -288,6 +296,8 @@ static void BiochemistryPage() {
 	ImGui::TextDisabled(shown.size() < MAX_SHOWN ? "Click a chemical to graph it (up to 6)" : "Six shown: click one above to make room");
 	if (!groups.empty() && ImGui::BeginListBox("##chems", ImVec2(480, 120))) {
 		for (int chem : groups[std::min<size_t>(group, groups.size() - 1)].second) {
+			if (chem == 0)
+				continue; // not a chemical: 0 stands for none in the genes
 			bool on = std::find(shown.begin(), shown.end(), chem) != shown.end();
 			std::string label = fmt::format("{:3d}  {}  ({})", chem, chemName(chem), (int)c->getChemical(chem));
 			if (ImGui::Selectable(label.c_str(), on) && !on && shown.size() < MAX_SHOWN)
@@ -456,6 +466,7 @@ static void SyringePage() {
 
 void DrawScienceKit() {
 	sampleChemistry();
+	KitCreatureHeader();
 	if (ImGui::BeginTabBar("pages")) {
 		if (KitTab("Physical")) {
 			PhysicalPage();

@@ -47,7 +47,7 @@ static int s_last_c2toolbar_height = 0;
 static bool s_show_standard = true;
 static bool s_show_pointer = true;
 static bool s_show_applets = true;
-static bool s_show_favourites = true;
+static bool s_show_favorites = true;
 
 int GetC2ToolBarHeight() {
 	return s_last_c2toolbar_height;
@@ -65,7 +65,7 @@ static void GoToFavoritePlace(int i) {
 	engine.camera->moveToGlobal(f.x, f.y, jump);
 }
 
-// Selects the next living creature after the current selection and centres
+// Selects the next living creature after the current selection and centers
 // the camera on it.
 static void SelectNextCreature() {
 	std::vector<std::shared_ptr<Agent>> creatures;
@@ -101,7 +101,7 @@ static const char* GenusName(int genus) {
 }
 
 // The Creatures 2 menu bar (layout read from the game's own menu resource).
-// Items that openc2e can't do yet are shown greyed out, as C2 itself does.
+// Items that openc2e can't do yet are shown grayed out, as C2 itself does.
 static void DrawC2MenuBar() {
 	static bool s_open_add_place = false;
 	static bool s_open_new_world = false;
@@ -186,7 +186,7 @@ static void DrawC2MenuBar() {
 			ImGui::MenuItem("Standard", nullptr, &s_show_standard);
 			ImGui::MenuItem("Pointer", nullptr, &s_show_pointer);
 			ImGui::MenuItem("Applets", nullptr, &s_show_applets);
-			ImGui::MenuItem("Favourites", nullptr, &s_show_favourites);
+			ImGui::MenuItem("Favorites", nullptr, &s_show_favorites);
 			ImGui::Separator();
 			ImGui::MenuItem("Text Labels", nullptr, false, false);
 			ImGui::EndMenu();
@@ -228,9 +228,9 @@ static void DrawC2MenuBar() {
 		}
 		if (world.favoriteplaces.size() < 6)
 			hasfree = true;
-		if (ImGui::MenuItem("Add Favourite Place...", nullptr, false, hasfree))
+		if (ImGui::MenuItem("Add Favorite Place...", nullptr, false, hasfree))
 			s_open_add_place = true;
-		if (ImGui::BeginMenu("Remove Favourite Place...", hasnamed)) {
+		if (ImGui::BeginMenu("Remove Favorite Place...", hasnamed)) {
 			for (auto& f : world.favoriteplaces) {
 				if (!f.name.empty() && ImGui::MenuItem(f.name.c_str())) {
 					f.name.clear();
@@ -376,12 +376,12 @@ static void DrawC2MenuBar() {
 		ImGui::EndPopup();
 	}
 
-	// Add Favourite Place: name the current camera position
+	// Add Favorite Place: name the current camera position
 	if (s_open_add_place) {
-		ImGui::OpenPopup("Add Favourite Place");
+		ImGui::OpenPopup("Add Favorite Place");
 		s_open_add_place = false;
 	}
-	if (ImGui::BeginPopupModal("Add Favourite Place", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+	if (ImGui::BeginPopupModal("Add Favorite Place", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 		static char s_name[64] = "";
 		ImGui::Text("Name for this place:");
 		if (ImGui::IsWindowAppearing())
@@ -609,7 +609,7 @@ void DrawC2Toolbar() {
 			ImGui::SetTooltip("Ecology Kit: the world's rooms (light, warmth, air, soil), watching rooms, and a census");
 		}
 
-		if (s_show_favourites) {
+		if (s_show_favorites) {
 		ImGui::NewLine();
 
 		static Texture s_favtoolbaricons_tex;

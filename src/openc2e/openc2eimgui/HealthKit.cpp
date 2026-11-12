@@ -4,6 +4,7 @@
 // that page is "Mind" here.
 
 #include "C2EyeView.h"
+#include "C2Kits.h"
 #include "C2KitsInternal.h"
 #include "CobManager.h"
 #include "PathResolver.h"
@@ -49,6 +50,7 @@ static void FitnessPage() {
 		return;
 	c2Creature* c = KitCreature();
 	Texture bg = KitPicture("Applet Data/Fitness.bmp");
+	KitCenterNext(320);
 	ImVec2 p = ImGui::GetCursorScreenPos();
 	DrawTexture(bg, p);
 	ImGui::Dummy(ImVec2(320, 240));
@@ -97,12 +99,21 @@ static void FitnessPage() {
 	// the X-ray: the organs' state on hover
 	ImGui::SetCursorScreenPos(p + ImVec2(128, 28));
 	ImGui::InvisibleButton("xray", ImVec2(124, 140));
-	int damaged = 0;
-	float h = KitOrganHealth(c, &damaged);
+	int damaged = 0, weakest = -1;
+	float avg = 1;
+	float h = KitOrganHealth(c, &damaged, &avg, &weakest);
+	std::string weakName = "an organ";
+	if (weakest >= 0 && weakest < (int)c->getOrgans().size())
+		if (const KitGeneNote* note = KitNoteFor(c->getOrgans()[weakest]->getGene()); note && !note->caption.empty())
+			weakName = note->caption;
+	std::string tip = fmt::format("Health is its weakest organ, {}, at {:.0f}% of its life force\n(what failing kills it; the status bar shows the same)\n{} organs, {:.0f}% on average; {} under 75%\nDetails in the Science Kit's Physical page.",
+		weakName, h * 100, (int)c->getOrgans().size(), avg * 100, damaged);
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("%d organs, %.0f%% of their life force on average\n%d damaged (under 75%%)\nDetails in the Science Kit's Physical page.", (int)c->getOrgans().size(), h * 100, damaged);
-	ImGui::SetCursorScreenPos(p + ImVec2(0, 244));
-	KitBar(h, fmt::format("Organ health {:.0f}%", h * 100).c_str(), 320);
+		ImGui::SetTooltip("%s", tip.c_str());
+	ImGui::SetCursorScreenPos(ImVec2(p.x, p.y + 244));
+	KitBar(h, fmt::format("Health {:.0f}% (weakest organ)", h * 100).c_str(), 320);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", tip.c_str());
 	if (!c->isAlive())
 		ImGui::TextColored(ImVec4(1, 0.5f, 0.5f, 1), "This creature has died.");
 }
@@ -114,6 +125,7 @@ static void MindPage() {
 		return;
 	c2Creature* c = KitCreature();
 	Texture bg = KitPicture("Applet Data/Brain.bmp");
+	KitCenterNext(320);
 	ImVec2 p = ImGui::GetCursorScreenPos();
 	DrawTexture(bg, p);
 	ImGui::Dummy(ImVec2(320, 240));
@@ -141,15 +153,13 @@ static void MindPage() {
 		dl->AddRect(p + ImVec2(150, y + 3), p + ImVec2(300, y + 11), IM_COL32(120, 200, 255, 120), 2);
 	}
 
-	if (CreatureMind* m = c->getMind()) {
-		ImGui::Text("Mind: %s", m->name().c_str());
-		std::string st = m->debugState();
-		if (!st.empty())
-			ImGui::TextWrapped("%s", st.c_str());
-	} else {
-		ImGui::TextDisabled("This creature runs the original brain (no --mind).");
-	}
-	ImGui::TextDisabled("The full view of the mind will be the Neuroscience Kit.");
+	if (c->getMind()) {
+		if (ImGui::Button("Open the Mind Kit"))
+			OpenC2Kit("mind");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Its feelings, choices, lessons, memories and mood");
+	} else
+		KitNote("This creature runs the original brain.");
 }
 
 // ---- Drives ----------------------------------------------------------------------
@@ -173,7 +183,7 @@ static void DrivesPage() {
 		}
 		ImGui::EndTable();
 	}
-	ImGui::TextDisabled("The longer and redder the bar, the stronger the need.");
+	KitNote("The longer and redder the bar, the stronger the need.");
 }
 
 // ---- Doctor ----------------------------------------------------------------------
@@ -184,6 +194,7 @@ static void DoctorPage() {
 }
 
 void DrawHealthKit() {
+	KitCreatureHeader();
 	if (ImGui::BeginTabBar("pages")) {
 		if (KitTab("Fitness")) {
 			FitnessPage();

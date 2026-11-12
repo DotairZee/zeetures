@@ -32,6 +32,7 @@
 #include <fstream>
 #include <tuple>
 
+#include <cstdarg>
 #include <cstring>
 #include <fmt/format.h>
 #include <imgui.h>
@@ -144,7 +145,7 @@ static void KitsWriteAll(ImGuiContext*, ImGuiSettingsHandler* handler, ImGuiText
 	}
 }
 
-// developer aid: OPENC2E_OPEN_KITS="health,science" selects the first norn
+// developer aid: OPENC2E_OPEN_KITS="health,science" selects the first norn (or other creature)
 // (if none is selected)
 // and opens those kits (for headless snapshots; the kits' ini file is then
 // neither read nor written); OPENC2E_KIT_PAGE="Drives" picks a page
@@ -155,11 +156,12 @@ static void OpenTestKits() {
 	if (!s)
 		return;
 	s_test_kits = true;
-	for (auto& a : world.agents)
-		if (!world.selectedcreature && a && dynamic_cast<CreatureAgent*>(a.get()) && a->genus == 1) {
-			world.selectedcreature = a;
-			break;
-		}
+	for (int pass = 0; pass < 2 && !world.selectedcreature; pass++) // a norn, or else any creature
+		for (auto& a : world.agents)
+			if (a && dynamic_cast<CreatureAgent*>(a.get()) && (pass == 1 || a->genus == 1)) {
+				world.selectedcreature = a;
+				break;
+			}
 	std::string list = s;
 	if (list.find("hatchery") != std::string::npos)
 		SetHatcheryOpen(true);
@@ -269,6 +271,7 @@ bool KitNeedsCreature(const char* cover) {
 		return true;
 	Texture t = KitPicture(cover);
 	if (t) {
+		KitCenterNext((float)t.width);
 		ImVec2 p = ImGui::GetCursorScreenPos();
 		DrawTexture(t, p);
 		ImGui::Dummy(ImVec2(t.width, t.height));
@@ -394,14 +397,15 @@ unsigned int KitAgeTicks(monikerData& m) {
 	return now >= m.borntick ? now - m.borntick : 0;
 }
 
-std::string KitAgeText(unsigned int ticks) {
+std::string KitAgeText(unsigned int ticks, bool withMinutes) {
 	unsigned int parts = ticks / TICKS_PER_PART;
 	unsigned int days = parts / PARTS_PER_DAY;
 	parts %= PARTS_PER_DAY;
 	unsigned int minutes = ticks / 600; // C2 runs 10 world ticks a second
 	std::string game = days ? fmt::format("{} day{} {} part{}", days, days == 1 ? "" : "s", parts, parts == 1 ? "" : "s")
-							: fmt::format("{} part{} of a day", parts, parts == 1 ? "" : "s");
-	return fmt::format("{} ({} min of play)", game, minutes);
+					   : parts ? fmt::format("{} part{} of a day", parts, parts == 1 ? "" : "s")
+							   : std::string("under a part of a day");
+	return withMinutes ? fmt::format("{} ({} min of play)", game, minutes) : game;
 }
 
 std::string KitDateText(unsigned int tick) {
@@ -416,10 +420,12 @@ std::string KitDateText(unsigned int tick) {
 	return fmt::format("{}, day {}, year {:03d}", seasons[season % SEASONS_PER_YEAR], dayOfSeason + 1, season / SEASONS_PER_YEAR);
 }
 
-float KitOrganHealth(c2Creature* c, int* damaged) {
-	float sum = 0;
-	int n = 0, bad = 0;
-	for (auto& o : c->getOrgans()) {
+float KitOrganHealth(c2Creature* c, int* damaged, float* average, int* weakest) {
+	float sum = 0, worst = 1.0f;
+	int n = 0, bad = 0, worstAt = -1;
+	auto& organs = c->getOrgans();
+	for (size_t i = 0; i < organs.size(); i++) {
+		auto& o = organs[i];
 		float start = o->getInitialLifeforce();
 		if (start <= 0)
 			continue;
@@ -428,10 +434,18 @@ float KitOrganHealth(c2Creature* c, int* damaged) {
 		n++;
 		if (h < 0.75f)
 			bad++;
+		if (h < worst || worstAt < 0) {
+			worst = h;
+			worstAt = (int)i;
+		}
 	}
 	if (damaged)
 		*damaged = bad;
-	return n ? sum / n : 0;
+	if (average)
+		*average = n ? sum / n : 1.0f;
+	if (weakest)
+		*weakest = worstAt;
+	return n ? worst : 1.0f;
 }
 
 std::string KitWhere(Agent* a) {
@@ -454,9 +468,18 @@ std::string KitWhereAt(float cx, float cy) {
 			best = &f;
 		}
 	}
-	if (!best)
-		return fmt::format("{:.0f}, {:.0f}", cx, cy);
-	return fmt::format("{} {}", bestd < 900.0f * 900.0f ? "near" : "far from", best->name);
+	if (best && bestd < 900.0f * 900.0f)
+		return fmt::format("near {}", best->name);
+	// otherwise its part of the metaroom: fifths across, thirds down
+	MetaRoom* m = world.map && cx >= 0 && cy >= 0 ? world.map->metaRoomAt((unsigned int)cx, (unsigned int)cy) : nullptr;
+	if (m && m->width() > 0 && m->height() > 0) {
+		static const char* const ACROSS[5] = {"far west", "west", "middle", "east", "far east"};
+		int i = std::clamp((int)((cx - m->x()) / m->width() * 5), 0, 4), j = std::clamp((int)((cy - m->y()) / m->height() * 3), 0, 2);
+		return fmt::format("{}in the {}", j == 0 ? "high up " : j == 2 ? "low down " : "", ACROSS[i]);
+	}
+	if (best)
+		return fmt::format("far from {}", best->name);
+	return fmt::format("{:.0f}, {:.0f}", cx, cy);
 }
 
 // a small picture of a metaroom's background, made once per background
@@ -516,6 +539,104 @@ void KitLookAt(const std::shared_ptr<Agent>& a) {
 	int cx = (int)(a->x + a->getWidth() / 2.0f) - (int)engine.camera->getWidth() / 2;
 	int cy = (int)(a->y + a->getHeight() / 2.0f) - (int)engine.camera->getHeight() / 2;
 	engine.camera->moveToGlobal(cx, cy, jump);
+}
+
+std::string KitCategoryNoun(int category) {
+	size_t w = 16 + (size_t)category;
+	std::string s = category >= 0 && w < engine.wordlist.size() ? engine.wordlist[w] : "";
+	while (!s.empty() && (s.back() == ' ' || s.back() == '\r' || s.back() == '\n'))
+		s.pop_back();
+	while (!s.empty() && s.front() == ' ')
+		s.erase(s.begin());
+	if (s.empty())
+		return fmt::format("kind {}", category);
+	s[0] = (char)toupper((unsigned char)s[0]);
+	return s;
+}
+
+// ---- layout shared by the kits -----------------------------------------------------
+
+void KitCreatureHeader() {
+	auto all = KitLivingCreatures();
+	Agent* sel = KitCreatureAgent();
+	if (all.empty() && !sel)
+		return;
+	std::vector<std::pair<std::string, std::shared_ptr<Agent>>> list;
+	for (auto& a : all)
+		list.push_back({KitCreatureName(a.get()), a});
+	std::sort(list.begin(), list.end(), [](auto& x, auto& y) { return x.first < y.first; });
+	int at = -1;
+	for (size_t i = 0; i < list.size(); i++)
+		if (list[i].second.get() == sel)
+			at = (int)i;
+	int n = (int)list.size();
+	ImGui::BeginDisabled(n == 0 || (n == 1 && at == 0));
+	if (ImGui::ArrowButton("##prevcreature", ImGuiDir_Left))
+		KitGoTo(list[at < 0 ? n - 1 : (at + n - 1) % n].second);
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+		ImGui::SetTooltip("The previous creature");
+	ImGui::SameLine(0, 2);
+	if (ImGui::ArrowButton("##nextcreature", ImGuiDir_Right))
+		KitGoTo(list[at < 0 ? 0 : (at + 1) % n].second);
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+		ImGui::SetTooltip("The next creature");
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	auto describe = [](Agent* a) {
+		c2Creature* c = KitC2Of(a);
+		std::string kind = fmt::format("{} {}", c && c->isFemale() ? "female" : "male", KitSpeciesWord(a));
+		if (c && !c->isAlive())
+			kind += ", dead";
+		return fmt::format("{}  ({})", KitCreatureName(a), kind);
+	};
+	std::string preview = sel ? describe(sel) : std::string("Choose a creature");
+	ImGui::SetNextItemWidth(260);
+	if (ImGui::BeginCombo("##creature", preview.c_str())) {
+		for (auto& [name, a] : list) {
+			ImGui::PushID(a.get());
+			if (ImGui::Selectable(describe(a.get()).c_str(), a.get() == sel))
+				KitGoTo(a);
+			ImGui::PopID();
+		}
+		ImGui::EndCombo();
+	}
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("The creature these pages show; choose another here or click one in the world");
+}
+
+// A note wraps at the window's width and does not count toward it, so a
+// window fits its other content (a wrapped line otherwise holds a window at
+// whatever width it had, after a wider page).
+static void kitNoteV(const ImVec4& color, const char* fmt, va_list args) {
+	ImGuiWindow* w = ImGui::GetCurrentWindow();
+	float keepMax = w->DC.CursorMaxPos.x, keepIdeal = w->DC.IdealMaxPos.x;
+	ImGui::PushStyleColor(ImGuiCol_Text, color);
+	ImGui::PushTextWrapPos(0.0f); // the window's width
+	ImGui::TextWrappedV(fmt, args);
+	ImGui::PopTextWrapPos();
+	ImGui::PopStyleColor();
+	w->DC.CursorMaxPos.x = keepMax;
+	w->DC.IdealMaxPos.x = keepIdeal;
+}
+
+void KitNote(const char* fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	kitNoteV(ImGui::GetStyle().Colors[ImGuiCol_TextDisabled], fmt, args);
+	va_end(args);
+}
+
+void KitNoteColored(const ImVec4& color, const char* fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	kitNoteV(color, fmt, args);
+	va_end(args);
+}
+
+void KitCenterNext(float width) {
+	float spare = ImGui::GetContentRegionAvail().x - width;
+	if (spare > 1)
+		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + spare / 2);
 }
 
 // ---- eggs ------------------------------------------------------------------------
@@ -989,6 +1110,19 @@ bool KitTitleMinimizeButton() {
 	return TitleMinimizeButton();
 }
 
+bool KitChipButton(const char* chip, int iconIndex, const char* tooltip) {
+	float icon = ImGui::GetFontSize() + 2;
+	std::string label = fmt::format("{}##chip", chip);
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x + icon + 2, 1));
+	bool pressed = ImGui::Button(label.c_str());
+	ImGui::PopStyleVar();
+	ImVec2 mn = ImGui::GetItemRectMin(), mx = ImGui::GetItemRectMax();
+	drawAppletIcon(iconIndex, ImVec2(mn.x + 4, mn.y + (mx.y - mn.y - icon * 21 / 22) / 2), icon);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", tooltip);
+	return pressed;
+}
+
 void DrawC2KitChips() {
 	if (engine.version != 2)
 		return;
@@ -999,16 +1133,8 @@ void DrawC2KitChips() {
 		if (!st.open || !st.minimized)
 			continue;
 		ImGui::PushID(k.id);
-		float icon = ImGui::GetFontSize() + 2;
-		std::string label = fmt::format("{}##chip", k.chip);
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x + icon + 2, 1));
-		bool pressed = ImGui::Button(label.c_str());
-		ImGui::PopStyleVar();
-		ImVec2 mn = ImGui::GetItemRectMin(), mx = ImGui::GetItemRectMax();
-		drawAppletIcon(k.icon, ImVec2(mn.x + 4, mn.y + (mx.y - mn.y - icon * 21 / 22) / 2), icon);
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Restore the %s", k.title);
-		if (pressed) {
+		std::string tip = fmt::format("Restore the {}", k.title);
+		if (KitChipButton(k.chip, k.icon, tip.c_str())) {
 			st.minimized = false;
 			s_focus_next = k.id;
 			ImGui::MarkIniSettingsDirty();

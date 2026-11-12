@@ -46,7 +46,7 @@ static void DetailsPage() {
 	ImGui::TableSetupScrollFreeze(0, 1);
 	ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed, 120);
 	ImGui::TableSetupColumn("Kind", ImGuiTableColumnFlags_WidthFixed, 96);
-	ImGui::TableSetupColumn("Age", ImGuiTableColumnFlags_WidthFixed, 96);
+	ImGui::TableSetupColumn("Age", ImGuiTableColumnFlags_WidthFixed, 176);
 	ImGui::TableSetupColumn("Health", ImGuiTableColumnFlags_WidthFixed, 64);
 	ImGui::TableSetupColumn("Preg.", ImGuiTableColumnFlags_WidthFixed, 44);
 	ImGui::TableSetupColumn("Doing", ImGuiTableColumnFlags_WidthStretch, 2.0f);
@@ -70,9 +70,8 @@ static void DetailsPage() {
 		r.kind = fmt::format("{} {}", c && c->isFemale() ? "female" : "male", KitSpeciesWord(a.get()));
 		if (monikerData* m = KitRecordsOf(a.get())) {
 			r.ageTicks = KitAgeTicks(*m);
-			unsigned int days = r.ageTicks / 18000;
 			int st = c ? (int)c->getStage() : -1;
-			r.age = fmt::format("{} ({} d{})", st >= 0 && st < 7 ? stages[st] : "?", days, m->bornknown ? "" : "+");
+			r.age = fmt::format("{}, {}{}", st >= 0 && st < 7 ? stages[st] : "?", m->bornknown ? "" : "over ", KitAgeText(r.ageTicks, false));
 		}
 		if (c) {
 			r.health = KitOrganHealth(c);
@@ -113,12 +112,14 @@ static void DetailsPage() {
 		ImGui::TableNextColumn();
 		ImGui::TextUnformatted(r.age.c_str());
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("days of game time%s", r.age.find('+') != std::string::npos ? "; + counted from when this world first saw it" : "");
+			ImGui::SetTooltip("Its life stage and age in game time (5 parts to a day)%s", r.age.find("over ") != std::string::npos ? "; counted from when this world first saw it" : "");
 		ImGui::TableNextColumn();
 		ImVec4 col = r.health > 0.75f ? ImVec4(0.3f, 0.8f, 0.3f, 1) : r.health > 0.4f ? ImVec4(0.9f, 0.7f, 0.2f, 1) : ImVec4(0.9f, 0.3f, 0.2f, 1);
 		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, col);
 		ImGui::ProgressBar(r.health, ImVec2(-1, 0), fmt::format("{:.0f}%", r.health * 100).c_str());
 		ImGui::PopStyleColor();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Its weakest organ's strength (what failing kills it)");
 		ImGui::TableNextColumn();
 		if (r.pregnant)
 			ImGui::Text("%d%%", r.pregnant * 100 / 255);

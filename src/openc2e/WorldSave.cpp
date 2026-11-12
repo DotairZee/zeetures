@@ -469,6 +469,9 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	for (auto& [genus, n] : world.history->namecount)
 		out << "names " << genus << " " << n << "\n";
 	out << "names-given " << (world.history->namesgiven ? 1 : 0) << "\n";
+	// the Ecology Kit's pinned rooms
+	for (auto& [room, color] : world.history->ecologypins)
+		out << "ecology-pin " << room << " " << color << "\n";
 	// the life log (Owner's Kit): kind, tick, genus, female, stage, age, age
 	// known, old age, moniker, then the name
 	for (auto& e : world.history->lifelog)
@@ -849,6 +852,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 	std::vector<SavedCreature> records;
 	std::map<int, unsigned int> namecount;
 	bool namesgiven = false;
+	std::vector<std::pair<unsigned int, int>> ecologypins;
 	int camx = -1, camy = -1;
 	bool relays_saved = false;
 	SavedCreature* c = nullptr;
@@ -896,6 +900,11 @@ bool LoadWorldState(const fs::path& worlddir) {
 				namecount[genus] = n;
 		} else if (key == "names-given") {
 			l >> namesgiven;
+		} else if (key == "ecology-pin") {
+			unsigned int room;
+			int color;
+			if (l >> room >> color)
+				ecologypins.push_back({room, color});
 		} else if (key == "injected" && !c && !e && !io) {
 			injectedCobs.push_back(unescapeLine(restOfLine(l)));
 		} else if (key == "injscript" && !c && !e && !io) {
@@ -1050,6 +1059,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 	world.history->notices.clear();
 	world.history->namecount = namecount;
 	world.history->namesgiven = namesgiven;
+	world.history->ecologypins = ecologypins;
 	for (auto& s : creatures) {
 		try {
 			restoreCreature(savedir, s, !relays_saved);

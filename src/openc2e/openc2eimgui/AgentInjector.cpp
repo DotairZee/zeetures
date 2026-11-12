@@ -206,12 +206,10 @@ void SetAgentInjectorOpen(bool is_open) {
 void DrawAgentInjectorChip() {
 	if (engine.version != 2 || !s_agent_injector_open || !s_agent_injector_minimized)
 		return;
-	if (ImGui::Button("Agent Injector##chip")) {
+	if (KitChipButton("Agent Injector", 7, "Restore the Agent Injector")) {
 		s_agent_injector_minimized = false;
 		s_agent_injector_focus = true;
 	}
-	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Restore the Agent Injector");
 }
 
 void DrawAgentInjector() {

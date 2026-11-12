@@ -196,19 +196,10 @@ void DrawC2StatusBar() {
 		} else {
 			std::string name = Openc2eImgui::KitCreatureName(world.selectedcreature.get());
 			if (c->isAlive()) {
-				float worst = 1.0f, sum = 0;
-				int n = 0;
+				// the same measure as the kits' (KitOrganHealth)
+				float worst = 1.0f, avg = 1.0f;
 				if (auto* c2 = dynamic_cast<c2Creature*>(c))
-					for (auto& o : c2->getOrgans()) {
-						float start = o->getInitialLifeforce();
-						if (start <= 0)
-							continue;
-						float h = std::clamp(o->getShortTermLifeforce() / start, 0.0f, 1.0f);
-						worst = std::min(worst, h);
-						sum += h;
-						n++;
-					}
-				float avg = n ? sum / n : 1.0f;
+					worst = Openc2eImgui::KitOrganHealth(c2, nullptr, &avg);
 				unsigned int bars = (unsigned int)std::clamp((int)std::ceil(worst * 4) - 1, 0, 3);
 				bool alarm = c->isUnconscious() || worst < 0.25f;
 				bool flashOff = alarm && std::fmod(ImGui::GetTime(), 0.8) < 0.4;

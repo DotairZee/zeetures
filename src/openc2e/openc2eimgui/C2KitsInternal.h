@@ -96,11 +96,15 @@ const char* KitSpeciesWord(Agent* a); // "norn", "grendel", "ettin"
 // ages and dates: C2 time runs a part of the day per 3600 world ticks, 5
 // parts a day, 4 days a season, 4 seasons a year
 unsigned int KitAgeTicks(monikerData& m);
-std::string KitAgeText(unsigned int ticks); // "2 days 3 parts (54 min of play)"
+std::string KitAgeText(unsigned int ticks, bool minutes = true); // "2 days 3 parts (54 min of play)"
 std::string KitDateText(unsigned int worldtick); // "Summer, day 3, year 001"
-// mean short-term organ life force against each organ's start, 0-1
-float KitOrganHealth(c2Creature* c, int* damaged = nullptr);
-// the favorite place nearest to an agent ("near The Incubator")
+// a creature's health, 0-1: its weakest organ's short-term life force
+// against that organ's start (what failing kills it; the status bar shows
+// the same). Optionally: how many are under 75%, the mean of all organs,
+// and which organ is weakest (its place in getOrgans(), or -1).
+float KitOrganHealth(c2Creature* c, int* damaged = nullptr, float* average = nullptr, int* weakest = nullptr);
+// where an agent is: near a favorite place ("near The Incubator"), or
+// else its part of the metaroom ("low down in the east")
 std::string KitWhere(Agent* a);
 std::string KitWhereAt(float x, float y); // the same for a point in the world
 // a small picture (660 px wide, dimmed) of a metaroom's background, made
@@ -108,6 +112,21 @@ std::string KitWhereAt(float x, float y); // the same for a point in the world
 Texture KitMapPicture(MetaRoom* m, int& w, int& h);
 // selects a creature and moves the camera to it
 void KitGoTo(const std::shared_ptr<Agent>& a);
+// the game's word for a kind of thing (catalogue words 16 on: "Toy",
+// "Egg"), capitalized; "kind 40" when it has none
+std::string KitCategoryNoun(int category);
+
+// ---- layout shared by the kits ----
+// The creature kits' header: the selected creature's name in a list of
+// every living creature, with arrows for the previous and next one
+void KitCreatureHeader();
+// Text that wraps at the window's width rather than widening it (hints and
+// notes): dim, or in a color
+void KitNote(const char* fmt, ...) IM_FMTARGS(1);
+void KitNoteColored(const ImVec4& color, const char* fmt, ...) IM_FMTARGS(2);
+// Moves the cursor so the next item, this wide, is centered in the window
+// (pictures and charts; text stays at the left)
+void KitCenterNext(float width);
 
 // ---- alarms (Observation Kit), checked every frame whatever is open ----
 void KitAlarmsTick();

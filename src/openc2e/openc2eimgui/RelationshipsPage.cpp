@@ -28,16 +28,16 @@ oldCreature* oldOf(Agent* a) {
 	return ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
 }
 
-// blue for liking, orange for disliking (readable for red-green colour
-// blindness), grey for neither; stronger feeling, stronger colour
-ImU32 feelingColour(const Bond* b, float alpha = 1.0f) {
+// blue for liking, orange for disliking (readable for red-green color
+// blindness), gray for neither; stronger feeling, stronger color
+ImU32 feelingColor(const Bond* b, float alpha = 1.0f) {
 	if (!b)
 		return IM_COL32(150, 150, 150, (int)(110 * alpha));
 	float a = std::clamp(b->affinity, -1.0f, 1.0f);
 	float s = std::min(1.0f, std::fabs(a) * 1.4f + 0.15f);
-	ImVec4 grey(0.6f, 0.6f, 0.6f, alpha), like(0.25f, 0.55f, 0.95f, alpha), dislike(0.95f, 0.55f, 0.15f, alpha);
+	ImVec4 gray(0.6f, 0.6f, 0.6f, alpha), like(0.25f, 0.55f, 0.95f, alpha), dislike(0.95f, 0.55f, 0.15f, alpha);
 	ImVec4 to = a >= 0 ? like : dislike;
-	ImVec4 c(grey.x + (to.x - grey.x) * s, grey.y + (to.y - grey.y) * s, grey.z + (to.z - grey.z) * s, alpha);
+	ImVec4 c(gray.x + (to.x - gray.x) * s, gray.y + (to.y - gray.y) * s, gray.z + (to.z - gray.z) * s, alpha);
 	return ImGui::ColorConvertFloat4ToU32(c);
 }
 
@@ -112,11 +112,13 @@ void RelationshipsPage() {
 
 	// ---- the map ----
 	const float size = 360, R = 150, rIn = 46, rRim = 168;
+	const float left = ImGui::GetCursorPosX(); // the words below start at the left
+	KitCenterNext(size + 40); // the map in the middle of the window
 	ImVec2 origin = ImGui::GetCursorScreenPos();
-	ImVec2 centre(origin.x + size / 2 + 20, origin.y + size / 2 + 10);
+	ImVec2 center(origin.x + size / 2 + 20, origin.y + size / 2 + 10);
 	ImDrawList* dl = ImGui::GetWindowDrawList();
-	dl->AddCircle(centre, R, IM_COL32(120, 120, 120, 60), 64, 1.0f);
-	dl->AddCircle(centre, rRim, IM_COL32(120, 120, 120, 40), 64, 1.0f);
+	dl->AddCircle(center, R, IM_COL32(120, 120, 120, 60), 64, 1.0f);
+	dl->AddCircle(center, rRim, IM_COL32(120, 120, 120, 40), 64, 1.0f);
 	int hovered = -1;
 	const float step = 2.0f * 3.14159265f / (float)rows.size();
 	std::vector<ImVec2> spots(rows.size());
@@ -125,37 +127,38 @@ void RelationshipsPage() {
 		// the better liked, the nearer; enemies out by the ring; not yet met: the rim
 		float rad = r.mine ? rIn + (1.0f - std::clamp(r.mine->affinity, -1.0f, 1.0f)) / 2.0f * (R - rIn) : rRim;
 		float ang = -3.14159265f / 2 + step * (float)i;
-		ImVec2 p(centre.x + std::cos(ang) * rad, centre.y + std::sin(ang) * rad);
+		ImVec2 p(center.x + std::cos(ang) * rad, center.y + std::sin(ang) * rad);
 		spots[i] = p;
 		// the line in two halves: the near half is how the selected creature
 		// feels, the far half how they feel back; thicker for more familiar
-		ImVec2 mid((centre.x + p.x) / 2, (centre.y + p.y) / 2);
+		ImVec2 mid((center.x + p.x) / 2, (center.y + p.y) / 2);
 		float wMine = 1.0f + 4.0f * (r.mine ? r.mine->familiarity : 0.0f);
 		float wTheirs = 1.0f + 4.0f * (r.theirs ? r.theirs->familiarity : 0.0f);
-		dl->AddLine(centre, mid, feelingColour(r.mine), wMine);
-		dl->AddLine(mid, p, feelingColour(r.theirs), wTheirs);
+		dl->AddLine(center, mid, feelingColor(r.mine), wMine);
+		dl->AddLine(mid, p, feelingColor(r.theirs), wTheirs);
 	}
 	for (size_t i = 0; i < rows.size(); i++) {
 		const Row& r = rows[i];
 		ImVec2 p = spots[i];
 		bool feared = r.mine && r.mine->fear > 0.5f;
 		dl->AddCircleFilled(p, 8, IM_COL32(235, 235, 225, 255));
-		dl->AddCircle(p, 8, feared ? IM_COL32(170, 60, 200, 255) : feelingColour(r.mine), 16, feared ? 3.0f : 2.0f);
+		dl->AddCircle(p, 8, feared ? IM_COL32(170, 60, 200, 255) : feelingColor(r.mine), 16, feared ? 3.0f : 2.0f);
 		if (r.mine && r.mine->mate)
 			dl->AddCircle(p, 12, IM_COL32(240, 90, 150, 255), 16, 2.0f);
 		std::string t = r.name;
 		ImVec2 ts = ImGui::CalcTextSize(t.c_str());
-		bool right = p.x >= centre.x || p.x - 12 - ts.x < origin.x + 2; // no room on the left: the right
+		bool right = p.x >= center.x || p.x - 12 - ts.x < origin.x + 2; // no room on the left: the right
 		ImVec2 tp(right ? p.x + 12 : p.x - 12 - ts.x, p.y - ts.y / 2);
 		dl->AddText(tp, IM_COL32(230, 230, 230, 255), t.c_str());
 		ImVec2 mouse = ImGui::GetIO().MousePos;
 		if (std::hypot(mouse.x - p.x, mouse.y - p.y) < 11)
 			hovered = (int)i;
 	}
-	dl->AddCircleFilled(centre, 13, IM_COL32(250, 220, 120, 255));
+	dl->AddCircleFilled(center, 13, IM_COL32(250, 220, 120, 255));
 	ImVec2 ns = ImGui::CalcTextSize(myName.c_str());
-	dl->AddText(ImVec2(centre.x - ns.x / 2, centre.y + 16), IM_COL32(255, 230, 150, 255), myName.c_str());
+	dl->AddText(ImVec2(center.x - ns.x / 2, center.y + 16), IM_COL32(255, 230, 150, 255), myName.c_str());
 	ImGui::InvisibleButton("relmap", ImVec2(size + 40, size + 20));
+	ImGui::SetCursorPosX(left);
 	if (hovered >= 0) {
 		const Row& r = rows[hovered];
 		ImGui::BeginTooltip();
@@ -177,10 +180,8 @@ void RelationshipsPage() {
 		if (ImGui::IsMouseClicked(0))
 			KitGoTo(r.agent);
 	}
-	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-	ImGui::TextWrapped("Nearer: better liked; on the rim: not met. Line: near half %s's feeling, far half theirs; blue liking, orange dislike, thicker more familiar. Pink ring: mate; purple: feared.",
+	KitNote("Nearer: better liked; on the rim: not met. Line: near half %s's feeling, far half theirs; blue liking, orange dislike, thicker more familiar. Pink ring: mate; purple: feared.",
 		myName.c_str());
-	ImGui::PopStyleColor();
 
 	// ---- the list ----
 	if (ImGui::BeginTable("rels", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
@@ -197,9 +198,9 @@ void RelationshipsPage() {
 			if (ImGui::Selectable(fmt::format("{}##{}", r.name, r.mon).c_str(), false, ImGuiSelectableFlags_SpanAllColumns))
 				KitGoTo(r.agent);
 			ImGui::TableNextColumn();
-			ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(feelingColour(r.mine)), "%s", r.mine ? fmt::format("{:+.2f}", r.mine->affinity).c_str() : "-");
+			ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(feelingColor(r.mine)), "%s", r.mine ? fmt::format("{:+.2f}", r.mine->affinity).c_str() : "-");
 			ImGui::TableNextColumn();
-			ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(feelingColour(r.theirs)), "%s", r.theirs ? fmt::format("{:+.2f}", r.theirs->affinity).c_str() : "-");
+			ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(feelingColor(r.theirs)), "%s", r.theirs ? fmt::format("{:+.2f}", r.theirs->affinity).c_str() : "-");
 			ImGui::TableNextColumn();
 			ImGui::Text("%s", r.mine ? fmt::format("{:.0f}%", r.mine->familiarity * 100).c_str() : "-");
 			ImGui::TableNextColumn();

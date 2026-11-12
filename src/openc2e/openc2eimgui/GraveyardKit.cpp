@@ -56,7 +56,7 @@ std::string causeOf(const std::string& mon) {
 	return "";
 }
 
-// text centred at y, engraved: a light edge below, dark letters
+// text centered at y, engraved: a light edge below, dark letters
 void engraved(ImDrawList* dl, ImVec2 origin, float width, float y, float size, const std::string& text, ImU32 col) {
 	ImFont* font = ImGui::GetFont();
 	ImVec2 ts = font->CalcTextSizeA(size, FLT_MAX, width - 40, text.c_str());

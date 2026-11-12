@@ -16,6 +16,8 @@
 #include "C2Kits.h"
 #include "C2KitsInternal.h"
 #include "Camera.h"
+#include "SpritePart.h"
+#include "historyManager.h"
 #include "Engine.h"
 #include "Map.h"
 #include "MetaRoom.h"
@@ -185,7 +187,7 @@ struct Pin {
 };
 
 std::vector<Pin> s_pins;
-const World* s_pinsWorld = nullptr; // the map the pins belong to
+std::weak_ptr<Room> s_pinsWorld; // the first room of the map the pins belong to
 int s_measure = TEMPERATURE;
 bool s_showCreatures = true, s_showFood = false;
 
@@ -203,30 +205,47 @@ Pin* pinOf(const std::shared_ptr<Room>& r) {
 	return nullptr;
 }
 
+// the pins are kept with the world (saved in its state file)
+void savePins() {
+	if (!world.history)
+		return;
+	world.history->ecologypins.clear();
+	for (auto& p : s_pins)
+		world.history->ecologypins.push_back({p.id, p.color});
+}
+
+void addPin(const std::shared_ptr<Room>& r, int color) {
+	Pin p;
+	p.room = r;
+	p.id = r->id;
+	p.color = color;
+	p.history.push_back(readings(*r));
+	s_pins.push_back(p);
+}
+
 void togglePin(const std::shared_ptr<Room>& r) {
 	if (!r)
 		return;
 	for (size_t i = 0; i < s_pins.size(); i++)
 		if (s_pins[i].room.lock() == r) {
 			s_pins.erase(s_pins.begin() + i);
+			savePins();
 			return;
 		}
 	if (s_pins.size() >= 7)
 		return;
-	Pin p;
-	p.room = r;
-	p.id = r->id;
+	int color = 1;
 	for (int c = 1; c <= 7; c++) { // the first color not in use
 		bool used = false;
 		for (auto& q : s_pins)
 			used |= q.color == c;
 		if (!used) {
-			p.color = c;
+			color = c;
 			break;
 		}
 	}
-	p.history.push_back(readings(*r));
-	s_pins.push_back(p);
+	addPin(r, color);
+	savePins();
 }
 
 // ---- food -------------------------------------------------------------------
@@ -260,17 +279,7 @@ MetaRoom* shownMetaRoom() {
 
 std::string roomTitle(const Room& r) {
 	float cx = (r.x_left + r.x_right) / 2.0f, cy = (std::min(r.y_left_ceiling, r.y_right_ceiling) + std::max(r.y_left_floor, r.y_right_floor)) / 2.0f;
-	std::string where = KitWhereAt(cx, cy);
-	MetaRoom* m = world.map ? world.map->metaRoomAt((unsigned int)cx, (unsigned int)cy) : nullptr;
-	if (where.rfind("near ", 0) != 0 && m && m->width() > 0 && m->height() > 0) {
-		static const char* const ACROSS[5] = {"far west", "west", "middle", "east", "far east"};
-		static const char* const DOWN[3] = {"high up", "", "low down"};
-		int i = std::clamp((int)((cx - m->x()) / m->width() * 5), 0, 4), j = std::clamp((int)((cy - m->y()) / m->height() * 3), 0, 2);
-		where = fmt::format("{}{}{}", j == 1 ? "" : DOWN[j], j == 1 ? "" : " in the ", ACROSS[i]);
-		if (j == 1)
-			where = fmt::format("in the {}", ACROSS[i]);
-	}
-	return fmt::format("Room {}{}, {}", r.id, r.type == 2 ? " (water)" : "", where);
+	return fmt::format("Room {}{}, {}", r.id, r.type == 2 ? " (water)" : "", KitWhereAt(cx, cy));
 }
 
 void goToRoom(const Room& r) {
@@ -509,7 +518,7 @@ void MonitorPage() {
 	ImGui::Separator();
 
 	if (s_pins.empty()) {
-		ImGui::TextWrapped("No rooms are pinned. On the Map page, right-click a room to pin it here (up to seven) and see how it changes.");
+		KitNoteColored(ImGui::GetStyle().Colors[ImGuiCol_Text], "No rooms are pinned. On the Map page, right-click a room to pin it here (up to seven) and see how it changes.");
 		Agent* sel = world.selectedcreature.get();
 		if (sel && world.map) {
 			auto r = world.map->roomAt(sel->x + sel->getWidth() / 2.0f, sel->y + sel->getHeight() / 2.0f);
@@ -561,24 +570,13 @@ void MonitorPage() {
 		}
 		ImGui::EndTable();
 	}
-	if (remove >= 0)
+	if (remove >= 0) {
 		s_pins.erase(s_pins.begin() + remove);
+		savePins();
+	}
 }
 
 // ---- the census -------------------------------------------------------------
-
-std::string categoryNoun(int category) {
-	size_t w = 16 + (size_t)category;
-	std::string s = category >= 0 && w < engine.wordlist.size() ? engine.wordlist[w] : "";
-	while (!s.empty() && (s.back() == ' ' || s.back() == '\r' || s.back() == '\n'))
-		s.pop_back();
-	while (!s.empty() && s.front() == ' ')
-		s.erase(s.begin());
-	if (s.empty())
-		return fmt::format("kind {}", category);
-	s[0] = (char)toupper((unsigned char)s[0]);
-	return s;
-}
 
 void CensusPage() {
 	// the creatures
@@ -589,6 +587,23 @@ void CensusPage() {
 	for (auto& [k, n] : kinds)
 		line += fmt::format("{}{} {}{}", line.empty() ? "" : ", ", n, k, n == 1 ? "" : "s");
 	ImGui::Text("Living creatures: %s", line.empty() ? "none" : line.c_str());
+	// eggs: the creatures' own (the Hatchery's list) and the grendel and
+	// ettin eggs the world makes for itself (2 5 3, 2 5 4), apart from the
+	// empty shells left after hatching
+	{
+		int ownEggs = (int)KitUnhatchedEggs().size(), worldEggs = 0, shells = 0;
+		for (auto& a : world.agents) {
+			if (!a || a->isDying() || a->family != 2 || a->genus != 5)
+				continue;
+			auto* sp = dynamic_cast<SpritePart*>(a->part(0));
+			if (sp && sp->getPose() == 7)
+				shells++;
+			else if (a->species == 3 || a->species == 4)
+				worldEggs++;
+		}
+		KitNote("Creature eggs: %d to hatch (the Hatchery's list), %d grendel and ettin egg%s the world made itself, %d empty shell%s.",
+			ownEggs, worldEggs, worldEggs == 1 ? "" : "s", shells, shells == 1 ? "" : "s");
+	}
 	ImGui::Spacing();
 
 	// everything else, by the game's own kinds of thing
@@ -641,7 +656,7 @@ void CensusPage() {
 				}
 				auto& c = counts[order[k].second];
 				ImGui::TableNextColumn();
-				ImGui::TextUnformatted(categoryNoun(order[k].second).c_str());
+				ImGui::TextUnformatted(KitCategoryNoun(order[k].second).c_str());
 				ImGui::TableNextColumn();
 				ImGui::Text("%d", c.all);
 				ImGui::TableNextColumn();
@@ -704,9 +719,22 @@ void CensusPage() {
 void EcologyKitTick() {
 	if (engine.version != 2 || !world.map)
 		return;
-	if (s_pinsWorld != &world || (!s_pins.empty() && s_pins.front().room.expired())) {
-		s_pins.clear(); // another world, or this one reloaded
-		s_pinsWorld = &world;
+	// another world, or this one reloaded: its rooms are new, and the pins
+	// come back from the world's saved list
+	auto& rooms = world.map->getRooms();
+	if (rooms.empty())
+		return;
+	bool differ = world.history && world.history->ecologypins.size() != s_pins.size();
+	for (size_t i = 0; world.history && !differ && i < s_pins.size(); i++)
+		differ = world.history->ecologypins[i] != std::make_pair(s_pins[i].id, s_pins[i].color);
+	if (differ || s_pinsWorld.expired() || s_pinsWorld.lock() != rooms.front()) {
+		s_pinsWorld = rooms.front();
+		s_pins.clear();
+		if (world.history)
+			for (auto& [id, color] : world.history->ecologypins)
+				for (auto& r : rooms)
+					if (r->id == id && !pinOf(r) && s_pins.size() < 7)
+						addPin(r, std::clamp(color, 1, 7));
 	}
 	// developer aid: OPENC2E_ECO_PINS="19,120,200" pins those rooms at the start
 	static bool s_testPins = true;

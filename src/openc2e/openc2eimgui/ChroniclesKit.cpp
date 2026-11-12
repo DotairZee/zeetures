@@ -118,7 +118,7 @@ void LifeStoryPage() {
 	if (ImGui::BeginTable("story", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(620, 300))) {
 		ImGui::TableSetupScrollFreeze(0, 1);
 		ImGui::TableSetupColumn("When", 0, 200);
-		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableSetupColumn("What happened", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableHeadersRow();
 		for (size_t i = 0; i < lines.size(); i++) {
 			const storyEntry& e = lines[i];
@@ -133,7 +133,7 @@ void LifeStoryPage() {
 		}
 		ImGui::EndTable();
 	}
-	ImGui::TextDisabled("Stories are kept from 11 November 2026 on; before that only hatching and family were recorded.");
+	KitNote("Stories are kept from 11 November 2026 on; before that only hatching and family were recorded.");
 }
 
 namespace {

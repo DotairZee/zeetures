@@ -55,6 +55,9 @@ void DrawC2KitChips();
 // The kits' minimize button, for other windows (the Hatchery): call just
 // after Begin; true when pressed.
 bool KitTitleMinimizeButton();
+// a minimized window's chip on the status bar, with its icon from the
+// game's applet toolbar strip; true when clicked
+bool KitChipButton(const char* label, int icon, const char* tooltip);
 
 // Celsius or Fahrenheit for every temperature shown (status bar and kits);
 // clicking a temperature switches it.

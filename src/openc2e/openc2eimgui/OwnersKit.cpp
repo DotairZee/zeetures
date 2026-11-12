@@ -52,6 +52,8 @@ static void RegistrationPage() {
 		return;
 	}
 	Texture cert = KitPicture("Applet Data/Certificate.bmp");
+	const float textX = ImGui::GetCursorPosX(); // the text below starts at the left
+	KitCenterNext(cert ? (float)cert.width : 320);
 	ImVec2 p = ImGui::GetCursorScreenPos();
 	DrawTexture(cert, p);
 	ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -79,8 +81,7 @@ static void RegistrationPage() {
 	dl->AddText(p + ImVec2(34, 148), INK, what.c_str());
 	std::string born = fmt::format("{} {}", m->bornknown ? "born" : "first seen", KitDateText(m->borntick));
 	dl->AddText(p + ImVec2(34, 166), INK, born.c_str());
-	std::string age = "age " + KitAgeText(KitAgeTicks(*m));
-	age = age.substr(0, age.find(" ("));		  // game time on the certificate
+	std::string age = "age " + KitAgeText(KitAgeTicks(*m), false); // game time on the certificate
 	dl->AddText(p + ImVec2(34, 184), INK, age.c_str());
 	int st = m->died ? m->diedstage : (int)c->getStage();
 	std::string stage = fmt::format("life stage: {}", stageWord(st));
@@ -100,13 +101,11 @@ static void RegistrationPage() {
 			ImGui::SetTooltip("Seal the certificate. The name can still be changed.");
 	}
 	ImGui::SetCursorScreenPos(p + ImVec2(0, cert ? cert.height + 4 : 324));
+	ImGui::SetCursorPosX(textX);
 	if (m->died) {
-		std::string age = KitAgeText(KitAgeTicks(*m));
-		age = age.substr(0, age.find(" ("));
-		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + (cert ? cert.width : 320));
-		ImGui::TextColored(ImVec4(0.85f, 0.45f, 0.45f, 1), "Died %s, aged %s%s, a%s %s.", KitDateText(m->diedtick).c_str(), m->bornknown ? "" : "at least ",
+		std::string age = KitAgeText(KitAgeTicks(*m), false);
+		KitNoteColored(ImVec4(0.85f, 0.45f, 0.45f, 1), "Died %s, aged %s%s, a%s %s.", KitDateText(m->diedtick).c_str(), m->bornknown ? "" : "at least ",
 			age.c_str(), st == 4 || st == 5 ? "n" : "", stageWord(st));
-		ImGui::PopTextWrapPos();
 	}
 
 	// notes
@@ -117,7 +116,7 @@ static void RegistrationPage() {
 		std::snprintf(notes, sizeof(notes), "%s", m->notes.c_str());
 	}
 	ImGui::TextDisabled("Notes");
-	if (ImGui::InputTextMultiline("##notes", notes, sizeof(notes), ImVec2(320, 60)))
+	if (ImGui::InputTextMultiline("##notes", notes, sizeof(notes), ImVec2(-FLT_MIN, 60)))
 		m->notes = notes;
 }
 
@@ -252,7 +251,7 @@ static void PhotosPage() {
 	}
 	ImGui::SetCursorScreenPos(p + ImVec2(0, std::max(1, rows) * rowH + 4));
 	if (m->photos.empty())
-		ImGui::TextDisabled("No photos yet. The camera frames the creature where it stands, with no other creature in the way.");
+		KitNote("No photos yet. The camera frames the creature where it stands, with no other creature in the way.");
 
 	// the chosen photo, full size
 	if (big >= 0 && big < (int)m->photos.size()) {
@@ -381,14 +380,14 @@ static void followEntry(const lifeLogEntry& e) {
 void WorldHistoryPage() {
 	auto& log = world.history->lifelog;
 	if (log.empty()) {
-		ImGui::TextDisabled("No births, deaths or pregnancies yet. They are recorded here as they happen.");
+		KitNote("No births, deaths or pregnancies yet. They are recorded here as they happen.");
 		return;
 	}
 	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
 	if (ImGui::BeginTable("log", 5, flags, ImVec2(800, 300))) {
 		ImGui::TableSetupScrollFreeze(0, 1);
 		ImGui::TableSetupColumn("When", 0, 180);
-		ImGui::TableSetupColumn("", 0, 60);
+		ImGui::TableSetupColumn("What", 0, 96); // room for "Unconscious"
 		ImGui::TableSetupColumn("Who", 0, 120);
 		ImGui::TableSetupColumn("Details", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableSetupColumn("", 0, 44);
@@ -1179,14 +1178,14 @@ static void FamilyPage() {
 	}
 }
 
-// A trait's bar: its own colour filling to where the creature stands, a mark
-// at the middle (average), nothing judged good or bad. Colours from the
-// commonest colour-feeling associations, kept apart for colour-blind eyes:
+// A trait's bar: its own color filling to where the creature stands, a mark
+// at the middle (average), nothing judged good or bad. Colors from the
+// commonest color-feeling associations, kept apart for color-blind eyes:
 // temper red (anger), energy yellow (activity), steadiness blue (calm),
 // boldness orange, curiosity teal (the new and open), sociability pink
 // (warmth), reactivity purple (nervous arousal).
 static void TraitBar(int trait, int percent, const char* label, float width) {
-	static const ImU32 colours[NUM_TRAITS] = {
+	static const ImU32 colors[NUM_TRAITS] = {
 		IM_COL32(235, 140, 40, 255), // boldness
 		IM_COL32(40, 175, 170, 255), // curiosity
 		IM_COL32(230, 200, 40, 255), // energy
@@ -1199,7 +1198,7 @@ static void TraitBar(int trait, int percent, const char* label, float width) {
 	ImVec2 p = ImGui::GetCursorScreenPos();
 	ImDrawList* dl = ImGui::GetWindowDrawList();
 	dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), IM_COL32(45, 45, 50, 255), 3);
-	dl->AddRectFilled(p, ImVec2(p.x + width * std::clamp(percent, 0, 100) / 100.0f, p.y + h), colours[trait], 3);
+	dl->AddRectFilled(p, ImVec2(p.x + width * std::clamp(percent, 0, 100) / 100.0f, p.y + h), colors[trait], 3);
 	dl->AddLine(ImVec2(p.x + width / 2, p.y), ImVec2(p.x + width / 2, p.y + h), IM_COL32(255, 255, 255, 140), 1.0f);
 	dl->AddRect(p, ImVec2(p.x + width, p.y + h), IM_COL32(110, 110, 120, 255), 3);
 	ImVec2 ts = ImGui::CalcTextSize(label);
@@ -1223,9 +1222,9 @@ static void TemperamentPage() {
 	const Temperament& t = c->temperament;
 	std::string name = KitCreatureName(a);
 	std::string words = Temperaments::describe(t);
-	ImGui::TextWrapped("%s is %s.", name.c_str(), words.c_str());
+	KitNoteColored(ImGui::GetStyle().Colors[ImGuiCol_Text], "%s is %s.", name.c_str(), words.c_str());
 	ImGui::Spacing();
-	ImGui::TextDisabled("Every creature has some of every trait. 50%% (the middle mark) is average: the share of creatures with less.");
+	KitNote("Every creature has some of every trait. 50%% (the middle mark) is average: the share of creatures with less.");
 	ImGui::Spacing();
 	for (int i = 0; i < NUM_TRAITS; i++) {
 		int pc = t.percent(i);
@@ -1240,6 +1239,7 @@ static void TemperamentPage() {
 }
 
 void DrawOwnersKit() {
+	KitCreatureHeader();
 	if (ImGui::BeginTabBar("pages")) {
 		if (KitTab("Registration")) {
 			RegistrationPage();

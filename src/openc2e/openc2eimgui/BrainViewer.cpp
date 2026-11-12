@@ -107,7 +107,7 @@ static void drawOldBrain(oldBrain* b) {
 				int lobex = (lobe->x + 4) * 20;
 				int lobey = (lobe->y + 4) * 20;
 
-				// store the centre coordinate for drawing dendrites
+				// store the center coordinate for drawing dendrites
 				assert(neuroncoords.find(neuron) == neuroncoords.end());
 				neuroncoords[neuron] = std::pair<unsigned int, unsigned int>(lobex + (x * 20) + 10, lobey + (y * 20) + 10);
 
@@ -122,7 +122,7 @@ static void drawOldBrain(oldBrain* b) {
 						continue;
 				}
 
-				// calculate appropriate colour
+				// calculate appropriate color
 				float multiplier = 0.5 + (var / 2.2);
 				ImU32 color = IM_COL32(255 * multiplier, 255 * multiplier, 255 * multiplier, 255);
 
@@ -188,7 +188,7 @@ static void drawC2eBrain(c2eBrain* b) {
 				int lobex = (lobe->x + 4) * 20;
 				int lobey = (lobe->y + 4) * 20;
 
-				// store the centre coordinate for drawing dendrites
+				// store the center coordinate for drawing dendrites
 				assert(neuroncoords.find(neuron) == neuroncoords.end());
 				neuroncoords[neuron] = std::pair<unsigned int, unsigned int>(lobex + (x * 20) + 10, lobey + (y * 20) + 10);
 
@@ -212,7 +212,7 @@ static void drawC2eBrain(c2eBrain* b) {
 						continue;
 				}
 
-				// calculate appropriate colour
+				// calculate appropriate color
 				float multiplier = 0.5 + (var / 2.2);
 				ImU32 color = IM_COL32(lobe->red * multiplier, lobe->green * multiplier, lobe->blue * multiplier, 255);
 

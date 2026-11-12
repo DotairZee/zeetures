@@ -1,6 +1,7 @@
 #include "C2EyeView.h"
 
 #include "Agent.h"
+#include "C2KitsInternal.h"
 #include "AgentHelpers.h"
 #include "Camera.h"
 #include "Catalogue.h"
@@ -42,7 +43,7 @@ static bool s_eye_view_open = false;
 static std::unique_ptr<EyeViewCamera> s_camera;
 static std::shared_ptr<RenderTarget> s_target;
 static AgentRef s_followed;
-static float s_cx = 0, s_cy = 0; // the view's centre, in world pixels
+static float s_cx = 0, s_cy = 0; // the view's center, in world pixels
 
 bool IsEyeViewOpen() {
 	return s_eye_view_open;
@@ -91,7 +92,16 @@ static std::string describe(Agent* a) {
 		return "something poisonous";
 	if (edible > 0)
 		return "some food";
-	return fmt::format("an object ({} {} {})", (int)a->family, (int)a->genus, a->species);
+	// the game's own word for its kind ("a toy"), as creatures know it
+	if (a->category >= 0) {
+		std::string noun = KitCategoryNoun(a->category);
+		if (noun.rfind("kind ", 0) != 0) {
+			for (char& ch : noun)
+				ch = (char)tolower((unsigned char)ch);
+			return fmt::format("{} {}", std::string("aeiou").find(noun[0]) != std::string::npos ? "an" : "a", noun);
+		}
+	}
+	return "something";
 }
 
 std::string DescribeCreatureActivity(Agent* self) {
