@@ -7,7 +7,18 @@
 #include "common/throw_ifnot.h"
 #include "imageManager.h"
 
+#include "common/Ascii.h"
 #include <fmt/core.h>
+
+// C2's weather (clouds, rain, snow, lightning: every picture in "weat") is
+// drawn see-through, checkered like the invisible hand, so the sky's colour
+// through the day shows through it (owner, 2026-11-11)
+static bool isWeather(const std::shared_ptr<creaturesImage>& img) {
+	if (engine.version != 2 || !img)
+		return false;
+	std::string n = to_ascii_lowercase(img->getName());
+	return n == "weat" || n == "weat.s16";
+}
 
 SpritePart::SpritePart(Agent* p, unsigned int _id, std::string spritefile, unsigned int fimg,
 	int _x, int _y, unsigned int _z)
@@ -34,6 +45,8 @@ SpritePart::SpritePart(Agent* p, unsigned int _id, std::string spritefile, unsig
 			throw Exception(fmt::format("Failed to create sprite part: first sprite {} is beyond {} sprite(s) in file {}", firstimg, sprite->numframes(), sprite->getName()));
 		}
 	}
+	if (isWeather(origsprite))
+		setStippled(true);
 }
 
 SpritePart::~SpritePart() {
@@ -112,6 +125,8 @@ void SpritePart::changeSprite(std::shared_ptr<creaturesImage> spr) {
 	}
 
 	origsprite = sprite = spr;
+	if (isWeather(origsprite))
+		setStippled(true);
 
 	setPose(pose); // TODO: we need to preserve pose, but shouldn't we do some sanity checking?
 }
