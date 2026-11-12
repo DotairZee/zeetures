@@ -53,7 +53,7 @@ std::array<float, 3> lightFor(int timeofday) {
 	}
 }
 
-void build(Sky& sky, creaturesImage& bkgd) {
+void build(Sky& sky, creaturesImage& bkgd, bool wraps) {
 	sky.built = true;
 	if (bkgd.images.empty() || !bkgd.images[0])
 		return;
@@ -268,7 +268,8 @@ void build(Sky& sky, creaturesImage& bkgd) {
 	sky.any = true;
 
 	// How far down the outdoors reaches in each column: the lowest sky pixel
-	// there, widened (the most within 120 px either side) and smoothed, so
+	// there, widened (the most within 250 px either side, so the ground under
+	// a tree's canopy counts as outdoors) and smoothed, so
 	// the grade's edge has no steps. Columns with no sky near them: none.
 	std::vector<float> bottom(W, -1.0f);
 	for (int x = 0; x < W; x++)
@@ -278,16 +279,21 @@ void build(Sky& sky, creaturesImage& bkgd) {
 				break;
 			}
 	{
+		// (in a world that wraps, across the seam too: stopping at the
+		// picture's edges left a hard edge in the light there, by the
+		// volcano)
+		auto col = [&](int k) { return wraps ? ((k % W) + W) % W : std::clamp(k, 0, W - 1); };
 		std::vector<float> wide(W, -1.0f), smooth(W, -1.0f);
 		for (int x = 0; x < W; x++)
-			for (int k = std::max(0, x - 120); k <= std::min(W - 1, x + 120); k++)
-				wide[x] = std::max(wide[x], bottom[k]);
+			for (int k = x - 250; k <= x + 250; k++)
+				if (wraps || (k >= 0 && k < W))
+					wide[x] = std::max(wide[x], bottom[col(k)]);
 		for (int x = 0; x < W; x++) {
 			float sum = 0;
 			int n = 0;
-			for (int k = std::max(0, x - 60); k <= std::min(W - 1, x + 60); k++)
-				if (wide[k] >= 0) {
-					sum += wide[k];
+			for (int k = x - 60; k <= x + 60; k++)
+				if ((wraps || (k >= 0 && k < W)) && wide[col(k)] >= 0) {
+					sum += wide[col(k)];
 					n++;
 				}
 			smooth[x] = n ? sum / n : -1.0f;
@@ -364,7 +370,7 @@ void draw(RenderTarget* surface, MetaRoom* m, int destx, int desty) {
 		return;
 	Sky& sky = s_skies[bkgd->getName()];
 	if (!sky.built)
-		build(sky, *bkgd);
+		build(sky, *bkgd, m->wraparound());
 	if (!sky.any)
 		return;
 
