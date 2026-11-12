@@ -1494,8 +1494,19 @@ class HomeostatMind : public CreatureMind {
 	// 3. Wanting: predicted drop in D, given current needs.
 	float predictedRelief(const std::array<float, NUM_DRIVES>& d, float D, const Expectation& e) const {
 		std::array<float, NUM_DRIVES> after{};
-		for (int i = 0; i < NUM_DRIVES; i++)
-			after[i] = std::clamp(d[i] + e.delta[i], 0.0f, 1.0f);
+		// A starving body does not recover from tiredness or sleepiness (in
+		// C2's chemistry they stay where they are, whatever the rest and
+		// sleep scripts report: a sleeping norn at hunger 254 kept Tired 136
+		// through 1292 ticks, a resting one Tired 223 through hundreds of
+		// rests). So while starving, nothing is expected to relieve them,
+		// and food comes first (owner, 2026-11-11).
+		bool starving = d[HUNGER] >= prm.starveAwake;
+		for (int i = 0; i < NUM_DRIVES; i++) {
+			float delta = e.delta[i];
+			if (starving && (i == TIRED || i == SLEEPY) && delta < 0.0f)
+				delta = 0.0f;
+			after[i] = std::clamp(d[i] + delta, 0.0f, 1.0f);
+		}
 		return D - overallDrive(after);
 	}
 
