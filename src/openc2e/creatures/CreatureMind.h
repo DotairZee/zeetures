@@ -169,6 +169,11 @@ struct MindOutput {
 struct MindView {
 	unsigned int tick = 0; // now
 	std::array<float, 17> drives{}; // 0-1
+	// how much each need matters to this mind (its temperament changes
+	// some), and how a need's pull grows with its level: pull = weight x
+	// level ^ pullPower
+	std::array<float, 17> weight{};
+	float pullPower = 1;
 	float content = 0; // 0-1: how far from its worst its needs are
 	float x = 0, y = 0; // where it is
 

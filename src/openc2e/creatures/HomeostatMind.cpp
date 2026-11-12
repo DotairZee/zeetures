@@ -669,8 +669,11 @@ class HomeostatMind : public CreatureMind {
 
 	bool view(MindView& v) const override {
 		v.tick = viewTick;
-		for (int i = 0; i < NUM_DRIVES && i < 17; i++)
+		for (int i = 0; i < NUM_DRIVES && i < 17; i++) {
 			v.drives[i] = viewDrives[i];
+			v.weight[i] = prm.weights[i];
+		}
+		v.pullPower = prm.driveExpN;
 		v.content = contentOf(viewD);
 		v.x = viewX;
 		v.y = viewY;

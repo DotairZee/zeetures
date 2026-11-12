@@ -1,4 +1,5 @@
 #include "C2StatusBar.h"
+#include "C2KitsInternal.h"
 
 #include "C2Kits.h"
 #include "AgentHelpers.h"
@@ -177,31 +178,58 @@ void DrawC2StatusBar() {
 
 		const float health_x = ImGui::GetCursorPosX();
 		ImGui::Text("Health:");
-		// TODO: norn health/drive/heartbeat
-		if (!world.selectedcreature) {
+		// The selected creature's health in C2's pictures (owner, 2026-11-11:
+		// make them real and say what they show). The bar, skull to smile,
+		// is its weakest organ's strength (what failing kills it), flashing
+		// while it is unconscious or an organ is failing; the heart beats,
+		// faster with adrenaline, slow while unconscious, blue when dead.
+		const char* noone = "Health: choose a creature to see how it is";
+		CreatureAgent* ca = world.selectedcreature ? dynamic_cast<CreatureAgent*>(world.selectedcreature.get()) : nullptr;
+		oldCreature* c = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+		if (!c) {
 			ImGuiUtils::Image(s_healthicons_texs[0]);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", noone);
 			ImGuiUtils::Image(s_hearticons_texs[0]);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", noone);
 		} else {
-			if (CreatureAgent* ca = dynamic_cast<CreatureAgent*>(world.selectedcreature.get())) {
-				oldCreature* c = dynamic_cast<oldCreature*>(ca->getCreature());
-				assert(c); // this is c2, after all..
-
-				if (c->isAlive()) {
-					// this life force indicator shows the level of Glycogen
-					// TODO: this does not update instantly w/Glycogen in real
-					// c2, so perhaps it's actually another (related) data point?
-					unsigned int x = c->getChemical(72) / 64;
-					ImGuiUtils::Image(s_healthicons_texs[x + 2]); // 2-5 (1-4 bars)
-					// TODO: flash indicator when norn is dying
-
-					// TODO: heartbeat animation
-					ImGuiUtils::Image(s_hearticons_texs[1]); // 1-3 = beating heart, large to small
-				} else {
-					// dead
-					ImGuiUtils::Image(s_healthicons_texs[1]);
-					ImGuiUtils::Image(s_hearticons_texs[4]); // blue heart
-				}
-				// TODO: drive
+			std::string name = Openc2eImgui::KitCreatureName(world.selectedcreature.get());
+			if (c->isAlive()) {
+				float worst = 1.0f, sum = 0;
+				int n = 0;
+				if (auto* c2 = dynamic_cast<c2Creature*>(c))
+					for (auto& o : c2->getOrgans()) {
+						float start = o->getInitialLifeforce();
+						if (start <= 0)
+							continue;
+						float h = std::clamp(o->getShortTermLifeforce() / start, 0.0f, 1.0f);
+						worst = std::min(worst, h);
+						sum += h;
+						n++;
+					}
+				float avg = n ? sum / n : 1.0f;
+				unsigned int bars = (unsigned int)std::clamp((int)std::ceil(worst * 4) - 1, 0, 3);
+				bool alarm = c->isUnconscious() || worst < 0.25f;
+				bool flashOff = alarm && std::fmod(ImGui::GetTime(), 0.8) < 0.4;
+				ImGuiUtils::Image(s_healthicons_texs[flashOff ? 1 : bars + 2]);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s's health: its weakest organ is at %.0f%% (all organs %.0f%% on average)%s", name.c_str(), worst * 100, avg * 100,
+						c->isUnconscious() ? "\nUnconscious" : worst < 0.25f ? "\nAn organ is failing" : "");
+				float adrenaline = c->getChemical(172) / 255.0f;
+				float perSecond = c->isUnconscious() ? 0.5f : 1.0f + 1.6f * adrenaline;
+				double phase = std::fmod(ImGui::GetTime() * perSecond, 1.0);
+				ImGuiUtils::Image(s_hearticons_texs[phase < 0.15 ? 1 : phase < 0.3 ? 2 : 3]); // large, medium, small
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s's heartbeat: %s, about %.0f a minute", name.c_str(),
+						c->isUnconscious() ? "faint" : adrenaline > 0.6f ? "racing" : adrenaline > 0.25f ? "quickened" : "calm", perSecond * 60);
+			} else {
+				ImGuiUtils::Image(s_healthicons_texs[1]);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s has died", name.c_str());
+				ImGuiUtils::Image(s_hearticons_texs[4]); // blue heart
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s has died", name.c_str());
 			}
 		}
 

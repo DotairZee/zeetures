@@ -136,22 +136,56 @@ void sector(ImDrawList* dl, ImVec2 c, float r0, float r1, float a0, float a1, Im
 	}
 }
 
+// Each need's pull on the mind: its level raised to the mind's power,
+// times how much the need matters to this creature, as a share of the most
+// any need could pull (the most-weighted need at its worst). A need that
+// matters little stays short even when full; this is what drives choices,
+// where the Health Kit's Drives show the body's levels as they are.
+std::array<float, 17> pullsOf(const MindView& v, float* total = nullptr) {
+	std::array<float, 17> p{};
+	float most = 0.0001f, sum = 0;
+	for (int i = 0; i < 17; i++)
+		most = std::max(most, v.weight[i]);
+	for (int i = 0; i < 17; i++) {
+		p[i] = v.weight[i] * std::pow(std::clamp(v.drives[i], 0.0f, 1.0f), v.pullPower) / most;
+		sum += p[i];
+	}
+	if (total)
+		*total = sum;
+	return p;
+}
+
+const char* mattersWord(float weight, float most) {
+	float r = weight / std::max(0.0001f, most);
+	return r > 0.75f ? "matters a great deal to it" : r > 0.4f ? "matters to it" : r > 0.2f ? "matters a little" : "hardly matters to it";
+}
+
 void FeelingsPage(const MindView& v) {
 	ImDrawList* dl = ImGui::GetWindowDrawList();
+	ImGui::TextColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "How hard each need is pushing it now: its level times how much it matters to this creature.");
 	ImVec2 o = ImGui::GetCursorScreenPos();
 	const float W = 460, H = 420;
 	ImVec2 c(o.x + 230, o.y + 200);
 	const float r0 = 52, r1 = 160;
+	float total = 0;
+	std::array<float, 17> pull = pullsOf(v, &total);
+	float most = 0.0001f;
+	for (float w : v.weight)
+		most = std::max(most, w);
 	for (int i = 0; i < 17; i++) {
 		float a0 = -PI / 2 + i * 2 * PI / 17 + 0.02f, a1 = a0 + 2 * PI / 17 - 0.04f;
 		sector(dl, c, r0, r1, a0, a1, TRACK);
+		// (the need's own level, faintly, behind its pull)
 		float lv = std::clamp(v.drives[i], 0.0f, 1.0f);
 		if (lv > 0.005f)
-			sector(dl, c, r0, r0 + (r1 - r0) * lv, a0, a1, KIND_COLOR[NEED_KIND[i]]);
+			sector(dl, c, r0, r0 + (r1 - r0) * lv, a0, a1, (KIND_COLOR[NEED_KIND[i]] & 0x00FFFFFF) | 0x38000000);
+		float pv = std::clamp(pull[i], 0.0f, 1.0f);
+		if (pv > 0.003f)
+			sector(dl, c, r0, r0 + (r1 - r0) * std::sqrt(pv), a0, a1, KIND_COLOR[NEED_KIND[i]]);
 		float am = (a0 + a1) / 2;
 		ImVec2 ts = ImGui::CalcTextSize(NEED_NAMES[i]);
 		ImVec2 lp(c.x + (r1 + 20) * std::cos(am) - ts.x / 2, c.y + (r1 + 14) * std::sin(am) - ts.y / 2);
-		dl->AddText(lp, lv > 0.4f ? TEXT : DIM, NEED_NAMES[i]);
+		dl->AddText(lp, pv > 0.15f ? TEXT : DIM, NEED_NAMES[i]);
 	}
 	dl->AddCircleFilled(c, r0 - 4, IM_COL32(30, 33, 41, 255), 40);
 	std::string pct = fmt::format("{:.0f}%", v.content * 100);
@@ -162,19 +196,19 @@ void FeelingsPage(const MindView& v) {
 	ImGui::SetWindowFontScale(1.0f);
 	ImVec2 cs = ImGui::CalcTextSize("content");
 	dl->AddText(ImVec2(c.x - cs.x / 2, c.y + 4), DIM, "content");
-	if (ImGui::IsMouseHoveringRect(ImVec2(c.x - r0, c.y - r0), ImVec2(c.x + r0, c.y + r0)))
-		ImGui::SetTooltip("How content it is: how far its needs are, taken together, from all at their worst");
-	// hover a petal
 	ImVec2 m = ImGui::GetIO().MousePos;
 	float dx = m.x - c.x, dy = m.y - c.y, dist = std::sqrt(dx * dx + dy * dy);
-	if (dist > r0 && dist < r1 + 30) {
+	if (dist <= r0)
+		ImGui::SetTooltip("How content it is: how far its needs, as they push it, are from all at their worst");
+	else if (dist < r1 + 30) {
 		float a = std::atan2(dy, dx) + PI / 2;
 		if (a < 0)
 			a += 2 * PI;
 		int i = std::clamp((int)(a / (2 * PI / 17)), 0, 16);
-		ImGui::SetTooltip("%s: %.0f%% (%s)", NEED_NAMES[i], v.drives[i] * 100, KIND_NAME[NEED_KIND[i]]);
+		ImGui::SetTooltip("%s: %.0f%% (%s); it %s\n%.0f%% of what is pushing it now",
+			NEED_NAMES[i], v.drives[i] * 100, KIND_NAME[NEED_KIND[i]], mattersWord(v.weight[i], most), total > 0 ? pull[i] / total * 100 : 0.0f);
 	}
-	// key and the strongest
+	// key and the strongest pulls
 	float ky = o.y + 382;
 	for (int k = 0; k < 4; k++) {
 		ImVec2 kp(o.x + 30 + k * 105, ky);
@@ -183,15 +217,16 @@ void FeelingsPage(const MindView& v) {
 	}
 	std::vector<std::pair<float, int>> order;
 	for (int i = 0; i < 17; i++)
-		order.push_back({v.drives[i], i});
+		order.push_back({pull[i], i});
 	std::sort(order.rbegin(), order.rend());
-	std::string strongest = "Strongest:";
-	for (int k = 0; k < 3 && order[k].first > 0.05f; k++)
-		strongest += fmt::format("{} {} {:.0f}%", k ? "," : "", NEED_NAMES[order[k].second], order[k].first * 100);
-	if (order[0].first <= 0.05f)
-		strongest = "No need stands out: all is well.";
+	std::string strongest = "Pushing it most:";
+	for (int k = 0; k < 3 && order[k].first > 0.01f && total > 0; k++)
+		strongest += fmt::format("{} {} ({:.0f}%)", k ? "," : "", NEED_NAMES[order[k].second], order[k].first / total * 100);
+	if (order[0].first <= 0.01f)
+		strongest = "Nothing is pushing it: all is well.";
 	dl->AddText(ImVec2(o.x + 14, ky + 20), TEXT, strongest.c_str());
 	ImGui::Dummy(ImVec2(W, H));
+	ImGui::TextDisabled("Faint behind each: the need's level. The body's levels are in the Health Kit's Drives.");
 }
 
 void ChoosingPage(const MindView& v) {
