@@ -2917,13 +2917,25 @@ class HomeostatMind : public CreatureMind {
 							pastWater = (dx < 0 && p.waterWest) || (dx > 0 && p.waterEast);
 							break;
 						}
-				if (pastWater)
+				// or past a wall the creature stands against on that side
+				// (owner, 2026-11-12: creatures pressed against the east wall
+				// of the dead-end pocket at the end of the lava corridor,
+				// x ~8240, reaching for critters bouncing against it)
+				bool pastWall = false;
+				if (episodeAgent && !pastWater)
+					for (auto& v : p.visible)
+						if (v.agent == episodeAgent) {
+							float dx = dxTo(p, v.x);
+							pastWall = (dx < 0 && p.wallWest) || (dx > 0 && p.wallEast);
+							break;
+						}
+				if (pastWater || pastWall)
 					futileInARow = prm.futileAfter;
 				if (futileInARow >= prm.futileAfter) {
 					futile.push_back({current.category, current.decision, p.x, p.y, p.tick + prm.futileTicks});
 					futileInARow = 0;
 					fmt::print("[homeostat] creature {} t{}: {}@{} gets nowhere from {:.0f},{:.0f}{}; not tried here for a while\n", p.creatureId, p.tick,
-						actionName(current.decision), current.category, p.x, p.y, pastWater ? " (it lies past water)" : "");
+						actionName(current.decision), current.category, p.x, p.y, pastWater ? " (it lies past water)" : pastWall ? " (a wall is in the way)" : "");
 				}
 			} else
 				futileInARow = 0;
