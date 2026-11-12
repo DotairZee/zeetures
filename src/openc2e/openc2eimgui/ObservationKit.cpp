@@ -40,18 +40,19 @@ static void DetailsPage() {
 	}
 	ImGui::Text("%d creature%s. Click a row to select it; Go to look at it.", (int)creatures.size(), creatures.size() == 1 ? "" : "s");
 	static const char* stages[] = {"baby", "child", "adolescent", "youth", "adult", "old", "senile"};
-	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_Sortable;
-	if (!ImGui::BeginTable("creatures", 8, flags, ImVec2(0, ImGui::GetContentRegionAvail().y)))
+	// every column as wide as what it holds, so the kit fits its table
+	// (owner, 2026-11-12: it had been a window sized by hand, mostly empty)
+	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Sortable | ImGuiTableFlags_SizingFixedFit;
+	if (!ImGui::BeginTable("creatures", 8, flags))
 		return;
-	ImGui::TableSetupScrollFreeze(0, 1);
-	ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed, 120);
-	ImGui::TableSetupColumn("Kind", ImGuiTableColumnFlags_WidthFixed, 96);
-	ImGui::TableSetupColumn("Age", ImGuiTableColumnFlags_WidthFixed, 176);
-	ImGui::TableSetupColumn("Health", ImGuiTableColumnFlags_WidthFixed, 64);
-	ImGui::TableSetupColumn("Preg.", ImGuiTableColumnFlags_WidthFixed, 44);
-	ImGui::TableSetupColumn("Doing", ImGuiTableColumnFlags_WidthStretch, 2.0f);
-	ImGui::TableSetupColumn("Where", ImGuiTableColumnFlags_WidthStretch, 1.2f);
-	ImGui::TableSetupColumn("", ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthFixed, 26);
+	ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort);
+	ImGui::TableSetupColumn("Kind");
+	ImGui::TableSetupColumn("Age");
+	ImGui::TableSetupColumn("Health");
+	ImGui::TableSetupColumn("Preg.");
+	ImGui::TableSetupColumn("Doing");
+	ImGui::TableSetupColumn("Where");
+	ImGui::TableSetupColumn("", ImGuiTableColumnFlags_NoSort);
 	ImGui::TableHeadersRow();
 
 	struct Row {
@@ -116,7 +117,7 @@ static void DetailsPage() {
 		ImGui::TableNextColumn();
 		ImVec4 col = r.health > 0.75f ? ImVec4(0.3f, 0.8f, 0.3f, 1) : r.health > 0.4f ? ImVec4(0.9f, 0.7f, 0.2f, 1) : ImVec4(0.9f, 0.3f, 0.2f, 1);
 		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, col);
-		ImGui::ProgressBar(r.health, ImVec2(-1, 0), fmt::format("{:.0f}%", r.health * 100).c_str());
+		ImGui::ProgressBar(r.health, ImVec2(56, 0), fmt::format("{:.0f}%", r.health * 100).c_str());
 		ImGui::PopStyleColor();
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Its weakest organ's strength (what failing kills it)");
@@ -257,7 +258,7 @@ void KitAlarmsTick() {
 }
 
 static void AlarmsPage() {
-	ImGui::TextWrapped("An alarm goes off when a chemical in a creature passes a level, and again after it has come back. Alarms are checked while the kit is closed too.");
+	KitNoteColored(ImGui::GetStyle().Colors[ImGuiCol_Text], "An alarm goes off when a chemical in a creature passes a level, and again after it has come back. Alarms are checked while the kit is closed too.");
 	const auto& groups = KitChemicalGroups();
 	int remove = -1;
 	if (ImGui::BeginTable("alarms", 6, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg)) {

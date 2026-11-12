@@ -59,7 +59,7 @@ static const KitDef s_kits[] = {
 	{"science", "Science Kit", "Science", 4, DrawScienceKit},
 	{"breeders", "Breeder's Kit", "Breeder's", 5, DrawBreedersKit},
 	{"owners", "Owner's Kit", "Owner's", 2, DrawOwnersKit},
-	{"observation", "Observation Kit", "Observation", 6, DrawObservationKit, true},
+	{"observation", "Observation Kit", "Observation", 6, DrawObservationKit},
 	{"chronicles", "Chronicles Kit", "Chronicles", 8, DrawChroniclesKit, true},
 	{"graveyard", "Graveyard Kit", "Graveyard", 9, DrawGraveyardKit},
 	{"mind", "Mind Kit", "Mind", 12, DrawMindKit},

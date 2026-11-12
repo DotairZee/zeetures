@@ -169,7 +169,7 @@ static void importPicked() {
 }
 
 static void DrawAgentPreview(Texture& texture) {
-	ImVec2 size = ImVec2(std::max<float>(300, ImGui::GetContentRegionAvail().x), 211);
+	ImVec2 size = ImVec2(300, 211); // the list's width (it once filled the window, which then could not shrink)
 	ImDrawList* drawlist = ImGui::GetWindowDrawList();
 	ImVec2 p = ImGui::GetCursorScreenPos();
 	// should be approx 300 x 170. Alima.bmp is 312 x 211
@@ -270,7 +270,9 @@ void DrawAgentInjector() {
 		ImGui::SetNextWindowFocus();
 		s_agent_injector_focus = false;
 	}
-	if (ImGuiUtils::BeginWindow("Agent Injector", &s_agent_injector_open)) {
+	// fits what it holds (a remembered or default size cut off the lines
+	// under the buttons; owner, 2026-11-12)
+	if (ImGuiUtils::BeginWindow("Agent Injector", &s_agent_injector_open, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar)) {
 		if (engine.version == 2 && KitTitleMinimizeButton())
 			s_agent_injector_minimized = true;
 		if (!s_read_agents) {
@@ -317,8 +319,10 @@ void DrawAgentInjector() {
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Add COB files, or zips of them, to this list (copied into your own data folder)");
 		ImGui::TextDisabled("Objects you add are saved with the world.");
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 300); // as wide as the list
 		for (auto& line : s_import_report)
 			ImGui::TextWrapped("%s", line.c_str());
+		ImGui::PopTextWrapPos();
 
 		ImGuiUtils::EndWindow();
 	}
