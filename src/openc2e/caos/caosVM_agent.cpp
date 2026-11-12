@@ -958,7 +958,15 @@ unsigned int calculateScriptId(unsigned int message_id) {
 void c_MESG_WRIT(caosVM* vm) {
 	VM_VERIFY_SIZE(2)
 	VM_PARAM_INTEGER(message_id)
-	VM_PARAM_VALIDAGENT(agent);
+	VM_PARAM_AGENT(agent);
+	// C1/C2: a message to an object that is gone goes nowhere. The creatures'
+	// eat-after-pickup script (4 0 0 28) tells the food it is eaten (it
+	// deletes itself), then that it is dropped; openc2e threw "Invalid agent
+	// handle" there and cut the script short, before its IMPT 0 and DONE
+	// (dozens of times a session in Home).
+	if (!agent && engine.version < 3)
+		return;
+	valid_agent(agent);
 
 	agent->queueScript(calculateScriptId(message_id), vm->owner.get());
 }
@@ -978,7 +986,10 @@ void c_MESG_WRT(caosVM* vm) {
 	VM_PARAM_VALUE(param_2)
 	VM_PARAM_VALUE(param_1)
 	VM_PARAM_INTEGER(message_id)
-	VM_PARAM_VALIDAGENT(agent)
+	VM_PARAM_AGENT(agent)
+	if (!agent && engine.version < 3) // C1/C2: to an object that is gone, nowhere (as MESG WRIT)
+		return;
+	valid_agent(agent);
 
 	// I'm not sure how to handle the 'delay'; is it a background delay, or do we actually block for delay ticks?
 	// TODO: fuzzie can't work out how on earth delays work in c2e, someone fixit
