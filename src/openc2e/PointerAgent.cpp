@@ -31,6 +31,8 @@
 #include "World.h"
 #include "caosVM.h"
 #include "creatures/CreatureAgent.h"
+#include "creatures/oldCreature.h"
+#include "Scriptorium.h"
 #include "creatures/SkeletalCreature.h"
 
 #include <cassert>
@@ -81,6 +83,29 @@ void PointerAgent::carry(AgentRef a) {
 
 void PointerAgent::drop(AgentRef a) {
 	Agent::drop(a);
+
+	// Hand-feeding (C2; owner, 2026-11-11): food dropped on an unconscious
+	// creature is eaten for it: the food's own eat script (event 12) runs
+	// as if the creature had eaten it, so a starving creature can be brought
+	// round
+	if (engine.version == 2 && a) {
+		Agent* food = a.get();
+		bool edible = world.scriptorium->getScript(food->family, food->genus, food->species, 12) != nullptr;
+		if (edible)
+			for (auto& other : world.agents) {
+				auto* ca = other ? dynamic_cast<CreatureAgent*>(other.get()) : nullptr;
+				auto* oc = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+				if (!oc || !oc->isUnconscious() || !oc->isAlive())
+					continue;
+				bool overlap = food->x < other->x + other->getWidth() && food->x + food->getWidth() > other->x &&
+							   food->y < other->y + other->getHeight() && food->y + food->getHeight() > other->y;
+				if (overlap) {
+					food->queueScript(12, AgentRef(other));
+					fmt::print("* Hand-fed {} to an unconscious creature\n", food->identify());
+					break;
+				}
+			}
+	}
 
 	int eve;
 	if (engine.version < 3)

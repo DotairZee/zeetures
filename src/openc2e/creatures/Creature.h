@@ -44,6 +44,7 @@ class Creature {
 	// state
 	bool alive, asleep, dreaming, tickage;
 	bool diedofoldage = false; // set as it dies at the end of its last life stage
+	std::string diedof; // how it died otherwise ("drowning", "starvation", "organ failure"), or empty
 	bool zombie;
 
 	unsigned int ticks;

@@ -476,7 +476,11 @@ c2Organ::c2Organ(c2Creature* p, organGene* g) {
 	injurytoapply = 0;
 	damagerate = ourGene->damagerate;
 	biotick = 0;
-	atpdamagecoefficient = ourGene->atpdamagecoefficient * (lifeforce / (255.0f * 255.0f));
+	atpdamagecoefficient = ourGene->atpdamagecoefficient;
+	// the gene's "damage due to zero energy" (0-255) as a share of the organ's
+	// full life force: 255/255 of it per activation at most. Kept as a float;
+	// it was stored in a byte, which overflowed for values above about 16.
+	zeroenergydamage = ourGene->atpdamagecoefficient * (lifeforce / (255.0f * 255.0f));
 
 	clockratereceptors = repairratereceptors = injuryreceptors = 0;
 }
@@ -572,8 +576,11 @@ void c2Organ::tick() {
 			for (auto& reaction : reactions)
 				processReaction(*reaction);
 		} else {
-			// not enough energy!
-			// TODO: apply atpdamagecoefficient
+			// not enough energy: the organ does nothing this activation and is
+			// damaged by the genome's "damage due to zero energy"
+			shorttermlifeforce -= zeroenergydamage;
+			if (shorttermlifeforce < 0.0f)
+				shorttermlifeforce = 0.0f;
 		}
 
 

@@ -1116,6 +1116,9 @@ void oldCreature::tickMind() {
 	// same cadence as the original brain path
 	if ((ticks % 4) != 0)
 		return;
+	// unconscious: no thought, no choices (C2; see updateConsciousness)
+	if (unconscious)
+		return;
 
 	chooseAgents();
 	if (!mindborn)

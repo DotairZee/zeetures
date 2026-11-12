@@ -73,7 +73,9 @@ struct storyEntry {
 		enemy, // came to dislike `other`
 		fears, // came to fear `other`
 		photo, // was photographed
-		died
+		died, // detail: "old age", or what it died of ("starvation", "drowning", "organ failure")
+		unconscious, // fell unconscious (out of energy)
+		cameRound // came round
 	};
 	unsigned int tick = 0; // world tick count
 	int kind = born;
@@ -132,7 +134,9 @@ struct lifeLogEntry {
 	enum { birth = 0,
 		death = 1,
 		pregnancy = 2,
-		eggLaid = 3 }; // a mother laid her egg (the status bar's notice goes to the egg)
+		eggLaid = 3, // a mother laid her egg (the status bar's notice goes to the egg)
+		unconscious = 4, // out of energy, it fell unconscious (C2)
+		cameRound = 5 }; // and came round
 	int kind = birth;
 	unsigned int tick = 0; // world tick count
 	std::string moniker;

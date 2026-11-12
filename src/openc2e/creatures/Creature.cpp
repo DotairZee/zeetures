@@ -261,7 +261,7 @@ void Creature::die() {
 			m.diedtick = world.worldtickcount;
 			m.diedstage = (int)stage;
 			world.history->logLife(lifeLogEntry::death, mon, (int)stage, diedofoldage);
-			world.history->tell(mon, storyEntry::died, "", diedofoldage ? "old age" : "");
+			world.history->tell(mon, storyEntry::died, "", diedofoldage ? "old age" : diedof);
 		}
 	}
 #endif
@@ -595,6 +595,23 @@ void c2Creature::tick() {
 	tickBrain();
 	// TODO: update brain organ every 0.4ms (ie: when brain is processed)!
 	tickBiochemistry();
+	updateConsciousness();
+
+	// developer aid: with OPENC2E_WATCH_CREATURES, organ health every 400 ticks
+	static const bool watchorgans = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	if (watchorgans && ticks % 400 == 0 && !organs.empty()) {
+		float minpct = 100.0f, sumpct = 0.0f;
+		int deadorgans = 0;
+		for (auto& o : organs) {
+			float pct = o->getInitialLifeforce() > 0 ? 100.0f * o->getLongTermLifeforce() / o->getInitialLifeforce() : 0.0f;
+			minpct = std::min(minpct, pct);
+			sumpct += pct;
+			if (o->getLongTermLifeforce() <= 0.5f)
+				deadorgans++;
+		}
+		fmt::print("* WATCH ORGANS t{} unid {} atp {} min {:.1f}% mean {:.1f}% dead {}/{}\n", ticks, parentagent ? parentagent->getUNID() : -1,
+			(int)chemicals[99], minpct, sumpct / organs.size(), deadorgans, organs.size());
+	}
 
 	// lifestage checks
 	for (unsigned int i = 0; i < 7; i++) {
@@ -779,6 +796,66 @@ void oldCreature::watchPregnancy() {
 	}
 	waspregnant = now;
 	pregnancywatched = true;
+}
+
+// Death and the rescue window (owner, 2026-11-11). A body out of energy
+// (ATP, chemical 99, at 4 or less) for 300 ticks falls unconscious: it lies
+// down (C2's own faint, creature event 70, run again as it ends) and its
+// mind stops. While it is unconscious its organs go on failing at the rate
+// its genome gives (the organs' damage at zero energy), so it can be saved
+// only by mending the cause: out of the water, fed (food the hand drops on
+// it), a Health Kit injection. Once ATP stays at 40 or more for 100 ticks
+// it comes round. If an organ's lasting health reaches nothing first, it
+// dies of it: "drowning" if it was under water and out of breath,
+// "starvation" if hungry, else "organ failure".
+void c2Creature::updateConsciousness() {
+#ifndef _CREATURE_STANDALONE
+	if (!alive || !parentagent)
+		return;
+	// death: an organ has failed
+	for (auto& o : organs)
+		if (o->getInitialLifeforce() > 0.0f && o->getLongTermLifeforce() <= 0.5f) {
+			if (breathHeld >= breathTicks)
+				diedof = "drowning";
+			else if (drives[2] >= 216) // hunger (C2 drive 2) at 0.85 or more
+				diedof = "starvation";
+			else
+				diedof = "organ failure";
+			fmt::print("* {} died of {} (an organ failed)\n", world.history->findMoniker(genome), diedof);
+			unconscious = false;
+			die();
+			return;
+		}
+	unsigned char atp = chemicals[99];
+	std::string mon = world.history->findMoniker(genome);
+	if (!unconscious) {
+		noEnergyTicks = atp <= 4 ? noEnergyTicks + 1 : 0;
+		if (noEnergyTicks >= 300) {
+			unconscious = true;
+			recoveringTicks = 0;
+			asleep = false;
+			parentagent->queueScript(70); // C2's faint: lying down, groaning
+			world.history->logLife(lifeLogEntry::unconscious, mon, (int)stage);
+			world.history->tell(mon, storyEntry::unconscious);
+			fmt::print("* {} fell unconscious (out of energy)\n", mon);
+		}
+		return;
+	}
+	recoveringTicks = atp >= 40 ? recoveringTicks + 1 : 0;
+	if (getenv("OPENC2E_WATCH_CREATURES") && ticks % 20 == 0)
+		fmt::print("* WATCH UNCONSCIOUS {} atp {} recovering {} vm {}\n", mon, (int)atp, recoveringTicks, parentagent->vmStopped() ? "idle" : "running");
+	if (recoveringTicks >= 100) {
+		unconscious = false;
+		noEnergyTicks = 0;
+		world.history->logLife(lifeLogEntry::cameRound, mon, (int)stage);
+		world.history->tell(mon, storyEntry::cameRound);
+		fmt::print("* {} came round\n", mon);
+		return;
+	}
+	// keep lying down: the faint again whenever it ends
+	if (parentagent->vmStopped() && !parentagent->carriedby)
+		parentagent->queueScript(70);
+#endif
 }
 
 bool c2Creature::breathesWater() {

@@ -93,6 +93,10 @@ class oldCreature : public Creature {
 	void setChemicalLevel(unsigned char id, unsigned char v) { chemicals[id] = v; } // world loading
 	virtual float breathLeft() const { return 1.0f; } // 1 = full breath, 0 = none left (under water)
 	virtual bool breathesWater() { return false; } // amphibious (C2: see c2Creature)
+	// C2: out of energy for a while, the creature falls unconscious (see
+	// c2Creature::updateConsciousness): it lies still and does not think
+	bool unconscious = false;
+	bool isUnconscious() const { return unconscious; }
 	virtual std::vector<float> getOrganState() { return {}; }
 	virtual void setOrganState(const std::vector<float>&) {}
 
@@ -238,6 +242,7 @@ class c2Organ {
 
 	// variables
 	float lifeforce, shorttermlifeforce, longtermlifeforce;
+	float zeroenergydamage; // short-term life force lost per activation without enough ATP
 
 	// locuses
 	unsigned char damagerate, repairrate, clockrate, injurytoapply;
@@ -300,6 +305,8 @@ class c2Creature : public oldCreature {
 	// raises no suffocation in its body (the Frog Norn pack's genome; every
 	// stock genome has one). Read from the genome once.
 	int waterbreather = -1;
+	unsigned int noEnergyTicks = 0, recoveringTicks = 0; // (updateConsciousness)
+	void updateConsciousness();
 
   public:
 	bool breathesWater() override;

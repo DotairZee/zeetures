@@ -77,7 +77,11 @@ std::string sentence(const monikerData& self, const storyEntry& e) {
 		case storyEntry::photo:
 			return "Was photographed.";
 		case storyEntry::died:
-			return e.detail == "old age" ? "Died of old age." : "Died.";
+			return e.detail.empty() ? "Died." : fmt::format("Died of {}.", e.detail);
+		case storyEntry::unconscious:
+			return "Fell unconscious (out of energy).";
+		case storyEntry::cameRound:
+			return "Came round.";
 	}
 	return "";
 }
