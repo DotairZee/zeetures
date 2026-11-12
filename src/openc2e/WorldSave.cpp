@@ -461,7 +461,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	out << MAGIC << "\n";
 	out << "saved " << timestamp() << "\n";
 	out << "chemical-relays 1\n"; // body chemistry relays were running when saved
-	out << "camera " << engine.camera->getX() << " " << engine.camera->getY() << "\n";
+	out << "camera " << engine.camera->getX() << " " << engine.camera->getY() << " " << engine.zoom << "\n"; // the view's top left and zoom
 	// the calendar: world ticks, part of the day, day of the season, season,
 	// year (without this every session began again in spring of year 0)
 	out << "calendar " << world.worldtickcount << " " << world.timeofday << " " << world.dayofseason << " " << world.season << " " << world.year << "\n";
@@ -832,7 +832,25 @@ static void restoreEgg(const SavedEgg& e) {
 		fmt::print("* Couldn't restore an egg: {}\n", err);
 }
 
+namespace {
+struct SavedView {
+	bool set = false;
+	int x = 0, y = 0;
+	float zoom = 1.0f;
+} s_view;
+} // namespace
+
+void ApplySavedView() {
+	if (!s_view.set)
+		return;
+	if (s_view.zoom >= 0.25f && s_view.zoom <= 4.0f)
+		engine.setZoom(s_view.zoom);
+	engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+	engine.camera->moveToGlobal(s_view.x, s_view.y, jump);
+}
+
 bool LoadWorldState(const fs::path& worlddir) {
+	s_view = SavedView();
 	world.injectedCobs.clear();
 	world.injectedScripts.clear();
 	if (!HasSavedState(worlddir))
@@ -854,6 +872,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 	bool namesgiven = false;
 	std::vector<std::pair<unsigned int, int>> ecologypins;
 	int camx = -1, camy = -1;
+	float camzoom = 1.0f;
 	bool relays_saved = false;
 	SavedCreature* c = nullptr;
 	SavedEgg* e = nullptr;
@@ -868,6 +887,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 			relays_saved = true;
 		} else if (key == "camera") {
 			l >> camx >> camy;
+			if (!(l >> camzoom)) // saved before the zoom was
+				camzoom = 1.0f;
 		} else if (key == "calendar") {
 			unsigned int wt, tod, dos, sea, yr;
 			if (l >> wt >> tod >> dos >> sea >> yr) {
@@ -1102,8 +1123,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 	}
 	injected.erase(std::remove_if(injected.begin(), injected.end(), [&](const SavedInjected& o) { return missing.count(o.from) > 0; }), injected.end());
 	restoreInjected(injected);
-	if (camx >= 0 && camy >= 0)
-		engine.camera->moveToGlobal(camx, camy, jump);
+	s_view = {camx >= 0 && camy >= 0, camx, camy, camzoom};
+	ApplySavedView(); // and again once the world has finished starting
 	int nkept = (int)std::count_if(eggs.begin(), eggs.end(), [](const SavedEgg& e) { return e.kept; });
 	fmt::print("* Restored saved world: {} creatures, {} eggs, {} kept objects, {} injected objects ({} add-ons)\n", creatures.size(), (int)eggs.size() - nkept, nkept,
 		injected.size(), world.injectedCobs.size());

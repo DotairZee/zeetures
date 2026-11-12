@@ -14,6 +14,10 @@ bool HasSavedState(const std::filesystem::path& worlddir);
 bool SaveWorldState(const std::filesystem::path& worlddir, std::string& error);
 // Applies a saved state after the world file has loaded; false if none.
 bool LoadWorldState(const std::filesystem::path& worlddir);
+// Puts the view back where it was saved (place and zoom), once the world has
+// finished starting: objects installed at load show themselves with SYS:
+// CAMT, which moved the view after LoadWorldState had restored it.
+void ApplySavedView();
 // Moves a living C1/C2 creature to life stage 0-6 (baby to senile), older or
 // younger, keeping its chemistry, organs and mind; false (with error) if not.
 // The same, one stage at a time with a short pause between stages, ageing

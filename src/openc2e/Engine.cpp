@@ -721,6 +721,7 @@ void Engine::update() {
 bool Engine::tick() {
 	// developer aid: OPENC2E_SNAPSHOTS="x,y,file;x,y,file" moves the camera to
 	// each (x, y) in turn and saves a screenshot there (BMP), one every 40 ticks
+	// (-1,-1: where the view already is)
 	static std::vector<std::tuple<int, int, std::string>> snapshots = [] {
 		std::vector<std::tuple<int, int, std::string>> v;
 		if (const char* s = getenv("OPENC2E_SNAPSHOTS")) {
@@ -796,6 +797,8 @@ bool Engine::tick() {
 			engine.zoom = (float)atof(z);
 		// move the camera first whenever this snapshot is somewhere new
 		static int camx = INT_MIN, camy = INT_MIN;
+		if (sx == -1 && sy == -1) // -1,-1: wherever the view is
+			camx = sx, camy = sy;
 		if (sx != camx || sy != camy) {
 			camera->trackAgent(AgentRef(), 0, 0, brittle, none);
 			camera->moveToGlobal(sx, sy, jump);
@@ -1840,6 +1843,11 @@ bool Engine::initialSetup() {
 	// to match actual engine state when starting muted)
 	// TODO: does this happen in real c2e?
 	handleResizedWindow();
+
+	// C1/C2: the view where it was when the world was saved (objects
+	// installed during startup moved it)
+	if (version < 3)
+		WorldSave::ApplySavedView();
 
 	return true;
 }
