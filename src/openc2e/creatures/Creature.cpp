@@ -784,12 +784,29 @@ void oldCreature::watchPregnancy() {
 bool c2Creature::breathesWater() {
 	if (waterbreather < 0) {
 		waterbreather = 0;
+		// C2's bodies get their oxygen (chemical 95) from air (96), which an
+		// emitter makes from the air sense (creature, sensorimotor, locus 9,
+		// which the engine empties under water). A body whose air or oxygen
+		// does not depend on that sense breathes water: some emitter makes
+		// air or oxygen from anything else (the Frog Norn pack moved its air
+		// emitter to the always-on sense, locus 0), or nothing reads the air
+		// sense at all. Read from the genome as it is, so old genomes need no
+		// changes (owner, 2026-11-11).
 		if (engine.version == 2 && genome) {
-			bool airEmitter = false;
-			for (auto& g : genome->genes)
-				if (auto* e = dynamic_cast<bioEmitterGene*>(g.get()); e && e->organ == 1 && e->tissue == 4 && e->locus == 9)
-					airEmitter = true;
-			waterbreather = airEmitter ? 0 : 1;
+			bool fromAirSense = false, fromElsewhere = false, airSenseRead = false;
+			for (auto& g : genome->genes) {
+				auto* e = dynamic_cast<bioEmitterGene*>(g.get());
+				if (!e)
+					continue;
+				bool airSense = e->organ == 1 && e->tissue == 4 && e->locus == 9;
+				airSenseRead = airSenseRead || airSense;
+				if (e->chemical == 95 || e->chemical == 96)
+					(airSense ? fromAirSense : fromElsewhere) = true;
+			}
+			waterbreather = (fromElsewhere || !airSenseRead) ? 1 : 0;
+			(void)fromAirSense;
+			if (waterbreather)
+				fmt::print("* {} breathes water as well as air (its genome's air does not come from the air sense)\n", world.history->findMoniker(genome));
 		}
 	}
 	return waterbreather == 1;
