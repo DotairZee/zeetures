@@ -64,8 +64,19 @@ void Bubble::setTimeout(unsigned int t) {
 	timeout = t;
 }
 
+bool Bubble::hiddenRider(Agent* a) {
+	return a && a->invehicle && a->invehicle->invisible();
+}
+
 void Bubble::tick() {
 	CompoundAgent::tick();
+
+	// a speaker carried off out of sight (an airlock's hidden car; owner,
+	// 2026-11-12: its bubble floated over the rock) takes its bubble with it
+	if (floatingagent && hiddenRider(floatingagent.get())) {
+		kill();
+		return;
+	}
 
 	if (!paused && timeout) {
 		timeout--;

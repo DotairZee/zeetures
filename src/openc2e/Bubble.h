@@ -48,6 +48,9 @@ class Bubble : public CompoundAgent {
 	void tick();
 
 	static Bubble* newBubble(Agent* parent, bool speech, std::string text);
+	// riding out of sight, in a vehicle creatures can't see (ATTR 16): no
+	// speech bubble is shown for it
+	static bool hiddenRider(Agent* a);
 };
 
 class BubblePart : public CompoundPart {

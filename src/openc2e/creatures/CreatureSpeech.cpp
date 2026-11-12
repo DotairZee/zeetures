@@ -497,11 +497,11 @@ void creatureSays(Agent* creature, int stage, const Utterance& u) {
 	if (!creature || u.shown.empty() || engine.version >= 3)
 		return;
 	// one bubble at a time for each speaker (none with View > Speech
-	// Bubbles off)
+	// Bubbles off, or while it rides out of sight)
 	auto it = bubbles.find(creature->getUNID());
 	if (it != bubbles.end() && it->second)
 		it->second->kill();
-	if (speechBubblesShown()) {
+	if (speechBubblesShown() && !Bubble::hiddenRider(creature)) {
 		Bubble* b = Bubble::newBubble(creature, true, u.shown);
 		b->setTimeout(35); // 3.5 s
 		bubbles[creature->getUNID()] = AgentRef(b);
@@ -514,5 +514,5 @@ void creatureSays(Agent* creature, int stage, const Utterance& u) {
 		// no voice for this creature: the bubble alone
 	}
 	if (watching())
-		fmt::print("* SAYS {} {} {} (stage {}): \"{}\" ({})\n", (int)creature->family, (int)creature->genus, creature->getUNID(), stage, u.shown, u.spoken);
+		fmt::print("* SAYS {} {} {} (stage {}): \"{}\" ({}){}\n", (int)creature->family, (int)creature->genus, creature->getUNID(), stage, u.shown, u.spoken, Bubble::hiddenRider(creature) ? " out of sight, no bubble" : "");
 }
