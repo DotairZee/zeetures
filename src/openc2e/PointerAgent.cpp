@@ -143,6 +143,45 @@ void PointerAgent::tick() {
 		}
 		agent_under_pointer = parent;
 
+		// The push hand (C2; owner, 2026-11-11, from C2's own hand sprite):
+		// while the Pointer toolbar's push is on, the hand holds the edge-on
+		// shoving pose (syst frame 9), and over a creature it shows which way
+		// a click would shove it, with the sprite's arrows (frame 14, east,
+		// to the hand's right; frame 13, west, to its left), as C2 shows the
+		// angel and devil. Overlay codes -4 (east) and -3 (west).
+		bool pushing = engine.version == 2 && world.handPush && !carrying;
+		if (engine.version == 2)
+			if (auto* sp = dynamic_cast<SpritePart*>(part(0))) {
+				if (pushing) {
+					if (!pushPosed) {
+						prePushPose = sp->getPose();
+						pushPosed = true;
+					}
+					if (sp->getPose() != 9)
+						sp->setPose(9);
+				} else if (pushPosed) {
+					sp->setPose(prePushPose);
+					pushPosed = false;
+				}
+			}
+		if (pushing) {
+			int want = 0;
+			if (a && parent && dynamic_cast<CreatureAgent*>(parent) && !parent->carriedby && !parent->invehicle)
+				want = x < parent->x + parent->getWidth() / 2.0f ? -4 : -3;
+			if (want != overlayTimer || (want && !overlay)) {
+				if (overlay)
+					delete overlay;
+				overlay = NULL;
+				overlayTimer = 0;
+				if (want) {
+					overlay = new DullPart(this, 0, "syst", want == -4 ? 14 : 13, want == -4 ? 50 : -28, 14, 1);
+					overlayTimer = want;
+				}
+			}
+			SimpleAgent::tick();
+			return;
+		}
+
 		// overlay magic for c1/c2 - angel, devil, generic overlay
 		if (a && parent && dynamic_cast<SkeletalCreature*>(parent)) {
 			// the part under the cursor belongs to a SkeletalCreature

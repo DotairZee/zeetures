@@ -30,6 +30,9 @@ class PointerAgent : public SimpleAgent {
   private:
 	DullPart* overlay;
 	int overlayTimer;
+	// C2 push hand: the pose it had before push mode (restored after)
+	bool pushPosed = false;
+	unsigned int prePushPose = 0;
 
   protected:
 	int hotspotx, hotspoty;
