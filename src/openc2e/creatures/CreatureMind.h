@@ -223,6 +223,22 @@ struct MindView {
 	};
 	std::vector<Ride> rides;
 
+	// how its last few choices turned out, oldest first: what it did, how
+	// long it took, why it stopped and what happened to its needs
+	struct Outcome {
+		unsigned int tick = 0; // when it ended
+		int category = -1, decision = 0;
+		std::string who; // a particular creature (moniker), or empty
+		bool travel = false; // going to find a kind of thing (category)
+		unsigned int ticks = 0; // how long it lasted
+		// "finished", "time", "stalled", "object gone", or the name of a
+		// need that grew urgent enough to cut it short
+		std::string why;
+		float reward = 0; // how much easier its needs became on the whole
+		std::array<float, 17> change{}; // each need's change, 0-1 scale
+	};
+	std::vector<Outcome> outcomes;
+
 	// how content it has been lately, and its strongest need then
 	struct Moment {
 		unsigned int tick = 0;

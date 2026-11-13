@@ -741,6 +741,7 @@ class HomeostatMind : public CreatureMind {
 			v.rides.push_back({l.x, l.fromY, l.toY, l.uses});
 		for (auto& m : moodLog)
 			v.mood.push_back({m.tick, m.content, m.strongest, m.strength});
+		v.outcomes.assign(outcomeLog.begin(), outcomeLog.end());
 		return true;
 	}
 
@@ -1481,6 +1482,7 @@ class HomeostatMind : public CreatureMind {
 		float strength;
 	};
 	std::deque<MoodSample> moodLog;
+	std::deque<MindView::Outcome> outcomeLog; // the last few episodes (view)
 	void noteChoiceForView(const std::vector<Candidate>& candidates, const Candidate& choice, const std::array<float, NUM_DRIVES>& d, float D) {
 		std::vector<Candidate> sorted = candidates;
 		std::sort(sorted.begin(), sorted.end(), [](const Candidate& a, const Candidate& b) { return a.score > b.score; });
@@ -3059,6 +3061,22 @@ class HomeostatMind : public CreatureMind {
 		for (int i = 0; i < NUM_DRIVES; i++)
 			if (feltAny[i])
 				feltText += fmt::format(" {} {:+.2f}", DRIVE_NAMES[i], felt[i]);
+		{
+			MindView::Outcome oc;
+			oc.tick = p.tick;
+			oc.category = current.seekCategory >= 0 ? current.seekCategory : current.category;
+			oc.decision = current.decision;
+			oc.who = current.who;
+			oc.travel = current.seekCategory >= 0;
+			oc.ticks = (unsigned int)std::max(episodeTicks, 0);
+			oc.why = why;
+			oc.reward = reward;
+			for (int i = 0; i < NUM_DRIVES && i < 17; i++)
+				oc.change[i] = change[i];
+			outcomeLog.push_back(std::move(oc));
+			while (outcomeLog.size() > 8)
+				outcomeLog.pop_front();
+		}
 		fmt::print("[homeostat] creature {} t{}: {}@{} ended ({}, {} ticks): reward {:+.3f}{} | beyond drift:{} | felt:{} | D {:.2f} valence {:+.3f}\n",
 			p.creatureId, p.tick, current.seekCategory >= 0 ? fmt::format("seek{}:{}", current.seekCategory, actionName(current.decision)) : actionName(current.decision),
 			current.category, why, episodeTicks, reward,

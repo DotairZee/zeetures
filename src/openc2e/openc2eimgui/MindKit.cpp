@@ -2,7 +2,8 @@
 // Neuroscience Kit: our creatures have no neurons to show, so this shows
 // what the mind is doing in its own terms, for the selected creature:
 //   Feelings    its 17 needs around a dial, and how content it is
-//   Choosing    the options it weighed at its last choice and why
+//   Choosing    the options it weighed at its last choice and why, and
+//               how its last few choices turned out
 //   Learned     what it expects doing each thing to each kind of thing does
 //   Memory map  the world as it remembers it: where it has been, food,
 //               lift rides, where it is
@@ -248,6 +249,89 @@ void FeelingsPage(const MindView& v) {
 	wrappedText("Faint behind each: the need's level. The body's levels are in the Health Kit's Drives.", W, DIM);
 }
 
+std::string outcomeLabel(const MindView::Outcome& oc) {
+	if (oc.travel)
+		return fmt::format("go to find a {}", thing(oc.category));
+	MindView::Option o;
+	o.category = oc.category;
+	o.decision = oc.decision;
+	o.who = oc.who;
+	return optionLabel(o);
+}
+
+std::string outcomeWhy(const MindView::Outcome& oc) {
+	if (oc.why == "finished")
+		return "finished";
+	if (oc.why == "time")
+		return "ran its time";
+	if (oc.why == "stalled")
+		return "got nowhere";
+	if (oc.why == "object gone")
+		return "the thing went away";
+	return "stopped: " + oc.why + " grew too strong";
+}
+
+// How its last few choices turned out (newest first): what it did, when and
+// for how long, why it stopped, and a bar for how much its needs eased
+// (green, to the right) or grew (red, to the left) on the whole, with the
+// needs that changed most. This is what it learns from.
+void OutcomesList(const MindView& v, float barX, float barW) {
+	ImGui::Spacing();
+	KitHeading("How its last choices turned out");
+	if (v.outcomes.empty()) {
+		KitNote("Nothing has finished yet.");
+		return;
+	}
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	ImVec2 o = ImGui::GetCursorScreenPos();
+	const float rowH = 40, half = barW / 2, full = 0.25f; // reward that fills half the bar
+	float mid = o.x + barX + half;
+	size_t n = v.outcomes.size();
+	for (size_t k = 0; k < n; k++) {
+		const auto& oc = v.outcomes[n - 1 - k];
+		float y = o.y + k * rowH + 4;
+		dl->AddText(ImVec2(o.x + 6, y), TEXT, outcomeLabel(oc).c_str());
+		std::string when = fmt::format("{} ago, for {}; {}", secondsText(secondsOf(v.tick > oc.tick ? v.tick - oc.tick : 0)),
+			secondsText(secondsOf(oc.ticks)), outcomeWhy(oc));
+		dl->AddText(ImVec2(o.x + 26, y + 17), DIM, when.c_str());
+		// the bar from the middle line
+		dl->AddRectFilled(ImVec2(mid - half, y + 3), ImVec2(mid + half, y + 15), TRACK);
+		float w = std::clamp(oc.reward / full, -1.0f, 1.0f) * half;
+		if (std::fabs(w) >= 1.0f)
+			dl->AddRectFilled(ImVec2(std::min(mid, mid + w), y + 3), ImVec2(std::max(mid, mid + w), y + 15),
+				w > 0 ? IM_COL32(88, 196, 104, 255) : IM_COL32(220, 84, 70, 255));
+		dl->AddLine(ImVec2(mid, y), ImVec2(mid, y + 18), IM_COL32(110, 116, 130, 255));
+		// the needs that changed most
+		std::array<int, 17> idx;
+		for (int i = 0; i < 17; i++)
+			idx[i] = i;
+		std::sort(idx.begin(), idx.end(), [&](int a, int b) { return std::fabs(oc.change[a]) > std::fabs(oc.change[b]); });
+		std::string most;
+		for (int k2 = 0; k2 < 2; k2++) {
+			float c = oc.change[idx[k2]];
+			if (std::fabs(c) < 0.02f)
+				break;
+			most += fmt::format("{}{} {}", most.empty() ? "" : ", ", NEED_NAMES[idx[k2]], c < 0 ? "eased" : "grew");
+		}
+		if (most.empty())
+			most = std::fabs(oc.reward) < 0.005f ? "no change" : oc.reward > 0 ? "a little better" : "a little worse";
+		dl->AddText(ImVec2(mid - half, y + 17), DIM, most.c_str());
+		if (ImGui::IsMouseHoveringRect(ImVec2(o.x, y), ImVec2(mid + half + 40, y + rowH - 4))) {
+			std::string tip = outcomeLabel(oc) + fmt::format("\n  overall: {:+.3f} ({})\n", oc.reward, oc.reward >= 0 ? "its needs eased" : "its needs grew");
+			for (int i = 0; i < 17; i++)
+				if (std::fabs(oc.change[i]) >= 0.005f)
+					tip += fmt::format("  {}: {:+.2f}\n", NEED_NAMES[i], oc.change[i]);
+			tip.pop_back();
+			ImGui::SetTooltip("%s", tip.c_str());
+		}
+	}
+	float ey = o.y + n * rowH + 6;
+	dl->AddText(ImVec2(mid - half, ey), DIM, "worse");
+	ImVec2 bt = ImGui::CalcTextSize("better");
+	dl->AddText(ImVec2(mid + half - bt.x, ey), DIM, "better");
+	ImGui::Dummy(ImVec2(barX + barW + 80, n * rowH + 24));
+}
+
 void ChoosingPage(const MindView& v) {
 	if (v.options.empty()) {
 		ImGui::TextWrapped("It has not chosen anything yet.");
@@ -333,6 +417,7 @@ void ChoosingPage(const MindView& v) {
 	dl->AddText(ImVec2(o.x + barX + 278, ey - 3), DIM, "curiosity");
 	ImGui::Dummy(ImVec2(barX + barW + 80, v.options.size() * rowH + 26));
 	ImGui::Text("Doing: %s%s", optionLabel(v.options[0]).c_str(), v.busy ? "" : " (done; about to choose again)");
+	OutcomesList(v, barX, barW);
 }
 
 void LearnedPage(const MindView& v) {
