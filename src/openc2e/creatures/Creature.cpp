@@ -177,8 +177,11 @@ void Creature::addGene(gene* g) {
 		parentagent->genus = genus + 1;
 	} else if (typeid(*g) == typeid(creaturePigmentGene)) {
 		creaturePigmentGene& p = *((creaturePigmentGene*)g);
-		// TODO: we don't sanity-check
-		tintinfo[p.color] = p.amount;
+		// red, green or blue: a mutated gene can name another colour, and
+		// writing past tintinfo overwrote the creature's next members (a
+		// mutated ettin egg's genome, zxyi, crashed Home, 2026-11-12)
+		if (p.color < 3)
+			tintinfo[p.color] = p.amount;
 	} else if (typeid(*g) == typeid(creaturePigmentBleedGene)) {
 		creaturePigmentBleedGene& p = *((creaturePigmentBleedGene*)g);
 		tintinfo[3] = p.rotation;

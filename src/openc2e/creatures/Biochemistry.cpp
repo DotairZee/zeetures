@@ -278,8 +278,8 @@ unsigned char* oldCreature::getLocusPointer(bool receptor, unsigned char o, unsi
 						return &muscleenergy;
 					break;
 
-				case 1: // circulatory
-					if (l > 8)
+				case 1: // circulatory (floating loci 0-7)
+					if (l > 7)
 						break;
 					return &floatingloci[l];
 
@@ -729,12 +729,12 @@ void c1Creature::processReaction(c1Reaction& d) {
 
 	unsigned char ratio = 255, ratio2 = 255;
 	if (g.reactant[0] != 0) {
-		assert(g.quantity[0] != 0); // TODO
-		ratio = getChemical(g.reactant[0]) / g.quantity[0];
+		// (a mutated gene can have quantity 0: taken as 1)
+		ratio = getChemical(g.reactant[0]) / std::max(1, (int)g.quantity[0]);
 	}
 	if (g.reactant[1] != 0) {
-		assert(g.quantity[1] != 0); // TODO
-		ratio2 = getChemical(g.reactant[1]) / g.quantity[1];
+		// (a mutated gene can have quantity 0: taken as 1)
+		ratio2 = getChemical(g.reactant[1]) / std::max(1, (int)g.quantity[1]);
 	}
 
 	// pick lowest ratio, if zero then return
@@ -775,9 +775,9 @@ void c2Organ::processReaction(c2Reaction& d) {
 	if (!c1table) {
 		float avail = 255.0f;
 		if (g.reactant[0] != 0)
-			avail = std::min(avail, (float)parent->getChemical(g.reactant[0]) / g.quantity[0]);
+			avail = std::min(avail, (float)parent->getChemical(g.reactant[0]) / std::max(1, (int)g.quantity[0]));
 		if (g.reactant[1] != 0)
-			avail = std::min(avail, (float)parent->getChemical(g.reactant[1]) / g.quantity[1]);
+			avail = std::min(avail, (float)parent->getChemical(g.reactant[1]) / std::max(1, (int)g.quantity[1]));
 		if (avail <= 0.0f)
 			return;
 		float half = powf(g.rate / curveK, curveP);
@@ -805,12 +805,12 @@ void c2Organ::processReaction(c2Reaction& d) {
 
 	unsigned char ratio = 255, ratio2 = 255;
 	if (g.reactant[0] != 0) {
-		assert(g.quantity[0] != 0); // TODO
-		ratio = parent->getChemical(g.reactant[0]) / g.quantity[0];
+		// (a mutated gene can have quantity 0: taken as 1)
+		ratio = parent->getChemical(g.reactant[0]) / std::max(1, (int)g.quantity[0]);
 	}
 	if (g.reactant[1] != 0) {
-		assert(g.quantity[1] != 0); // TODO
-		ratio2 = parent->getChemical(g.reactant[1]) / g.quantity[1];
+		// (a mutated gene can have quantity 0: taken as 1)
+		ratio2 = parent->getChemical(g.reactant[1]) / std::max(1, (int)g.quantity[1]);
 	}
 
 	// pick lowest ratio, if zero then return
@@ -841,12 +841,12 @@ void c2eOrgan::processReaction(c2eReaction& d) {
 
 	float ratio = 1.0f, ratio2 = 1.0f;
 	if (g.reactant[0] != 0) {
-		assert(g.quantity[0] != 0); // TODO
-		ratio = parent->getChemical(g.reactant[0]) / (float)g.quantity[0];
+		// (a mutated gene can have quantity 0: taken as 1)
+		ratio = parent->getChemical(g.reactant[0]) / (float)std::max(1, (int)g.quantity[0]);
 	}
 	if (g.reactant[1] != 0) {
-		assert(g.quantity[1] != 0); // TODO
-		ratio2 = parent->getChemical(g.reactant[1]) / (float)g.quantity[1];
+		// (a mutated gene can have quantity 0: taken as 1)
+		ratio2 = parent->getChemical(g.reactant[1]) / (float)std::max(1, (int)g.quantity[1]);
 	}
 
 	// pick lowest ratio, if zero then return
@@ -871,7 +871,7 @@ void c1Creature::processEmitter(c1Emitter& d) {
 
 	bioEmitterGene& g = *d.data;
 
-	if ((biochemticks % g.rate) != 0)
+	if ((biochemticks % std::max<unsigned int>(1, g.rate)) != 0) // (a mutated gene can have rate 0)
 		return;
 
 	if (!d.locus)
@@ -905,7 +905,7 @@ void c2Organ::processEmitter(c2Emitter& d) {
 
 	bioEmitterGene& g = *d.data;
 
-	if ((biochemticks % g.rate) != 0)
+	if ((biochemticks % std::max<unsigned int>(1, g.rate)) != 0) // (a mutated gene can have rate 0)
 		return;
 
 	if (!d.locus)
