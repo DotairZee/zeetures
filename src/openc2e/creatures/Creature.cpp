@@ -937,6 +937,32 @@ void oldCreature::watchPregnancy() {
 // it comes round. If an organ's lasting health reaches nothing first, it
 // dies of it: "drowning" if it was under water and out of breath,
 // "starvation" if hungry, else "organ failure".
+// UNCS 1/0 from a script: faint now (as when out of energy: lying down, the
+// mind still; it comes round once its energy has recovered), or come round
+void c2Creature::setUnconscious(bool u) {
+#ifndef _CREATURE_STANDALONE
+	if (!alive || !parentagent || u == unconscious)
+		return;
+	std::string mon = world.history->findMoniker(genome);
+	unconscious = u;
+	if (u) {
+		recoveringTicks = 0;
+		asleep = false;
+		parentagent->queueScript(70);
+		world.history->logLife(lifeLogEntry::unconscious, mon, (int)stage);
+		world.history->tell(mon, storyEntry::unconscious);
+		fmt::print("* {} fell unconscious (a script, UNCS 1)\n", mon);
+	} else {
+		noEnergyTicks = 0;
+		world.history->logLife(lifeLogEntry::cameRound, mon, (int)stage);
+		world.history->tell(mon, storyEntry::cameRound);
+		fmt::print("* {} came round (a script, UNCS 0)\n", mon);
+	}
+#else
+	unconscious = u;
+#endif
+}
+
 void c2Creature::updateConsciousness() {
 #ifndef _CREATURE_STANDALONE
 	if (!alive || !parentagent)

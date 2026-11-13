@@ -485,6 +485,15 @@ c2Organ::c2Organ(c2Creature* p, organGene* g) {
 	clockratereceptors = repairratereceptors = injuryreceptors = 0;
 }
 
+// INJR (C2): an injury of `value` (0-255) takes that share of the organ's
+// full life force from its short-term life force; the organ's repair (its
+// genome's repair rate) brings it back over time
+void c2Organ::applyInjury(float value) {
+	shorttermlifeforce -= value * (lifeforce / 255.0f);
+	if (shorttermlifeforce < 0.0f)
+		shorttermlifeforce = 0.0f;
+}
+
 c2eOrgan::c2eOrgan(c2eCreature* p, organGene* g) {
 	parent = p;
 	assert(parent);

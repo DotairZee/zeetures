@@ -989,27 +989,35 @@ void c_APPR(caosVM* vm) {
 
 /**
  UNCS (command) unconscious (integer)
- %status stub
+ %status maybe
+ %variants c2 cv c3
 
  Makes the target Creature conscious if 0, or unconscious if 1.
 */
 void c_UNCS(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(unconscious)
+	VM_PARAM_INTEGER(unconscious)
 
-	vm->getTargCreature();
-	// TODO
+	Creature* c = vm->getTargCreature();
+	// C2: the engine's own unconsciousness (c2Creature::updateConsciousness):
+	// 1 faints it now (it comes round once its energy has recovered), 0
+	// brings it round
+	if (auto* oc = dynamic_cast<oldCreature*>(c))
+		oc->setUnconscious(unconscious != 0);
 }
 
 /**
  UNCS (integer)
- %status stub
+ %status maybe
  %variants c2 cv c3
 
  Returns 1 if the target Creature is unconscious, or 0 otherwise.
 */
 void v_UNCS(caosVM* vm) {
-	vm->getTargCreature();
-	vm->result.setInt(0); // TODO
+	Creature* c = vm->getTargCreature();
+	// the creature scripts ask before reacting or walking ("doif uncs ne 0
+	// stop"); answering 0 always let an unconscious creature walk and react
+	auto* oc = dynamic_cast<oldCreature*>(c);
+	vm->result.setInt(oc && oc->isUnconscious() ? 1 : 0);
 }
 
 /**
@@ -1900,15 +1908,29 @@ void c_TNTC(caosVM* vm) {
 
 /**
  INJR (command) organ (integer) amount (integer)
- %status stub
+ %status maybe
  %variants c2
 */
 void c_INJR(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(amount)
-	VM_PARAM_INTEGER_UNUSED(organ)
+	VM_PARAM_INTEGER(amount)
+	VM_PARAM_INTEGER(organ)
 
 	valid_agent(vm->targ);
-	// TODO
+	// C2: injures one organ (-1: one at random) by amount (0-255, a share of
+	// its full life force). The game's scripts use it for a slap from the
+	// hand (10), hard landings (up to 150) and an object that strikes
+	// creatures; it did nothing before (2026-11-12)
+	auto* ca = dynamic_cast<CreatureAgent*>(vm->targ.get());
+	auto* c = ca ? dynamic_cast<c2Creature*>(ca->getCreature()) : nullptr;
+	if (!c || !c->isAlive() || amount <= 0)
+		return;
+	auto& organs = c->getOrgans();
+	if (organs.empty())
+		return;
+	int i = organ < 0 ? rand_int32(0, (int)organs.size() - 1) : organ;
+	if (i >= (int)organs.size())
+		return;
+	organs[i]->applyInjury((float)std::min(amount, 255));
 }
 
 /**

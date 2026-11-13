@@ -97,6 +97,7 @@ class oldCreature : public Creature {
 	// c2Creature::updateConsciousness): it lies still and does not think
 	bool unconscious = false;
 	bool isUnconscious() const { return unconscious; }
+	virtual void setUnconscious(bool u) { unconscious = u; } // UNCS (CAOS); c2Creature faints or brings round
 	virtual std::vector<float> getOrganState() { return {}; }
 	virtual void setOrganState(const std::vector<float>&) {}
 
@@ -307,6 +308,11 @@ class c2Creature : public oldCreature {
 	int waterbreather = -1;
 	unsigned int noEnergyTicks = 0, recoveringTicks = 0; // (updateConsciousness)
 	void updateConsciousness();
+
+  public:
+	void setUnconscious(bool u) override; // faints now, or brings round (UNCS)
+
+  protected:
 
   public:
 	bool breathesWater() override;
