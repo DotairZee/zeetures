@@ -1124,7 +1124,8 @@ static void BreedsPage() {
 	} else {
 		ImGui::TextUnformatted(BreedLabel(*b).c_str());
 		ImGui::TextDisabled("%s", b->inOverrides ? (b->inGame ? "Installed in your data folder, in place of the game's" : "Installed in your data folder")
-														 : b->inGame ? "In the game's folders" : "Installed in your data folder");
+														 : b->inGame ? (b->jointsAdjusted ? "In the game's folders (joints corrected in your data folder)" : "In the game's folders")
+																	 : "Installed in your data folder");
 		// portraits: the adult face (or the oldest there is), each sex
 		int stage = b->stages.empty() ? 0 : std::min(4, *b->stages.rbegin());
 		ImVec2 p = ImGui::GetCursorScreenPos();

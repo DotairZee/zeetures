@@ -173,6 +173,13 @@ std::vector<BreedInfo>& KnownBreeds(bool rescan) {
 				} else {
 					b.bodyData = true;
 				}
+				// body data alone in Overrides only corrects a game breed's
+				// joints (Golden Desert's neck, owner 2026-11-13): it stays
+				// the game's breed
+				if (kind == 2 && !sprite) {
+					b.jointsAdjusted = true;
+					continue;
+				}
 				(isUser ? b.inUser : b.inGame) = true;
 				if (kind == 2)
 					b.inOverrides = true;

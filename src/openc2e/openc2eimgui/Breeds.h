@@ -31,6 +31,7 @@ struct BreedInfo {
 	bool inGame = false; // files in the game's own folders
 	bool inUser = false; // files in the user data folder
 	bool inOverrides = false; // files in its Overrides folder, in place of the game's
+	bool jointsAdjusted = false; // only body data in Overrides (corrected joints)
 	// from breeds.txt, for breeds imported here
 	bool imported = false;
 	std::string name, source, genome;
