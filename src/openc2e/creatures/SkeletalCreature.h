@@ -167,6 +167,8 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// viewer, 2 right, 3 left), from its current pose
 	unsigned int facing() const { static const unsigned int dirn[4] = {2, 3, 1, 0}; return posedirection < 4 ? dirn[posedirection] : 2; }
 	float footX();
+	// the foot's height (the foot on the ground), in world terms
+	float footY() { return y + attachmentY(downfoot_left ? 11 : 12, 1); }
 
 	CompoundPart* part(unsigned int id);
 	void setZOrder(unsigned int plane);

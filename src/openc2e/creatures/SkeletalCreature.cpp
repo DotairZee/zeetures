@@ -825,6 +825,18 @@ void SkeletalCreature::snapDownFoot() {
 		}
 	} else {
 		newroom = bestRoomAt(footx, footy, 3, m, std::shared_ptr<Room>());
+		// a foot placed a few pixels under a floor (a world's restore can put
+		// it 1-2 px low) stands on that floor, not on the floor of the room
+		// below: a grendel saved on room 34's floor (y 1858) was set on room
+		// 50's, 366 px down (2026-11-12, "creatures fall through floors")
+		if (engine.version == 2) {
+			std::shared_ptr<Room> above = bestRoomAt(footx, footy - 8, 3, m, std::shared_ptr<Room>());
+			if (above && above != newroom && above->type != 2) {
+				float fl = above->floorYatX(footx);
+				if (fl >= footy - 8 && fl <= footy + 1)
+					newroom = above;
+			}
+		}
 
 		// insane emergency handling
 		float newfooty = footy;
@@ -944,6 +956,15 @@ void SkeletalCreature::snapDownFoot() {
 		// boardwalk pool's bank fell back each time from the 33 px step onto
 		// the planks, owner 2026-11-10)
 		if (newroomchosen && (newy - (footy - y)) - y > 20) {
+			falling = true;
+			return;
+		}
+		// a creature just placed (put down by the hand, let out of a vehicle,
+		// moved by a script) with its floor far below falls to it, rather
+		// than being set on it at once: a grendel let go above the open
+		// floor at the far east was moved 313 px down in one step
+		// (2026-11-12). Not at a world's start (the save's places stand).
+		if (engine.version == 2 && !hadroom && engine.worldready && !carriedby && !invehicle && (newy - (footy - y)) - y > 20) {
 			falling = true;
 			return;
 		}

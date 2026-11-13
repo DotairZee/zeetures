@@ -499,6 +499,12 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			out << "variant " << c->getVariant() << "\n";
 			out << "selected " << (world.selectedcreature == a.get() ? 1 : 0) << "\n";
 			out << "pos " << a->x << " " << a->y << "\n";
+			// where its feet were: a creature restored in another pose (it
+			// was saved lying down, asleep or fainted) stands there, not
+			// by its top (its feet went 29 px under a floor and it fell to
+			// the room below)
+			if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()))
+				out << "foot " << sc->footY() << "\n";
 			out << "stage " << (int)c->getStage() << "\n";
 			out << "age " << c->getAge() << "\n";
 			out << "ticks " << c->getTicks() << "\n";
@@ -639,6 +645,7 @@ struct SavedCreature {
 	std::vector<std::string> bonds; // bond lines (Relationships::fromLine)
 	std::string temperament; // Temperaments::toLine; empty: keep the one drawn at hatching
 	float x = 0, y = 0;
+	float foot = -1; // where its feet were (y), or -1 (older saves)
 	unsigned int age = 0, ticks = 0;
 	std::vector<int> chemicals;
 	std::vector<float> organs;
@@ -777,6 +784,12 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 	if (s.asleep)
 		c->setAsleep(true);
 	a->moveTo(s.x, s.y, true);
+	if (s.foot >= 0)
+		if (auto* sc = dynamic_cast<SkeletalCreature*>(a)) {
+			float dy = s.foot - sc->footY();
+			if (std::fabs(dy) > 0.5f && std::fabs(dy) < 120)
+				a->moveTo(a->x, a->y + dy, true);
+		}
 	if (CreatureMind* m = c->getMind()) {
 		if (m->name() == s.mind)
 			m->loadState(s.mindstate);
@@ -968,6 +981,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 				l >> c->selected;
 			else if (key == "pos")
 				l >> c->x >> c->y;
+			else if (key == "foot")
+				l >> c->foot;
 			else if (key == "stage")
 				l >> c->stage;
 			else if (key == "age")
