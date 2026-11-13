@@ -21,6 +21,10 @@
 namespace Openc2eImGui {
 
 void Init() {
+	// no interface without one (the null backend, -k null, has none: it
+	// crashed here at startup)
+	if (!ImGui::GetCurrentContext())
+		return;
 	{
 		// {
 		// 	io.Fonts->Clear();
@@ -44,6 +48,8 @@ void Init() {
 }
 
 void Update() {
+	if (!ImGui::GetCurrentContext())
+		return;
 	if (engine.version == 1) {
 		Openc2eImgui::DrawC1ToolBar();
 	} else if (engine.version == 2) {
@@ -68,6 +74,8 @@ void Update() {
 }
 
 int GetViewportOffsetTop() {
+	if (!ImGui::GetCurrentContext())
+		return 0;
 	if (engine.version == 1) {
 		return Openc2eImgui::GetC1ToolBarHeight();
 	} else if (engine.version == 2) {
@@ -78,6 +86,8 @@ int GetViewportOffsetTop() {
 }
 
 int GetViewportOffsetBottom() {
+	if (!ImGui::GetCurrentContext())
+		return 0;
 	if (engine.version == 2) {
 		return Openc2eImgui::GetC2StatusBarHeight() + Openc2eImgui::GetC2ScrollBarThickness();
 	} else {
@@ -86,6 +96,8 @@ int GetViewportOffsetBottom() {
 }
 
 int GetViewportOffsetRight() {
+	if (!ImGui::GetCurrentContext())
+		return 0;
 	if (engine.version == 2) {
 		return Openc2eImgui::GetC2ScrollBarThickness();
 	} else {
