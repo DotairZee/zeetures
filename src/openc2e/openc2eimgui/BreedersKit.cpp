@@ -83,7 +83,14 @@ static void ReproductivePage() {
 	KitCreaturePhoto(a, ImVec2(PW, PH));
 	ImGui::SameLine(0, 20);
 	ImGui::BeginGroup();
-	ImGui::TextColored(ImVec4(0.86f, 0.70f, 0.40f, 1), "%s %s", female ? "Female" : "Male", genus == 2 ? "grendel" : genus == 3 ? "ettin" : "norn");
+	// with its life stage (owner, 2026-11-13): creatures mate from
+	// adolescence (the world's kiss script asks for CAGE 2 or more of both)
+	static const char* stages[] = {"baby", "child", "adolescent", "youth", "adult", "old", "senile"};
+	int stage = (int)c->getStage();
+	ImGui::TextColored(ImVec4(0.86f, 0.70f, 0.40f, 1), "%s %s, %s", female ? "Female" : "Male", genus == 2 ? "grendel" : genus == 3 ? "ettin" : "norn",
+		stage >= 0 && stage < 7 ? stages[stage] : "?");
+	if (stage < 2)
+		ImGui::TextDisabled("Too young to breed: creatures mate from adolescence.");
 	KitBar(c->getDrive(12) / 255.0f, "Sex drive", BW, true);
 	KitBar(c->getFertile() / 255.0f, female ? "Fertility" : "Fertility (sperm)", BW);
 	if (female)

@@ -578,10 +578,9 @@ void DrawLifeNotices(float room) {
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(col.x + 0.2f, col.y + 0.2f, col.z + 0.2f, 1));
 		if (ImGui::SmallButton(label(e, i).c_str())) {
 			followEntry(e);
-			// (an egg notice stays until the egg hatches or it is dismissed:
-			// the egg may move again)
-			if (e.kind != lifeLogEntry::eggLaid)
-				remove = i;
+			// a click is enough for every notice, eggs too (owner,
+			// 2026-11-13: the Hatchery's Find eggs is for finding eggs later)
+			remove = i;
 		}
 		ImGui::PopStyleColor(3);
 		if (ImGui::IsItemHovered()) {
