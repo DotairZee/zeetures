@@ -291,6 +291,18 @@ static const StageGrowth& stageGrowth(int species) {
 	return cache[species] = best;
 }
 
+static float stageScale(int species, bool female, int breed, int stage);
+
+bool BreedGrownForEveryStage(int species, int breed) {
+	for (bool female : {false, true}) {
+		float f = stageScale(species, female, breed, 0);
+		for (int st = 1; st <= 6; st++)
+			if (stageScale(species, female, breed, st) != f)
+				return true;
+	}
+	return false;
+}
+
 // the factor for a part from a breed with only one set of pictures, at a
 // life stage (1 for breeds drawn at more than one age)
 static float stageScale(int species, bool female, int breed, int stage) {

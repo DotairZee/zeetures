@@ -30,6 +30,7 @@
 #include "historyManager.h"
 #include "Engine.h"
 #include "creatures/BreedSlots.h"
+#include "creatures/SkeletalCreature.h"
 #include "common/io/FileWriter.h"
 #include "common/Ascii.h"
 #include "PathResolver.h"
@@ -1062,10 +1063,19 @@ static void DrawCard(float CW, float NH) {
 	CardRow("Genome", genome, CW);
 	if (b) {
 		const char* credit = b->imported ? PackCredit(b->source) : nullptr;
-		CardRow("By", credit ? credit : b->imported ? (b->source.empty() ? "imported" : b->source) : "Creature Labs", CW);
+		std::string by = credit ? credit : b->imported ? (b->source.empty() ? "imported" : b->source) : "Creature Labs";
+		// one set of pictures that openc2e grows to fit every life stage:
+		// the owner's work, credited (owner, 2026-11-13)
+		bool grown = BreedGrownForEveryStage(b->species, b->slot);
+		if (grown)
+			by += "; grown for every life stage by DotairZee";
+		CardRow("By", by, CW);
 		// the life stages it has its own sprites for; at the others a
 		// creature wears the nearest younger set
-		CardRow("Sprites", b->stages.size() >= 7 ? "every age" : AgesOf(b->stages), CW);
+		CardRow("Sprites", b->stages.size() >= 7 ? std::string("every age")
+						   : grown		   ? std::string("every age (one set, grown to fit)")
+										   : AgesOf(b->stages),
+			CW);
 	}
 	if (egg.taken) {
 		ImGui::Dummy(ImVec2(1, 6));
