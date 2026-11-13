@@ -1068,14 +1068,12 @@ static void DrawCard(float CW, float NH) {
 	if (b) {
 		const char* credit = b->imported ? PackCredit(b->source) : nullptr;
 		std::string by = credit ? credit : b->imported ? (b->source.empty() ? "imported" : b->source) : "Creature Labs";
-		// one set of pictures that openc2e grows to fit every life stage:
-		// the owner's work, credited (owner, 2026-11-13)
+		// no credit for the engine's own scaling of a breed's pictures to
+		// other life stages: no new pictures are made (owner, 2026-11-13)
 		bool grown = BreedGrownForEveryStage(b->species, b->slot);
-		if (grown)
-			by += "; grown for every life stage by DotairZee";
 		CardRow("By", by, CW);
 		// the life stages it has its own sprites for; at the others a
-		// creature wears the nearest younger set
+		// creature wears the nearest younger set, grown to the stage
 		CardRow("Sprites", b->stages.size() >= 7 ? std::string("every age")
 						   : grown		   ? std::string("every age (one set, grown to fit)")
 										   : AgesOf(b->stages),
