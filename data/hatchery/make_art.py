@@ -101,6 +101,12 @@ def hessian_wall(W, H, seed=0):
     a = np.asarray(img).astype(np.float32)
     vign = 1 - 0.5 * np.clip(((xs / W - 0.45) ** 2 * 1.4 + (ys / H - 0.38) ** 2 * 1.3), 0, 1)
     a[..., :3] *= (vign * (0.95 - 0.25 * ys / H))[..., None] * 0.8
+    # muted (owner, 2026-11-13): less saturated, a little less contrast
+    rgb = a[..., :3]
+    lum = (rgb * np.array([0.299, 0.587, 0.114], np.float32)).sum(axis=2, keepdims=True)
+    rgb = lum + (rgb - lum) * 0.68
+    m = rgb.mean(axis=(0, 1), keepdims=True)
+    a[..., :3] = m + (rgb - m) * 0.8
     return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), 'RGBA')
 
 

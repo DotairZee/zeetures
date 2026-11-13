@@ -417,7 +417,11 @@ static int s_hsort = -1; // -1: not read yet
 
 struct Shelf {
 	float off = 0, target = 0;
-	bool dragging = false;
+	// a press on the shelf: a click if the mouse stays put, a drag that
+	// scrolls the shelf if it moves (owner, 2026-11-13)
+	bool pressed = false, dragged = false;
+	float pressX = 0, pressOff = 0;
+	int pressItem = -1;
 };
 static std::map<int, Shelf> s_shelves;
 
@@ -780,69 +784,110 @@ static float DrawShelves(float NW, float NH) {
 		std::string count = fmt::format("{} breed{}", items.size(), items.size() == 1 ? "" : "s");
 		dl->AddText(ImVec2(x0 + 22 + tw, y + 3), kDim, count.c_str());
 		y += 18;
-		const float SY = y + 70; // the board's top
+		const float SY = y + 52; // the board's top
 		const float full = std::max(NW, 40 + items.size() * SLOT + 40);
 		const float maxoff = std::max(0.f, full - NW);
 		Shelf& st = s_shelves[g];
 
 		// input: the whole band of the shelf is one control
-		ImGui::SetCursorScreenPos(ImVec2(x0, SY - 70));
+		ImGui::SetCursorScreenPos(ImVec2(x0, SY - 52));
 		ImGui::PushID(g);
-		ImGui::InvisibleButton("shelf", ImVec2(NW, 182));
+		ImGui::InvisibleButton("shelf", ImVec2(NW, 118));
 		bool hov = ImGui::IsItemHovered();
-		bool active = ImGui::IsItemActive();
 		ImGui::PopID();
 		ImVec2 m = io.MousePos;
-		const float barY = SY + 108, barX0 = x0 + 40, barX1 = x1 - 40;
+		// the wheel, or a trackpad's sideways swipe (MouseWheelH)
 		if (hov && maxoff > 0) {
-			float wheel = io.MouseWheel + io.MouseWheelH;
-			if (wheel != 0)
-				st.target -= wheel * SLOT;
+			if (io.MouseWheel != 0)
+				st.target -= io.MouseWheel * SLOT;
+			if (io.MouseWheelH != 0)
+				st.target -= io.MouseWheelH * SLOT * 0.5f;
 			ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY);
+			ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelX);
 		}
-		int hovered = -1;
-		if (hov) {
-			bool onLeft = maxoff > 0 && m.x < x0 + 32 && m.y >= SY && m.y <= SY + 44;
-			bool onRight = maxoff > 0 && m.x > x1 - 32 && m.y >= SY && m.y <= SY + 44;
-			bool onBar = maxoff > 0 && m.y >= barY - 6 && m.y <= barY + 11 && m.x >= barX0 - 6 && m.x <= barX1 + 6;
-			if (ImGui::IsMouseClicked(0)) {
-				if (onLeft)
-					st.target -= 3 * SLOT;
-				else if (onRight)
-					st.target += 3 * SLOT;
-				else if (onBar)
-					st.dragging = true;
-			}
-			if (!onLeft && !onRight && !onBar && m.y < SY + 64) {
-				float k = std::round((m.x - (x0 + 54 - st.off)) / SLOT);
-				if (k >= 0 && k < (float)items.size() && std::abs(m.x - (x0 + 54 - st.off + k * SLOT)) < SLOT / 2)
-					hovered = (int)k;
+		auto itemAt = [&](ImVec2 at) {
+			if (at.y >= SY + 64)
+				return -1;
+			float k = std::round((at.x - (x0 + 54 - st.off)) / SLOT);
+			if (k >= 0 && k < (float)items.size() && std::abs(at.x - (x0 + 54 - st.off + k * SLOT)) < SLOT / 2)
+				return (int)k;
+			return -1;
+		};
+		bool onLeft = maxoff > 0 && m.x < x0 + 32 && m.y >= SY && m.y <= SY + 44;
+		bool onRight = maxoff > 0 && m.x > x1 - 32 && m.y >= SY && m.y <= SY + 44;
+		int hovered = hov && !onLeft && !onRight && !st.dragged ? itemAt(m) : -1;
+		if (hov && ImGui::IsMouseClicked(0)) {
+			if (onLeft)
+				st.target -= 3 * SLOT;
+			else if (onRight)
+				st.target += 3 * SLOT;
+			else {
+				st.pressed = true;
+				st.dragged = false;
+				st.pressX = m.x;
+				st.pressOff = st.off;
+				st.pressItem = itemAt(m);
+				if (ImGui::IsMouseDoubleClicked(0) && st.pressItem >= 0 && !s_c2eggs[items[st.pressItem]].taken) {
+					st.pressed = false; // double-click: placed
+					s_selected = items[st.pressItem];
+					TakeC2Egg(items[st.pressItem], false);
+				}
 			}
 		}
-		if (st.dragging) {
-			if (!ImGui::IsMouseDown(0))
-				st.dragging = false;
-			else
-				st.target = st.off = (m.x - barX0) / (barX1 - barX0) * full - NW / 2;
+		if (st.pressed) {
+			if (std::abs(m.x - st.pressX) > 4 && maxoff > 0)
+				st.dragged = true;
+			if (st.dragged)
+				st.target = st.off = std::clamp(st.pressOff - (m.x - st.pressX), 0.f, maxoff);
+			if (!ImGui::IsMouseDown(0)) {
+				if (!st.dragged && st.pressItem >= 0)
+					s_selected = items[st.pressItem];
+				st.pressed = st.dragged = false;
+			}
 		}
 		st.target = std::clamp(st.target, 0.f, maxoff);
 		st.off += (st.target - st.off) * std::min(1.f, io.DeltaTime * 14);
 		if (std::abs(st.target - st.off) < 0.5f)
 			st.off = st.target;
 		st.off = std::clamp(st.off, 0.f, maxoff);
-		if (hovered >= 0) {
+		// developer aid: OPENC2E_TEST_HATCHERY_MOUSE=1 drives the first shelf
+		// with real mouse events: drag 250 px left, click the egg under the
+		// middle, swipe a trackpad sideways; prints the results
+		if (getenv("OPENC2E_TEST_HATCHERY_MOUSE") && g == s_c2eggs[0].group) {
+			static int f = 0;
+			f++;
+			ImVec2 mid(x0 + NW / 2, SY - 10);
+			if (f == 60)
+				io.AddMousePosEvent(mid.x + 120, mid.y);
+			if (f == 62)
+				io.AddMouseButtonEvent(ImGuiMouseButton_Left, true);
+			if (f >= 64 && f <= 84)
+				io.AddMousePosEvent(mid.x + 120 - 250 * (f - 64) / 20.f, mid.y);
+			if (f == 86)
+				io.AddMouseButtonEvent(ImGuiMouseButton_Left, false);
+			if (f == 90)
+				fmt::print("* Hatchery mouse test: after a 250 px drag left, shelf at {:.0f} (max {:.0f}); selected {}\n", st.off, maxoff, s_c2eggs[s_selected].breed);
+			if (f == 92)
+				io.AddMousePosEvent(mid.x, mid.y);
+			if (f == 94)
+				io.AddMouseButtonEvent(ImGuiMouseButton_Left, true);
+			if (f == 96)
+				io.AddMouseButtonEvent(ImGuiMouseButton_Left, false);
+			if (f == 100)
+				fmt::print("* Hatchery mouse test: clicked the middle egg: selected {}\n", s_c2eggs[s_selected].breed);
+			if (f == 102)
+				io.AddMouseWheelEvent(3, 0); // a swipe: wheel x positive scrolls left
+			if (f == 130)
+				fmt::print("* Hatchery mouse test: after a swipe, shelf at {:.0f}\n", st.off);
+		}
+		if (hovered >= 0 && !st.pressed) {
 			const C2EggInfo& egg = s_c2eggs[items[hovered]];
 			ImGui::SetTooltip("%s\n%s", egg.label.c_str(),
 				egg.taken ? "In the world now." : "Click to choose it; double-click to place it in the world.");
-			if (ImGui::IsMouseClicked(0))
-				s_selected = items[hovered];
-			if (ImGui::IsMouseDoubleClicked(0) && !egg.taken)
-				TakeC2Egg(items[hovered], false);
 		}
-		(void)active;
 
 		// the shadow the shelf casts on the wall, then the board
-		dl->AddRectFilledMultiColor(ImVec2(x0, SY + 26), ImVec2(x1, SY + 80), IM_COL32(0, 0, 0, 120), IM_COL32(0, 0, 0, 120), IM_COL32(0, 0, 0, 0), IM_COL32(0, 0, 0, 0));
+		dl->AddRectFilledMultiColor(ImVec2(x0, SY + 26), ImVec2(x1, SY + 66), IM_COL32(0, 0, 0, 120), IM_COL32(0, 0, 0, 120), IM_COL32(0, 0, 0, 0), IM_COL32(0, 0, 0, 0));
 		DrawBoard(dl, ImVec2(x0, SY), g * 517.f + st.off, NW);
 		// the nests, eggs and labels
 		for (size_t k = 0; k < items.size(); k++) {
@@ -876,10 +921,10 @@ static float DrawShelves(float NW, float NH) {
 				continue;
 			for (int i = 0; i < FADE; i++) {
 				float x = side == 0 ? x0 + i : x1 - 1 - i;
-				DrawWall(dl, origin, ImVec2(x, SY - 72), ImVec2(x + 1, SY + 104), 0.85f * (1 - i / (float)FADE));
+				DrawWall(dl, origin, ImVec2(x, SY - 52), ImVec2(x + 1, SY + 66), 0.85f * (1 - i / (float)FADE));
 			}
 		}
-		// the arrows and a slim bar, where the shelf is longer than the view
+		// the arrows, where the shelf is longer than the view
 		if (maxoff > 0) {
 			for (int side = 0; side < 2; side++) {
 				bool can = side == 0 ? st.off > 0.5f : st.off < maxoff - 0.5f;
@@ -887,11 +932,8 @@ static float DrawShelves(float NW, float NH) {
 				dl->AddRectFilled(ImVec2(ax, SY + 4), ImVec2(ax + 24, SY + 40), IM_COL32(20, 16, 12, can ? 200 : 90), 6);
 				DrawChevron(dl, ImVec2(ax + 12, SY + 22), side == 1, can ? IM_COL32(240, 220, 180, 255) : IM_COL32(110, 100, 90, 255));
 			}
-			dl->AddRectFilled(ImVec2(barX0, barY), ImVec2(barX1, barY + 5), IM_COL32(40, 32, 26, 255), 2);
-			float f0 = st.off / full, f1 = (st.off + NW) / full;
-			dl->AddRectFilled(ImVec2(barX0 + (barX1 - barX0) * f0, barY), ImVec2(barX0 + (barX1 - barX0) * f1, barY + 5), IM_COL32(170, 140, 96, 255), 2);
 		}
-		y = SY + 112;
+		y = SY + 72;
 	}
 	if (y == origin.y + 10)
 		dl->AddText(ImVec2(x0 + 16, y), kText, s_search[0] ? "No breed matches." : "No eggs.");
@@ -957,7 +999,7 @@ static void DrawCard(float CW, float NH) {
 	const BreedInfo* b = egg.species >= 0 ? FindBreed(egg.species, egg.slot) : nullptr;
 	float mid = std::floor(p0.x + CW / 2);
 	// the egg, large, under the lamp
-	dl->AddImage(s_cardglow.as<ImTextureID>(), ImVec2(mid - 120, p0.y + 2), ImVec2(mid + 120, p0.y + 242), ImVec2(0, 0), ImVec2(1, 1),
+	dl->AddImage(s_cardglow.as<ImTextureID>(), ImVec2(mid - 90, p0.y - 6), ImVec2(mid + 90, p0.y + 174), ImVec2(0, 0), ImVec2(1, 1),
 		IM_COL32(255, 255, 255, egg.taken ? 70 : 255));
 	if (egg.taken) {
 		// taken: its nest, empty, as on the shelf
@@ -966,17 +1008,17 @@ static void DrawCard(float CW, float NH) {
 			if (size_t(2 * v + layer) < s_nests.size()) {
 				Texture& t = s_nests[2 * v + layer];
 				ImVec2 sz(t.width * 2.f, t.height * 2.f);
-				ImVec2 at(mid - std::floor(sz.x / 2), p0.y + 150 - s_nest_bottom * 2);
+				ImVec2 at(mid - std::floor(sz.x / 2), p0.y + 118 - s_nest_bottom * 2);
 				dl->AddImage(t.as<ImTextureID>(), at, at + sz);
 			}
 	} else if (Texture* e = EggTexture(egg)) {
-		float sc = std::floor(std::min(3.f, 156.f / std::max(1, e->height)));
+		float sc = std::floor(std::min(2.f, 110.f / std::max(1, e->height)));
 		sc = std::max(1.f, sc);
 		ImVec2 sz(e->width * sc, e->height * sc);
-		ImVec2 at(mid - std::floor(sz.x / 2), p0.y + 44 + std::floor((156 - sz.y) / 2));
+		ImVec2 at(mid - std::floor(sz.x / 2), p0.y + 14 + std::floor((110 - sz.y) / 2));
 		dl->AddImage(e->as<ImTextureID>(), at, at + sz);
 	}
-	ImGui::SetCursorPos(ImVec2(16, 216));
+	ImGui::SetCursorPos(ImVec2(16, 134));
 	if (ImFont* f = NurseryFont(17)) {
 		ImGui::PushFont(f);
 		ImGui::PushTextWrapPos(CW - 16);
@@ -1007,12 +1049,7 @@ static void DrawCard(float CW, float NH) {
 		CardRow("By", credit ? credit : b->imported ? (b->source.empty() ? "imported" : b->source) : "Creature Labs", CW);
 		// the life stages it has its own sprites for; at the others a
 		// creature wears the nearest younger set
-		std::string sprites = AgesOf(b->stages);
-		if (b->stages.size() < 7 && !b->stages.empty())
-			sprites += "; other ages wear the nearest younger set";
-		else if (b->stages.size() >= 7)
-			sprites = "every age";
-		CardRow("Sprites", sprites, CW);
+		CardRow("Sprites", b->stages.size() >= 7 ? "every age" : AgesOf(b->stages), CW);
 	}
 	if (egg.taken) {
 		ImGui::Dummy(ImVec2(1, 6));
@@ -1075,7 +1112,7 @@ static void DrawNursery() {
 				s_selected = s_c2eggs.size() - 1;
 		}
 	}
-	const float NW = 670, CW = 338;
+	const float NW = 670, CW = 320;
 	// the top row: a chip per shelf, search, finding eggs, importing
 	int counts[4] = {0, 0, 0, 0};
 	for (auto& e : s_c2eggs)
@@ -1153,10 +1190,10 @@ static void DrawNursery() {
 	ImGui::Dummy(ImVec2(1, 2));
 
 	// the panel's height: the shelves', within what the screen allows; the
-	// card needs about 480
+	// card needs about 390
 	static float s_content = 620;
 	float maxH = std::max(480.f, ImGui::GetMainViewport()->WorkSize.y - 160);
-	float NH = std::clamp(s_content, 480.f, std::min(628.f, maxH));
+	float NH = std::clamp(s_content, 390.f, std::min(628.f, maxH));
 
 	// developer aid: OPENC2E_TEST_HATCHERY="select=Frog,taken=Ron,search=no,
 	// filter=1,place|incubator" (applied once the shelves are drawn)
