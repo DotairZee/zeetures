@@ -49,6 +49,15 @@ static bool s_show_pointer = true;
 static bool s_show_applets = true;
 static bool s_show_favorites = true;
 
+static bool readFlag(const char* key, bool def) {
+	std::string v = readPlayerSetting(key);
+	return v.empty() ? def : v != "0";
+}
+
+static void writeFlag(const char* key, bool on) {
+	writePlayerSetting(key, on ? "1" : "0");
+}
+
 // Camera > Smooth Scrolling
 static bool s_smooth_scrolling = false;
 
@@ -271,15 +280,20 @@ static void DrawC2MenuBar() {
 			if (ImGui::MenuItem("Ambient Music", nullptr, music)) {
 				engine.musicmanager->setMuted(music);
 				engine.musicmanager->setMIDIMuted(music);
+				writeFlag("ambient-music", !music);
 			}
 			bool world_sounds = !soundmanager.isMuted();
-			if (ImGui::MenuItem("World Sounds", nullptr, world_sounds))
+			if (ImGui::MenuItem("World Sounds", nullptr, world_sounds)) {
 				soundmanager.setMuted(world_sounds);
+				writeFlag("world-sounds", !world_sounds);
+			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("Machines, objects, creatures' noises: every sound but music and speech");
 			bool bibble = !soundmanager.areVoicesMutedByPlayer();
-			if (ImGui::MenuItem("Bibble", nullptr, bibble))
+			if (ImGui::MenuItem("Bibble", nullptr, bibble)) {
 				soundmanager.setVoicesMutedByPlayer(bibble);
+				writeFlag("bibble", !bibble);
+			}
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("Creatures' speech");
 			ImGui::EndMenu();
@@ -302,12 +316,17 @@ static void DrawC2MenuBar() {
 			engine.setZoom(1.0f);
 		ImGui::Separator();
 		if (ImGui::BeginMenu("Toolbars")) {
-			ImGui::MenuItem("Standard", nullptr, &s_show_standard);
-			ImGui::MenuItem("Pointer", nullptr, &s_show_pointer);
-			ImGui::MenuItem("Applets", nullptr, &s_show_applets);
-			ImGui::MenuItem("Favourites", nullptr, &s_show_favorites);
+			if (ImGui::MenuItem("Standard", nullptr, &s_show_standard))
+				writeFlag("toolbar-standard", s_show_standard);
+			if (ImGui::MenuItem("Pointer", nullptr, &s_show_pointer))
+				writeFlag("toolbar-pointer", s_show_pointer);
+			if (ImGui::MenuItem("Applets", nullptr, &s_show_applets))
+				writeFlag("toolbar-applets", s_show_applets);
+			if (ImGui::MenuItem("Favourites", nullptr, &s_show_favorites))
+				writeFlag("toolbar-favourites", s_show_favorites);
 			ImGui::Separator();
-			ImGui::MenuItem("Text Labels", nullptr, &s_text_labels);
+			if (ImGui::MenuItem("Text Labels", nullptr, &s_text_labels))
+				writeFlag("text-labels", s_text_labels);
 			ImGui::EndMenu();
 		}
 		// not in C2's menu; openc2e addition (owner, 2026-11-11)
@@ -317,14 +336,19 @@ static void DrawC2MenuBar() {
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Creatures' words in bubbles (their voices go on; Bibble under File > Sound)");
 		bool statusbar = IsC2StatusBarShown();
-		if (ImGui::MenuItem("Status Bar", nullptr, &statusbar))
+		if (ImGui::MenuItem("Status Bar", nullptr, &statusbar)) {
 			SetC2StatusBarShown(statusbar);
-		ImGui::MenuItem("ToolTips for Objects", nullptr, &s_object_tips);
+			writeFlag("status-bar", statusbar);
+		}
+		if (ImGui::MenuItem("ToolTips for Objects", nullptr, &s_object_tips))
+			writeFlag("object-tooltips", s_object_tips);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Name what the hand rests on: a creature, or the kind of object");
 		bool scrollbars = AreC2ScrollBarsShown();
-		if (ImGui::MenuItem("Scroll Bars", nullptr, &scrollbars)) // not in C2's menu; openc2e addition
+		if (ImGui::MenuItem("Scroll Bars", nullptr, &scrollbars)) { // not in C2's menu; openc2e addition
 			SetC2ScrollBarsShown(scrollbars);
+			writeFlag("scroll-bars", scrollbars);
+		}
 		ImGui::Separator();
 		if (ImGui::MenuItem("Full Screen", "F12", get_backend()->isFullscreen()))
 			get_backend()->setFullscreen(!get_backend()->isFullscreen());
@@ -342,7 +366,8 @@ static void DrawC2MenuBar() {
 			ToggleHalo();
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 			ImGui::SetTooltip("A halo over the selected creature (the toolbar's Halo button)");
-		ImGui::MenuItem("Smooth Scrolling", nullptr, &s_smooth_scrolling);
+		if (ImGui::MenuItem("Smooth Scrolling", nullptr, &s_smooth_scrolling))
+			writeFlag("smooth-scrolling", s_smooth_scrolling);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Glide to places and creatures you choose, instead of jumping");
 		ImGui::Separator();
@@ -570,10 +595,34 @@ static void DrawC2MenuBar() {
 	}
 }
 
+// The View, Camera and Sound menus' switches are kept between runs in the
+// player's settings file (settings.txt in the user data folder, with Speech
+// Bubbles and Autosave): read once at the first frame, written when the
+// player changes one. Not read for headless tests that set their own view
+// (OPENC2E_VIEW, OPENC2E_OPEN_KITS), so their pictures don't depend on it.
+static void LoadViewSettings() {
+	s_show_standard = readFlag("toolbar-standard", s_show_standard);
+	s_show_pointer = readFlag("toolbar-pointer", s_show_pointer);
+	s_show_applets = readFlag("toolbar-applets", s_show_applets);
+	s_show_favorites = readFlag("toolbar-favourites", s_show_favorites);
+	s_text_labels = readFlag("text-labels", s_text_labels);
+	s_object_tips = readFlag("object-tooltips", s_object_tips);
+	s_smooth_scrolling = readFlag("smooth-scrolling", s_smooth_scrolling);
+	SetC2StatusBarShown(readFlag("status-bar", IsC2StatusBarShown()));
+	SetC2ScrollBarsShown(readFlag("scroll-bars", AreC2ScrollBarsShown()));
+	bool music = readFlag("ambient-music", !engine.musicmanager->isMuted());
+	engine.musicmanager->setMuted(!music);
+	engine.musicmanager->setMIDIMuted(!music);
+	soundmanager.setMuted(!readFlag("world-sounds", !soundmanager.isMuted()));
+	soundmanager.setVoicesMutedByPlayer(!readFlag("bibble", !soundmanager.areVoicesMutedByPlayer()));
+}
+
 void DrawC2Toolbar() {
 	// developer aid: OPENC2E_VIEW="labels,tips,smooth" starts with Text
 	// Labels, ToolTips for Objects and Smooth Scrolling on (headless tests)
 	static bool s_view_aid = [] {
+		if (!getenv("OPENC2E_VIEW") && !getenv("OPENC2E_OPEN_KITS"))
+			LoadViewSettings();
 		if (const char* v = getenv("OPENC2E_VIEW")) {
 			std::string s = v;
 			s_text_labels = s.find("labels") != std::string::npos;
