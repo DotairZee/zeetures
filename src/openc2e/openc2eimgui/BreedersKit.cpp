@@ -1038,6 +1038,21 @@ static void BreedsPage() {
 		}
 	}
 
+	// developer aid: OPENC2E_MOVE_BREED="species,slot,toSpecies,toSlot" (slot
+	// letters, e.g. "0,ak,0,ka") moves one imported breed once
+	static bool movedOne = false;
+	if (!movedOne && getenv("OPENC2E_MOVE_BREED")) {
+		movedOne = true;
+		int sp = -1, tsp = -1;
+		char from[8] = "", to[8] = "";
+		if (sscanf(getenv("OPENC2E_MOVE_BREED"), "%d,%7[a-z],%d,%7[a-z]", &sp, from, &tsp, to) == 4) {
+			std::string err;
+			const BreedInfo* b = FindBreed(sp, breedSlotFromName(from));
+			bool ok = b && MoveBreedTo(BreedInfo(*b), tsp, breedSlotFromName(to), err);
+			fmt::print("* MOVE BREED {} {} -> {} {}: {}\n", sp, from, tsp, to, ok ? "done" : b ? err : "no such breed");
+		}
+	}
+
 	// the list, by species
 	ImGui::BeginChild("list", ImVec2(230, 330), ImGuiChildFlags_Borders);
 	for (int sp = 0; sp < 4; sp++) {
@@ -1142,7 +1157,7 @@ static void BreedsPage() {
 				int slot = breedSlotFromName(letter);
 				std::string err;
 				if (slot < 0)
-					s_breed_message = "That is not a slot letter (a-z, then aa ... iv).";
+					s_breed_message = "That is not a slot name (a-z, then aa ... zz, then aaa ...).";
 				else if (MoveBreedToNornSet(*b, slot, err)) {
 					s_breed_message = fmt::format("Moved to norn slot {}.", breedSlotName(slot));
 					sel_species = 0;
@@ -1152,8 +1167,36 @@ static void BreedsPage() {
 					s_breed_message = "Couldn't move it: " + err;
 			}
 		}
+		// an imported breed to another slot in its own set (owner, 2026-11-12:
+		// the Kai norns to ka, past the old iv limit)
+		if (b->imported && !(b->kind == 0 && b->species != 0)) {
+			static char slotName[8] = "";
+			static const BreedInfo* forMove = nullptr;
+			if (forMove != b) {
+				forMove = b;
+				slotName[0] = 0;
+			}
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Move to %s slot", BreedSpeciesName(b->species));
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(50);
+			ImGui::InputText("##moveslot", slotName, sizeof(slotName));
+			ImGui::SameLine();
+			if (ImGui::Button("Move##toslot")) {
+				int slot = breedSlotFromName(slotName);
+				std::string err;
+				if (slot < 0)
+					s_breed_message = "That is not a slot name (a-z, then aa ... zz, then aaa ...).";
+				else if (MoveBreedTo(BreedInfo(*b), b->species, slot, err)) {
+					s_breed_message = fmt::format("Moved to slot {}.", breedSlotName(slot));
+					sel_slot = slot;
+					forMove = nullptr;
+				} else
+					s_breed_message = "Couldn't move it: " + err;
+			}
+		}
 		if (b->imported && b->origSlot >= 0 && b->origSlot != b->slot)
-			KitNote("Moved from slot %s (taken here); its files and genomes were changed to match.", breedSlotName(b->origSlot).c_str());
+			KitNote("Moved from slot %s; its files and genomes were changed to match.", breedSlotName(b->origSlot).c_str());
 		ImGui::PopTextWrapPos();
 
 		bool canLay = b->parts.count('a') && b->parts.count('b');
@@ -1182,7 +1225,12 @@ static void BreedsPage() {
 			ImGui::EndDisabled();
 		if (!canLay)
 			ImGui::BeginDisabled();
-		if (ImGui::Button("Lay an egg of this breed")) {
+		// developer aid: OPENC2E_TEST_BREED_LAY=1 lays one egg of the breed shown
+		static bool testLay = getenv("OPENC2E_TEST_BREED_LAY") != nullptr;
+		bool layNow = ImGui::Button("Lay an egg of this breed") || (testLay && canLay);
+		if (layNow && testLay)
+			testLay = false;
+		if (layNow) {
 			auto genome = BreedBaseGenome(*b);
 			if (genome.empty()) {
 				s_breed_message = "No genome to start from (norn.gen, gren.gen or ettn.gen).";
@@ -1193,8 +1241,10 @@ static void BreedsPage() {
 				int sex = s_eggSex;
 				if (sex == 0) // either: at random among the sexes it has
 					sex = b->male && b->female ? rand_int32(1, 2) : b->female ? 2 : b->male ? 1 : rand_int32(1, 2);
-				if (LayC2Egg({genome}, sex, rand_int32(0, 10), fmt::format("b{:02d}", s_laid++ % 100), err))
+				if (LayC2Egg({genome}, sex, rand_int32(0, 10), fmt::format("b{:02d}", s_laid++ % 100), err)) {
 					s_breed_message = fmt::format("Laid a {} egg of {} by the incubator.", sex == 2 ? "female" : "male", BreedLabel(*b));
+					fmt::print("* {}\n", s_breed_message);
+				}
 				else
 					s_breed_message = "Couldn't lay the egg: " + err;
 			}

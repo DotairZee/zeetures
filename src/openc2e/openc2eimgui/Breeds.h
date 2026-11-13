@@ -82,6 +82,11 @@ int GenomeGenus(const std::vector<uint8_t>& genome);
 // the norn set, else that letter followed by a, b ... ("ka").
 int DefaultNornSlotFor(const BreedInfo& b);
 bool MoveBreedToNornSet(const BreedInfo& b, int slot, std::string& err);
+// an imported breed to another free slot, in its own set or another (its
+// picture and body-data files copied under the new names, the pack's
+// genomes and eggs changed to match, the registry updated; the old files
+// stay for creatures hatched before)
+bool MoveBreedTo(const BreedInfo& b, int toSpecies, int slot, std::string& err);
 // the {species, slot} pairs a C2 genome's appearance genes use
 std::set<std::pair<int, int>> GenomeAppearanceSlots(const std::vector<uint8_t>& genome);
 

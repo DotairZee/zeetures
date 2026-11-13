@@ -388,18 +388,26 @@ int DefaultNornSlotFor(const BreedInfo& b) {
 }
 
 bool MoveBreedToNornSet(const BreedInfo& orig, int slot, std::string& err) {
-	namespace fs = std::filesystem;
-	BreedInfo b = orig;
-	if (!b.imported || b.species == 0 || slot < 0 || slot >= BREED_SLOTS) {
+	if (orig.species == 0) {
 		err = "not an imported breed in another set";
 		return false;
 	}
-	if (FindBreed(0, slot)) {
-		err = "norn slot " + breedSlotName(slot) + " is taken";
+	return MoveBreedTo(orig, 0, slot, err);
+}
+
+bool MoveBreedTo(const BreedInfo& orig, int toSpecies, int slot, std::string& err) {
+	namespace fs = std::filesystem;
+	BreedInfo b = orig;
+	if (!b.imported || slot < 0 || slot >= BREED_SLOTS || toSpecies < 0 || toSpecies > 3 || (toSpecies == b.species && slot == b.slot)) {
+		err = "not an imported breed, or not a new slot";
+		return false;
+	}
+	if (FindBreed(toSpecies, slot)) {
+		err = fmt::format("{} slot {} is taken", BreedSpeciesName(toSpecies), breedSlotName(slot));
 		return false;
 	}
 	fs::path main = getUserDataDir();
-	std::map<std::pair<int, int>, std::pair<int, int>> moves{{{b.species, b.slot}, {0, slot}}};
+	std::map<std::pair<int, int>, std::pair<int, int>> moves{{{b.species, b.slot}, {toSpecies, slot}}};
 	auto readAll = [](const fs::path& p) {
 		std::ifstream in(p, std::ios::binary);
 		return std::vector<uint8_t>((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -414,7 +422,7 @@ bool MoveBreedToNornSet(const BreedInfo& orig, int slot, std::string& err) {
 		std::string ext = to_ascii_lowercase(p.extension().string());
 		if (ParseBreedFileName(name, part, species, female, stage, s) && species == b.species && s == b.slot) {
 			// a body-part picture or body data: a copy under the norn set's name
-			std::string stem = fmt::format("{}{}{}{}", part, female ? 4 : 0, stage, breedSlotName(slot));
+			std::string stem = fmt::format("{}{}{}{}", part, toSpecies + (female ? 4 : 0), stage, breedSlotName(slot));
 			fs::path dest = p.parent_path() / (stem + ext);
 			std::error_code ec;
 			fs::copy_file(p, dest, fs::copy_options::overwrite_existing, ec);
@@ -453,14 +461,17 @@ bool MoveBreedToNornSet(const BreedInfo& orig, int slot, std::string& err) {
 			}
 		}
 	}
-	// the registry: now a norn breed at `slot`, moved from its set and slot
+	// the registry: now at `toSpecies`/`slot`, moved from its set and slot
+	// (the old files stay, for creatures hatched before)
 	for (auto& k : KnownBreeds())
 		if (k.species == orig.species && k.slot == orig.slot && k.imported) {
-			k.origSpecies = k.species;
+			if (toSpecies != k.species)
+				k.origSpecies = k.origSpecies >= 0 ? k.origSpecies : k.species;
 			k.origSlot = k.origSlot >= 0 ? k.origSlot : k.slot;
-			k.species = 0;
+			if (toSpecies == 0)
+				k.kind = 0;
+			k.species = toSpecies;
 			k.slot = slot;
-			k.kind = 0;
 			k.files.insert(k.files.end(), added.begin(), added.end());
 		}
 	SaveBreedRegistry();
