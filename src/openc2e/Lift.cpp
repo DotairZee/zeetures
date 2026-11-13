@@ -19,6 +19,10 @@
 
 #include "Lift.h"
 
+#include <cmath>
+#include <fmt/core.h>
+#include <string>
+
 #include "Engine.h" // version
 #include "World.h"
 #include "caosValue.h"
@@ -48,6 +52,19 @@ bool Lift::fireScript(unsigned short event, Agent* from, caosValue one, caosValu
 	// on and drops its passengers (creatures could never ride). The lift's own
 	// activations (from tick(), answering a call button) already chose one.
 	if (from != this) {
+		// Standing still, the lift is at the stop nearest its cage, whatever
+		// stop it last thought it was at. They disagreed after a world loaded
+		// (the cage where the save or the world file left it), so a request
+		// was refused ("no stop further up"), or the stop check in tick()
+		// fired at once and snapped the cage, with its riders, to a far stop:
+		// a rider on the west cage lift jumped 417 px (2026-11-12).
+		if (engine.version == 2 && yvec == 0 && newbutton == currentbutton && !callbuttony.empty()) {
+			unsigned int nearest = 0;
+			for (unsigned int i = 1; i < callbuttony.size(); i++)
+				if (std::fabs(callbuttony[i] - liftBottom()) < std::fabs(callbuttony[nearest] - liftBottom()))
+					nearest = i;
+			currentbutton = newbutton = nearest;
+		}
 		if (event == 1) {
 			if (currentbutton + 1 == callbuttony.size())
 				return false;
