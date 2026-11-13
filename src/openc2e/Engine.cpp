@@ -1627,6 +1627,71 @@ bool Engine::parseCommandLine(int argc, char* argv[]) {
 	return true;
 }
 
+// C1/C2: patches to the world's own scripts, applied on the player's
+	// machine to the player's own copy (the project ships only the recipe):
+	// "script-patches.txt" in the Additions folders, in blocks of
+	//   scrp <family> <genus> <species> <event>
+	//   find <text in the script>
+	//   replace <text to put there>
+	// Lines starting with * or # are notes. A patch whose text is not found
+	// (already applied, or a different game version) is reported and skipped.
+void Engine::applyScriptPatches(bool quiet) {
+	if (version < 3) {
+		std::vector<fs::path> files{getUserDataDir() / "Additions" / "script-patches.txt"};
+		if (!currentworlddir.empty())
+			files.push_back(fs::path(currentworlddir) / "Additions" / "script-patches.txt");
+		for (auto& path : files) {
+			if (!fs::exists(path))
+				continue;
+			std::ifstream in(path);
+			std::string line;
+			int f = -1, g = -1, sp = -1, ev = -1;
+			std::string find;
+			while (std::getline(in, line)) {
+				if (!line.empty() && line.back() == '\r')
+					line.pop_back();
+				if (line.empty() || line[0] == '*' || line[0] == '#')
+					continue;
+				std::istringstream l(line);
+				std::string key;
+				l >> key;
+				std::string rest;
+				std::getline(l >> std::ws, rest);
+				if (key == "scrp") {
+					std::istringstream r(rest);
+					r >> f >> g >> sp >> ev;
+					find.clear();
+				} else if (key == "find") {
+					find = rest;
+				} else if (key == "replace" && f >= 0 && !find.empty()) {
+					auto sc = world.scriptorium->getScript(f, g, sp, ev);
+					size_t at = sc ? sc->code.find(find) : std::string::npos;
+					if (at == std::string::npos) {
+						if (!quiet)
+							fmt::print("* Script patch for scrp {} {} {} {}: text not found (already patched, or another version); skipped\n", f, g, sp, ev);
+						continue;
+					}
+					std::string code = sc->code;
+					code.replace(at, find.size(), rest);
+					std::string text = fmt::format("scrp {} {} {} {} {}", f, g, sp, ev, code);
+					if (text.find("endm") == std::string::npos)
+						text += " endm";
+					try {
+						caosScript patched(engine.gametype, path.filename().string());
+						patched.parse(text);
+						caosVM vm(0);
+						patched.installScripts();
+						vm.runEntirely(patched.installer);
+						fmt::print("* Patched scrp {} {} {} {} ({})\n", f, g, sp, ev, path.filename().string());
+					} catch (Exception& e) {
+						fmt::print(stderr, "* Script patch for scrp {} {} {} {} failed: {}\n", f, g, sp, ev, e.prettyPrint());
+					}
+				}
+			}
+		}
+	}
+}
+
 bool Engine::initialSetup() {
 	assert(data_directories.size() > 0);
 
@@ -1857,67 +1922,7 @@ bool Engine::initialSetup() {
 		}
 	}
 
-	// C1/C2: patches to the world's own scripts, applied on the player's
-	// machine to the player's own copy (the project ships only the recipe):
-	// "script-patches.txt" in the Additions folders, in blocks of
-	//   scrp <family> <genus> <species> <event>
-	//   find <text in the script>
-	//   replace <text to put there>
-	// Lines starting with * or # are notes. A patch whose text is not found
-	// (already applied, or a different game version) is reported and skipped.
-	if (version < 3) {
-		std::vector<fs::path> files{getUserDataDir() / "Additions" / "script-patches.txt"};
-		if (!currentworlddir.empty())
-			files.push_back(fs::path(currentworlddir) / "Additions" / "script-patches.txt");
-		for (auto& path : files) {
-			if (!fs::exists(path))
-				continue;
-			std::ifstream in(path);
-			std::string line;
-			int f = -1, g = -1, sp = -1, ev = -1;
-			std::string find;
-			while (std::getline(in, line)) {
-				if (!line.empty() && line.back() == '\r')
-					line.pop_back();
-				if (line.empty() || line[0] == '*' || line[0] == '#')
-					continue;
-				std::istringstream l(line);
-				std::string key;
-				l >> key;
-				std::string rest;
-				std::getline(l >> std::ws, rest);
-				if (key == "scrp") {
-					std::istringstream r(rest);
-					r >> f >> g >> sp >> ev;
-					find.clear();
-				} else if (key == "find") {
-					find = rest;
-				} else if (key == "replace" && f >= 0 && !find.empty()) {
-					auto sc = world.scriptorium->getScript(f, g, sp, ev);
-					size_t at = sc ? sc->code.find(find) : std::string::npos;
-					if (at == std::string::npos) {
-						fmt::print("* Script patch for scrp {} {} {} {}: text not found (already patched, or another version); skipped\n", f, g, sp, ev);
-						continue;
-					}
-					std::string code = sc->code;
-					code.replace(at, find.size(), rest);
-					std::string text = fmt::format("scrp {} {} {} {} {}", f, g, sp, ev, code);
-					if (text.find("endm") == std::string::npos)
-						text += " endm";
-					try {
-						caosScript patched(engine.gametype, path.filename().string());
-						patched.parse(text);
-						caosVM vm(0);
-						patched.installScripts();
-						vm.runEntirely(patched.installer);
-						fmt::print("* Patched scrp {} {} {} {} ({})\n", f, g, sp, ev, path.filename().string());
-					} catch (Exception& e) {
-						fmt::print(stderr, "* Script patch for scrp {} {} {} {} failed: {}\n", f, g, sp, ev, e.prettyPrint());
-					}
-				}
-			}
-		}
-	}
+	applyScriptPatches(false);
 
 	if (const char* dumppath = getenv("OPENC2E_DUMP_SCRIPTS")) {
 		std::ofstream dump(dumppath);

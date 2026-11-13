@@ -112,6 +112,10 @@ class Engine {
 	~Engine();
 	void setBackend(Backend* b);
 	std::string executeNetwork(std::string in);
+	// C1/C2: the Additions folders' script-patches.txt applied to the
+	// scripts now installed (at load, and after an object is injected);
+	// quiet: no line for a patch whose text is not there
+	void applyScriptPatches(bool quiet);
 	unsigned int msUntilTick();
 	void drawWorld();
 	void update();

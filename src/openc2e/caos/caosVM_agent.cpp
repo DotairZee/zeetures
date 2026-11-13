@@ -646,7 +646,14 @@ void v_POSE(caosVM* vm) {
 */
 void c_KILL(caosVM* vm) {
 	VM_VERIFY_SIZE(1)
-	VM_PARAM_VALIDAGENT(a)
+	VM_PARAM_AGENT(a)
+	// C1/C2: killing an object that is already gone does nothing, as a
+	// message to one goes nowhere (MESG WRIT). The Anteater kills the ant it
+	// ate, then its next timer tick kills it again; openc2e threw "Invalid
+	// agent handle" and stopped the script (2026-11-13).
+	if (engine.version < 3 && (!a || a->isDying()))
+		return;
+	valid_agent(a);
 
 	// C2: the frog's kiss lasts only near the pond. Its watcher (2 1 94,
 	// from the Frogs COB) KILLs the frog norn it made once it strays, and

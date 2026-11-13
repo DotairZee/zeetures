@@ -254,6 +254,9 @@ void CobManager::inject(const CobFileInfo& info, bool byHand) {
 	if (result.size()) {
 		fmt::print("warning: injection returned data (error?): {}\n", result);
 	}
+	// the project's patches to scripts it just installed (the Anteater's,
+	// 2026-11-13), as at a world load
+	engine.applyScriptPatches(true);
 	if (byHand && engine.version == 2) {
 		for (auto& a : world.agents)
 			if (a && !before.count(a.get()) && a->injectedFrom.empty())
