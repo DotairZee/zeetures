@@ -146,6 +146,9 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// or away), level with its snout tip; looking up, as high as the mouth
 	// point or a share of the head's height from its top if higher
 	bool bubbleSpot(float& bx, float& by);
+	// its head's pictures (part a, slot 1; frame 8 faces the viewer), for a thought
+	// bubble's picture of it
+	std::shared_ptr<creaturesImage> headSprite() { return images[1]; }
 	// the push hand: slide along the ground for a few ticks (dir 1 east,
 	// -1 west), fast at first, easing off; walls and floors as for walking
 	void shove(int dir) {

@@ -335,3 +335,9 @@ std::shared_ptr<creaturesImage> imageManager::tint(const std::shared_ptr<creatur
 }
 
 /* vim: set noet: */
+
+std::shared_ptr<creaturesImage> imageManager::fromFrames(const std::string& name, std::vector<Image> frames) {
+	auto img = std::make_shared<creaturesImage>(name);
+	img->images = std::move(frames);
+	return img;
+}

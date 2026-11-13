@@ -33,6 +33,7 @@
 #include "common/Random.h"
 #include "oldBrain.h"
 #include "CreatureSpeech.h"
+#include "creatures/Thoughts.h"
 #include "oldCreature.h"
 #include <map>
 #include <sstream>
@@ -1224,6 +1225,8 @@ void oldCreature::tickMind() {
 
 	if (!out.say.empty())
 		creatureSays(parentagent, (int)stage, phraseFor(out.say, parentagent, this));
+	if (!out.thought.empty())
+		Thoughts::think(parentagent, out.thought, out.thoughtKey);
 
 	if (out.expression >= 0 && out.expression < 6) {
 		if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent))

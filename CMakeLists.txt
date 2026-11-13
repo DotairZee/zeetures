@@ -311,6 +311,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/creatures/Breeding.cpp
 	src/openc2e/creatures/CreatureSpeech.cpp
 	src/openc2e/creatures/Pheromones.cpp
+	src/openc2e/creatures/Thoughts.cpp
 	src/openc2e/creatures/Relationships.cpp
 	src/openc2e/creatures/Temperament.cpp
 	src/openc2e/creatures/Creature.cpp
@@ -562,7 +563,8 @@ set(EMBEDDED_FILES
 	${SRC}/data/hatchery/wall.png
 	${SRC}/data/hatchery/board.png
 	${SRC}/data/hatchery/nests.png
-	${SRC}/data/hatchery/nests.txt)
+	${SRC}/data/hatchery/nests.txt
+	${SRC}/data/thoughts/icons.png)
 add_custom_command(
 	OUTPUT ${GEN}/embedded_files.cpp
 	COMMAND ${Python_EXECUTABLE} scripts/embed_files.py ${GEN}/embedded_files.cpp ${EMBEDDED_FILES}

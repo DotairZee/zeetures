@@ -323,6 +323,9 @@ struct Params {
 	float leaveNeed = 0.2f; // that need at least this high: leave the room
 	float exploreWant = 0.025f; // curiosity about an unvisited room next door
 	float exploreReach = 1500.0f; // a known but unvisited room on this floor this near
+	// a thought bubble of surprise when an action eases its needs this much
+	// more than it expected
+	float surpriseReward = 0.15f;
 	float foragePass = 80.0f;
 	unsigned int forageStuckTicks = 60;
 	float foodTripGain = 100.0f;
@@ -357,6 +360,7 @@ struct Params {
 	float exitBonus = 1.5f; // a remembered exit nearby: this many times the escape's worth
 	float exitNear = 400.0f;
 	unsigned int exitWindow = 400;
+	unsigned int waterSettle = 8; // ticks in (or out of) the water before it counts as a change
 	size_t exitMax = 8;
 	// Devices that did nothing for an escape (passed over) are not tried again
 	// for this long (mind ticks); with none left untried in view, the creature
@@ -500,6 +504,7 @@ struct FoodPlace {
 	int meals = 0;
 	unsigned int checked = 0; // last time arriving there was judged
 	unsigned int cooldownUntil = 0; // out of reach from here: not tried until then
+	int category = -1; // what was seen or eaten there (for a thought's picture; not saved)
 };
 
 struct Candidate {
@@ -855,9 +860,19 @@ class HomeostatMind : public CreatureMind {
 				hungryTicks = 0; // fed
 		}
 		lastTick = p.tick;
+		// in or out of the water only once it has lasted waterSettle ticks: a
+		// creature against a wall between a water room and a dry one read
+		// wet and dry by turns every tick, and learned the device it had just
+		// pressed as an exit and a flooder over and over, pressing it on
+		// (the gene lab's pumps, owner's screencast 2026-11-13)
+		if (p.inRoom && p.inWater != waterRaw) {
+			waterRaw = p.inWater;
+			waterRawSince = p.tick;
+		}
+		const bool inWaterSettled = (p.inRoom && waterRaw != wasInWater && p.tick >= waterRawSince + prm.waterSettle) ? waterRaw : wasInWater;
 		// (outside every room is not out of the water: a norn that sank
 		// through the underground pond's bed learned a button as its exit)
-		if (wasInWater && !p.inWater && p.inRoom && lastObjectUse.category >= 0 && p.tick < lastObjectUseTick + prm.exitWindow) {
+		if (wasInWater && !inWaterSettled && p.inRoom && lastObjectUse.category >= 0 && p.tick < lastObjectUseTick + prm.exitWindow) {
 			bool known = false;
 			for (auto& e : exits)
 				if (e.category == lastObjectUse.category && e.decision == lastObjectUse.decision && std::fabs(e.x - lastObjectUse.x) < 200.0f && std::fabs(e.y - lastObjectUse.y) < prm.sameLevel) {
@@ -876,7 +891,7 @@ class HomeostatMind : public CreatureMind {
 		}
 		// (only working a device counts: activate 1 or 2, deactivate; eating
 		// or approaching near one taught creatures nonsense flooders)
-		if (!wasInWater && p.inWater && lastObjectUse.category >= 0 && lastObjectUse.decision >= 1 && lastObjectUse.decision <= 3 && p.tick < lastObjectUseTick + prm.exitWindow) {
+		if (!wasInWater && inWaterSettled && lastObjectUse.category >= 0 && lastObjectUse.decision >= 1 && lastObjectUse.decision <= 3 && p.tick < lastObjectUseTick + prm.exitWindow) {
 			bool known = false;
 			for (auto& f : flooders)
 				if (f.category == lastObjectUse.category && f.decision == lastObjectUse.decision && std::fabs(f.x - lastObjectUse.x) < prm.flooderNear && std::fabs(f.y - lastObjectUse.y) < prm.sameLevel) {
@@ -893,8 +908,7 @@ class HomeostatMind : public CreatureMind {
 			fmt::print("[homeostat] creature {} t{}: in the water; remembers {}@{} at {:.0f},{:.0f} as a flooder\n", p.creatureId, p.tick,
 				actionName(lastObjectUse.decision), lastObjectUse.category, lastObjectUse.x, lastObjectUse.y);
 		}
-		if (p.inRoom)
-			wasInWater = p.inWater;
+		wasInWater = inWaterSettled;
 		// boat rides
 		if (p.riding && !wasRiding) {
 			rideStartX = p.x;
@@ -1000,7 +1014,7 @@ class HomeostatMind : public CreatureMind {
 		bool foodInSight = false;
 		for (auto& s : p.visible)
 			if (s.edible >= prm.foodSeeEdible) {
-				rememberFood(s.x, s.y, p.tick, 0.6f, false);
+				rememberFood(s.x, s.y, p.tick, 0.6f, false, s.category);
 				foodInSight = true;
 			}
 		for (auto& fp : foodPlaces) {
@@ -1173,6 +1187,7 @@ class HomeostatMind : public CreatureMind {
 		if (p.asleep && !chooseSleep)
 			out.sleep = 0;
 		logChoice(p, choice, candidates, D);
+		thinkAbout(p, choice, out);
 
 		if (choice.category == prm.liftCategory)
 			lastLiftDecision = choice.decision;
@@ -1625,6 +1640,8 @@ class HomeostatMind : public CreatureMind {
 	unsigned int boatTryTick = 0;
 	unsigned int boatFlipUntil = 0; // until then, use the other action than learned/guessed
 	bool wasInWater = false;
+	bool waterRaw = false;
+	unsigned int waterRawSince = 0;
 	ExitLink lastObjectUse; // the most recent object action, for exit learning
 	unsigned int lastObjectUseTick = 0;
 	AgentRef episodeAgent; // the object this episode acts on
@@ -2031,11 +2048,13 @@ class HomeostatMind : public CreatureMind {
 		return best;
 	}
 
-	void rememberFood(float x, float y, unsigned int tick, float confidence, bool meal) {
+	void rememberFood(float x, float y, unsigned int tick, float confidence, bool meal, int category = -1) {
 		for (auto& fp : foodPlaces)
 			if (std::fabs(wrapD(fp.x - x)) < prm.foodMerge && std::fabs(fp.y - y) < prm.sameLevel) {
 				fp.x = fp.x + wrapD(x - fp.x) / 4.0f; // (the short way round)
 				fp.tick = tick;
+				if (category >= 0)
+					fp.category = category;
 				fp.confidence = std::max(fp.confidence, confidence);
 				fp.meals += meal ? 1 : 0;
 				return;
@@ -2049,6 +2068,7 @@ class HomeostatMind : public CreatureMind {
 			foodTrip = -1; // indices moved
 		}
 		foodPlaces.push_back({x, y, tick, confidence, meal ? 1 : 0, 0});
+		foodPlaces.back().category = category;
 	}
 
 	// What eating is expected to do for hunger: a typical meal, or the best
@@ -2723,6 +2743,91 @@ class HomeostatMind : public CreatureMind {
 		return false;
 	}
 
+
+
+	// ---- Thoughts (owner, 2026-11-13: thought clouds in pictures) ----
+	// the symbol for a need
+	static const char* needSymbol(int need) {
+		switch (need) {
+			case PAIN: return "pain";
+			case HUNGER: return "hunger";
+			case COLD: return "snow";
+			case HOT: return "sun";
+			case TIRED: return "tired";
+			case SLEEPY: return "zzz";
+			case LONELY: return "people";
+			case FEAR: return "fear";
+			case INJURY: return "injury";
+			case SUFFOCATE: return "breath";
+			default: return "question";
+		}
+	}
+	static int needIndex(const std::string& name) {
+		for (int i = 0; i < NUM_DRIVES; i++)
+			if (name == DRIVE_NAMES[i])
+				return i;
+		return -1;
+	}
+	std::vector<std::string> pendingThought; // from the end of an episode (a surprise)
+	std::string pendingThoughtKey;
+	// What it is thinking as it starts something new: why it chose it.
+	void thinkAbout(const MindPerception& p, const Candidate& c, MindOutput& out) {
+		auto way = [&](int decision) -> std::string {
+			return decision == 10 || decision == 26 ? "arrow_w" : decision == 11 || decision == 27 ? "arrow_e" : "";
+		};
+		std::vector<std::string> t;
+		std::string key;
+		if (c.place.rfind("mate:", 0) == 0) {
+			t = {"heart", "who:" + c.place.substr(5)};
+			key = c.place;
+		} else if (c.place == "explore") {
+			t = {"feet", "question"};
+			key = "explore";
+		} else if (c.place.rfind("favourite:", 0) == 0) {
+			t = {needSymbol(needIndex(c.place.substr(10))), "home"};
+			key = c.place;
+		} else if (c.place.rfind("leave:", 0) == 0) {
+			t = {needSymbol(needIndex(c.place.substr(6))), "cross"};
+			key = c.place;
+		} else if (c.food || c.route) {
+			int cat = foodTrip >= 0 && foodTrip < (int)foodPlaces.size() ? foodPlaces[foodTrip].category : -1;
+			t = {"hunger"};
+			if (cat >= 0)
+				t.push_back(fmt::format("cat:{}", cat));
+			if (!way(c.decision).empty())
+				t.push_back(way(c.decision));
+			key = "food";
+		} else if (c.scent && c.urge.empty()) {
+			t = {"nose", "hunger"};
+			key = "smell";
+		} else if (c.forage) {
+			t = {"hunger", "question"};
+			key = "forage";
+		} else if (c.escape) {
+			t = {"breath"};
+			if (!way(c.decision).empty())
+				t.push_back(way(c.decision));
+			key = "escape";
+		} else if (c.seekCategory >= 0) {
+			t = {fmt::format("cat:{}", c.seekCategory), "question"};
+			key = fmt::format("seek:{}", c.seekCategory);
+		} else if (c.who.rfind("away from ", 0) == 0) {
+			t = {"fear", "who:" + c.who.substr(10)};
+			key = "fear:" + c.who.substr(10);
+		} else if (c.category < 0 && c.decision == prm.sleepDecision) {
+			t = {"zzz"};
+			key = "sleep";
+		}
+		if (t.empty() && !pendingThought.empty()) {
+			t = pendingThought;
+			key = pendingThoughtKey;
+		}
+		pendingThought.clear();
+		if (!t.empty()) {
+			out.thought = t;
+			out.thoughtKey = key;
+		}
+	}
 
 	// ---- Sense of place ----
 	// a room's feel for a need: how much faster (positive) or slower that
@@ -3494,7 +3599,7 @@ class HomeostatMind : public CreatureMind {
 	void endEpisode(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, const char* why, bool stalled = false) {
 		if (current.decision == prm.eatDecision && current.category >= 0 && felt[HUNGER] < -0.05f)
 		{
-			rememberFood(p.x, p.y, p.tick, 1.0f, true); // a meal here eased hunger
+			rememberFood(p.x, p.y, p.tick, 1.0f, true, current.category); // a meal here eased hunger
 			hungryTicks = 0;
 		}
 		inEpisode = false;
@@ -3507,6 +3612,7 @@ class HomeostatMind : public CreatureMind {
 			total += std::fabs(change[i]);
 		}
 		float reward = startD - D;
+		const float expectedReward = current.want; // what it expected (the same scale: overall drive eased)
 
 		// an object action that keeps getting nowhere: stop offering it here
 		if (current.category >= 0) {
@@ -3654,6 +3760,12 @@ class HomeostatMind : public CreatureMind {
 		mood += prm.moodRate * (advantage - mood);
 
 		valence += prm.valenceRate * (reward - valence);
+		// a far better (or worse) result than expected: a moment of surprise
+		// (a pleasant one only: a disappointment drawn as pain read as hurt)
+		if (current.category >= 0 && current.seekCategory < 0 && !current.chain && reward - expectedReward > prm.surpriseReward) {
+			pendingThought = {"bang", fmt::format("cat:{}", current.category)};
+			pendingThoughtKey = fmt::format("surprise:{}:{}", current.category, p.tick);
+		}
 
 		if (current.category >= 0 && current.category < (int)habituation.size()) {
 			if (total < prm.eventfulThreshold)

@@ -7,6 +7,7 @@
 #include "C2KitsInternal.h"
 #include "HelpWindow.h"
 #include "creatures/CreatureSpeech.h"
+#include "creatures/Thoughts.h"
 
 #include <SDL3/SDL_misc.h>
 
@@ -344,6 +345,20 @@ static void DrawC2MenuBar() {
 			setSpeechBubblesShown(bubbles);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Creatures' words in bubbles (their voices go on; Bibble under File > Sound)");
+		// openc2e addition (owner, 2026-11-13): what creatures are thinking,
+		// as pictures in thought bubbles
+		if (ImGui::BeginMenu("Thought Bubbles")) {
+			Thoughts::Mode tm = Thoughts::mode();
+			if (ImGui::MenuItem("Every Creature", nullptr, tm == Thoughts::EVERY))
+				Thoughts::setMode(Thoughts::EVERY);
+			if (ImGui::MenuItem("Selected Creature Only", nullptr, tm == Thoughts::SELECTED))
+				Thoughts::setMode(Thoughts::SELECTED);
+			if (ImGui::MenuItem("Off", nullptr, tm == Thoughts::OFF))
+				Thoughts::setMode(Thoughts::OFF);
+			ImGui::EndMenu();
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("What creatures are thinking, in pictures, when they set about something new");
 		bool statusbar = IsC2StatusBarShown();
 		if (ImGui::MenuItem("Status Bar", nullptr, &statusbar)) {
 			SetC2StatusBarShown(statusbar);

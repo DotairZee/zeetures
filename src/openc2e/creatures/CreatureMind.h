@@ -180,6 +180,14 @@ struct MindOutput {
 	// Something to say (a meaning, worded by the engine for the creature's
 	// age: CreatureSpeech.h), or empty.
 	std::string say;
+	// What it is thinking, as pictures for a thought cloud (owner,
+	// 2026-11-13; creatures/Thoughts.h): each a symbol's name ("hunger",
+	// "heart", "arrow_w"...), "cat:N" for a picture of a thing of category
+	// N, or "who:MONIKER" for a creature's face; empty: no new thought.
+	// thoughtKey names the thought, so one long trip is not shown again
+	// and again.
+	std::vector<std::string> thought;
+	std::string thoughtKey;
 };
 
 // What a mind holds, for the Mind Kit (openc2e addition, owner 2026-11-11):

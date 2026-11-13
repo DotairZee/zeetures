@@ -498,7 +498,9 @@ static void dumpRenders() {
 		Agent* a = p->getParent();
 		if ((a->x < x0 || a->x > x1) && a->family != 4)
 			continue;
-		fmt::print("  render #{} {} part {} z {}\n", i, a->identify(), p->id, p->getZOrder());
+		auto* sp = dynamic_cast<SpritePart*>(p);
+		fmt::print("  render #{} {} part {} z {} at {:.0f},{:.0f} sprite {} frame {}\n", i, a->identify(), p->id, p->getZOrder(), a->x + p->x, a->y + p->y,
+			sp && sp->getSprite() ? sp->getSprite()->getName() : "-", sp ? (int)sp->getCurrentSprite() : -1);
 	}
 }
 
