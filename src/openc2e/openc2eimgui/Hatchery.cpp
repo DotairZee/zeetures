@@ -37,6 +37,8 @@
 #include "Camera.h"
 #include "ImGuiUtils.h"
 #include "World.h"
+#include "Room.h"
+#include "Map.h"
 #include "common/Random.h"
 #include "fileformats/bmpImage.h"
 #include "fileformats/c16Image.h"
@@ -57,6 +59,8 @@
 #include <imgui_internal.h>
 #include <chrono>
 #include <map>
+#include <unistd.h>
+#include <set>
 #include <cmath>
 #include <cfloat>
 #include <mutex>
@@ -1282,6 +1286,113 @@ static void DrawNursery() {
 	ImGui::PopStyleVar();
 }
 
+// developer aid: OPENC2E_TEST_LINEUP="Boney,female" (a breed as the
+// Hatchery names it, and a sex) stands that breed at each life stage, baby
+// to senile, in a row on the floor of room 54 (x 3100 on, floor 1996), and
+// pauses the world once they have landed (for comparing how each stage is
+// drawn; run with OPENC2E_MUTATION_RATE=0 so they keep the breed's looks)
+static void TestLineup() {
+	static const char* spec = getenv("OPENC2E_TEST_LINEUP");
+	static int pauseAt = -1;
+	// OPENC2E_LINEUP_SHOT="x,y,file": once they stand, the view moved to x,y
+	// (top left), a screenshot saved to file a few frames later, then quit
+	static int shotFrames = -1;
+	if (shotFrames >= 0) {
+		shotFrames++;
+		if (shotFrames == 20) {
+			int sx, sy;
+			char file[512];
+			if (sscanf(getenv("OPENC2E_LINEUP_SHOT"), "%d,%d,%511s", &sx, &sy, file) == 3)
+				get_backend()->requestScreenshot(file);
+		}
+		if (shotFrames == 30)
+			engine.done = true;
+		return;
+	}
+	if (pauseAt >= 0 && (int)world.tickcount >= pauseAt) {
+		world.paused = true;
+		pauseAt = -2;
+		std::string where;
+		for (auto& a : world.agents)
+			if (a && a->family == 4)
+				where += fmt::format(" {:.0f},{:.0f}-{:.0f}", a->x, a->y, a->y + a->getHeight());
+		fmt::print("* Lineup: paused; creatures at{}\n", where);
+		if (getenv("OPENC2E_LINEUP_SHOT"))
+			shotFrames = 0; // the picture, a few frames on
+	}
+	if (!spec || engine.version != 2 || world.tickcount < 30 || pauseAt != -1)
+		return;
+	// "Name,sex[,x,y,gap]": where the first stands (it falls to the floor)
+	std::vector<std::string> f;
+	for (size_t at = 0; at <= strlen(spec);) {
+		size_t end = std::string(spec).find(',', at);
+		f.push_back(std::string(spec).substr(at, end == std::string::npos ? std::string::npos : end - at));
+		if (end == std::string::npos)
+			break;
+		at = end + 1;
+	}
+	std::string name = f[0], sex = f.size() > 1 ? f[1] : "male";
+	int x0 = f.size() > 2 ? atoi(f[2].c_str()) : 3110, y0 = f.size() > 3 ? atoi(f[3].c_str()) : 1850, gap = f.size() > 4 ? atoi(f[4].c_str()) : 100;
+	int first = 0, last = 6; // ",a-b": only those stages
+	if (f.size() > 5)
+		sscanf(f[5].c_str(), "%d-%d", &first, &last);
+	const BreedInfo* found = nullptr;
+	for (auto& b : KnownBreeds())
+		if (to_ascii_lowercase(b.name) == to_ascii_lowercase(name) || to_ascii_lowercase(BreedLabel(b)) == to_ascii_lowercase(name))
+			found = &b;
+	pauseAt = -2;
+	if (!found) {
+		fmt::print("* Lineup: no breed \"{}\"\n", name);
+		return;
+	}
+	auto genome = GenomeWithBreed(BreedBaseGenome(*found), *found);
+	// a genome name of its own (several test copies may run at once)
+	static const char digits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+	unsigned int pid = (unsigned int)getpid();
+	std::string token = fmt::format("l{}{}", digits[pid % 36], digits[(pid / 36) % 36]);
+	auto [mum, dad] = WriteEggGenomes({genome}, token);
+	// a clear stretch of floor: plain objects there (bushes, toys) are
+	// removed (a test copy of the world only)
+	std::string script = fmt::format("enum 2 0 0 doif posx gt {} doif posx lt {} doif posy gt {} doif posy lt {} kill targ endi endi endi endi next\n",
+		x0 - 120, x0 + (last - first) * gap + 200, y0 - 200, y0 + 300);
+	for (int st = first; st <= last; st++)
+		script += fmt::format("new: gene tokn {} tokn {} var9 new: crea var9 {} mvto {} {} ages {}\n", mum, dad, sex == "female" ? 2 : 1, x0 + (st - first) * gap, y0, st);
+	std::set<Agent*> before;
+	for (auto& a : world.agents)
+		if (a && a->family == 4)
+			before.insert(a.get());
+	std::string err = engine.executeNetwork(script);
+	// each stood on the floor beneath it, and the world paused at once, so
+	// none falls or walks off before the picture
+	std::string where;
+	for (auto& a : world.agents) {
+		if (!a || a->family != 4 || before.count(a.get()))
+			continue;
+		if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()))
+			sc->poseInPlace("111111111111111"); // standing, facing you (as in birth photos)
+		float cx = a->x + a->getWidth() / 2.0f;
+		for (float yy = a->y + a->getHeight() - 2; yy < a->y + 600; yy += 2)
+			if (std::shared_ptr<Room> r = world.map->roomAt(cx, yy)) {
+				float fy = r->floorYatX(cx);
+				if (fy >= yy - 2) {
+					a->moveTo(a->x, fy - a->getHeight() - 1);
+					break;
+				}
+			}
+		a->velx = a->vely = 0;
+		where += fmt::format(" {:.0f},{:.0f}+{}x{}", a->x, a->y, a->getWidth(), a->getHeight());
+	}
+	if (const char* shot = getenv("OPENC2E_LINEUP_SHOT")) {
+		int sx, sy;
+		if (sscanf(shot, "%d,%d", &sx, &sy) == 2) {
+			engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+			engine.camera->moveToGlobal(sx, sy, jump);
+		}
+	}
+	fmt::print("* Lineup: {} ({}) at stages {}-{}{}; creatures at{}\n", BreedLabel(*found), sex, first, last, err.empty() ? "" : ": " + err, where);
+	pauseAt = (int)world.tickcount; // at once: posed, nothing to settle
+}
+
 void LoadHatchery() {
 	if (engine.version == 1) {
 		s_hatcherybackground = LoadImageWithTransparentTopLeft("hatchery/hatchery.bmp")[0];
@@ -1335,6 +1446,7 @@ void DrawHatchery() {
 	if (!(engine.version == 1 || engine.version == 2)) {
 		return;
 	}
+	TestLineup();
 
 	// developer aid: with OPENC2E_OPEN_KITS, OPENC2E_KITS_MINIMIZED starts it minimized
 	static bool s_test_min = getenv("OPENC2E_KITS_MINIMIZED") != nullptr;

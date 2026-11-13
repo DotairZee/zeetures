@@ -20,6 +20,7 @@
 #include "imageManager.h"
 #include <cmath>
 #include <map>
+#include <tuple>
 
 #include "Engine.h"
 #include "PathResolver.h"
@@ -300,6 +301,25 @@ std::shared_ptr<creaturesImage> imageManager::scaled(const std::shared_ptr<creat
 	for (size_t i = 0; i < img->images.size(); ++i)
 		img->images[i] = ImageUtils::Scale(oldimage->images[i], k);
 	cache[key] = img;
+	return img;
+}
+
+std::shared_ptr<creaturesImage> imageManager::muted(const std::shared_ptr<creaturesImage>& oldimage, float grey, float lift) {
+	// keyed by the source image itself (a scaled one has its source's name),
+	// checked against a weak reference so a reused address never matches
+	struct Entry {
+		std::weak_ptr<creaturesImage> source, result;
+	};
+	static std::map<std::tuple<const creaturesImage*, int, int>, Entry> cache;
+	auto key = std::make_tuple(oldimage.get(), (int)std::lround(grey * 1000), (int)std::lround(lift * 1000));
+	if (auto& e = cache[key]; e.source.lock() == oldimage)
+		if (auto hit = e.result.lock())
+			return hit;
+	auto img = std::make_shared<creaturesImage>(oldimage->getName());
+	img->images.resize(oldimage->images.size());
+	for (size_t i = 0; i < img->images.size(); ++i)
+		img->images[i] = ImageUtils::Mute(oldimage->images[i], grey, lift);
+	cache[key] = Entry{oldimage, img};
 	return img;
 }
 

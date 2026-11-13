@@ -128,6 +128,51 @@ Image Stipple(const Image& oldimage) {
 	return newimage;
 }
 
+Image Mute(const Image& src, float grey, float lift) {
+	const bool sixteen = src.format == if_rgb565 || src.format == if_rgb555;
+	const bool rgba = src.format == if_rgba32;
+	if (!sixteen && !rgba)
+		return src;
+	Image out = src;
+	const size_t n = (size_t)src.width * src.height;
+	const int bpp = rgba ? 4 : 2;
+	out.data = shared_array<uint8_t>(n * bpp);
+	std::memcpy(out.data.data(), src.data.data(), n * bpp);
+	auto mute = [&](float& r, float& g, float& b) {
+		float l = 0.299f * r + 0.587f * g + 0.114f * b;
+		r += (l - r) * grey, g += (l - g) * grey, b += (l - b) * grey;
+		r += (255 - r) * lift, g += (255 - g) * lift, b += (255 - b) * lift;
+	};
+	for (size_t i = 0; i < n; i++) {
+		uint8_t* p = out.data.data() + i * bpp;
+		if (rgba) {
+			if (p[3] == 0)
+				continue;
+			float r = p[0], g = p[1], b = p[2];
+			mute(r, g, b);
+			p[0] = (uint8_t)std::clamp(r, 0.f, 255.f), p[1] = (uint8_t)std::clamp(g, 0.f, 255.f), p[2] = (uint8_t)std::clamp(b, 0.f, 255.f);
+			continue;
+		}
+		uint16_t v;
+		std::memcpy(&v, p, 2);
+		if (v == 0)
+			continue; // transparent
+		float r, g, b;
+		if (src.format == if_rgb565)
+			r = ((v >> 11) & 31) * 255 / 31.f, g = ((v >> 5) & 63) * 255 / 63.f;
+		else
+			r = ((v >> 10) & 31) * 255 / 31.f, g = ((v >> 5) & 31) * 255 / 31.f;
+		b = (v & 31) * 255 / 31.f;
+		mute(r, g, b);
+		unsigned int R = (unsigned int)std::clamp(r, 0.f, 255.f), G = (unsigned int)std::clamp(g, 0.f, 255.f), B = (unsigned int)std::clamp(b, 0.f, 255.f);
+		v = src.format == if_rgb565 ? (uint16_t)(((R >> 3) << 11) | ((G >> 2) << 5) | (B >> 3)) : (uint16_t)(((R >> 3) << 10) | ((G >> 3) << 5) | (B >> 3));
+		if (v == 0)
+			v = 1 << 5; // opaque black must not turn transparent
+		std::memcpy(p, &v, 2);
+	}
+	return out;
+}
+
 Image Scale(const Image& src, float k) {
 	const int w = std::max(1, (int)std::lround(src.width * k));
 	const int h = std::max(1, (int)std::lround(src.height * k));

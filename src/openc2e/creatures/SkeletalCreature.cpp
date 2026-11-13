@@ -211,14 +211,14 @@ static bool stageScaleOn() {
 
 // the average frame size (mean of width and height) of a breed's body
 // sprite at an age, or 0 if there is none
-static float bodySetSize(int species, bool female, int age, int breed) {
-	static std::map<std::tuple<int, bool, int, int>, float> cache;
-	auto key = std::make_tuple(species, female, age, breed);
+static float partSetSize(char part, int species, bool female, int age, int breed) {
+	static std::map<std::tuple<char, int, bool, int, int>, float> cache;
+	auto key = std::make_tuple(part, species, female, age, breed);
 	if (auto it = cache.find(key); it != cache.end())
 		return it->second;
 	float size = 0;
 	for (bool f : {female, false}) {
-		std::string name = "b";
+		std::string name(1, part);
 		name += (char)('0' + species + (f ? 4 : 0));
 		name += (char)('0' + age);
 		name += breedSlotName(breed);
@@ -235,6 +235,10 @@ static float bodySetSize(int species, bool female, int age, int breed) {
 	}
 	cache[key] = size;
 	return size;
+}
+
+static float bodySetSize(int species, bool female, int age, int breed) {
+	return partSetSize('b', species, female, age, breed);
 }
 
 // The reference growth for a species: its breed with the most ages drawn
@@ -350,6 +354,97 @@ static float stageScale(int species, bool female, int breed, int stage) {
 	return g.at(stage) / g.at(drawn);
 }
 
+// ---- Per-part growth (prototype, owner 2026-11-13: option 3) ----------------
+// With OPENC2E_STAGE_GROWTH=parts, every breed (norns too) gets a look for
+// each of the seven life stages: a stage it has no pictures for is drawn
+// from the set the engine falls back to, each body part scaled by how much
+// that part grows between the two ages in its species' reference breed
+// (heads grow less than legs). Reference ages the reference breed lacks
+// (C2 draws no adolescent or adult) are interpolated between its drawn ages.
+static bool partGrowthOn() {
+	static const bool on = getenv("OPENC2E_STAGE_GROWTH") && std::string(getenv("OPENC2E_STAGE_GROWTH")) == "parts";
+	return on;
+}
+
+// a part's size in the reference breed at an age, interpolated (on a log
+// scale) between the ages it was drawn at, held level beyond them
+static float referencePartSize(char part, const StageGrowth& g, int age) {
+	std::array<float, 7> s{};
+	for (int a = 0; a <= 6; a++)
+		s[a] = partSetSize(part, g.species, false, a, g.breed);
+	if (s[age] > 0)
+		return s[age];
+	int lo = -1, hi = -1;
+	for (int a = age - 1; a >= 0 && lo < 0; a--)
+		if (s[a] > 0)
+			lo = a;
+	for (int a = age + 1; a <= 6 && hi < 0; a++)
+		if (s[a] > 0)
+			hi = a;
+	if (lo >= 0 && hi >= 0)
+		return s[lo] * std::pow(s[hi] / s[lo], (age - lo) / (float)(hi - lo));
+	return lo >= 0 ? s[lo] : hi >= 0 ? s[hi] : 0;
+}
+
+// the age a breed's only set of pictures shows (by its body's size against
+// the reference), or -1 if it has pictures at more than one age
+static int oneSetDrawnAge(int species, bool female, int breed) {
+	float own = bodySetSize(species, female, 0, breed);
+	if (own <= 0)
+		return -1;
+	for (int a = 1; a <= 6; a++)
+		if (bodySetSize(species, female, a, breed) > 0)
+			return -1;
+	const StageGrowth& g = stageGrowth(species);
+	if (g.breed < 0)
+		return -1;
+	int drawn = -1;
+	if (g.species == species) {
+		float bestd = 1e9f;
+		for (int a = 0; a <= 6; a++)
+			if (g.ages[a] > 0 && std::fabs(std::log(own / g.ages[a])) < bestd) {
+				bestd = std::fabs(std::log(own / g.ages[a]));
+				drawn = a;
+			}
+	} else {
+		for (int a = 6; a >= 0 && drawn < 0; a--)
+			if (g.ages[a] > 0)
+				drawn = a;
+	}
+	return drawn;
+}
+
+// the factor for part `part` shown at `stage` from pictures found at
+// `foundstage`
+static float partGrowth(char part, int species, bool female, int breed, int foundstage, int stage) {
+	int drawn = oneSetDrawnAge(species, female, breed);
+	if (drawn < 0)
+		drawn = foundstage;
+	if (drawn == stage)
+		return 1.0f;
+	const StageGrowth& g = stageGrowth(species);
+	if (g.breed < 0)
+		return 1.0f;
+	float now = referencePartSize(part, g, stage), then = referencePartSize(part, g, drawn);
+	if (now <= 0 || then <= 0)
+		return 1.0f;
+	return now / then;
+}
+
+// OPENC2E_SENILE_TINT=1 (prototype): a senile creature's pictures muted toward
+// grey and lightened a little (owner, 2026-11-13); OPENC2E_SENILE_TINT=g,l
+// sets the grey share and the lift
+static bool senileTint(float& grey, float& lift) {
+	static const char* v = getenv("OPENC2E_SENILE_TINT");
+	if (!v)
+		return false;
+	grey = 0.55f, lift = 0.08f;
+	sscanf(v, "%f,%f", &grey, &lift);
+	if (std::string(v) == "1")
+		grey = 0.55f, lift = 0.08f;
+	return true;
+}
+
 void SkeletalCreature::skeletonInit() {
 	// TODO: the exception throwing in here needs some more thought
 	// TODO: if we throw an exception when we need to kill the creature off, else segfault :/
@@ -446,13 +541,17 @@ void SkeletalCreature::skeletonInit() {
 
 		// a breed drawn at one age only, scaled to the life stage: the
 		// pictures and every joint point together, so the parts still meet
-		float k = stageScale(spe, foundfemale, foundvar, creature->getStage());
+		float k = partGrowthOn() ? partGrowth(x, spe, foundfemale, foundvar, foundstage, creature->getStage())
+								 : stageScale(spe, foundfemale, foundvar, creature->getStage());
 		if (std::fabs(k - 1.0f) > 0.01f) {
 			images[i] = world.gallery->scaled(images[i], k);
 			for (auto& pose : att[i].attachments)
 				for (auto& v : pose)
 					v = (unsigned int)std::lround(v * k);
 		}
+		float grey, lift;
+		if (creature->getStage() == 6 && senileTint(grey, lift))
+			images[i] = world.gallery->muted(images[i], grey, lift);
 	}
 }
 

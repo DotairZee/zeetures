@@ -44,6 +44,8 @@ class imageManager {
 	std::shared_ptr<creaturesImage> stipple(const std::shared_ptr<creaturesImage>& image);
 	// every picture scaled by k (cached by name and k)
 	std::shared_ptr<creaturesImage> scaled(const std::shared_ptr<creaturesImage>& image, float k);
+	// muted toward grey and lightened (ImageUtils::Mute), cached
+	std::shared_ptr<creaturesImage> muted(const std::shared_ptr<creaturesImage>& image, float grey, float lift);
 	std::shared_ptr<creaturesImage> tint(const std::shared_ptr<creaturesImage>& image,
 		unsigned char r, unsigned char g, unsigned char b,
 		unsigned char rotation, unsigned char swap);
