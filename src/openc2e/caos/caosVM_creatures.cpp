@@ -1961,14 +1961,17 @@ void c_TRIG(caosVM* vm) {
 
 /**
  MONK (integer)
- %status stub
+ %status maybe
  %variants c2
+
+ Returns the target creature's moniker as an integer (its four letters, as
+ NEW: GENE and NEW: CREA take it).
 */
 void v_MONK(caosVM* vm) {
 	oldCreature* c = getoldCreature(vm->targ.get());
 	THROW_IFNOT(c);
 
-	vm->result.setInt(0); // TODO
+	vm->result.setInt(genomeNameToInt(world.history->findMoniker(c->getGenome())));
 }
 
 /**

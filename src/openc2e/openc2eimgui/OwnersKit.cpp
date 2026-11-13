@@ -134,6 +134,8 @@ static void RegistrationPage() {
 	};
 	if (m->mother.empty() && m->father.empty())
 		row("Parents", "none: it hatched from an egg laid by the Hatchery or the Breeder's Kit");
+	else if (m->mother == m->father) // one genome copied (NEW: GENE of one creature: the Metamorphosis device)
+		row("Parents", "cloned from " + nameOf(m->mother));
 	else
 		row("Parents", fmt::format("{} and {}", m->mother.empty() ? "unknown" : nameOf(m->mother), m->father.empty() ? "unknown" : nameOf(m->father)));
 	std::vector<std::string> kids;
@@ -690,6 +692,8 @@ static std::string roleText(const std::vector<std::string>& roles) {
 	if (roles.empty())
 		return "";
 	auto has = [&](const char* r) { return std::find(roles.begin(), roles.end(), r) != roles.end(); };
+	if (roles.size() == 2 && has("Mother") && has("Father"))
+		return "Cloned from";
 	if (roles.size() == 2 && has("Mother's mother") && has("Father's mother"))
 		return "Grandmother on both sides";
 	if (roles.size() == 2 && has("Mother's father") && has("Father's father"))

@@ -17,14 +17,17 @@
  *
  */
 
+#include "Engine.h"
 #include "World.h"
 #include "caosVM.h"
 #include "common/throw_ifnot.h"
+#include "creatures/Breeding.h"
 #include "creatures/CreatureAgent.h"
 #include "fileformats/genomeFile.h"
 #include "historyManager.h"
 
 #include <cassert>
+#include <fmt/core.h>
 #include <memory>
 
 /**
@@ -171,17 +174,46 @@ void v_MTOC(caosVM* vm) {
 	vm->result.setAgent(a);
 }
 
+// a genome by moniker: a living creature's own, or a file in Genetics
+static std::shared_ptr<genomeFile> genomeByName(const std::string& name) {
+	if (world.history->hasMoniker(name))
+		if (auto g = world.history->getMoniker(name).genome.lock())
+			return g;
+	return world.loadGenome(name);
+}
+
 /**
  NEW: GENE (command) mum (integer) dad (integer) destination (variable)
- %status stub
+ %status maybe
  %variants c1 c2
+
+ Makes a new genome from two others, named by moniker as integers (MONK, an
+ egg's genome), the way a conception does (crossover and mutation), stores it
+ under a new name and sets destination to that name. mum and dad may be the
+ same: a copy of one genome, with the usual small mutations (the
+ Metamorphosis device clones a creature this way).
 */
 void c_NEW_GENE(caosVM* vm) {
 	VM_PARAM_VARIABLE(destination)
-	VM_PARAM_INTEGER_UNUSED(dad)
+	VM_PARAM_INTEGER(dad)
 	VM_PARAM_INTEGER(mum)
 
-	destination->setInt(mum); // TODO
+	THROW_IFNOT(mum != 0 && dad != 0);
+	std::string mumName = genomeNameFromInt(mum), dadName = genomeNameFromInt(dad);
+	std::shared_ptr<genomeFile> m = genomeByName(mumName), d = genomeByName(dadName);
+	if (!m)
+		throw Exception("NEW: GENE: failed to find genome '" + mumName + "'");
+	if (!d)
+		throw Exception("NEW: GENE: failed to find genome '" + dadName + "'");
+	THROW_IFNOT(m->getVersion() == engine.version && d->getVersion() == engine.version);
+
+	CrossReport rep;
+	std::shared_ptr<genomeFile> child = crossGenomes(*m, *d, mumName, dadName, &rep);
+	std::string name = storeGenome(*child);
+	if (name.empty())
+		throw Exception("NEW: GENE: couldn't store the new genome");
+	fmt::print("* NEW: GENE {} and {}: genome {} ({} genes, {} mutations)\n", mumName, dadName, name, rep.genes, rep.mutations);
+	destination->setInt(genomeNameToInt(name));
 }
 
 /* vim: set noet: */
