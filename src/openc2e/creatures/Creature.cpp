@@ -799,7 +799,32 @@ void oldCreature::keepInRoomSystem() {
 		if (group.count(foot.get()))
 			for (auto& [r, k] : group)
 				pocketRooms += k == group[foot.get()];
-		if (group.count(foot.get()) && group[foot.get()] != worldGroup && pocketRooms <= 2) {
+		// (not when its feet stand in a room of the world: a creature pressed
+		// against the far east wall (x 8240) had its middle 2 px into the
+		// sealed pocket beyond and was lifted 900 px to the surface; owner,
+		// 2026-11-12)
+		bool feetInWorld = false;
+		if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
+			if (std::shared_ptr<Room> fr = sc->footRoom(); fr && group.count(fr.get()) && group[fr.get()] == worldGroup)
+				feetInWorld = true;
+		if (!feetInWorld && group.count(foot.get()) && group[foot.get()] != worldGroup && pocketRooms <= 2) {
+			// first the nearest room of the world beside it, at its feet's height
+			float fy = a->y + a->getHeight() - 2;
+			for (float dx = 4; dx <= 80; dx += 4)
+				for (float side : {-1.0f, 1.0f}) {
+					std::shared_ptr<Room> r = world.map->roomAt(cx + side * dx, fy);
+					if (!r || r->type == 2 || !group.count(r.get()) || group[r.get()] != worldGroup)
+						continue;
+					float oldx = a->x, oldy = a->y;
+					a->moveTo(a->x + side * (dx + a->getWidth() / 2.0f), a->y);
+					a->velx = 0;
+					a->vely = 0;
+					if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
+						sc->scriptMoved();
+					fmt::print("* {} was in a sealed pocket (room {}) at {:.0f},{:.0f}; moved beside it into room {} at {:.0f},{:.0f}\n",
+						world.history->findMoniker(genome), foot->id, oldx, oldy, r->id, a->x, a->y);
+					return;
+				}
 			for (float yy = a->y + a->getHeight() - 12; yy > a->y - 800; yy -= 10) {
 				std::shared_ptr<Room> r = world.map->roomAt(cx, yy);
 				if (!r || r->type == 2 || !group.count(r.get()) || group[r.get()] != worldGroup)
