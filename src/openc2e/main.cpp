@@ -63,6 +63,7 @@ int main(int argc, char* argv[]) {
 		return 0;
 
 	get_backend()->run([] {
+		hang_watch_beat(); // (see install_backtrace_printer: hang reports)
 		engine.tick();
 		if (engine.done) {
 			return false;

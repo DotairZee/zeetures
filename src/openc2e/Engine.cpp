@@ -381,6 +381,18 @@ void Engine::drawWorld() {
 		if (camera->isPanning())
 			fmt::print("* TEST PAN t{} at {},{}\n", get_ticks_msec(), camera->getX(), camera->getY());
 	}
+	// developer aid: OPENC2E_TEST_HANG=N spins the main loop for N seconds
+	// at world tick 50 (to test the hang reports, common/backtrace.h)
+	if (const char* th = getenv("OPENC2E_TEST_HANG")) {
+		static bool hung = false;
+		if (!hung && world.tickcount >= 50) {
+			hung = true;
+			unsigned int until = get_ticks_msec() + 1000u * (unsigned int)atoi(th);
+			volatile unsigned long spin = 0;
+			while (get_ticks_msec() < until)
+				spin++;
+		}
+	}
 	camera->stepPan(); // smooth scrolling, frame by frame
 	Openc2eImGui::Update();
 	get_backend()->getMainRenderTarget()->setViewportOffsetTop(Openc2eImGui::GetViewportOffsetTop());

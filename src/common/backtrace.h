@@ -148,15 +148,77 @@ LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
 #include <cxxabi.h>
 #endif
 
+static void print_frames(bool demangle);
+
 static void signalhandler(int) {
+	print_frames(true);
+	exit(1);
+}
+
+// Hang reports (2026-11-12: Home froze twice and had to be force-quit, with
+// nothing in its log): main loop beats once a frame (hang_watch_beat); a
+// watcher thread, when no beat has come for 8 s, signals the main thread
+// (SIGUSR2), which prints its own stack to stderr and carries on. Repeated
+// every 20 s while it stays stuck, to tell a loop that moves from one that
+// doesn't. Names are not demangled (no allocating in the handler); offsets
+// are for addr2line.
+#include <atomic>
+#include <chrono>
+#include <pthread.h>
+#include <thread>
+
+static std::atomic<unsigned long> s_hang_beats{0};
+static pthread_t s_main_thread;
+
+static void hangsignalhandler(int) {
+	fprintf(stderr, "* HANG: the main loop has not finished a frame for a while; its stack:\n");
+	print_frames(false);
+	fprintf(stderr, "* HANG: end of stack\n");
+}
+
+inline void hang_watch_beat() {
+	s_hang_beats.fetch_add(1, std::memory_order_relaxed);
+}
+
+static void start_hang_watch() {
+	s_main_thread = pthread_self();
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = hangsignalhandler;
+	sa.sa_flags = SA_ONSTACK | SA_RESTART;
+	sigemptyset(&sa.sa_mask);
+	sigaction(SIGUSR2, &sa, nullptr);
+	std::thread([] {
+		unsigned long last = 0;
+		auto since = std::chrono::steady_clock::now();
+		auto reported = since;
+		bool stuck = false;
+		while (true) {
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+			unsigned long now_beats = s_hang_beats.load(std::memory_order_relaxed);
+			auto now = std::chrono::steady_clock::now();
+			if (now_beats != last || now_beats == 0) { // moving, or not started yet
+				if (stuck)
+					fprintf(stderr, "* HANG: over; frames again after %.0f s\n", std::chrono::duration<double>(now - since).count());
+				last = now_beats;
+				since = now;
+				stuck = false;
+				continue;
+			}
+			double idle = std::chrono::duration<double>(now - since).count();
+			if ((!stuck && idle >= 8) || (stuck && std::chrono::duration<double>(now - reported).count() >= 20)) {
+				fprintf(stderr, "* HANG: no frame for %.0f s\n", idle);
+				stuck = true;
+				reported = now;
+				pthread_kill(s_main_thread, SIGUSR2);
+			}
+		}
+	}).detach();
+}
+
+static void print_frames(bool demangle) {
 	void* callstack[128];
 	int num_frames = backtrace(callstack, 128);
-	char** symbols = backtrace_symbols(callstack, num_frames);
-	if (!symbols) {
-		fprintf(stderr, "backtrace_symbols() returned NULL\n");
-		backtrace_symbols_fd(callstack, num_frames, STDERR_FILENO);
-		exit(1);
-	}
 	for (int i = 0; i < num_frames; i++) {
 		Dl_info info;
 		memset(&info, 0, sizeof(info));
@@ -186,9 +248,9 @@ static void signalhandler(int) {
 		// function name
 		if (info.dli_sname) {
 #ifdef __GNUG__
-			int status;
-			char* demangled = abi::__cxa_demangle(info.dli_sname, NULL, NULL, &status);
-			if (status == 0) {
+			int status = -1;
+			char* demangled = demangle ? abi::__cxa_demangle(info.dli_sname, NULL, NULL, &status) : nullptr;
+			if (status == 0 && demangled) {
 				fprintf(stderr, "%s ", demangled);
 				free(demangled);
 			} else {
@@ -207,10 +269,12 @@ static void signalhandler(int) {
 		// end of frame
 		fprintf(stderr, "\n");
 	}
-	free(symbols);
-	exit(1);
 }
 
+#endif
+
+#ifdef _WIN32
+inline void hang_watch_beat() {}
 #endif
 
 void install_backtrace_printer() {
@@ -232,5 +296,6 @@ void install_backtrace_printer() {
 	sigemptyset(&sa.sa_mask);
 	for (int sig : {SIGABRT, SIGBUS, SIGFPE, SIGILL, SIGSEGV, SIGTRAP})
 		sigaction(sig, &sa, nullptr);
+	start_hang_watch();
 #endif
 }
