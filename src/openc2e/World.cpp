@@ -295,6 +295,14 @@ void World::tick() {
 	scriptqueue.clear();
 	scriptqueue = newqueue;
 
+	// developer aid: OPENC2E_TEST_BIG_MOVE=1 has the engine itself move the
+	// selected creature 400 px up at tick 100 (checks BIG MOVE's stack line)
+	static bool testBigMove = getenv("OPENC2E_TEST_BIG_MOVE") != nullptr;
+	if (testBigMove && tickcount == 100) {
+		if (std::shared_ptr<Agent> c = selectedcreature.lock())
+			c->moveTo(c->x, c->y - 400);
+	}
+
 	// developer aid: OPENC2E_TEST_PUSH=1 shoves the selected creature east
 	// once, at tick 100 (the push hand)
 	static bool testPush = getenv("OPENC2E_TEST_PUSH") != nullptr;

@@ -18,6 +18,11 @@
  */
 
 #include "Agent.h"
+#ifndef _WIN32
+#include <dlfcn.h>
+#include <execinfo.h>
+#endif
+#include <cstring>
 
 #include "AgentHelpers.h"
 #include "Camera.h"
@@ -164,6 +169,27 @@ void Agent::zotstack() {
 	vmstack.clear();
 }
 
+// the C++ call stack, as "module+offset" frames for addr2line (names where the
+// dynamic symbol table has them), skipping the logger's own frames
+static std::string engineStack() {
+#ifndef _WIN32
+	void* frames[20];
+	int n = backtrace(frames, 20);
+	std::string out;
+	for (int i = 2; i < n; i++) {
+		Dl_info info;
+		if (dladdr(frames[i], &info) && info.dli_fname) {
+			const char* mod = strrchr(info.dli_fname, '/');
+			out += fmt::format(" {}+{:#x}", mod ? mod + 1 : info.dli_fname, (uintptr_t)frames[i] - (uintptr_t)info.dli_fbase);
+		} else
+			out += fmt::format(" {}", frames[i]);
+	}
+	return out;
+#else
+	return {};
+#endif
+}
+
 void Agent::logBigMove(float nx, float ny) {
 	std::string by = "the engine";
 	if (g_runningVM && g_runningVM->currentscript) {
@@ -175,6 +201,11 @@ void Agent::logBigMove(float nx, float ny) {
 		by = fmt::format("its carrier {} {} {}", (int)carriedby->family, (int)carriedby->genus, carriedby->species);
 	fmt::print("* BIG MOVE {} {} {} unid {} from {:.0f},{:.0f} to {:.0f},{:.0f} by {}{}\n", (int)family, (int)genus, species, unid, x, y, nx, ny, by,
 		invehicle ? fmt::format(" (in vehicle {} {} {})", (int)invehicle->family, (int)invehicle->genus, invehicle->species) : std::string());
+	// which engine code moved it (2026-11-13: a grendel at the world's seam
+	// was moved 489 px up by no script and not by the pocket safety net):
+	// resolve with addr2line -f -C -e build/openc2e OFFSET
+	if (by == "the engine")
+		fmt::print("* BIG MOVE stack:{}\n", engineStack());
 }
 
 void Agent::moveTo(float _x, float _y, bool force) {
