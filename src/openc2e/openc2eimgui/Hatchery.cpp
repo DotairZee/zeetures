@@ -91,6 +91,8 @@ struct C2EggInfo {
 	int frame = 0;
 	std::string moniker;
 	std::string breed; // its breed, named as in the Breeder's Kit (owner, 2026-11-12)
+	std::string label; // the breed's full label ("Horse (Norn c)"), for the tooltip
+	int sexes = 3; // the sexes it may hatch as (1 male, 2 female): its breed's pictures
 	std::vector<std::vector<uint8_t>> genomes;
 	int x = 0;
 	int y = 0;
@@ -138,46 +140,6 @@ static void ImportGenome(const std::string& path) {
 	s_import_message = fmt::format("Made an egg from {}.", name);
 }
 
-static std::vector<std::filesystem::path> findC2EggFiles() {
-	std::vector<std::filesystem::path> result;
-	for (auto& dir : getMainDirectories()) {
-		std::error_code ec;
-		for (auto& sub : std::filesystem::directory_iterator(dir, ec)) {
-			std::string name = to_ascii_lowercase(sub.path().filename().string());
-			if (name != "eggs" || !sub.is_directory())
-				continue;
-			for (auto& f : std::filesystem::directory_iterator(sub.path(), ec)) {
-				if (to_ascii_lowercase(f.path().extension().string()) == ".egg")
-					result.push_back(f.path());
-			}
-		}
-	}
-	std::sort(result.begin(), result.end());
-	return result;
-}
-
-static bool readC2Egg(const std::filesystem::path& file, C2EggInfo& egg) {
-	std::ifstream in(file, std::ios::binary);
-	std::vector<uint8_t> d((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-	if (d.size() < 30 || std::memcmp(d.data(), "eggf", 4) != 0)
-		return false;
-	egg.file = file;
-	egg.gender = d[4];
-	egg.frame = d[5];
-	egg.moniker = std::string(reinterpret_cast<const char*>(&d[14]), 4);
-	egg.moniker.erase(std::find(egg.moniker.begin(), egg.moniker.end(), '\0'), egg.moniker.end());
-	size_t pos = 26;
-	while (pos + 4 <= d.size() && egg.genomes.size() < 2) {
-		uint32_t len = d[pos] | (d[pos + 1] << 8) | (d[pos + 2] << 16) | ((uint32_t)d[pos + 3] << 24);
-		pos += 4;
-		if (len < 4 || pos + len > d.size() || std::memcmp(&d[pos], "dna", 3) != 0)
-			break;
-		egg.genomes.emplace_back(d.begin() + pos, d.begin() + pos + len);
-		pos += len;
-	}
-	return !egg.genomes.empty();
-}
-
 // Lays an egg in the world near the incubator: the world's own egg object
 // (2 5 2), whose scripts develop and hatch it. Its genomes are written to
 // the user data folder under short unique tokens for NEW: GENE. Used by the
@@ -220,9 +182,12 @@ static void TakeC2Egg(size_t index) {
 	if (egg.taken)
 		return;
 	std::vector<std::vector<uint8_t>> genomes = egg.genomes;
+	int gender = egg.gender;
+	if (gender == 0) // decided now: either, or the one its breed has
+		gender = egg.sexes == 1 ? 1 : egg.sexes == 2 ? 2 : rand_int32(1, 2);
 	// tokens 4 characters, unique per Hatchery egg: q + 2 digits + m/d
 	std::string err;
-	if (!LayC2Egg(genomes, egg.gender, egg.frame, fmt::format("q{:02d}", (int)index % 100), err)) {
+	if (!LayC2Egg(genomes, gender, egg.frame, fmt::format("q{:02d}", (int)index % 100), err)) {
 		fmt::print("Couldn't hatch egg {}: {}\n", egg.file.filename().string(), err);
 		return;
 	}
@@ -263,28 +228,44 @@ void LoadHatchery() {
 	} else if (engine.version == 2) {
 		s_omelette = LoadImageWithTransparentTopLeft("Applet Data/Omelette.s16");
 
+		// one egg of every breed in the game, of a sex drawn at random
+		// from those the breed has pictures for (owner, 2026-11-12); before,
+		// the ten eggs of C2's Eggs folder. Each is the breed's genome (its
+		// own, or the species' standard one) wearing the breed's parts, as
+		// the Breeder's Kit lays them. Norns first, then grendels, ettins.
 		s_c2eggs.clear();
-		for (auto& f : findC2EggFiles()) {
-			C2EggInfo egg;
-			if (readC2Egg(f, egg)) {
-				if (!egg.genomes.empty())
-					egg.breed = BreedNameOfGenome(egg.genomes[0]);
-				s_c2eggs.push_back(egg);
-			}
-			if (s_c2eggs.size() == 10)
-				break; // the hatchery holds ten
-		}
 		{
+			std::vector<const BreedInfo*> breeds;
+			for (auto& b : KnownBreeds())
+				if (b.parts.count('a') && b.parts.count('b')) // a head and a body
+					breeds.push_back(&b);
+			auto kindOf = [](const BreedInfo* b) { return b->kind >= 0 ? b->kind : b->species; };
+			std::stable_sort(breeds.begin(), breeds.end(), [&](const BreedInfo* l, const BreedInfo* r) {
+				return kindOf(l) != kindOf(r) ? kindOf(l) < kindOf(r) : l->species != r->species ? l->species < r->species : l->slot < r->slot;
+			});
 			std::string kinds;
-			for (auto& e : s_c2eggs)
-				kinds += fmt::format("{}{} {}", kinds.empty() ? "" : ", ", e.gender == 2 ? "female" : e.gender == 1 ? "male" : "?", e.breed.empty() ? e.moniker : e.breed);
-			fmt::print("* Hatchery: {} eggs from the Eggs folder: {}\n", s_c2eggs.size(), kinds);
+			for (const BreedInfo* b : breeds) {
+				auto genome = BreedBaseGenome(*b);
+				if (genome.empty())
+					continue;
+				C2EggInfo egg;
+				egg.genomes.push_back(GenomeWithBreed(genome, *b));
+				// its sex unknown until it is placed in the world (owner,
+				// 2026-11-12), then drawn from the sexes its breed has
+				egg.gender = 0;
+				egg.sexes = (b->male ? 1 : 0) | (b->female ? 2 : 0);
+				egg.frame = rand_int32(0, 10);
+				egg.breed = b->name.empty() ? BreedLabel(*b) : b->name;
+				egg.label = BreedLabel(*b);
+				s_c2eggs.push_back(egg);
+				kinds += fmt::format("{}{}", kinds.empty() ? "" : ", ", egg.label);
+			}
+			fmt::print("* Hatchery: {} eggs, one of each breed: {}\n", s_c2eggs.size(), kinds);
 		}
 		for (auto& egg : s_c2eggs)
 			egg.x = 0;
 		for (auto& egg : s_c2eggs)
 			PlaceEggInHatchery(egg);
-		std::sort(s_c2eggs.begin(), s_c2eggs.end(), [](const auto& l, const auto& r) { return l.y < r.y; });
 	}
 
 	s_hatchery_loaded = true;
@@ -401,7 +382,7 @@ void DrawHatchery() {
 			// the eggs as tiles (owner, 2026-11-12: the kits' own style, not
 			// C2's incubator picture): each egg's own picture and its sex;
 			// click one to send it into the world
-			const float TW = 96, TH = 92;
+			const float TW = 96, TH = 106;
 			const int per = 5;
 			ImDrawList* dl = ImGui::GetWindowDrawList();
 			int shown = 0;
@@ -417,7 +398,8 @@ void DrawHatchery() {
 				bool hov = ImGui::IsItemHovered();
 				if (hov)
 					ImGui::SetTooltip("%s egg (%s)\nClick to place it in the world. It hatches where it lies, or sooner in the incubator.",
-						egg.gender == 2 ? "Female" : egg.gender == 1 ? "Male" : "Unknown-sex", egg.breed.empty() ? egg.moniker.c_str() : egg.breed.c_str());
+						egg.gender == 2 ? "Female" : egg.gender == 1 ? "Male" : "Unknown-sex",
+						!egg.label.empty() ? egg.label.c_str() : egg.breed.empty() ? egg.moniker.c_str() : egg.breed.c_str());
 				ImGui::PopID();
 				dl->AddRectFilled(at, at + ImVec2(TW, TH), hov ? IM_COL32(38, 40, 48, 255) : IM_COL32(26, 28, 34, 255), 5);
 				dl->AddRect(at, at + ImVec2(TW, TH), hov ? IM_COL32(205, 170, 95, 255) : IM_COL32(70, 72, 80, 255), 5);
@@ -429,11 +411,20 @@ void DrawHatchery() {
 				ImU32 col = egg.gender == 2 ? IM_COL32(240, 150, 190, 255) : egg.gender == 1 ? IM_COL32(130, 180, 250, 255) : IM_COL32(170, 170, 170, 255);
 				ImVec2 ts = ImGui::CalcTextSize(sex);
 				dl->AddText(at + ImVec2((TW - ts.x) / 2, TH - ts.y - 6), col, sex);
+				// its breed (shortened to fit the tile)
+				std::string name = egg.breed.empty() ? egg.moniker : egg.breed;
+				if (ImGui::CalcTextSize(name.c_str()).x > TW - 8) {
+					while (name.size() > 2 && ImGui::CalcTextSize((name + ".").c_str()).x > TW - 8)
+						name.pop_back();
+					name += ".";
+				}
+				ImVec2 ns = ImGui::CalcTextSize(name.c_str());
+				dl->AddText(at + ImVec2((TW - ns.x) / 2, TH - ts.y - ns.y - 8), IM_COL32(222, 224, 230, 255), name.c_str());
 				if (click)
 					TakeC2Egg(i);
 			}
 			if (!shown)
-				KitNote("The Hatchery is empty. Its eggs come from the Eggs folder, or File > Import Genome.");
+				KitNote("The Hatchery is empty: every breed's egg has been taken. It fills again when the world is next loaded; File > Import Genome adds more.");
 			// (the breed dropdown, "As in the egg", was removed: unclear;
 			// owner, 2026-11-11. Breeds are chosen in the Breeder's Kit.)
 			// egg locator (owner, 2026-11-11): each click goes to the next
