@@ -34,6 +34,8 @@
 #include "common/creaturesImage.h"
 #include "common/throw_ifnot.h"
 #include "creatures/SkeletalCreature.h"
+#include "historyManager.h"
+#include "creatures/oldCreature.h"
 
 #include <algorithm>
 #include <cassert>
@@ -646,6 +648,24 @@ void c_KILL(caosVM* vm) {
 	VM_VERIFY_SIZE(1)
 	VM_PARAM_VALIDAGENT(a)
 
+	// C2: the frog's kiss lasts only near the pond. Its watcher (2 1 94,
+	// from the Frogs COB) KILLs the frog norn it made once it strays, and
+	// makes a frog in its place: in the life log that is a change, not a
+	// death (owner, 2026-11-11/13). A plain KILL logs nothing otherwise.
+	if (engine.version == 2 && vm->owner && vm->owner->family == 2 && vm->owner->genus == 1 && vm->owner->species == 94) {
+		CreatureAgent* ca = dynamic_cast<CreatureAgent*>(a.get());
+		if (ca && ca->getCreature() && ca->getCreature()->isAlive()) {
+			std::string mon = world.history->findMoniker(ca->getCreature()->getGenome());
+			size_t notices = world.history->notices.size(), entries = world.history->lifelog.size();
+			world.history->logLife(lifeLogEntry::changed, mon, (int)ca->getCreature()->getStage());
+			const char* what = "turned back into a frog, away from the pond";
+			if (world.history->lifelog.size() > entries)
+				world.history->lifelog.back().cause = what;
+			if (world.history->notices.size() > notices)
+				world.history->notices.back().cause = what;
+			fmt::print("* Frog norn {} turned back into a frog at {:.0f}, {:.0f}\n", mon, a->x, a->y);
+		}
+	}
 	// note that kill is a virtual function which doesn't work on PNTR
 	a->kill();
 }

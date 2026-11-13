@@ -370,6 +370,7 @@ static const char* kindWord(int kind) {
 		case lifeLogEntry::eggLaid: return "Egg laid";
 		case lifeLogEntry::unconscious: return "Unconscious";
 		case lifeLogEntry::cameRound: return "Came round";
+		case lifeLogEntry::changed: return "Changed";
 		default: return "Pregnant";
 	}
 }
@@ -405,6 +406,7 @@ static std::string entryDetail(const lifeLogEntry& e) {
 		}
 		case lifeLogEntry::unconscious: return fmt::format("a {}, {}: out of energy. Mend the cause soon (out of water, fed, a Health Kit injection)", who, stageWord(e.stage));
 		case lifeLogEntry::cameRound: return fmt::format("a {}, {}: came round", who, stageWord(e.stage));
+		case lifeLogEntry::changed: return fmt::format("a {}, {}: {}", who, stageWord(e.stage), e.cause.empty() ? "changed into something else" : e.cause);
 		case lifeLogEntry::eggLaid: {
 			std::string s = fmt::format("laid by a {}, {}", who, stageWord(e.stage));
 			if (auto egg = KitEggOf(e.child))
@@ -569,6 +571,7 @@ void DrawLifeNotices(float room) {
 																: e.kind == lifeLogEntry::eggLaid			? ImVec4(0.62f, 0.50f, 0.18f, 1)
 																: e.kind == lifeLogEntry::unconscious		? ImVec4(0.75f, 0.16f, 0.14f, 1)
 																: e.kind == lifeLogEntry::cameRound		? ImVec4(0.20f, 0.52f, 0.25f, 1)
+															: e.kind == lifeLogEntry::changed			? ImVec4(0.16f, 0.44f, 0.50f, 1)
 																										  : ImVec4(0.70f, 0.30f, 0.50f, 1);
 		ImGui::PushStyleColor(ImGuiCol_Button, col);
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(col.x + 0.12f, col.y + 0.12f, col.z + 0.12f, 1));

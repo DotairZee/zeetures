@@ -20,6 +20,7 @@
 #include "Engine.h"
 #include "PathResolver.h"
 #include "World.h"
+#include "WorldSave.h"
 #include "caosVM.h"
 #include "creatures/CreatureAgent.h"
 #include "creatures/CreatureSpeech.h"
@@ -429,6 +430,8 @@ void v_OC2E_DDIR(caosVM* vm) {
 
  Do something by providing a menu ID from the original Creatures 1 or Creatures 2 engines. This is obviously limited to the IDs that openc2e is aware of.
  Known: C2 32777, Instant Vocabulary (the selected creature learns every word; the Stone of Knowledge uses it).
+ C2 32865, Force Ageing (the selected creature grows one life stage; the frog's kiss calls it four times so the
+ frog norn it makes is an adult). Names from the game's own menu resources.
 */
 void c_SYS_CMND(caosVM* vm) {
 	VM_PARAM_INTEGER(menuid)
@@ -437,6 +440,17 @@ void c_SYS_CMND(caosVM* vm) {
 		CreatureAgent* ca = dynamic_cast<CreatureAgent*>(world.selectedcreature.get());
 		if (ca)
 			learnAllWords(dynamic_cast<oldCreature*>(ca->getCreature()));
+	}
+	if (engine.version == 2 && menuid == 32865) {
+		// one stage older, as natural ageing (genes and body for the stage,
+		// the life chemical moved to match); never past senile
+		std::shared_ptr<Agent> a = world.selectedcreature.lock();
+		CreatureAgent* ca = dynamic_cast<CreatureAgent*>(a.get());
+		if (ca && ca->getCreature() && ca->getCreature()->isAlive() && (int)ca->getCreature()->getStage() < 6) {
+			std::string err;
+			if (!WorldSave::SetCreatureLifeStage(a, (int)ca->getCreature()->getStage() + 1, err))
+				fmt::print("* Force Ageing: {}\n", err);
+		}
 	}
 }
 

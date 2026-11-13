@@ -139,7 +139,8 @@ struct lifeLogEntry {
 		pregnancy = 2,
 		eggLaid = 3, // a mother laid her egg (the status bar's notice goes to the egg)
 		unconscious = 4, // out of energy, it fell unconscious (C2)
-		cameRound = 5 }; // and came round
+		cameRound = 5, // and came round
+		changed = 6 }; // became something else, not a death (C2: a frog norn turned back into a frog); cause says what
 	int kind = birth;
 	unsigned int tick = 0; // world tick count
 	std::string moniker;
