@@ -190,6 +190,13 @@ void setAutosaveMinutes(int minutes) {
 	writeSetting("autosave-minutes", std::to_string(s_autosave_minutes));
 }
 
+bool speechBubbleShowing(Agent* creature) {
+	if (!creature)
+		return false;
+	auto it = bubbles.find(creature->getUNID());
+	return it != bubbles.end() && it->second && !it->second->isDying();
+}
+
 bool speechBubblesShown() {
 	if (s_bubbles_shown < 0)
 		s_bubbles_shown = readSetting("speech-bubbles") == "0" ? 0 : 1;

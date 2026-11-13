@@ -207,7 +207,8 @@ void draw(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth) {
 			continue;
 		}
 		++it;
-		if (m == OFF || (m == SELECTED && world.selectedcreature.get() != c) || Bubble::hiddenRider(c))
+		// one bubble at a time: while it speaks, its thought is not shown
+		if (m == OFF || (m == SELECTED && world.selectedcreature.get() != c) || Bubble::hiddenRider(c) || speechBubbleShowing(c))
 			continue;
 		if (!syst || syst->numframes() < 30)
 			continue;

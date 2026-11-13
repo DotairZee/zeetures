@@ -89,6 +89,9 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 // folder's settings.txt ("speech-bubbles 0" or 1). Turning it off clears
 // the bubbles showing.
 bool speechBubblesShown();
+// whether a creature's speech bubble is showing now (a creature shows a
+// speech bubble or a thought bubble, not both: owner, 2026-11-13)
+bool speechBubbleShowing(Agent* creature);
 void setSpeechBubblesShown(bool shown);
 
 // The player's settings file (settings.txt in the user data folder, "key
