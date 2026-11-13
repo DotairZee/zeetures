@@ -211,6 +211,18 @@ struct Params {
 	// worth its weight times this.
 	float pheromoneRelief = 0.4f;
 	float pheromoneWantScale = 0.1f;
+	// Following a scent persists (owner chose this, 2026-11-13): mates apart
+	// never met, as each follow was one 12-tick step re-weighed from scratch
+	// and stopped wherever old scent had pooled ("here" strongest). Once a
+	// creature sets off along a scent it keeps that way, its want raised by
+	// followBoost, for up to followDecisions decisions while the urge holds;
+	// it gives up when the scent falls below followKeepShare of the best it
+	// smelled on the way, or after followOvershoot decisions with nothing
+	// stronger ahead (it walks on through a pool rather than stopping in it).
+	int followDecisions = 20;
+	float followBoost = 1.5f;
+	float followKeepShare = 0.5f;
+	int followOvershoot = 4;
 	float floorChangeDiscount = 0.5f; // share of the target's value for each step toward it
 	float atPlace = 50.0f; // close enough to a lift's position to use it
 	float sameLevel = 120.0f; // heights this close count as the same floor
@@ -1468,6 +1480,16 @@ class HomeostatMind : public CreatureMind {
 	int futileInARow = 0;
 	int futileCategory = -1, futileDecision = -1;
 	std::map<int, float> scents; // strongest edible scent smelled, by category
+	// a scent being followed (persistent following): which, which way (10
+	// west, 11 east, -1 up, 1 down), the strongest smelled on the way,
+	// decisions left, and decisions since anything ahead smelled stronger
+	struct Trail {
+		std::string scent;
+		int kind = 0;
+		float best = 0;
+		int left = 0;
+		int pastPeak = 0;
+	} trail;
 	bool riding = false;
 	float rideFromX = 0, rideFromY = 0;
 	int lastLiftDecision = -1;
@@ -2649,6 +2671,15 @@ class HomeostatMind : public CreatureMind {
 	// Scent urges (pheromones.txt): follow a scent toward its strongest side,
 	// or move away from it, as food smell is followed.
 	void addScentUrges(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		// the trail ends when its urge is gone (the drive eased, or the
+		// creature no longer smells it as a releaser)
+		if (trail.left > 0) {
+			bool held = false;
+			for (auto& u : p.scentUrges)
+				held = held || (!u.avoid && u.scent == trail.scent);
+			if (!held)
+				trail.left = 0;
+		}
 		for (auto& u : p.scentUrges) {
 			float want;
 			if (u.drive >= 0 && u.drive < NUM_DRIVES) {
@@ -2663,16 +2694,43 @@ class HomeostatMind : public CreatureMind {
 					u.scent, u.avoid ? "avoid" : "follow", want, u.here, u.west, u.east, u.up, u.down);
 			if (want < prm.seekMinWant)
 				continue;
-			auto walk = [&](int kind) {
-				if (waterAhead(p, kind) || (kind == 10 && !canWest) || (kind == 11 && !canEast) || isBlocked(p, kind) || cliffAhead(p, kind))
-					return;
-				Candidate c{-1, kind, 0, want, 0, want};
-				c.chain = true;
-				c.scent = true;
-				c.urge = (u.avoid ? "avoid:" : "follow:") + u.scent;
-				out.push_back(c);
+			std::string label = (u.avoid ? "avoid:" : "follow:") + u.scent;
+			// a step west or east, or a change of floor, toward the scent
+			auto go = [&](int kind, float w, const std::string& lab) {
+				if (kind == 10 || kind == 11) {
+					if (waterAhead(p, kind) || (kind == 10 && !canWest) || (kind == 11 && !canEast) || isBlocked(p, kind) || cliffAhead(p, kind))
+						return false;
+					Candidate c{-1, kind, 0, w, 0, w};
+					c.chain = true;
+					c.scent = true;
+					c.urge = lab;
+					out.push_back(c);
+					return true;
+				}
+				size_t before = out.size();
+				addFloorChange(p, w, p.y + kind * prm.scentFloorStep, -1, canWest, canEast, out);
+				for (size_t i = before; i < out.size(); i++) {
+					out[i].scent = true;
+					out[i].urge = lab;
+				}
+				return out.size() > before;
 			};
 			if (!u.avoid) {
+				// keep on along the trail already set out on
+				if (trail.left > 0 && trail.scent == u.scent) {
+					float ahead = trail.kind == 10 ? u.west : trail.kind == 11 ? u.east : trail.kind == -1 ? u.up : u.down;
+					trail.best = std::max(trail.best, u.here);
+					if (ahead > u.here * prm.scentStronger + 0.01f)
+						trail.pastPeak = 0;
+					else
+						trail.pastPeak++;
+					if (std::max(u.here, ahead) >= trail.best * prm.followKeepShare && trail.pastPeak <= prm.followOvershoot &&
+						go(trail.kind, want * prm.followBoost, label + ":on")) {
+						trail.left--;
+						continue;
+					}
+					trail.left = 0; // lost it: read the scent afresh
+				}
 				float threshold = u.here * prm.scentStronger + 0.01f;
 				struct Side {
 					float scent;
@@ -2685,15 +2743,12 @@ class HomeostatMind : public CreatureMind {
 						best = &side;
 				if (!best)
 					continue;
-				if (best->kind == 10 || best->kind == 11)
-					walk(best->kind);
-				else {
-					size_t before = out.size();
-					addFloorChange(p, want, p.y + best->kind * prm.scentFloorStep, -1, canWest, canEast, out);
-					for (size_t i = before; i < out.size(); i++) {
-						out[i].scent = true;
-						out[i].urge = "follow:" + u.scent;
-					}
+				if (go(best->kind, want, label)) {
+					trail.scent = u.scent;
+					trail.kind = best->kind;
+					trail.best = std::max(u.here, best->scent);
+					trail.left = prm.followDecisions;
+					trail.pastPeak = 0;
 				}
 			} else {
 				// away: if the scent is here or stronger on some side, walk
@@ -2702,11 +2757,11 @@ class HomeostatMind : public CreatureMind {
 				if (strongest < 0.02f)
 					continue;
 				if (u.west < u.east)
-					walk(10);
+					go(10, want, label);
 				else if (u.east < u.west)
-					walk(11);
+					go(11, want, label);
 				else
-					walk(std::uniform_int_distribution<int>(0, 1)(rng) ? 10 : 11); // even both ways: either
+					go(std::uniform_int_distribution<int>(0, 1)(rng) ? 10 : 11, want, label); // even both ways: either
 			}
 		}
 	}
