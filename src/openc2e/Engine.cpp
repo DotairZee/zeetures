@@ -28,6 +28,7 @@
 
 #include <climits>
 #include "creatures/CreatureAgent.h"
+#include "creatures/oldCreature.h"
 #include "creatures/Creature.h"
 #include "CobManager.h"
 
@@ -548,6 +549,57 @@ void Engine::update() {
 			fmt::print("* TEST CLICK at {},{}: selected genus {} (before: genus {})\n", cx, cy, world.selectedcreature ? (int)world.selectedcreature->genus : -1, before);
 		}
 	}
+	// developer aid: OPENC2E_TEST_TYPE="N,words": at tick N the hand goes beside
+	// the selected creature (or the first creature) and the words are typed
+	// through the engine's own key handlers, then Enter: the hand's speech
+	// bubble opens, fills and is spoken, as when the player types (tests the
+	// hand teaching creatures words)
+	if (static const char* k = getenv("OPENC2E_TEST_TYPE"); k && version == 2) {
+		// (OPENC2E_TEST_TYPE_REPEAT=R types it R times, 30 ticks apart)
+		static int times = 0;
+		static const int repeat = getenv("OPENC2E_TEST_TYPE_REPEAT") ? std::max(1, atoi(getenv("OPENC2E_TEST_TYPE_REPEAT"))) : 1;
+		static unsigned int nextAt = (unsigned int)atoi(k);
+		const char* words = strchr(k, ',');
+		if (times < repeat && words && world.tickcount >= nextAt) {
+			times++;
+			nextAt = world.tickcount + 30;
+			Agent* c = world.selectedcreature.get();
+			if (!c)
+				for (auto& a : world.agents)
+					if (a && dynamic_cast<CreatureAgent*>(a.get())) {
+						c = a.get();
+						break;
+					}
+			if (c && world.hand()) {
+				world.hand()->moveTo(c->x + c->getWidth() + 10, c->y - 20);
+				for (const char* ch = words + 1; *ch; ch++) {
+					BackendEvent e;
+					e.type = eventtextinput;
+					e.text = std::string(1, *ch);
+					handleTextInput(e);
+				}
+				BackendEvent ret;
+				ret.type = eventrawkeydown;
+				ret.key = OPENC2E_KEY_RETURN;
+				handleRawKeyDown(ret);
+				// how well it knows each typed word now (0-255; known from WORD_KNOWN)
+				std::string known;
+				if (auto* ca = dynamic_cast<CreatureAgent*>(c))
+					if (auto* oc = dynamic_cast<oldCreature*>(ca->getCreature()))
+						for (size_t w = 0; w < wordlist.size(); w++) {
+							std::string word = wordlist[w];
+							while (!word.empty() && word.back() == ' ')
+								word.pop_back();
+							std::string t = std::string(" ") + (words + 1) + " ";
+							if (!word.empty() && t.find(" " + word + " ") != std::string::npos)
+								known += fmt::format(" {}={}", word, w < oc->vocab.size() ? (int)oc->vocab[w] : 0);
+						}
+				fmt::print("* TEST TYPE tick {} ({} of {}): typed \"{}\" beside creature {} at {:.0f},{:.0f}{}; vocabulary:{}\n", world.tickcount, times, repeat,
+					words + 1, c->getUNID(), c->x, c->y, c->isDying() ? " (dying)" : "", known);
+			}
+		}
+	}
+
 	// developer aid: OPENC2E_TEST_MIDDLE_DRAG=N: from tick N, a middle-button
 	// drag across the view sent as the system's own mouse events (through the
 	// backend and the interface, as a real one comes): the button down, a
