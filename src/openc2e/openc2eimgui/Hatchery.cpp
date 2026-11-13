@@ -24,6 +24,7 @@
 #include "Breeds.h"
 #include "Agent.h"
 #include "C2Kits.h"
+#include "C2ToolBar.h"
 #include "C2KitsInternal.h"
 #include "historyManager.h"
 #include "Engine.h"
@@ -210,7 +211,7 @@ bool LayC2Egg(const std::vector<std::vector<uint8_t>>& genomes, int gender, int 
 	if (!err.empty())
 		return false;
 	engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
-	engine.camera->moveToGlobal(x - (int)engine.camera->getWidth() / 2, 750 - (int)engine.camera->getHeight() / 2, jump);
+	engine.camera->moveToGlobal(x - (int)engine.camera->getWidth() / 2, 750 - (int)engine.camera->getHeight() / 2, UiPanStyle());
 	return true;
 }
 

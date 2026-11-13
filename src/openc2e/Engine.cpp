@@ -367,6 +367,21 @@ static int handViewX(Camera* cam, PointerAgent* hand) {
 void Engine::drawWorld() {
 	// draw the world
 
+	// developer aid: OPENC2E_TEST_PAN="dx,dy" starts a smooth pan that far
+	// from the view at world tick 30 and prints the camera's place each
+	// frame while it glides
+	if (const char* tp = getenv("OPENC2E_TEST_PAN")) {
+		static bool started = false;
+		int dx = 0, dy = 0;
+		if (!started && world.tickcount >= 30 && sscanf(tp, "%d,%d", &dx, &dy) == 2) {
+			started = true;
+			fmt::print("* TEST PAN from {},{} by {},{}\n", camera->getX(), camera->getY(), dx, dy);
+			camera->moveTo((int)camera->getX() + dx, (int)camera->getY() + dy, smoothscroll);
+		}
+		if (camera->isPanning())
+			fmt::print("* TEST PAN t{} at {},{}\n", get_ticks_msec(), camera->getX(), camera->getY());
+	}
+	camera->stepPan(); // smooth scrolling, frame by frame
 	Openc2eImGui::Update();
 	get_backend()->getMainRenderTarget()->setViewportOffsetTop(Openc2eImGui::GetViewportOffsetTop());
 	get_backend()->getMainRenderTarget()->setViewportOffsetBottom(Openc2eImGui::GetViewportOffsetBottom());
@@ -1171,6 +1186,9 @@ void Engine::handleRawKeyDown(BackendEvent& event) {
 	// C1/C2: Ctrl+0 shows the world at its actual size
 	if (version <= 2 && event.key == OPENC2E_KEY_0 && get_backend()->keyDown(OPENC2E_KEY_CTRL))
 		setZoom(1.0f);
+	// C1/C2: F12 switches full screen on and off
+	if (version <= 2 && event.key == OPENC2E_KEY_F12)
+		get_backend()->setFullscreen(!get_backend()->isFullscreen());
 	switch (event.key) {
 		case OPENC2E_KEY_W:
 			w_down = true;

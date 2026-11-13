@@ -81,6 +81,8 @@ class SDLBackend : public Backend {
 	void requestScreenshot(const std::string& path) override { pending_screenshot = path; }
 	std::string pending_screenshot;
 	void setWindowTitle(const std::string& title) override;
+	bool isFullscreen() override;
+	void setFullscreen(bool on) override;
 	SDL_Window* window = nullptr;
 
 	static Backend* get_instance();

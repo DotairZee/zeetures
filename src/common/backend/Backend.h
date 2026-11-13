@@ -93,6 +93,9 @@ class Backend {
 
 	virtual void run(std::function<bool()> render_callback) = 0;
 	virtual void setWindowTitle(const std::string&) {}
+	// the main window filling the screen (borderless, at the desktop's size)
+	virtual bool isFullscreen() { return false; }
+	virtual void setFullscreen(bool) {}
 	// developer aid: save the next presented frame as a BMP file
 	virtual void requestScreenshot(const std::string&) {}
 

@@ -42,6 +42,11 @@ class Camera {
 
 	bool panning;
 	float velx, vely;
+	// a smooth pan in progress (main camera only): from, to, when it began
+	// and how long it takes (ms)
+	int panFromX = 0, panFromY = 0, panToX = 0, panToY = 0;
+	unsigned int panStart = 0, panTime = 0;
+	virtual bool canPan() const { return false; }
 
 	AgentRef trackedagent;
 	trackstyle trackingstyle;
@@ -67,6 +72,9 @@ class Camera {
 
 	void tick();
 	void updateTracking();
+	// moves a smooth pan on (once per frame drawn)
+	void stepPan();
+	bool isPanning() const { return panning; }
 
 	virtual ~Camera() {}
 };
@@ -94,6 +102,7 @@ class MainCamera : public Camera {
 	unsigned int getWidth() const;
 	unsigned int getHeight() const;
 	void moveTo(int _x, int _y, panstyle pan = jump);
+	bool canPan() const override { return true; }
 
 	void addFloated(AgentRef);
 	void delFloated(AgentRef);

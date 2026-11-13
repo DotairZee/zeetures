@@ -14,6 +14,7 @@
 // the other measures keep the world file's values unless a script sets them.
 
 #include "C2Kits.h"
+#include "C2ToolBar.h"
 #include "C2KitsInternal.h"
 #include "Camera.h"
 #include "SpritePart.h"
@@ -287,7 +288,7 @@ void goToRoom(const Room& r) {
 		return;
 	float cx = (r.x_left + r.x_right) / 2.0f, cy = (std::min(r.y_left_ceiling, r.y_right_ceiling) + std::max(r.y_left_floor, r.y_right_floor)) / 2.0f;
 	engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
-	engine.camera->moveToGlobal((int)cx - (int)engine.camera->getWidth() / 2, (int)cy - (int)engine.camera->getHeight() / 2, jump);
+	engine.camera->moveToGlobal((int)cx - (int)engine.camera->getWidth() / 2, (int)cy - (int)engine.camera->getHeight() / 2, UiPanStyle());
 }
 
 float roomValue(const Room& r, int m) {

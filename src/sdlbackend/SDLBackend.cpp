@@ -729,6 +729,15 @@ void SDLBackend::setWindowTitle(const std::string& title) {
 		SDL_SetWindowTitle(window, title.c_str());
 }
 
+bool SDLBackend::isFullscreen() {
+	return window && (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN);
+}
+
+void SDLBackend::setFullscreen(bool on) {
+	if (window)
+		SDL_SetWindowFullscreen(window, on); // no mode set: the desktop's own size
+}
+
 void SDLBackend::run(std::function<bool()> update_callback) {
 	SDL_AddEventWatch(sdl_event_watcher, nullptr);
 

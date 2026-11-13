@@ -49,6 +49,107 @@ static bool s_show_pointer = true;
 static bool s_show_applets = true;
 static bool s_show_favorites = true;
 
+// Camera > Smooth Scrolling
+static bool s_smooth_scrolling = false;
+
+panstyle UiPanStyle() {
+	return s_smooth_scrolling ? smoothscroll : jump;
+}
+
+// View > Toolbars > Text Labels: each toolbar button's name under it
+static bool s_text_labels = false;
+
+static bool ToolButton(TextureRect icon, bool enabled, const char* label) {
+	if (!s_text_labels)
+		return ImageButton(icon, enabled);
+	const ImGuiStyle& st = ImGui::GetStyle();
+	ImFont* font = ImGui::GetFont();
+	float fs = ImGui::GetFontSize(); // (the pixel font does not scale cleanly)
+	ImVec2 ts = font->CalcTextSizeA(fs, FLT_MAX, 0, label);
+	ImVec2 p = ImGui::GetCursorScreenPos();
+	float bw = icon.w + st.FramePadding.x * 2, bh = icon.h + st.FramePadding.y * 2;
+	float w = std::max(bw, ts.x + 6);
+	ImGui::BeginGroup();
+	ImGui::SetCursorScreenPos(ImVec2(p.x + (w - bw) / 2, p.y));
+	bool clicked = ImageButton(icon, enabled);
+	ImGui::SetCursorScreenPos(ImVec2(p.x, p.y + bh));
+	ImGui::Dummy(ImVec2(w, ts.y + 1));
+	ImGui::EndGroup();
+	ImGui::GetWindowDrawList()->AddText(font, fs, ImVec2(p.x + (w - ts.x) / 2, p.y + bh),
+		ImGui::GetColorU32(enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled), label);
+	return clicked;
+}
+
+// View > ToolTips for Objects: resting the hand on a creature names it, on
+// an object says what kind of thing it is (the game's own word for it, as
+// creatures learn it). Creatures first, even behind something; otherwise
+// what the hand would click (transparent scenery passed over). Not over the
+// kits or menus, and only once the hand has rested on it a moment.
+static bool s_object_tips = false;
+static const char* GenusName(int genus);
+
+static void DrawObjectToolTip() {
+	static Agent* s_last = nullptr;
+	static double s_since = 0;
+	if (!s_object_tips || !world.hand() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemActive()) {
+		s_last = nullptr;
+		return;
+	}
+	int px = world.hand()->pointerX(), py = world.hand()->pointerY();
+	Agent* a = world.creatureAt(px, py);
+	if (!a)
+		if (CompoundPart* part = world.partAt(px, py, true, false))
+			a = part->getParent();
+	if (a && (a == world.hand() || a->family == 1 || a->invisible()))
+		a = nullptr;
+	if (a != s_last) {
+		s_last = a;
+		s_since = ImGui::GetTime();
+	}
+	if (!a || ImGui::GetTime() - s_since < 0.4)
+		return;
+	std::string text;
+	if (auto* ca = dynamic_cast<CreatureAgent*>(a); ca && ca->getCreature()) {
+		std::string given = KitGivenName(a);
+		std::string kind = fmt::format("{} {}", ca->getCreature()->isFemale() ? "female" : "male", GenusName(a->genus));
+		for (auto& ch : kind)
+			ch = (char)tolower((unsigned char)ch);
+		text = given.empty() ? kind : fmt::format("{} ({})", given, kind);
+		if (!ca->getCreature()->isAlive())
+			text += ", dead";
+	} else if (a->category >= 0)
+		text = KitCategoryNoun(a->category);
+	if (!text.empty())
+		ImGui::SetTooltip("%s", text.c_str());
+}
+
+// The halo over the selected creature (the toolbar's Halo button, and
+// Camera > Norn Indicator, C2's name for it): the game's own system macro
+// (world-file script 0 1 0 0) makes or removes the halo object (2 1 3),
+// whose timer script keeps it over the creature's head.
+static bool HaloShown() {
+	for (auto& a : world.agents)
+		if (a && a->family == 2 && a->genus == 1 && a->species == 3)
+			return true;
+	return false;
+}
+
+static bool CanToggleHalo() {
+	return (bool)world.selectedcreature && world.scriptorium->getScript(0, 1, 0, 0) != nullptr;
+}
+
+static void ToggleHalo() {
+	std::shared_ptr<script> macro = world.scriptorium->getScript(0, 1, 0, 0);
+	if (!macro)
+		return;
+	caosVM vm(0);
+	try {
+		vm.runEntirely(macro);
+	} catch (std::exception& e) {
+		fmt::print("* Halo macro failed: {}\n", e.what());
+	}
+}
+
 int GetC2ToolBarHeight() {
 	return s_last_c2toolbar_height;
 }
@@ -62,7 +163,7 @@ static void GoToFavoritePlace(int i) {
 		return;
 	auto& f = world.favoriteplaces[i];
 	engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
-	engine.camera->moveToGlobal(f.x, f.y, jump);
+	engine.camera->moveToGlobal(f.x, f.y, UiPanStyle());
 }
 
 // Selects the next living creature after the current selection and centers
@@ -88,7 +189,7 @@ static void SelectNextCreature() {
 	world.selectCreature(c);
 	int cx = (int)(c->x + c->getWidth() / 2.0f) - (int)engine.camera->getWidth() / 2;
 	int cy = (int)(c->y + c->getHeight() / 2.0f) - (int)engine.camera->getHeight() / 2;
-	engine.camera->moveToGlobal(cx, cy, jump);
+	engine.camera->moveToGlobal(cx, cy, UiPanStyle());
 }
 
 static const char* GenusName(int genus) {
@@ -206,7 +307,7 @@ static void DrawC2MenuBar() {
 			ImGui::MenuItem("Applets", nullptr, &s_show_applets);
 			ImGui::MenuItem("Favourites", nullptr, &s_show_favorites);
 			ImGui::Separator();
-			ImGui::MenuItem("Text Labels", nullptr, false, false);
+			ImGui::MenuItem("Text Labels", nullptr, &s_text_labels);
 			ImGui::EndMenu();
 		}
 		// not in C2's menu; openc2e addition (owner, 2026-11-11)
@@ -218,12 +319,15 @@ static void DrawC2MenuBar() {
 		bool statusbar = IsC2StatusBarShown();
 		if (ImGui::MenuItem("Status Bar", nullptr, &statusbar))
 			SetC2StatusBarShown(statusbar);
-		ImGui::MenuItem("ToolTips for Objects", nullptr, false, false);
+		ImGui::MenuItem("ToolTips for Objects", nullptr, &s_object_tips);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Name what the hand rests on: a creature, or the kind of object");
 		bool scrollbars = AreC2ScrollBarsShown();
 		if (ImGui::MenuItem("Scroll Bars", nullptr, &scrollbars)) // not in C2's menu; openc2e addition
 			SetC2ScrollBarsShown(scrollbars);
 		ImGui::Separator();
-		ImGui::MenuItem("Full Screen", "F12", false, false);
+		if (ImGui::MenuItem("Full Screen", "F12", get_backend()->isFullscreen()))
+			get_backend()->setFullscreen(!get_backend()->isFullscreen());
 		ImGui::EndMenu();
 	}
 	if (ImGui::BeginMenu("Camera")) {
@@ -234,8 +338,13 @@ static void DrawC2MenuBar() {
 			else
 				engine.camera->trackAgent(world.selectedcreature, 0, 0, flexible, none);
 		}
-		ImGui::MenuItem("Norn Indicator", nullptr, false, false);
-		ImGui::MenuItem("Smooth Scrolling", nullptr, false, false);
+		if (ImGui::MenuItem("Norn Indicator", nullptr, HaloShown(), CanToggleHalo()))
+			ToggleHalo();
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			ImGui::SetTooltip("A halo over the selected creature (the toolbar's Halo button)");
+		ImGui::MenuItem("Smooth Scrolling", nullptr, &s_smooth_scrolling);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Glide to places and creatures you choose, instead of jumping");
 		ImGui::Separator();
 		bool hasfree = false, hasnamed = false;
 		for (auto& f : world.favoriteplaces) {
@@ -304,7 +413,7 @@ static void DrawC2MenuBar() {
 				world.selectCreature(a);
 				int cx = (int)(a->x + a->getWidth() / 2.0f) - (int)engine.camera->getWidth() / 2;
 				int cy = (int)(a->y + a->getHeight() / 2.0f) - (int)engine.camera->getHeight() / 2;
-				engine.camera->moveToGlobal(cx, cy, jump);
+				engine.camera->moveToGlobal(cx, cy, UiPanStyle());
 			}
 		}
 		if (n == 0)
@@ -462,6 +571,18 @@ static void DrawC2MenuBar() {
 }
 
 void DrawC2Toolbar() {
+	// developer aid: OPENC2E_VIEW="labels,tips,smooth" starts with Text
+	// Labels, ToolTips for Objects and Smooth Scrolling on (headless tests)
+	static bool s_view_aid = [] {
+		if (const char* v = getenv("OPENC2E_VIEW")) {
+			std::string s = v;
+			s_text_labels = s.find("labels") != std::string::npos;
+			s_object_tips = s.find("tips") != std::string::npos;
+			s_smooth_scrolling = s.find("smooth") != std::string::npos;
+		}
+		return true;
+	}();
+	(void)s_view_aid;
 	ImGuiIO& io = ImGui::GetIO();
 	ImGui::SetNextWindowPos(ImVec2(0, 0));
 	ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, 0));
@@ -498,16 +619,16 @@ void DrawC2Toolbar() {
 		ImGui::GetCurrentWindow()->DC.LayoutType = ImGuiLayoutType_Horizontal;
 
 		if (s_show_standard) {
-		if (ImageButton(icon_next, true)) {
+		if (ToolButton(icon_next, true, "Next")) {
 			SelectNextCreature();
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Next Creature: select the next creature in the world");
-		if (ImageButton(icon_eyeview, (bool)world.selectedcreature))
+		if (ToolButton(icon_eyeview, (bool)world.selectedcreature, "Eye View"))
 			SetEyeViewOpen(!IsEyeViewOpen());
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Creature's Eye View: see the world as the selected creature sees it");
-		if (ImageButton(icon_track, (bool)world.selectedcreature)) {
+		if (ToolButton(icon_track, (bool)world.selectedcreature, "Follow")) {
 			// toggle: follow the selected creature, or stop following
 			if (engine.camera->trackedAgent() == world.selectedcreature)
 				engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
@@ -516,41 +637,28 @@ void DrawC2Toolbar() {
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip(engine.camera->trackedAgent() && engine.camera->trackedAgent() == world.selectedcreature ? "Follow: stop following the selected creature" : "Follow: keep the view on the selected creature");
-		// the halo over the selected creature: the game's own system macro
-		// (world-file script 0 1 0 0) makes or removes the halo object
-		// (2 1 3), whose timer script keeps it over the creature's head
-		bool halo_on = false;
-		for (auto& a : world.agents)
-			if (a && a->family == 2 && a->genus == 1 && a->species == 3)
-				halo_on = true;
-		std::shared_ptr<script> halo_macro = world.scriptorium->getScript(0, 1, 0, 0);
-		if (ImageButton(icon_halo, (bool)world.selectedcreature && halo_macro)) {
-			caosVM vm(0);
-			try {
-				vm.runEntirely(halo_macro);
-			} catch (std::exception& e) {
-				fmt::print("* Halo macro failed: {}\n", e.what());
-			}
-		}
+		bool halo_on = HaloShown();
+		if (ToolButton(icon_halo, CanToggleHalo(), "Halo"))
+			ToggleHalo();
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip(halo_on ? "Halo: hide the halo" : "Halo: show a halo over the selected creature");
 		ImGui::Separator();
-		if (ImageButton(icon_play, world.paused)) {
+		if (ToolButton(icon_play, world.paused, "Play")) {
 			world.paused = false;
 		};
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 			ImGui::SetTooltip("Play: let the world run");
-		if (ImageButton(icon_pause, !world.paused)) {
+		if (ToolButton(icon_pause, !world.paused, "Pause")) {
 			world.paused = true;
 		}
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 			ImGui::SetTooltip("Pause: stop the world");
 		ImGui::Separator();
-		if (ImageButton(icon_help, true))
+		if (ToolButton(icon_help, true, "Help"))
 			SetHelpOpen(true);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Help: how to play here, and what this version adds");
-		if (ImageButton(icon_web, true))
+		if (ToolButton(icon_web, true, "Web"))
 			SDL_OpenURL(OPENC2E_WEB);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Web: openc2e on the web (the open-source engine this runs on)");
@@ -560,15 +668,15 @@ void DrawC2Toolbar() {
 		// the Pointer toolbar: an invisible hand (creatures do not see it)
 		// as a switch, and the hand's two modes: teach (a click tickles or
 		// slaps) and push (a click shoves a creature away from the hand)
-		auto toggled = [](bool on, auto icon) {
+		auto toggled = [](bool on, auto icon, const char* label) {
 			if (on)
 				ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
-			bool clicked = ImageButton(icon, true);
+			bool clicked = ToolButton(icon, true, label);
 			if (on)
 				ImGui::PopStyleColor();
 			return clicked;
 		};
-		if (toggled(world.handInvisible, icon_invisible)) {
+		if (toggled(world.handInvisible, icon_invisible, "Invisible")) {
 			world.handInvisible = !world.handInvisible;
 			// see-through at once, even while the world is paused
 			if (world.hand())
@@ -577,11 +685,11 @@ void DrawC2Toolbar() {
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip(world.handInvisible ? "Invisible Hand: creatures can't see the hand (click to show it again)" : "Invisible Hand: hide the hand from creatures");
-		if (toggled(!world.handPush, icon_teach))
+		if (toggled(!world.handPush, icon_teach, "Teach"))
 			world.handPush = false;
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Teach: click a creature's head to tickle it, lower down to slap it");
-		if (toggled(world.handPush, icon_push))
+		if (toggled(world.handPush, icon_push, "Push"))
 			world.handPush = true;
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Push: click a creature to shove it away from the hand");
@@ -608,53 +716,53 @@ void DrawC2Toolbar() {
 		TextureRect icon_unknown_maybe_neurosciencekit{s_appleticons_tex, 264, 0, 22, 21};
 
 		if (s_show_applets) {
-		if (ImageButton(icon_hatchery, IsHatcheryEnabled())) {
+		if (ToolButton(icon_hatchery, IsHatcheryEnabled(), "Hatchery")) {
 			SetHatcheryOpen(true);
 		};
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 			ImGui::SetTooltip("Hatchery: choose eggs to hatch");
-		if (ImageButton(icon_ownerskit, IsC2KitAvailable("owners")))
+		if (ToolButton(icon_ownerskit, IsC2KitAvailable("owners"), "Owner's"))
 			OpenC2Kit("owners");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Owner's Kit: name, photos, family, temperament, relationships and life story");
-		if (ImageButton(icon_healthkit, IsC2KitAvailable("health")))
+		if (ToolButton(icon_healthkit, IsC2KitAvailable("health"), "Health"))
 			OpenC2Kit("health");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Health Kit: fitness, mind, drives and medicine");
-		if (ImageButton(icon_graveyard, IsC2KitAvailable("graveyard")))
+		if (ToolButton(icon_graveyard, IsC2KitAvailable("graveyard"), "Graveyard"))
 			OpenC2Kit("graveyard");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Graveyard Kit: the gravestones of the creatures that have died");
 		ImGui::Separator();
-		if (ImageButton(icon_unknown_maybe_breederskit, IsC2KitAvailable("breeders")))
+		if (ToolButton(icon_unknown_maybe_breederskit, IsC2KitAvailable("breeders"), "Breeder's"))
 			OpenC2Kit("breeders");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Breeder's Kit: fertility and pregnancy, aphrodisiacs and breeds");
-		if (ImageButton(icon_unknown_maybe_sciencekit, IsC2KitAvailable("science")))
+		if (ToolButton(icon_unknown_maybe_sciencekit, IsC2KitAvailable("science"), "Science"))
 			OpenC2Kit("science");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Science Kit: body, genes, biochemistry and the syringe");
 		// (C2's Neuroscience Kit button opens our Mind Kit: our creatures
 		// have no neurons to show; owner, 2026-11-11)
-		if (ImageButton(icon_unknown_maybe_neurosciencekit, IsC2KitAvailable("mind")))
+		if (ToolButton(icon_unknown_maybe_neurosciencekit, IsC2KitAvailable("mind"), "Mind"))
 			OpenC2Kit("mind");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Mind Kit: what the creature feels, is weighing, has learned and remembers");
-		if (ImageButton(icon_unknown_maybe_observationkit, IsC2KitAvailable("observation")))
+		if (ToolButton(icon_unknown_maybe_observationkit, IsC2KitAvailable("observation"), "Observation"))
 			OpenC2Kit("observation");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Observation Kit: every creature at a glance, and alarms");
 		ImGui::Separator();
-		if (ImageButton(icon_agent_injector, IsAgentInjectorEnabled())) {
+		if (ToolButton(icon_agent_injector, IsAgentInjectorEnabled(), "Injector")) {
 			SetAgentInjectorOpen(true);
 		}
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 			ImGui::SetTooltip("Agent Injector: add objects to the world");
-		if (ImageButton(icon_unknown_maybe_historykit, IsC2KitAvailable("chronicles")))
+		if (ToolButton(icon_unknown_maybe_historykit, IsC2KitAvailable("chronicles"), "Chronicles"))
 			OpenC2Kit("chronicles");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Chronicles Kit: the world's history and statistics");
-		if (ImageButton(icon_unknown_maybe_ecologykit, IsC2KitAvailable("ecology")))
+		if (ToolButton(icon_unknown_maybe_ecologykit, IsC2KitAvailable("ecology"), "Ecology"))
 			OpenC2Kit("ecology");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Ecology Kit: the world's rooms (light, warmth, air, soil), watching rooms, and a census");
@@ -689,7 +797,7 @@ void DrawC2Toolbar() {
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Speech History: what creatures and you said lately");
-		if (ImageButton(icon_say, !s_line.empty()))
+		if (ToolButton(icon_say, !s_line.empty(), "Say"))
 			handSays(s_line);
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 			ImGui::SetTooltip("Say: the hand says the chosen line again (creatures nearby hear it)");
@@ -748,6 +856,7 @@ void DrawC2Toolbar() {
 		s_last_c2toolbar_height = ImGui::GetWindowSize().y;
 		ImGui::End();
 	}
+	DrawObjectToolTip();
 }
 
 } // namespace Openc2eImgui

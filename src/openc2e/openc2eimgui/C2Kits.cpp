@@ -1,4 +1,5 @@
 #include "C2Kits.h"
+#include "C2ToolBar.h"
 
 #include "C2KitsInternal.h"
 #include "Hatchery.h"
@@ -605,7 +606,7 @@ void KitGoTo(const std::shared_ptr<Agent>& a) {
 	engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
 	int cx = (int)(a->x + a->getWidth() / 2.0f) - (int)engine.camera->getWidth() / 2;
 	int cy = (int)(a->y + a->getHeight() / 2.0f) - (int)engine.camera->getHeight() / 2;
-	engine.camera->moveToGlobal(cx, cy, jump);
+	engine.camera->moveToGlobal(cx, cy, UiPanStyle());
 }
 
 void KitLookAt(const std::shared_ptr<Agent>& a) {
@@ -614,7 +615,7 @@ void KitLookAt(const std::shared_ptr<Agent>& a) {
 	engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
 	int cx = (int)(a->x + a->getWidth() / 2.0f) - (int)engine.camera->getWidth() / 2;
 	int cy = (int)(a->y + a->getHeight() / 2.0f) - (int)engine.camera->getHeight() / 2;
-	engine.camera->moveToGlobal(cx, cy, jump);
+	engine.camera->moveToGlobal(cx, cy, UiPanStyle());
 }
 
 std::string KitCategoryNoun(int category) {

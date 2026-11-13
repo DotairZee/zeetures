@@ -59,13 +59,39 @@ void Camera::goToMetaRoom(unsigned int m, int _x, int _y, cameratransition trans
 
 void Camera::moveTo(int _x, int _y, panstyle pan) {
 	// TODO: we don't break tracking according to trackingstyle.. atm updateTracking() calls this, also
+
+	// smooth scrolling (the main camera): glide there over a moment, eased
+	// in and out, stepped once per frame drawn (stepPan); "if visible" only
+	// when the place is within a screen of the view. Any plain move (keys,
+	// scroll bars, following a creature) ends a glide.
+	bool near = std::abs(_x - x) <= (int)getWidth() && std::abs(_y - y) <= (int)getHeight();
+	if (canPan() && (pan == smoothscroll || (pan == smoothscrollifvisible && near)) && (_x != x || _y != y)) {
+		panFromX = x;
+		panFromY = y;
+		panToX = _x;
+		panToY = _y;
+		panStart = engine.get_ticks_msec();
+		float dist = std::hypot((float)(_x - x), (float)(_y - y));
+		panTime = 300 + (unsigned int)(std::min(dist, 3000.0f) / 10.0f); // 0.3-0.6 s
+		panning = true;
+		return;
+	}
+	panning = false;
 	x = _x;
 	y = _y;
 
-	// TODO: panning
-	(void)pan;
-
 	checkBounds();
+}
+
+void Camera::stepPan() {
+	if (!panning)
+		return;
+	float t = std::min(1.0f, (engine.get_ticks_msec() - panStart) / (float)std::max(panTime, 1u));
+	float e = t * t * (3 - 2 * t); // eased in and out
+	int nx = (int)std::lround(panFromX + (panToX - panFromX) * e);
+	int ny = (int)std::lround(panFromY + (panToY - panFromY) * e);
+	moveTo(nx, ny, jump); // (ends the glide)
+	panning = t < 1.0f;
 }
 
 void Camera::moveToGlobal(int _x, int _y, panstyle pan) {
@@ -80,9 +106,10 @@ void Camera::moveToGlobal(int _x, int _y, panstyle pan) {
 }
 
 void MainCamera::moveTo(int _x, int _y, panstyle pan) {
-	int xoffset = _x - x;
-	int yoffset = _y - y;
+	int oldx = x, oldy = y;
 	Camera::moveTo(_x, _y, pan);
+	int xoffset = x - oldx; // (none yet when a glide starts)
+	int yoffset = y - oldy;
 
 	for (auto& i : floated) {
 		assert(i);
