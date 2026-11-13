@@ -214,8 +214,13 @@ static const char* GenusName(int genus) {
 	}
 }
 
-// This fork's version, shown in Help > About openC2e (raise it for releases)
-#define OPENC2E_FORK_VERSION "0.1.0"
+// This fork's version, shown in Help > About openC2e (raise it for releases).
+// 0.3.0 (2026-11-12): openc2e's last release was v0.2 (June 2020), and the
+// code this fork started from already ran 825 commits past it, so the fork
+// numbers on from there; still 0.x, as there is more to do before a 1.0.
+#define OPENC2E_FORK_VERSION "0.3.0"
+// the openc2e this fork started from (an unreleased development build)
+#define OPENC2E_UPSTREAM_BASE "commit dfcd46f2, 6 October 2026 (825 commits after its v0.2 release)"
 #define OPENC2E_WEB "https://openc2e.github.io/"
 static bool s_open_about = false;
 
@@ -485,9 +490,33 @@ static void DrawC2MenuBar() {
 		ImGui::TextUnformatted("Creatures 2 with creatures that think for themselves: a mind of their own, words, temperament and "
 							   "relationships, breeding, and a full set of kits.");
 		ImGui::Spacing();
-		ImGui::TextDisabled("A fork of openc2e, the open-source Creatures engine, by its contributors. openc2e is free software "
-							"under the GNU Lesser General Public License 2.1, and so are this fork's changes to it.");
+		ImGui::TextDisabled("A fork of openc2e, the open-source Creatures engine. openc2e is free software under the GNU Lesser "
+							"General Public License 2.1, and so are this fork's changes to it.");
+		ImGui::TextDisabled("Based on openc2e " OPENC2E_UPSTREAM_BASE ".");
 		ImGui::TextDisabled("The game's art, sounds and worlds come from your own copy of Creatures 2.");
+		ImGui::Spacing();
+		// openc2e's developers, from its AUTHORS file and its history up to
+		// the commit this fork started from (most commits first)
+		if (ImGui::CollapsingHeader("openc2e was written by", ImGuiTreeNodeFlags_DefaultOpen)) {
+			static const char* const devs[][2] = {
+				{"Alyssa Milburn (fuzzie)", "lead developer"},
+				{"Michael Maltese (ligfx)", "developer and maintainer since 2019"},
+				{"Bryan Donlan (bdonlan)", "virtual machine and core developer"},
+				{"Jeremy Apthorp (nornagon)", "core developer"},
+				{"Eric Goodwin (muffin)", "Windows builds, documentation and bug fixes"},
+				{"Dylan William Hardison (dylan)", ""},
+				{"Sven Eckelmann", ""},
+				{"Bertram Bourdrez (bbz)", ""},
+			};
+			for (auto& d : devs) {
+				ImGui::BulletText("%s", d[0]);
+				if (d[1][0]) {
+					ImGui::SameLine();
+					ImGui::TextDisabled("%s", d[1]);
+				}
+			}
+			ImGui::TextWrapped("with contributions from expwnent, Michael Lynch, Shreddan, pushfoo, Jelle De Loecker and callym.");
+		}
 		ImGui::PopTextWrapPos();
 		ImGui::Spacing();
 		if (ImGui::Button("openc2e on the Web"))
