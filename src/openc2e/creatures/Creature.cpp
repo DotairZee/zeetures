@@ -734,6 +734,22 @@ void c2eCreature::tick() {
 // swimming in the underground pond sank through its bed into the rock
 // (owner, 2026-11-11); the floor check in Agent::physicsTick leaves water
 // rooms alone, so nothing brought her back. Checked about twice a second.
+// whether a room's floor at x is an open doorway into water below
+static bool floorOpensOntoWater(Room* r, float x) {
+	float span = std::max(1.0f, (float)r->x_right - (float)r->x_left);
+	float floor = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (x - r->x_left) / span;
+	for (auto& d : r->getDoors()) {
+		Room* o = d.first.get();
+		if (!o || d.second.perm <= 0 || o->type != 2 || x < o->x_left || x > o->x_right)
+			continue;
+		float ospan = std::max(1.0f, (float)o->x_right - (float)o->x_left);
+		float ceiling = o->y_left_ceiling + ((float)o->y_right_ceiling - (float)o->y_left_ceiling) * (x - o->x_left) / ospan;
+		if (std::fabs(ceiling - floor) <= 4)
+			return true;
+	}
+	return false;
+}
+
 void oldCreature::keepInRoomSystem() {
 #ifndef _CREATURE_STANDALONE
 	if (!parentagent || !world.map || parentagent->carriedby || parentagent->invehicle)
@@ -824,6 +840,11 @@ void oldCreature::keepInRoomSystem() {
 					std::shared_ptr<Room> r = mr ? mr->roomAt(cx + side * dx, fy) : world.map->roomAt(cx + side * dx, fy);
 					if (!r || r->type == 2 || !livable(r.get()))
 						continue;
+					// (not air over open water: room 140, east of the dock's end,
+					// has the sea through its floor, and a creature moved there
+					// dropped to the seabed; 2026-11-12)
+					if (floorOpensOntoWater(r.get(), cx + side * dx))
+						continue;
 					float oldx = a->x, oldy = a->y;
 					a->moveTo(a->x + side * (dx + a->getWidth() / 2.0f), a->y);
 					a->velx = 0;
@@ -843,7 +864,21 @@ void oldCreature::keepInRoomSystem() {
 				if (r->floorpoints.size())
 					bottom = std::min(bottom, r->floorYatX(cx));
 				float oldx = a->x, oldy = a->y;
-				a->moveTo(a->x, bottom - a->getHeight() - 1);
+				// wholly on that floor: lifted at the same x, a creature at the
+				// east end of the dock (room 13, which ends at x 6565) still
+				// overhung the open sea beyond, fell through again by its corner
+				// and was lifted again, 1,228 times in 20 minutes (3RPA,
+				// starving; 2026-11-12)
+				float nx = a->x, w = a->getWidth();
+				if ((float)r->x_right - (float)r->x_left > w + 4)
+					nx = std::clamp(nx, (float)r->x_left + 2, (float)r->x_right - w - 2);
+				if (nx != a->x) {
+					cx = nx + w / 2.0f;
+					bottom = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
+					if (r->floorpoints.size())
+						bottom = std::min(bottom, r->floorYatX(cx));
+				}
+				a->moveTo(nx, bottom - a->getHeight() - 1);
 				a->velx = 0;
 				a->vely = 0;
 				if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
