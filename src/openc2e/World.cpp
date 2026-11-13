@@ -504,12 +504,27 @@ void World::tick() {
 			if (!creature && (a->family != 2 || !(a->attr & 64)))
 				continue;
 			float cx = a->x + a->getWidth() / 2.0f, bottom = a->y + a->getHeight();
+			// across the seam of a wrapping world, the middle is on the other
+			// side: a creature against the library's west wall (x ~0) has its
+			// top-left wrapped to ~8320, so its middle fell past the east edge,
+			// inside the sealed pillar there (room 213), and this lifted it
+			// 490 px into room 175 (2026-11-13, three times in a night)
+			if (MetaRoom* m = map->metaRoomAt(a->x, a->y); m && m->wraparound()) {
+				if (cx >= m->x() + (int)m->width())
+					cx -= m->width();
+				else if (cx < m->x())
+					cx += m->width();
+			}
 			std::shared_ptr<Room> at = map->roomAt(cx, bottom - 1);
 			std::shared_ptr<Room> mid = map->roomAt(cx, a->y + a->getHeight() / 2.0f);
 			bool outside = !at && !mid;
 			bool pocket = at && sealed(at) && (!mid || sealed(mid));
 			if (!(creature ? pocket : (outside || pocket)))
 				continue;
+			// and a creature whose feet stand in an open room is where it should be
+			if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()))
+				if (std::shared_ptr<Room> fr = sc->footRoom(); fr && !sealed(fr))
+					continue;
 			for (float yy = bottom - 2; yy > bottom - 600 && yy > 0; yy -= 4) {
 				std::shared_ptr<Room> r = map->roomAt(cx, yy);
 				if (!r || r == at || sealed(r))
