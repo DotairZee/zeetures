@@ -578,6 +578,11 @@ void c2Creature::tick() {
 	// TODO: should we tick some things even if dead?
 	if (!alive) {
 		notifyMindOfDeath();
+		// a body, too, is kept in the room system: a dead ettin came to rest
+		// in the rock under the upper-east deck's end (7743,968), out of
+		// every room, and raised an error 737 times through the night until
+		// it was cleared (2026-11-13)
+		keepInRoomSystem();
 		return;
 	}
 
@@ -962,7 +967,21 @@ void oldCreature::keepInRoomSystem() {
 	if (r->floorpoints.size() && r->type != 2)
 		bottom = std::min(bottom, r->floorYatX(cx));
 	float oldx = a->x, oldy = a->y;
-	a->moveTo(a->x, bottom - a->getHeight() - 1);
+	// wholly on that floor, as for a sealed pocket: a body lifted onto the
+	// upper-east deck (room 145, which ends at x 7745) at the same x
+	// overhung its end and dropped back into the rock below, again and again
+	// (2026-11-13)
+	float nx = a->x, w = a->getWidth();
+	if ((float)r->x_right - (float)r->x_left > w + 4 && r->type != 2) {
+		nx = std::clamp(nx, (float)r->x_left + 2, (float)r->x_right - w - 2);
+		if (nx != a->x) {
+			cx = nx + w / 2.0f;
+			bottom = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
+			if (r->floorpoints.size())
+				bottom = std::min(bottom, r->floorYatX(cx));
+		}
+	}
+	a->moveTo(nx, bottom - a->getHeight() - 1);
 	a->velx = 0;
 	a->vely = 0;
 	if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
