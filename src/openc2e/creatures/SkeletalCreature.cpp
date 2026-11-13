@@ -41,6 +41,8 @@ bool walkOffEndsInWater(const Room& r, bool east, int fit); // CreatureAI.cpp
 #include "MetaRoom.h"
 #include "PathResolver.h"
 #include "Room.h"
+#include "caosScript.h"
+#include "caosVM.h"
 #include "World.h"
 #include "caosValue.h"
 #include "common/backend/Backend.h"
@@ -1194,7 +1196,11 @@ void SkeletalCreature::tick() {
 				bool east = direction == 2;
 				float fx = footX();
 				float edge = east ? (float)downfootroom->x_right : (float)downfootroom->x_left;
-				if (std::fabs(fx - edge) < 14.0f && walkOffEndsInWater(*downfootroom, east, std::max(1, size)))
+				// within a stride of the edge (the feet take turns, and the
+				// front one lands a stride on: measured from the foot on the
+				// floor, 14 px let it step straight past the edge)
+				float toEdge = east ? edge - fx : fx - edge;
+				if (toEdge < 40.0f && toEdge > -20.0f && walkOffEndsInWater(*downfootroom, east, std::max(1, size)))
 					edgeStop = true;
 			}
 		}
@@ -1294,8 +1300,10 @@ void SkeletalCreature::physicsTick() {
 		int nowroom = downfootroom ? (int)downfootroom->id : -1;
 		auto lr = lastroom.find(unid);
 		if (lr != lastroom.end() && lr->second != nowroom)
-			fmt::print("* WATCH ROOM t{} unid {} {} -> {} foot ({:.0f}, {:.0f}) falling {} floor {:.0f}\n", world.tickcount, unid,
-				lr->second, nowroom, footx, footy, (bool)falling, downfootroom ? downfootroom->floorYatX(footx) : -1.0f);
+			fmt::print("* WATCH ROOM t{} unid {} {} -> {} foot ({:.0f}, {:.0f}) falling {} floor {:.0f} script {} {}\n", world.tickcount, unid,
+				lr->second, nowroom, footx, footy, (bool)falling, downfootroom ? downfootroom->floorYatX(footx) : -1.0f,
+				vm && vm->currentscript ? fmt::format("{} {} {} {}", vm->currentscript->fmly, vm->currentscript->gnus, vm->currentscript->spcs, vm->currentscript->scrp) : std::string("none"),
+				walking ? "walking" : "");
 		lastroom[unid] = nowroom;
 		static std::map<int, float> lastfooty;
 		auto it = lastfooty.find(unid);
