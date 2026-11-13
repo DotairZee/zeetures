@@ -1,4 +1,8 @@
 #include "AgentInjector.h"
+#include "Agent.h"
+#include <ctime>
+#include <map>
+#include "creatures/CreatureSpeech.h"
 
 #include "C2Kits.h"
 #include "C2KitsInternal.h"
@@ -23,7 +27,8 @@
 namespace Openc2eImgui {
 
 static bool s_read_agents = false;
-static Texture s_cob_texture;
+// each listed object's thumbnail, made when first drawn (by file and name)
+static std::map<std::string, Texture> s_thumbs;
 static size_t s_object_selected_index = 0;
 
 static CobManager s_object_injector;
@@ -162,35 +167,90 @@ static void importPicked() {
 	}
 	s_object_injector.update();
 	hideListed();
-	s_cob_texture = {};
+	s_thumbs.clear();
 	if (getenv("OPENC2E_TEST_IMPORT_OBJECTS"))
 		for (auto& line : s_import_report)
 			fmt::print("* IMPORT {}\n", line);
 }
 
-static void DrawAgentPreview(Texture& texture) {
-	ImVec2 size = ImVec2(300, 211); // the list's width (it once filled the window, which then could not shrink)
-	ImDrawList* drawlist = ImGui::GetWindowDrawList();
-	ImVec2 p = ImGui::GetCursorScreenPos();
-	// should be approx 300 x 170. Alima.bmp is 312 x 211
-
-	ImRect bb(p, p + size);
-	drawlist->AddRectFilled(
-		bb.Min,
-		bb.Max,
-		IM_COL32(0, 0, 0, 255),
-		ImGui::GetStyle().FrameRounding);
-
-	if (texture) {
-		int w = texture.width, h = texture.height;
-		// w *= io.DisplayFramebufferScale.x;
-		// h *= io.DisplayFramebufferScale.y;
-		ImVec2 tex_p = p + size / 2 - ImVec2(w, h) / 2;
-		drawlist->AddImage(texture.as<ImTextureID>(), tex_p, tex_p + ImVec2(w, h));
+static Texture& thumbOf(const CobManager::CobFileInfo& o) {
+	std::string key = o.filename.string() + "|" + o.name;
+	auto it = s_thumbs.find(key);
+	if (it == s_thumbs.end()) {
+		Image img = s_object_injector.getPicture(o);
+		Texture t;
+		if (img.width > 0 && img.height > 0)
+			t = get_backend()->createTextureFromImage(img);
+		it = s_thumbs.emplace(key, t).first;
 	}
-
-	ImGui::Dummy(size);
+	return it->second;
 }
+
+// a thumbnail fitted into a box (on black, as the COBs draw them), centred
+static void drawThumb(ImDrawList* dl, const CobManager::CobFileInfo& o, ImVec2 at, float box) {
+	dl->AddRectFilled(at, at + ImVec2(box, box), IM_COL32(0, 0, 0, 255), 3);
+	Texture& t = thumbOf(o);
+	if (!t)
+		return;
+	float k = std::min(1.0f, std::min(box / t.width, box / t.height));
+	ImVec2 sz(t.width * k, t.height * k);
+	ImVec2 p = at + ImVec2((box - sz.x) / 2, (box - sz.y) / 2);
+	dl->AddImage(t.as<ImTextureID>(), p, p + sz);
+}
+
+// what kind of thing an object is: the game's word for its category, as a
+// heading (plural) or a label; respelt where the game's word reads oddly
+static std::string kindWord(int category, bool plural) {
+	if (category < 0)
+		return plural ? "Other objects" : "object";
+	std::string w = to_ascii_lowercase(KitCategoryNoun(category));
+	static const std::map<std::string, std::pair<const char*, const char*>> names = {
+		{"badcritter", {"pest", "Pests"}}, {"implement", {"gadget", "Gadgets"}}, {"mover", {"vehicle", "Vehicles"}},
+		{"dispensor", {"dispenser", "Dispensers"}}, {"badplant", {"bad plant", "Bad plants"}}, {"badbug", {"bad bug", "Bad bugs"}},
+		{"mediabox", {"media box", "Media boxes"}}, {"leftright", {"switch", "Switches"}}, {"cliff edge", {"cliff edge", "Cliff edges"}},
+		{"nature", {"nature", "Nature"}}, {"food", {"food", "Food"}}, {"medicine", {"medicine", "Medicine"}}, {"detritus", {"detritus", "Detritus"}},
+		{"weather", {"weather", "Weather"}}, {"machinery", {"machine", "Machines"}},
+	};
+	auto n = names.find(w);
+	if (n != names.end())
+		return plural ? n->second.second : n->second.first;
+	if (!plural)
+		return w;
+	std::string h = w;
+	h[0] = (char)std::toupper((unsigned char)h[0]);
+	return h + "s";
+}
+
+// the order kinds come in when sorted by kind: living things first, then
+// things to play with and use, then the rest by name
+static int kindRank(int category) {
+	static const char* const order[] = {"critter", "badcritter", "bug", "badbug", "plant", "badplant", "nest", "toy", "implement",
+		"dispensor", "mover", "machine", "food", "drink", "medicine"};
+	std::string w = category < 0 ? std::string() : to_ascii_lowercase(KitCategoryNoun(category));
+	for (int i = 0; i < (int)(sizeof(order) / sizeof(*order)); i++)
+		if (w == order[i])
+			return i;
+	return category < 0 ? 1000 : 100;
+}
+
+static std::string dateText(long long secs) {
+	if (secs <= 0)
+		return "unknown";
+	std::time_t t = (std::time_t)secs;
+	std::tm tm{};
+	localtime_r(&t, &tm);
+	static const char* const months[] = {"January", "February", "March", "April", "May", "June", "July", "August", "September",
+		"October", "November", "December"};
+	return fmt::format("{} {} {}", tm.tm_mday, months[tm.tm_mon], 1900 + tm.tm_year);
+}
+
+// the injector's sort and view, kept between runs (settings.txt)
+enum { SORT_NAME, SORT_NAME_DESC, SORT_KIND, SORT_ADDED, SORT_IMPORTED, SORT_IN_WORLD, SORT_USED, SORT_COUNT };
+static const char* const SORT_NAMES[SORT_COUNT] = {"Name, A to Z", "Name, Z to A", "Kind of object", "Recently added", "Imported first",
+	"In the world now", "Recently used"};
+static int s_sort = -1; // -1: not read yet
+static bool s_tiles = false;
+static char s_search[64] = "";
 
 bool IsAgentInjectorEnabled() {
 	return engine.version == 1 || engine.version == 2;
@@ -298,44 +358,253 @@ void DrawAgentInjector() {
 		}
 		importPicked();
 
-		{
-			ImGui::BeginChild("Objects", ImVec2(300, 100), true);
-			for (size_t i = 0; i < s_object_injector.objects.size(); ++i) {
-				auto obj = s_object_injector.objects[i];
-				if (ImGui::Selectable(obj.name.c_str(), i == s_object_selected_index)) {
-					s_cob_texture = {};
-					s_object_selected_index = i;
+		if (s_sort < 0) {
+			std::string v = readPlayerSetting("injector-sort");
+			s_sort = v.empty() ? SORT_NAME : std::clamp(atoi(v.c_str()), 0, SORT_COUNT - 1);
+			s_tiles = readPlayerSetting("injector-view") == "tiles";
+			// developer aid: OPENC2E_INJECTOR_VIEW="sort,tiles|list[,search]"
+			if (const char* v2 = getenv("OPENC2E_INJECTOR_VIEW")) {
+				std::string t = v2;
+				s_sort = std::clamp(atoi(t.c_str()), 0, SORT_COUNT - 1);
+				s_tiles = t.find("tiles") != std::string::npos;
+				auto c = t.find(',', t.find(',') + 1);
+				if (c != std::string::npos)
+					std::snprintf(s_search, sizeof(s_search), "%s", t.c_str() + c + 1);
+			}
+		}
+		auto& objs = s_object_injector.objects;
+		// how many of each the player has added to this world
+		std::map<std::string, int> inWorld;
+		for (auto& a : world.agents)
+			if (a && !a->injectedFrom.empty() && !a->isDying())
+				inWorld[a->injectedFrom]++;
+		std::map<std::string, long long> used;
+		if (s_sort == SORT_USED)
+			for (auto& o : objs)
+				used[o.name] = CobManager::lastUsed(o.name);
+
+		// the toolbar: search, sort, view, import
+		ImGui::SetNextItemWidth(220);
+		ImGui::InputTextWithHint("##search", "Search objects...", s_search, sizeof(s_search));
+		ImGui::SameLine(0, 14);
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted("Sort:");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(170);
+		if (ImGui::BeginCombo("##sort", SORT_NAMES[s_sort])) {
+			for (int k = 0; k < SORT_COUNT; k++)
+				if (ImGui::Selectable(SORT_NAMES[k], k == s_sort)) {
+					s_sort = k;
+					writePlayerSetting("injector-sort", std::to_string(k));
 				}
+			ImGui::EndCombo();
+		}
+		ImGui::SameLine(0, 14);
+		for (int v = 0; v < 2; v++) {
+			bool on = s_tiles == (v == 1);
+			if (on)
+				ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
+			if (ImGui::Button(v ? "Tiles" : "List")) {
+				s_tiles = v == 1;
+				writePlayerSetting("injector-view", s_tiles ? "tiles" : "list");
 			}
-			ImGui::EndChild();
+			if (on)
+				ImGui::PopStyleColor();
+			ImGui::SameLine(0, 2);
 		}
-
-		if (!s_cob_texture && s_object_selected_index < s_object_injector.objects.size()) {
-			s_cob_texture = get_backend()->createTextureFromImage(
-				s_object_injector.getPicture(s_object_injector.objects[s_object_selected_index]));
-		}
-		DrawAgentPreview(s_cob_texture);
-
-		if (ImGui::Button("Add Object") && s_object_selected_index < s_object_injector.objects.size()) {
-			s_object_injector.inject(s_object_injector.objects[s_object_selected_index], true);
-		}
-		ImGui::SameLine();
-		if (s_object_selected_index < s_object_injector.objects.size() && s_object_injector.objects[s_object_selected_index].is_removable) {
-			if (ImGui::Button("Remove Object")) {
-				s_object_injector.remove(s_object_injector.objects[s_object_selected_index], true);
-			}
-		} else {
-			ImGuiUtils::DisabledButton("Remove Object");
-		}
-		ImGui::SameLine();
+		const float listW = s_tiles ? 456 : 340, detailW = 420, paneH = 470;
+		ImGui::SameLine(listW + detailW + ImGui::GetStyle().ItemSpacing.x - 80);
 		if (ImGui::Button("Import...")) {
 			static const SDL_DialogFileFilter filters[] = {{"Objects (COB files, zips, add-on installers)", "cob;zip;exe"}, {"All files", "*"}};
 			SDL_ShowOpenFileDialog(ObjectFilesChosen, nullptr, nullptr, filters, 2, nullptr, true);
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Add COB files, or zips of them, to this list (copied into your own data folder)");
-		ImGui::TextDisabled("Objects you add are saved with the world.");
-		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 300); // as wide as the list
+
+		// the shown objects: matching the search, in the chosen order
+		std::string q = to_ascii_lowercase(std::string(s_search));
+		std::vector<size_t> shown;
+		for (size_t i = 0; i < objs.size(); i++) {
+			auto& o = objs[i];
+			if (!q.empty() && to_ascii_lowercase(o.name).find(q) == std::string::npos && to_ascii_lowercase(o.description).find(q) == std::string::npos &&
+				to_ascii_lowercase(kindWord(o.category, false)).find(q) == std::string::npos)
+				continue;
+			shown.push_back(i);
+		}
+		auto byName = [&](size_t a, size_t b) { return to_ascii_lowercase(objs[a].name) < to_ascii_lowercase(objs[b].name); };
+		std::stable_sort(shown.begin(), shown.end(), [&](size_t a, size_t b) {
+			auto& x = objs[a];
+			auto& y = objs[b];
+			switch (s_sort) {
+				case SORT_NAME_DESC: return byName(b, a);
+				case SORT_KIND:
+					if (kindRank(x.category) != kindRank(y.category))
+						return kindRank(x.category) < kindRank(y.category);
+					if (x.category != y.category)
+						return kindWord(x.category, true) < kindWord(y.category, true);
+					return byName(a, b);
+				case SORT_ADDED:
+					if (x.added != y.added)
+						return x.added > y.added;
+					return byName(a, b);
+				case SORT_IMPORTED:
+					if (x.imported != y.imported)
+						return x.imported;
+					return byName(a, b);
+				case SORT_IN_WORLD:
+					if (inWorld[x.name] != inWorld[y.name])
+						return inWorld[x.name] > inWorld[y.name];
+					return byName(a, b);
+				case SORT_USED:
+					if (used[x.name] != used[y.name])
+						return used[x.name] > used[y.name];
+					return byName(a, b);
+				default: return byName(a, b);
+			}
+		});
+		if (s_object_selected_index >= objs.size() && !objs.empty())
+			s_object_selected_index = 0;
+		// the details follow the search: a chosen object it hides gives way
+		// to the first one shown
+		if (!shown.empty() && std::find(shown.begin(), shown.end(), s_object_selected_index) == shown.end())
+			s_object_selected_index = shown[0];
+
+		// the objects: a list (with kind headings when sorted by kind) or tiles
+		ImGui::BeginChild("Objects", ImVec2(listW, paneH), true);
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+		const ImU32 GOLD = IM_COL32(205, 170, 95, 255), DIM = IM_COL32(140, 146, 156, 255), GREEN = IM_COL32(88, 196, 104, 255);
+		if (shown.empty())
+			KitNote(objs.empty() ? "No objects. Import adds COB files." : "Nothing matches the search.");
+		if (!s_tiles) {
+			int lastKind = -2;
+			for (size_t n = 0; n < shown.size(); n++) {
+				size_t i = shown[n];
+				auto& o = objs[i];
+				if (s_sort == SORT_KIND && o.category != lastKind) {
+					lastKind = o.category;
+					int count = 0;
+					for (size_t m : shown)
+						count += objs[m].category == o.category;
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(GOLD));
+					ImGui::Text("%s", kindWord(o.category, true).c_str());
+					ImGui::PopStyleColor();
+					ImGui::SameLine(listW - 40);
+					ImGui::TextDisabled("%d", count);
+				}
+				ImGui::PushID((int)i);
+				ImVec2 at = ImGui::GetCursorScreenPos();
+				if (ImGui::Selectable("##obj", i == s_object_selected_index, 0, ImVec2(0, 34)))
+					s_object_selected_index = i;
+				if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+					s_object_injector.inject(o, true);
+					CobManager::noteUsed(o.name);
+				}
+				ImGui::PopID();
+				drawThumb(dl, o, at + ImVec2(4, 2), 30);
+				dl->AddText(at + ImVec2(42, 9), ImGui::GetColorU32(ImGuiCol_Text), o.name.c_str());
+				// a badge: added to this world, or imported by the player
+				std::string badge = inWorld[o.name] ? fmt::format("in world {}", inWorld[o.name]) : o.imported ? "imported" : "";
+				if (!badge.empty()) {
+					ImVec2 bs = ImGui::CalcTextSize(badge.c_str());
+					ImVec2 b0 = at + ImVec2(listW - bs.x - 30, 9);
+					dl->AddRectFilled(b0 - ImVec2(4, 1), b0 + bs + ImVec2(4, 1), inWorld[o.name] ? IM_COL32(30, 66, 38, 255) : IM_COL32(70, 58, 30, 255), 4);
+					dl->AddText(b0, inWorld[o.name] ? GREEN : GOLD, badge.c_str());
+				}
+			}
+		} else {
+			const float TW = 104, TH = 118;
+			const int per = 4;
+			for (size_t n = 0; n < shown.size(); n++) {
+				size_t i = shown[n];
+				auto& o = objs[i];
+				if (n % per)
+					ImGui::SameLine(0, 4);
+				ImGui::PushID((int)i);
+				ImVec2 at = ImGui::GetCursorScreenPos();
+				if (ImGui::InvisibleButton("tile", ImVec2(TW, TH)))
+					s_object_selected_index = i;
+				bool hov = ImGui::IsItemHovered();
+				if (hov && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+					s_object_injector.inject(o, true);
+					CobManager::noteUsed(o.name);
+				}
+				ImGui::PopID();
+				bool sel = i == s_object_selected_index;
+				dl->AddRectFilled(at, at + ImVec2(TW, TH), sel ? IM_COL32(51, 86, 140, 255) : hov ? IM_COL32(38, 40, 48, 255) : IM_COL32(28, 29, 33, 255), 5);
+				dl->AddRect(at, at + ImVec2(TW, TH), sel || hov ? GOLD : IM_COL32(48, 48, 51, 255), 5);
+				drawThumb(dl, o, at + ImVec2((TW - 72) / 2, 6), 72);
+				std::string name = o.name;
+				if (ImGui::CalcTextSize(name.c_str()).x > TW - 6) {
+					while (name.size() > 2 && ImGui::CalcTextSize((name + ".").c_str()).x > TW - 6)
+						name.pop_back();
+					name += ".";
+				}
+				ImVec2 ns = ImGui::CalcTextSize(name.c_str());
+				dl->AddText(at + ImVec2((TW - ns.x) / 2, 82), ImGui::GetColorU32(ImGuiCol_Text), name.c_str());
+				std::string kw = inWorld[o.name] ? fmt::format("in world {}", inWorld[o.name]) : kindWord(o.category, false);
+				ImVec2 ks = ImGui::CalcTextSize(kw.c_str());
+				dl->AddText(at + ImVec2((TW - ks.x) / 2, 98), inWorld[o.name] ? GREEN : o.imported ? GOLD : DIM, kw.c_str());
+				if (hov)
+					ImGui::SetTooltip("%s\nDouble-click to add one to the world", o.name.c_str());
+			}
+		}
+		ImGui::EndChild();
+
+		// the chosen object
+		ImGui::SameLine();
+		ImGui::BeginChild("Details", ImVec2(detailW, paneH), true);
+		if (s_object_selected_index < objs.size()) {
+			auto& o = objs[s_object_selected_index];
+			ImDrawList* dd = ImGui::GetWindowDrawList();
+			ImVec2 p = ImGui::GetCursorScreenPos();
+			drawThumb(dd, o, p, 150);
+			dd->AddRect(p - ImVec2(1, 1), p + ImVec2(151, 151), GOLD);
+			ImGui::SetCursorScreenPos(p + ImVec2(166, 0));
+			ImGui::BeginGroup();
+			ImGui::SetWindowFontScale(1.3f);
+			ImGui::TextUnformatted(o.name.c_str());
+			ImGui::SetWindowFontScale(1.0f);
+			std::string kind = kindWord(o.category, false);
+			kind[0] = (char)std::toupper((unsigned char)kind[0]);
+			ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(GOLD), "%s", kind.c_str());
+			ImGui::Spacing();
+			auto row = [](const char* k, const std::string& v) {
+				ImGui::TextDisabled("%s", k);
+				ImGui::SameLine(110);
+				ImGui::TextUnformatted(v.c_str());
+			};
+			row("From", o.imported ? "you (imported)" : "Creatures 2");
+			row("Added", dateText(o.added));
+			row("In this world", inWorld[o.name] ? fmt::format("{} you added", inWorld[o.name]) : std::string("none you added"));
+			row("Makes", o.category >= 0 ? fmt::format("{} {} {}", o.family, o.genus, o.species) : std::string("scripts only"));
+			ImGui::EndGroup();
+			ImGui::SetCursorScreenPos(p + ImVec2(0, 160));
+			ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + detailW - 24);
+			ImGui::TextWrapped("%s", o.description.empty() ? "No description." : o.description.c_str());
+			ImGui::PopTextWrapPos();
+			// the buttons at the foot of the pane
+			float footY = paneH - 2 * ImGui::GetFrameHeightWithSpacing() - 30;
+			if (ImGui::GetCursorPosY() < footY)
+				ImGui::SetCursorPosY(footY);
+			ImGui::TextDisabled("Objects you add are saved with the world.");
+			ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
+			if (ImGui::Button("Add to world")) {
+				s_object_injector.inject(o, true);
+				CobManager::noteUsed(o.name);
+			}
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			if (o.is_removable) {
+				if (ImGui::Button("Remove from world"))
+					s_object_injector.remove(o, true);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Runs the object's own removal script: every one of it goes, not only those you added");
+			} else
+				ImGuiUtils::DisabledButton("Remove from world");
+		}
+		ImGui::EndChild();
+
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + listW + detailW);
 		for (auto& line : s_import_report)
 			ImGui::TextWrapped("%s", line.c_str());
 		ImGui::PopTextWrapPos();

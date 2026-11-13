@@ -14,6 +14,7 @@
 #include "fileformats/c2cobfile.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
@@ -61,9 +62,30 @@ void CobManager::update() {
 					continue;
 				cobAgentBlock a(b);
 				objects.emplace_back(a.name, cob);
+				auto& o = objects.back();
 				if (a.removescript.size() > 0) {
-					objects.back().is_removable = true;
+					o.is_removable = true;
 				}
+				o.description = a.description;
+				// the first classified object the install script makes
+				std::string lower = to_ascii_lowercase(a.installscript);
+				for (size_t at = lower.find("setv cls2"); at != std::string::npos; at = lower.find("setv cls2", at + 9)) {
+					int f = 0, g = 0, sp = 0;
+					if (sscanf(lower.c_str() + at + 9, "%d %d %d", &f, &g, &sp) != 3)
+						continue;
+					int cat = world.findCategory((unsigned char)f, (unsigned char)g, (unsigned short)sp);
+					if (cat < 0)
+						continue;
+					o.category = cat;
+					o.family = f, o.genus = g, o.species = sp;
+					break;
+				}
+				std::error_code ec;
+				auto t = fs::last_write_time(cob, ec);
+				if (!ec)
+					o.added = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::file_clock::to_sys(t).time_since_epoch()).count();
+				std::string userdir = getUserDataDir().lexically_normal().string();
+				o.imported = cob.lexically_normal().string().rfind(userdir, 0) == 0;
 			}
 		}
 	}
@@ -98,6 +120,28 @@ Image CobManager::getPicture(const CobFileInfo& info) {
 // script; images and sounds it needs are written to the user data folder
 static std::string c2AgentCaos(const std::filesystem::path& filename, const std::string& name, bool withInstall);
 static std::vector<std::string> c2AgentScripts(const std::filesystem::path& filename, const std::string& name);
+
+static fs::path usedFile() {
+	return getUserDataDir() / "injector-used.txt";
+}
+
+// injector-used.txt: "seconds<TAB>name" lines, the latest for each name last
+long long CobManager::lastUsed(const std::string& name) {
+	std::ifstream in(usedFile());
+	std::string line;
+	long long when = 0;
+	while (std::getline(in, line)) {
+		auto tab = line.find('\t');
+		if (tab != std::string::npos && line.substr(tab + 1) == name)
+			when = atoll(line.c_str());
+	}
+	return when;
+}
+
+void CobManager::noteUsed(const std::string& name) {
+	std::ofstream out(usedFile(), std::ios::app);
+	out << (long long)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "\t" << name << "\n";
+}
 
 void CobManager::inject(const CobFileInfo& info, bool byHand) {
 	std::string idata;
