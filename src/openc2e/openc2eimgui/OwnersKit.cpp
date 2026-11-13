@@ -7,6 +7,7 @@
 #include "Agent.h"
 #include "C2Kits.h"
 #include "C2KitsInternal.h"
+#include "WorldSave.h"
 #include "Camera.h"
 #include "Engine.h"
 #include "World.h"
@@ -162,6 +163,26 @@ static void RegistrationPage() {
 			ImGui::SetTooltip("Seal its record. The name can still be changed.");
 	}
 	KitEndCard();
+
+	// its life stage, older or younger: stage by stage, as natural ageing
+	// (moved here from the Creatures menu; owner, 2026-11-12)
+	if (c->isAlive() && !m->died) {
+		static const char* const stages[] = {"Baby", "Child", "Adolescent", "Youth", "Adult", "Old", "Senile"};
+		int stage = (int)c->getStage();
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted("Life stage");
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(140);
+		if (ImGui::BeginCombo("##lifestage", stage >= 0 && stage < 7 ? stages[stage] : "?")) {
+			for (int i = 0; i < 7; i++)
+				if (ImGui::Selectable(stages[i], i == stage) && i != stage)
+					if (auto sp = AgentRef(a).lock())
+						WorldSave::RequestLifeStage(sp, i);
+			ImGui::EndCombo();
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Make it older or younger: it changes a stage at a time, as natural ageing does,\nkeeping its memories, chemistry and health.");
+	}
 
 	if (m->died) {
 		std::string age = KitAgeText(KitAgeTicks(*m), false);
