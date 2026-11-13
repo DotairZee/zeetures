@@ -813,7 +813,22 @@ void SkeletalCreature::recalculateSkeleton() {
 		int orig_footpart = (downfoot_left ? 11 : 12);
 		float oldbottom = y + height; // height is the lower foot's y, from the last calculation
 		// adjust location to match foot
-		moveTo(x - (attachmentX(orig_footpart, 1) - oldfootx), y - (attachmentY(orig_footpart, 1) - oldfooty));
+		float dx = attachmentX(orig_footpart, 1) - oldfootx;
+		// C2: a creature in the air does not walk. Its walk carried on while
+		// it fell (the mind's walk goes on, and each step moved it on by the
+		// planted foot's stride), and nothing checks walls in the air, so a
+		// norn that went off the ledge by the west lift (x 494, y 1540) came
+		// down 184 px further east, through the rock face into the room
+		// below (owner, 2026-11-13). Moving up or down, or well clear of the
+		// floor, a pose change keeps it where it is across (the floor test
+		// alone missed a fall through an open floor between two rooms).
+		if (engine.version == 2 && falling && world.map) {
+			float cx = x + getWidth() / 2.0f, feet = y + height;
+			std::shared_ptr<Room> r = world.map->roomAt(cx, feet - 1);
+			if (std::fabs(vely) > 3.0f || !r || r->floorYatX(cx) - feet > 8.0f)
+				dx = 0;
+		}
+		moveTo(x - dx, y - (attachmentY(orig_footpart, 1) - oldfooty));
 		if (engine.version == 2 && falling) {
 			// While physics is in charge (falling, landing, bouncing), nothing snaps the
 			// feet back to a floor, and keeping the previous down foot fixed lets the
@@ -1458,6 +1473,12 @@ void SkeletalCreature::physicsTick() {
 		} else
 			fallStuck = 0;
 	}
+	// developer aid (OPENC2E_WATCH_FALLS): each tick of a creature's fall,
+	// with whether it is walking, to see what moves it sideways
+	static const bool watchfalls = getenv("OPENC2E_WATCH_FALLS") != nullptr;
+	if (watchfalls && falling && fallTracking)
+		fmt::print("* FALLTICK t{} unid {} at {:.0f},{:.0f} walking {} approaching {} velx {:.1f}\n", world.tickcount, unid, x + getWidth() / 2.0f, y + getHeight(),
+			walking, approaching, velx);
 	if (fallTracking && !falling) {
 		fallTracking = false;
 		if (fallOwn && !carriedby && !invehicle)
@@ -1682,8 +1703,8 @@ void SkeletalCreature::landed(float height) {
 	lastFall.hurt = (pain + injury) / 255.0f;
 	lastFall.tick = world.tickcount;
 	if (pain > 0 || getenv("OPENC2E_WATCH_FALLS"))
-		fmt::print("* {} fell {:.0f} px from {:.0f},{:.0f}{}\n", world.history ? world.history->findMoniker(creature->getGenome()) : std::string("?"), height,
-			lastFall.fromX, lastFall.fromY, pain > 0 ? fmt::format(": hurt (pain {:.0f}, injury {:.0f})", pain, injury) : std::string(water ? " into water" : ""));
+		fmt::print("* {} fell {:.0f} px from {:.0f},{:.0f} to {:.0f},{:.0f}{}\n", world.history ? world.history->findMoniker(creature->getGenome()) : std::string("?"), height,
+			lastFall.fromX, lastFall.fromY, x + getWidth() / 2.0f, y + getHeight(), pain > 0 ? fmt::format(": hurt (pain {:.0f}, injury {:.0f})", pain, injury) : std::string(water ? " into water" : ""));
 }
 
 void SkeletalCreature::scriptMoved() {
