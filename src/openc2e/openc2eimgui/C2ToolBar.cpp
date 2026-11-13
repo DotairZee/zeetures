@@ -1,5 +1,9 @@
 #include "C2ToolBar.h"
 
+#include <algorithm>
+#include <array>
+#include <functional>
+
 #include "C2KitsInternal.h"
 #include "HelpWindow.h"
 #include "creatures/CreatureSpeech.h"
@@ -600,7 +604,226 @@ static void DrawC2MenuBar() {
 // Bubbles and Autosave): read once at the first frame, written when the
 // player changes one. Not read for headless tests that set their own view
 // (OPENC2E_VIEW, OPENC2E_OPEN_KITS), so their pictures don't depend on it.
+// ---- movable toolbars ------------------------------------------------------
+// As in C2 (a Windows rebar): each toolbar is a band with a grip at its
+// left; drag the grip to move the band along its row, onto another row, or
+// above or below the others onto a row of its own (owner, 2026-11-12). A
+// band that doesn't fit in the window wraps onto the next line. The layout
+// is kept in settings.txt ("toolbar-layout", rows split by ';', bands by
+// ','). Bands hidden under View > Toolbars keep their places.
+enum { BAND_STANDARD, BAND_POINTER, BAND_APPLETS, BAND_FAVOURITES, BAND_COUNT };
+static const char* const BAND_KEYS[BAND_COUNT] = {"standard", "pointer", "applets", "favourites"};
+static const char* const BAND_NAMES[BAND_COUNT] = {"Standard", "Pointer", "Applets", "Favourites"};
+static std::vector<std::vector<int>> s_band_rows = {{BAND_STANDARD, BAND_POINTER, BAND_APPLETS}, {BAND_FAVOURITES}};
+static ImVec2 s_band_min[BAND_COUNT], s_band_max[BAND_COUNT]; // last frame (screen)
+static bool s_band_drawn[BAND_COUNT];
+static int s_drag_band = -1;
+static const float GRIP_W = 9;
+
+static bool BandShown(int b) {
+	switch (b) {
+		case BAND_STANDARD: return s_show_standard;
+		case BAND_POINTER: return s_show_pointer;
+		case BAND_APPLETS: return s_show_applets;
+		default: return s_show_favorites;
+	}
+}
+
+static std::string BandLayoutText() {
+	std::string t;
+	for (auto& row : s_band_rows) {
+		if (!t.empty())
+			t += ";";
+		for (size_t i = 0; i < row.size(); i++)
+			t += (i ? "," : "") + std::string(BAND_KEYS[row[i]]);
+	}
+	return t;
+}
+
+// reads a layout; bands it leaves out go on the last row, unknown names and
+// repeats are dropped
+static void ParseBandLayout(const std::string& text) {
+	if (text.empty())
+		return;
+	std::vector<std::vector<int>> rows(1);
+	bool seen[BAND_COUNT] = {};
+	std::string name;
+	auto flush = [&] {
+		for (int b = 0; b < BAND_COUNT; b++)
+			if (name == BAND_KEYS[b] && !seen[b]) {
+				seen[b] = true;
+				rows.back().push_back(b);
+			}
+		name.clear();
+	};
+	for (char ch : text + ";") {
+		if (ch == ',' || ch == ';') {
+			flush();
+			if (ch == ';' && !rows.back().empty())
+				rows.emplace_back();
+		} else
+			name += ch;
+	}
+	while (!rows.empty() && rows.back().empty())
+		rows.pop_back();
+	for (int b = 0; b < BAND_COUNT; b++)
+		if (!seen[b]) {
+			if (rows.empty())
+				rows.emplace_back();
+			rows.back().push_back(b);
+		}
+	s_band_rows = rows;
+}
+
+// where a band dropped at the mouse would go: before band `before` (in its
+// row), after band `after` (at the end of its line), or on a new row first
+// or last
+struct BandDrop {
+	int before = -1, after = -1;
+	int newRow = 0; // -1 first, 1 last
+	ImVec2 a, b; // the marker line (screen)
+};
+
+static BandDrop FindBandDrop(int dragged, ImVec2 m) {
+	BandDrop d;
+	float top = 1e9f, bottom = -1e9f, left = 1e9f, right = -1e9f;
+	for (int b = 0; b < BAND_COUNT; b++)
+		if (s_band_drawn[b]) {
+			top = std::min(top, s_band_min[b].y);
+			bottom = std::max(bottom, s_band_max[b].y);
+			left = std::min(left, s_band_min[b].x);
+			right = std::max(right, s_band_max[b].x);
+		}
+	if (top > bottom)
+		return d;
+	if (m.y < top + 3 || m.y > bottom + 4) { // above or below them all: a row of its own
+		d.newRow = m.y < top + 3 ? -1 : 1;
+		float y = d.newRow < 0 ? top - 1 : bottom + 2;
+		d.a = ImVec2(left, y);
+		d.b = ImVec2(right, y);
+		return d;
+	}
+	// the line of bands nearest the mouse, by height
+	int line = -1;
+	float best = 1e9f;
+	for (int b = 0; b < BAND_COUNT; b++) {
+		if (!s_band_drawn[b])
+			continue;
+		float dy = m.y < s_band_min[b].y ? s_band_min[b].y - m.y : m.y > s_band_max[b].y ? m.y - s_band_max[b].y : 0;
+		if (dy < best)
+			best = dy, line = b;
+	}
+	float ly = s_band_min[line].y;
+	int lastOnLine = -1;
+	for (int b = 0; b < BAND_COUNT; b++) {
+		if (!s_band_drawn[b] || std::fabs(s_band_min[b].y - ly) > 2)
+			continue;
+		if (m.x < (s_band_min[b].x + s_band_max[b].x) / 2 && (d.before < 0 || s_band_min[b].x < s_band_min[d.before].x))
+			d.before = b;
+		if (lastOnLine < 0 || s_band_min[b].x > s_band_min[lastOnLine].x)
+			lastOnLine = b;
+	}
+	if (d.before >= 0) {
+		float x = s_band_min[d.before].x - 2;
+		d.a = ImVec2(x, s_band_min[d.before].y);
+		d.b = ImVec2(x, s_band_max[d.before].y);
+	} else {
+		d.after = lastOnLine;
+		float x = s_band_max[lastOnLine].x + 2;
+		d.a = ImVec2(x, s_band_min[lastOnLine].y);
+		d.b = ImVec2(x, s_band_max[lastOnLine].y);
+	}
+	if (d.before == dragged || d.after == dragged) // where it is already
+		d.before = d.after = -1, d.newRow = 0, d.a = d.b = ImVec2(-1, -1);
+	return d;
+}
+
+static void ApplyBandDrop(int dragged, const BandDrop& d) {
+	if (d.before < 0 && d.after < 0 && d.newRow == 0)
+		return;
+	for (auto& row : s_band_rows)
+		row.erase(std::remove(row.begin(), row.end(), dragged), row.end());
+	if (d.newRow != 0)
+		s_band_rows.insert(d.newRow < 0 ? s_band_rows.begin() : s_band_rows.end(), std::vector<int>{dragged});
+	else
+		for (auto& row : s_band_rows) {
+			int anchor = d.before >= 0 ? d.before : d.after;
+			auto it = std::find(row.begin(), row.end(), anchor);
+			if (it == row.end())
+				continue;
+			row.insert(d.before >= 0 ? it : it + 1, dragged);
+			break;
+		}
+	s_band_rows.erase(std::remove_if(s_band_rows.begin(), s_band_rows.end(), [](auto& r) { return r.empty(); }), s_band_rows.end());
+	if (!getenv("OPENC2E_TEST_TOOLBAR_DRAG")) // (tests leave the player's settings alone)
+		writePlayerSetting("toolbar-layout", BandLayoutText());
+}
+
+// the grip: two etched bars, as on C2's toolbars
+static void DrawGrip(ImVec2 p, float h, bool hot) {
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	ImU32 light = hot ? IM_COL32(230, 236, 250, 255) : IM_COL32(150, 160, 180, 255);
+	ImU32 dark = IM_COL32(20, 22, 28, 255);
+	for (float x : {p.x + 2, p.x + 5}) {
+		dl->AddLine(ImVec2(x, p.y + 3), ImVec2(x, p.y + h - 3), light);
+		dl->AddLine(ImVec2(x + 1, p.y + 3), ImVec2(x + 1, p.y + h - 3), dark);
+	}
+}
+
+static void DrawToolbarBands(const std::array<std::function<void()>, BAND_COUNT>& draw) {
+	const float right = ImGui::GetWindowPos().x + ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x;
+	bool anyDrawn = false;
+	bool drawnNow[BAND_COUNT] = {};
+	for (auto& row : s_band_rows) {
+		bool onLine = false;
+		for (int b : row) {
+			if (!BandShown(b))
+				continue;
+			float w = s_band_drawn[b] ? s_band_max[b].x - s_band_min[b].x : 0;
+			if (onLine) {
+				ImGui::SameLine(0, 6);
+				if (ImGui::GetCursorScreenPos().x + w > right) // no room: wrap
+					ImGui::NewLine();
+			} else if (anyDrawn)
+				ImGui::NewLine();
+			onLine = anyDrawn = true;
+			ImGui::BeginGroup();
+			ImVec2 g = ImGui::GetCursorScreenPos();
+			float h = s_band_drawn[b] ? s_band_max[b].y - s_band_min[b].y : ImGui::GetFrameHeight() + 6;
+			ImGui::InvisibleButton(BAND_KEYS[b], ImVec2(GRIP_W, h));
+			bool hovered = ImGui::IsItemHovered(), active = ImGui::IsItemActive();
+			if (hovered || active)
+				ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+			if (hovered && !active && s_drag_band < 0)
+				ImGui::SetTooltip("%s toolbar: drag to move it", BAND_NAMES[b]);
+			if (active && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 3))
+				s_drag_band = b;
+			DrawGrip(g, h, hovered || active);
+			draw[b]();
+			ImGui::EndGroup();
+			s_band_min[b] = ImGui::GetItemRectMin();
+			s_band_max[b] = ImGui::GetItemRectMax();
+			drawnNow[b] = true;
+		}
+	}
+	for (int b = 0; b < BAND_COUNT; b++)
+		s_band_drawn[b] = drawnNow[b];
+	// dragging: a marker where it would go; dropped: move it there
+	if (s_drag_band >= 0) {
+		BandDrop d = FindBandDrop(s_drag_band, ImGui::GetMousePos());
+		if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+			if (d.a.x >= 0)
+				ImGui::GetForegroundDrawList()->AddLine(d.a, d.b, IM_COL32(255, 210, 90, 255), 3);
+			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+		} else {
+			ApplyBandDrop(s_drag_band, d);
+			s_drag_band = -1;
+		}
+	}
+}
+
 static void LoadViewSettings() {
+	ParseBandLayout(readPlayerSetting("toolbar-layout"));
 	s_show_standard = readFlag("toolbar-standard", s_show_standard);
 	s_show_pointer = readFlag("toolbar-pointer", s_show_pointer);
 	s_show_applets = readFlag("toolbar-applets", s_show_applets);
@@ -623,6 +846,9 @@ void DrawC2Toolbar() {
 	static bool s_view_aid = [] {
 		if (!getenv("OPENC2E_VIEW") && !getenv("OPENC2E_OPEN_KITS"))
 			LoadViewSettings();
+		// developer aid: OPENC2E_TOOLBAR_LAYOUT="applets;standard,pointer;favourites"
+		if (const char* l = getenv("OPENC2E_TOOLBAR_LAYOUT"))
+			ParseBandLayout(l);
 		if (const char* v = getenv("OPENC2E_VIEW")) {
 			std::string s = v;
 			s_text_labels = s.find("labels") != std::string::npos;
@@ -633,6 +859,40 @@ void DrawC2Toolbar() {
 	}();
 	(void)s_view_aid;
 	ImGuiIO& io = ImGui::GetIO();
+	// developer aid: OPENC2E_TEST_TOOLBAR_DRAG="band,x,y" drags that band's
+	// grip to (x, y) in the window with the mouse, a few seconds in, and
+	// prints the layout after (headless tests of moving toolbars)
+	if (const char* td = getenv("OPENC2E_TEST_TOOLBAR_DRAG")) {
+		static int s_frame = 0, s_band = -1;
+		static ImVec2 s_from, s_to;
+		s_frame++;
+		if (s_frame == 120) {
+			char key[32] = {};
+			float x = 0, y = 0;
+			if (sscanf(td, "%31[^,],%f,%f", key, &x, &y) == 3)
+				for (int b = 0; b < BAND_COUNT; b++)
+					if (std::string(key) == BAND_KEYS[b] && s_band_drawn[b]) {
+						s_band = b;
+						s_from = ImVec2(s_band_min[b].x + GRIP_W / 2, (s_band_min[b].y + s_band_max[b].y) / 2);
+						s_to = ImVec2(x, y);
+					}
+			fmt::print("* TEST TOOLBAR DRAG: {} from {:.0f},{:.0f} to {:.0f},{:.0f}; layout {}\n", key, s_from.x, s_from.y, x, y, BandLayoutText());
+		}
+		if (s_band >= 0) {
+			if (s_frame == 121)
+				io.AddMousePosEvent(s_from.x, s_from.y);
+			if (s_frame == 123)
+				io.AddMouseButtonEvent(ImGuiMouseButton_Left, true);
+			if (s_frame >= 125 && s_frame <= 145) {
+				float t = (s_frame - 125) / 20.0f;
+				io.AddMousePosEvent(s_from.x + (s_to.x - s_from.x) * t, s_from.y + (s_to.y - s_from.y) * t);
+			}
+			if (s_frame == 150)
+				io.AddMouseButtonEvent(ImGuiMouseButton_Left, false);
+			if (s_frame == 155)
+				fmt::print("* TEST TOOLBAR DRAG: layout now {}\n", BandLayoutText());
+		}
+	}
 	ImGui::SetNextWindowPos(ImVec2(0, 0));
 	ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, 0));
 
@@ -667,7 +927,8 @@ void DrawC2Toolbar() {
 
 		ImGui::GetCurrentWindow()->DC.LayoutType = ImGuiLayoutType_Horizontal;
 
-		if (s_show_standard) {
+		// each toolbar is a band (see DrawToolbarBands)
+		auto bandStandard = [&] {
 		if (ToolButton(icon_next, true, "Next")) {
 			SelectNextCreature();
 		}
@@ -711,9 +972,8 @@ void DrawC2Toolbar() {
 			SDL_OpenURL(OPENC2E_WEB);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Web: openc2e on the web (the open-source engine this runs on)");
-		ImGui::Separator();
-		}
-		if (s_show_pointer) {
+		};
+		auto bandPointer = [&] {
 		// the Pointer toolbar: an invisible hand (creatures do not see it)
 		// as a switch, and the hand's two modes: teach (a click tickles or
 		// slaps) and push (a click shoves a creature away from the hand)
@@ -742,8 +1002,7 @@ void DrawC2Toolbar() {
 			world.handPush = true;
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Push: click a creature to shove it away from the hand");
-		ImGui::Separator();
-		}
+		};
 
 		static Texture s_appleticons_tex;
 		if (!s_appleticons_tex) {
@@ -764,7 +1023,7 @@ void DrawC2Toolbar() {
 		TextureRect icon_unknown_magnifyingglass{s_appleticons_tex, 242, 0, 22, 21};
 		TextureRect icon_unknown_maybe_neurosciencekit{s_appleticons_tex, 264, 0, 22, 21};
 
-		if (s_show_applets) {
+		auto bandApplets = [&] {
 		if (ToolButton(icon_hatchery, IsHatcheryEnabled(), "Hatchery")) {
 			SetHatcheryOpen(true);
 		};
@@ -815,10 +1074,8 @@ void DrawC2Toolbar() {
 			OpenC2Kit("ecology");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Ecology Kit: the world's rooms (light, warmth, air, soil), watching rooms, and a census");
-		}
-
-		if (s_show_favorites) {
-		ImGui::NewLine();
+		};
+		auto bandFavourites = [&] {
 
 		static Texture s_favtoolbaricons_tex;
 		if (!s_favtoolbaricons_tex) {
@@ -900,7 +1157,9 @@ void DrawC2Toolbar() {
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Zoom: the size of the view (also Ctrl+wheel; Ctrl+0 for actual size)");
-		}
+		};
+
+		DrawToolbarBands({bandStandard, bandPointer, bandApplets, bandFavourites});
 
 		s_last_c2toolbar_height = ImGui::GetWindowSize().y;
 		ImGui::End();
