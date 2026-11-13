@@ -88,9 +88,15 @@ bool draw(SkeletalCreature* sc, const Pose& p, const std::string& file) {
 	// framed so the creature fills about half the height: newborns are
 	// drawn at twice their size, pixel for pixel
 	auto memo = sc->memoPose();
+	float standsAt = sc->footY(); // where its foot is on the floor now
 	sc->poseInPlace("111111111111111"); // measured standing, facing you
 	int scale = a->getHeight() * 2 <= OUT_H * 2 / 3 ? 2 : 1; // twice its size if that leaves room
 	sc->poseInPlace(p.pose);
+	// stood on that floor: posed in place (its corner kept where it was),
+	// a portrait pose reaches lower than the pose it was standing in, and
+	// the photos showed creatures sunk into the ground (owner, 2026-11-12).
+	// Its lowest foot goes where its foot stood (restorePose puts it back).
+	a->y += standsAt - (a->y + std::max(sc->attachmentY(11, 1), sc->attachmentY(12, 1)));
 	sc->setFacialExpression(p.expression);
 	sc->setEyesClosed(p.eyesClosed);
 	static PortraitCamera cam;
@@ -153,9 +159,13 @@ void schedule(AgentRef creature) {
 
 void tick() {
 	// developer aid: OPENC2E_TEST_PORTRAITS=<folder> draws every pose of
-	// every creature there at tick 30 (<moniker>_<pose number>.bmp)
+	// every creature there (<moniker>_<pose number>.bmp)
+	// (30 ticks into the run: a restored world's tick count starts far on)
 	static const char* test = std::getenv("OPENC2E_TEST_PORTRAITS");
-	if (test && world.worldtickcount == 30) {
+	static unsigned int s_start = world.worldtickcount;
+	static bool s_done = false;
+	if (test && !s_done && world.worldtickcount >= s_start + 30) {
+		s_done = true;
 		for (auto& a : world.agents)
 			if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get())) {
 				auto* ca = dynamic_cast<CreatureAgent*>(sc);
