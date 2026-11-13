@@ -386,6 +386,22 @@ static void LoadC2Eggs() {
 		s_c2eggs.push_back(egg);
 		kinds += fmt::format("{}{}", kinds.empty() ? "" : ", ", egg.label);
 	}
+	// eggs on the same shelf look different: each keeps its own stable
+	// picture unless one of the ten before it on the shelf (in breed order)
+	// has it, then takes the next free one; so a shelf of up to 11 (the
+	// pictures there are) has no two alike, and a longer one no two close
+	for (int g = 0; g <= 3; g++) {
+		std::vector<int> recent;
+		for (auto& e : s_c2eggs) {
+			if (e.group != g)
+				continue;
+			while (std::find(recent.begin(), recent.end(), e.frame) != recent.end())
+				e.frame = (e.frame + 1) % 11;
+			recent.push_back(e.frame);
+			if (recent.size() > 10)
+				recent.erase(recent.begin());
+		}
+	}
 	for (auto& e : fromFiles)
 		s_c2eggs.push_back(e);
 	fmt::print("* Hatchery: {} eggs, one of each breed: {}\n", s_c2eggs.size(), kinds);
