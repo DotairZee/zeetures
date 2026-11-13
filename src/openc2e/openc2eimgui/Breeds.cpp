@@ -61,6 +61,24 @@ std::string BreedLabel(const BreedInfo& b) {
 	return fmt::format("{} breed {}", BreedSpeciesName(b.species), breedSlotName(b.slot));
 }
 
+std::string BreedNameOfGenome(const std::vector<uint8_t>& bytes) {
+	try {
+		if (bytes.size() < 8 || std::memcmp(bytes.data(), "dna2", 4) != 0)
+			return {};
+		genomeFile g;
+		SpanReader r(std::span<const uint8_t>(bytes.data(), bytes.size()));
+		r >> g;
+		for (auto& gp : g.genes)
+			if (auto* a = dynamic_cast<creatureAppearanceGene*>(gp.get()); a && a->part == 0) {
+				if (const BreedInfo* b = FindBreed(a->species, a->variant))
+					return !b->name.empty() ? b->name : BreedLabel(*b);
+				return fmt::format("{} breed {}", BreedSpeciesName(a->species), breedSlotName(a->variant));
+			}
+	} catch (std::exception&) {
+	}
+	return {};
+}
+
 // "a04k.s16" -> part a, species 0, female no, stage 4, slot k
 bool ParseBreedFileName(const std::string& filename, char& part, int& species, bool& female, int& stage, int& slot) {
 	std::string n = to_ascii_lowercase(filename);

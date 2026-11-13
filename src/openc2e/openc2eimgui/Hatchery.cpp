@@ -89,6 +89,7 @@ struct C2EggInfo {
 	int gender = 0;
 	int frame = 0;
 	std::string moniker;
+	std::string breed; // its breed, named as in the Breeder's Kit (owner, 2026-11-12)
 	std::vector<std::vector<uint8_t>> genomes;
 	int x = 0;
 	int y = 0;
@@ -130,6 +131,7 @@ static void ImportGenome(const std::string& path) {
 	egg.frame = rand_int32(0, 10);
 	egg.moniker = std::filesystem::path(path).stem().string().substr(0, 4);
 	egg.genomes.push_back(d);
+	egg.breed = BreedNameOfGenome(d);
 	PlaceEggInHatchery(egg);
 	s_c2eggs.push_back(egg);
 	s_import_message = fmt::format("Made an egg from {}.", name);
@@ -263,12 +265,20 @@ void LoadHatchery() {
 		s_c2eggs.clear();
 		for (auto& f : findC2EggFiles()) {
 			C2EggInfo egg;
-			if (readC2Egg(f, egg))
+			if (readC2Egg(f, egg)) {
+				if (!egg.genomes.empty())
+					egg.breed = BreedNameOfGenome(egg.genomes[0]);
 				s_c2eggs.push_back(egg);
+			}
 			if (s_c2eggs.size() == 10)
 				break; // the hatchery holds ten
 		}
-		fmt::print("* Hatchery: {} eggs from the Eggs folder\n", s_c2eggs.size());
+		{
+			std::string kinds;
+			for (auto& e : s_c2eggs)
+				kinds += fmt::format("{}{} {}", kinds.empty() ? "" : ", ", e.gender == 2 ? "female" : e.gender == 1 ? "male" : "?", e.breed.empty() ? e.moniker : e.breed);
+			fmt::print("* Hatchery: {} eggs from the Eggs folder: {}\n", s_c2eggs.size(), kinds);
+		}
 		for (auto& egg : s_c2eggs)
 			egg.x = 0;
 		for (auto& egg : s_c2eggs)
@@ -406,7 +416,7 @@ void DrawHatchery() {
 				bool hov = ImGui::IsItemHovered();
 				if (hov)
 					ImGui::SetTooltip("%s egg (%s)\nClick to place it in the world. It hatches where it lies, or sooner in the incubator.",
-						egg.gender == 2 ? "Female" : egg.gender == 1 ? "Male" : "Unknown-sex", egg.moniker.c_str());
+						egg.gender == 2 ? "Female" : egg.gender == 1 ? "Male" : "Unknown-sex", egg.breed.empty() ? egg.moniker.c_str() : egg.breed.c_str());
 				ImGui::PopID();
 				dl->AddRectFilled(at, at + ImVec2(TW, TH), hov ? IM_COL32(38, 40, 48, 255) : IM_COL32(26, 28, 34, 255), 5);
 				dl->AddRect(at, at + ImVec2(TW, TH), hov ? IM_COL32(205, 170, 95, 255) : IM_COL32(70, 72, 80, 255), 5);

@@ -56,6 +56,9 @@ std::string BreedLabel(const BreedInfo& b); // "Norn breed k" or its name
 // every breed found in the data folders (scanned once; rescan after changes)
 std::vector<BreedInfo>& KnownBreeds(bool rescan = false);
 const BreedInfo* FindBreed(int species, int slot);
+// the breed a C2 genome looks like (its head's appearance gene), named as
+// the Breeder's Kit names it ("Golden Desert"); empty if it can't be read
+std::string BreedNameOfGenome(const std::vector<uint8_t>& genome);
 
 // breeds.txt in the user data folder: one line per imported breed
 void SaveBreedRegistry();
