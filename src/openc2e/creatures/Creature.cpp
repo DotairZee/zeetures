@@ -26,6 +26,7 @@
 #include "common/Random.h"
 #include "Room.h"
 #include "SkeletalCreature.h"
+#include "MetaRoom.h"
 #include "Map.h"
 #include "c2eBrain.h"
 #include "c2eCreature.h"
@@ -754,6 +755,7 @@ void oldCreature::keepInRoomSystem() {
 	// largest group is the world (refreshed every minute, as additions edit
 	// doors).
 	static std::map<Room*, int> group;
+	static std::map<int, int> groupSize;
 	static int worldGroup = -1;
 	static unsigned int grouped = UINT_MAX;
 	if (grouped == UINT_MAX || world.tickcount - grouped > 600) {
@@ -778,6 +780,7 @@ void oldCreature::keepInRoomSystem() {
 			}
 			g++;
 		}
+		groupSize = sizes;
 		worldGroup = -1;
 		int most = 0;
 		for (auto& [k, n] : sizes)
@@ -803,17 +806,23 @@ void oldCreature::keepInRoomSystem() {
 		// against the far east wall (x 8240) had its middle 2 px into the
 		// sealed pocket beyond and was lifted 900 px to the surface; owner,
 		// 2026-11-12)
+		auto livable = [&](Room* r) { return group.count(r) && (group[r] == worldGroup || groupSize[group[r]] > 2); };
 		bool feetInWorld = false;
 		if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
-			if (std::shared_ptr<Room> fr = sc->footRoom(); fr && group.count(fr.get()) && group[fr.get()] == worldGroup)
+			if (std::shared_ptr<Room> fr = sc->footRoom(); fr && livable(fr.get()))
 				feetInWorld = true;
 		if (!feetInWorld && group.count(foot.get()) && group[foot.get()] != worldGroup && pocketRooms <= 2) {
 			// first the nearest room of the world beside it, at its feet's height
 			float fy = a->y + a->getHeight() - 2;
+			// (across the seam of a wrapping world too: the pocket at the far
+			// east edge, room 183, lies beside the rooms at x 0)
+			MetaRoom* mr = world.map->metaRoomAt(cx, fy);
+			if (!mr)
+				mr = world.map->wrappingMetaRoomNear(cx, fy);
 			for (float dx = 4; dx <= 80; dx += 4)
 				for (float side : {-1.0f, 1.0f}) {
-					std::shared_ptr<Room> r = world.map->roomAt(cx + side * dx, fy);
-					if (!r || r->type == 2 || !group.count(r.get()) || group[r.get()] != worldGroup)
+					std::shared_ptr<Room> r = mr ? mr->roomAt(cx + side * dx, fy) : world.map->roomAt(cx + side * dx, fy);
+					if (!r || r->type == 2 || !livable(r.get()))
 						continue;
 					float oldx = a->x, oldy = a->y;
 					a->moveTo(a->x + side * (dx + a->getWidth() / 2.0f), a->y);
