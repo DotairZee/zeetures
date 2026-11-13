@@ -944,6 +944,51 @@ void oldCreature::keepInRoomSystem() {
 
 	if (world.map->roomAt(cx, cy) || world.map->roomAt(cx, a->y + a->getHeight() - 2))
 		return;
+	// Stepping off a ledge: a foot reaching out over the lower floor beside
+	// pulls the body down before the body is past the edge, into the rock
+	// under the ledge's end (the lower room within its width at its feet's
+	// height). That is a fall under way,
+	// not a creature stuck in rock: it is moved the few pixels out over the
+	// drop and falls the rest of the way (owner, 2026-11-13: creatures that
+	// walk off a ledge should drop straight down; at the upper-east deck's
+	// end, room 145 over 179, they were lifted back onto the ledge instead).
+	{
+		float fy = a->y + a->getHeight() - 2, w = a->getWidth();
+		float bestdx = 0;
+		std::shared_ptr<Room> over;
+		for (float dx = 2; dx <= w + 10 && !over; dx += 2)
+			for (float side : {-1.0f, 1.0f}) {
+				std::shared_ptr<Room> r = world.map->roomAt(cx + side * dx, fy);
+				// a dry room of the world (not a sealed pocket, like room 213
+				// at the far east wall) whose floor there is not above its feet
+				if (!r || r->type == 2 || !group.count(r.get()) || group[r.get()] != worldGroup)
+					continue;
+				if (r->floorYatX(cx + side * dx) < fy - 4)
+					continue; // (its floor at or below its feet: they may be there already)
+				// and open beside it (its ceiling above the creature's head):
+				// not the cave under the ledge (room 157 under 145's floor)
+				float span = std::max(1.0f, (float)r->x_right - (float)r->x_left);
+				float ceiling = r->y_left_ceiling + ((float)r->y_right_ceiling - (float)r->y_left_ceiling) * (cx + side * dx - r->x_left) / span;
+				if (ceiling > a->y + 4)
+					continue;
+				over = r;
+				bestdx = side * dx;
+				break;
+			}
+		if (over) {
+			float oldx = a->x, oldy = a->y;
+			// all of it just inside that room's edge, hanging over the drop
+			float edge = bestdx > 0 ? (float)over->x_left + 2 : (float)over->x_right - 2;
+			float nx = bestdx > 0 ? std::max(a->x, edge) : std::min(a->x, edge - w);
+			a->moveTo(nx, a->y);
+			a->velx = 0;
+			if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
+				sc->scriptMoved();
+			fmt::print("* {} stepped off a ledge at {:.0f},{:.0f}; moved out over room {} at {:.0f} to fall\n",
+				world.history->findMoniker(genome), oldx, oldy, over->id, a->x);
+			return;
+		}
+	}
 	std::shared_ptr<Room> dry, wet;
 	float found = 0;
 	for (float yy = cy - 10; yy > cy - 800 && !dry; yy -= 10) {

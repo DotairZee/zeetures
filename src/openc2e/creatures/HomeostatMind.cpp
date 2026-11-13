@@ -1770,6 +1770,34 @@ class HomeostatMind : public CreatureMind {
 		unsigned int until = 0;
 	};
 	Blocked blocked[2]; // [0] west, [1] east
+	// Ways found blocked, by place (owner's screencast, 2026-11-13: norns in
+	// the volcano walked into its west wall again and again, a doorway too
+	// narrow for them that looks open): each spot's block lasts longer each
+	// time it is met again, up to 16 times blockedTicks.
+	struct BlockedSpot {
+		float x = 0, y = 0;
+		int dir = 0; // 10 west, 11 east
+		int times = 0;
+		unsigned int until = 0;
+	};
+	std::vector<BlockedSpot> blockedSpots;
+	void noteBlocked(const MindPerception& p, int dir) {
+		BlockedSpot* spot = nullptr;
+		for (auto& b : blockedSpots)
+			if (b.dir == dir && std::fabs(dxTo(p, b.x)) < prm.blockedNear && std::fabs(b.y - p.y) < prm.sameLevel)
+				spot = &b;
+		if (!spot) {
+			if (blockedSpots.size() >= 24)
+				blockedSpots.erase(std::min_element(blockedSpots.begin(), blockedSpots.end(), [](const BlockedSpot& a, const BlockedSpot& b) { return a.until < b.until; }));
+			blockedSpots.push_back({p.x, p.y, dir, 0, 0});
+			spot = &blockedSpots.back();
+		}
+		spot->times = std::min(spot->times + 1, 5);
+		spot->until = p.tick + prm.blockedTicks * (1u << (spot->times - 1));
+		blocked[dir == 10 ? 0 : 1] = {p.x, spot->until};
+	}
+	std::map<int, unsigned int> exploreBlockedUntil; // room -> not explored toward until then
+	int exploreTarget = -1; // the room the latest explore trip heads for
 
 	// East-west distances the short way round a wrapping world (C2's joins
 	// its far west edge to its far east): wrapD folds a difference into
@@ -1789,8 +1817,14 @@ class HomeostatMind : public CreatureMind {
 	float dxTo(const MindPerception& p, float x) const { return wrapD(x - p.x); }
 
 	bool isBlocked(const MindPerception& p, int decision) const {
-		const Blocked& b = blocked[decision == 10 ? 0 : 1];
-		return p.tick < b.until && std::fabs(dxTo(p, b.x)) < prm.blockedNear;
+		int dir = decision == 26 ? 10 : decision == 27 ? 11 : decision;
+		const Blocked& b = blocked[dir == 10 ? 0 : 1];
+		if (p.tick < b.until && std::fabs(dxTo(p, b.x)) < prm.blockedNear)
+			return true;
+		for (auto& s : blockedSpots)
+			if (s.dir == dir && p.tick < s.until && std::fabs(dxTo(p, s.x)) < prm.blockedNear && std::fabs(s.y - p.y) < prm.sameLevel)
+				return true;
+		return false;
 	}
 	float mood = 0.0f; // short-term affect: fast-following, decaying average of reward
 	int lastFace = -1;
@@ -1966,6 +2000,9 @@ class HomeostatMind : public CreatureMind {
 					continue;
 				// nor walks into a wall right ahead (owner, 2026-11-10)
 				if ((dir == 10 || dir == 11) && wallAhead(p, dir))
+					continue;
+				// nor a way found blocked here lately
+				if ((dir == 10 || dir == 11) && isBlocked(p, dir))
 					continue;
 				add(-1, a.decision, 0.0f, 0.0f);
 			}
@@ -3158,31 +3195,40 @@ class HomeostatMind : public CreatureMind {
 		if (want < prm.seekMinWant)
 			return;
 		const RoomMemory* target = nullptr;
+		int targetId = -1;
 		float bestDist = 1e9f;
+		auto blockedRoom = [&](int id) {
+			auto it = exploreBlockedUntil.find(id);
+			return it != exploreBlockedUntil.end() && p.tick < it->second;
+		};
 		for (auto& n : p.roomsNear) {
 			if ((n.side != 10 && n.side != 11) || (n.water && !p.inWater))
 				continue;
 			auto r = rooms.find(n.id);
-			if (r != rooms.end() && r->second.visits > 0)
+			if ((r != rooms.end() && r->second.visits > 0) || blockedRoom(n.id))
 				continue;
 			float dist = std::fabs(dxTo(p, n.x));
 			if (r != rooms.end() && dist < bestDist) {
 				bestDist = dist;
 				target = &r->second;
+				targetId = n.id;
 			}
 		}
 		if (!target)
 			for (auto& [id, r] : rooms) {
-				if (r.visits > 0 || r.water || std::fabs(r.floor - p.roomFloor) > prm.seekMaxHeight)
+				if (r.visits > 0 || r.water || std::fabs(r.floor - p.roomFloor) > prm.seekMaxHeight || blockedRoom(id))
 					continue;
 				float dist = std::fabs(dxTo(p, r.x));
 				if (dist < prm.exploreReach && dist < bestDist) {
 					bestDist = dist;
 					target = &r;
+					targetId = id;
 				}
 			}
-		if (target)
+		if (target) {
+			exploreTarget = targetId;
 			addGoTo(p, want, target->x, target->floor - 40.0f, "explore", canWest, canEast, out, d[BORED]);
+		}
 	}
 
 	// Seeking: for each remembered place whose category is out of sight, how
@@ -3705,9 +3751,12 @@ class HomeostatMind : public CreatureMind {
 			} else if (std::fabs(dxTo(p, startX)) >= blockedMove)
 				stepFails = 0;
 		}
-		if ((current.decision == 10 || current.decision == 11) && current.category < 0 && (current.seekCategory >= 0 || current.chain) &&
+		// (any walk that got nowhere, plain wandering too)
+		if ((current.decision == 10 || current.decision == 11) && current.category < 0 && !p.riding &&
 			std::fabs(dxTo(p, startX)) < blockedMove && !(steppedNowhere && gaitWalk)) {
-			blocked[current.decision == 10 ? 0 : 1] = {p.x, p.tick + prm.blockedTicks};
+			noteBlocked(p, current.decision);
+			if (current.place == "explore" && exploreTarget >= 0)
+				exploreBlockedUntil[exploreTarget] = p.tick + prm.blockedTicks * 8;
 			if (current.route)
 				for (auto& e : placeMap[cellOf(p.x, p.y)])
 					if (e.dir == current.decision)
