@@ -357,9 +357,11 @@ void SkeletalCreature::skeletonInit() {
 		int partspecies, partvariant;
 		partspecies = creature->getGenus();
 		if (partapp) {
-			if (engine.version > 1)
-				partspecies = partapp->species;
-			partvariant = partapp->variant;
+			if (engine.version > 1) {
+				partspecies = geneBreedSpecies(partapp->species);
+				partvariant = geneBreedSlot(partapp->species, partapp->variant);
+			} else
+				partvariant = partapp->variant;
 		} else {
 			partvariant = creature->getVariant();
 		}
@@ -390,7 +392,9 @@ void SkeletalCreature::skeletonInit() {
 					}
 					stage_to_try--;
 				}
-				var--;
+				// past the game's own 26 slots, a missing picture falls back
+				// to them, not slot by slot through thousands
+				var = var > 26 ? 25 : var - 1;
 			}
 			if (!tryfemale)
 				break;
@@ -413,7 +417,7 @@ void SkeletalCreature::skeletonInit() {
 				attpath = findBodyDataFile(x + dataString(stage_to_try, false, spe, var) + ".att");
 				stage_to_try--;
 			}
-			var--;
+			var = var > 26 ? 25 : var - 1;
 		}
 		if (attpath.empty())
 			throw Exception(fmt::format("SkeletalCreature couldn't find body data for part {:c} of species {}, variant {}, stage {}", x, (int)partspecies, (int)partvariant, creature->getStage()));
@@ -1426,7 +1430,8 @@ std::string SkeletalCreature::getFaceSpriteName() {
 
 		if (creatureAppearanceGene* x = dynamic_cast<creatureAppearanceGene*>(gene.get())) {
 			if (x->part == 0) {
-				return std::string("a") + dataString(0, creature->isFemale(), x->species, x->variant);
+				return std::string("a") + dataString(0, creature->isFemale(), engine.version > 1 ? geneBreedSpecies(x->species) : x->species,
+											engine.version > 1 ? geneBreedSlot(x->species, x->variant) : x->variant);
 			}
 		}
 	}

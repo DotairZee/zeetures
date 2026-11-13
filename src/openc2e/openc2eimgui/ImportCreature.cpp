@@ -144,8 +144,8 @@ int stageOf(const Exported& e, std::shared_ptr<genomeFile> genome, bool female) 
 	for (auto& gn : genome->genes)
 		if (auto* a = dynamic_cast<creatureAppearanceGene*>(gn.get()))
 			if (a->part == 0) {
-				species = a->species;
-				variant = a->variant;
+				species = geneBreedSpecies(a->species);
+				variant = geneBreedSlot(a->species, a->variant);
 				break;
 			}
 	if (species < 0 || e.headFrames.empty())

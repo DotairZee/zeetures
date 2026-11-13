@@ -4,6 +4,7 @@
 // always available (owner, 2026-11-09).
 
 #include "C2KitsInternal.h"
+#include "creatures/BreedSlots.h"
 #include "PathResolver.h"
 #include "World.h"
 #include "creatures/oldCreature.h"
@@ -107,7 +108,7 @@ static std::string geneSummary(gene* g) {
 	if (auto* ic = dynamic_cast<bioInitialConcentrationGene*>(g))
 		return fmt::format("{} {}", (int)ic->quantity, chemName(ic->chemical));
 	if (auto* a = dynamic_cast<creatureAppearanceGene*>(g))
-		return fmt::format("body part {} breed {}  (species {})", (int)a->part, (char)('a' + a->variant), (int)a->species);
+		return fmt::format("body part {} breed {}  (species {})", (int)a->part, breedSlotName(geneBreedSlot(a->species, a->variant)), geneBreedSpecies(a->species));
 	if (auto* s = dynamic_cast<creatureStimulusGene*>(g))
 		return fmt::format("stimulus {}  (significance {}, intensity {})", (int)s->stim, (int)s->significance, (int)s->intensity);
 	if (auto* in = dynamic_cast<creatureInstinctGene*>(g))

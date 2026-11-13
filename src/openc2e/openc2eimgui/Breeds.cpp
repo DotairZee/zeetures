@@ -70,9 +70,10 @@ std::string BreedNameOfGenome(const std::vector<uint8_t>& bytes) {
 		r >> g;
 		for (auto& gp : g.genes)
 			if (auto* a = dynamic_cast<creatureAppearanceGene*>(gp.get()); a && a->part == 0) {
-				if (const BreedInfo* b = FindBreed(a->species, a->variant))
+				int species = geneBreedSpecies(a->species), slot = geneBreedSlot(a->species, a->variant);
+				if (const BreedInfo* b = FindBreed(species, slot))
 					return !b->name.empty() ? b->name : BreedLabel(*b);
-				return fmt::format("{} breed {}", BreedSpeciesName(a->species), breedSlotName(a->variant));
+				return fmt::format("{} breed {}", BreedSpeciesName(species), breedSlotName(slot));
 			}
 	} catch (std::exception&) {
 	}
@@ -86,7 +87,7 @@ bool ParseBreedFileName(const std::string& filename, char& part, int& species, b
 	if (dot == std::string::npos)
 		return false;
 	std::string stem = n.substr(0, dot);
-	if (stem.size() != 4 && stem.size() != 5)
+	if (stem.size() < 4 || stem.size() > 6)
 		return false;
 	if (stem[0] < 'a' || stem[0] > 'q' || stem[1] < '0' || stem[1] > '7' || stem[2] < '0' || stem[2] > '6')
 		return false;
@@ -338,8 +339,7 @@ std::vector<uint8_t> GenomeWithBreed(const std::vector<uint8_t>& genome, const B
 	return editGenome(genome, [&](creatureAppearanceGene& a) {
 		if (!parts.count(a.part))
 			return false;
-		a.species = (uint8_t)b.species;
-		a.variant = (uint8_t)b.slot;
+		setGeneBreed(a.species, a.variant, b.species, b.slot);
 		return true;
 	});
 }
@@ -348,11 +348,10 @@ std::vector<uint8_t> GenomeWithBreedsMoved(const std::vector<uint8_t>& genome, c
 	if (moves.empty())
 		return genome;
 	return editGenome(genome, [&](creatureAppearanceGene& a) {
-		auto it = moves.find({(int)a.species, (int)a.variant});
+		auto it = moves.find({geneBreedSpecies(a.species), geneBreedSlot(a.species, a.variant)});
 		if (it == moves.end())
 			return false;
-		a.species = (uint8_t)it->second.first;
-		a.variant = (uint8_t)it->second.second;
+		setGeneBreed(a.species, a.variant, it->second.first, it->second.second);
 		return true;
 	});
 }
@@ -477,10 +476,10 @@ std::vector<uint8_t> GenomeWithSlotsMoved(const std::vector<uint8_t>& genome, co
 	if (moves.empty())
 		return genome;
 	return editGenome(genome, [&](creatureAppearanceGene& a) {
-		auto it = moves.find({(int)a.species, (int)a.variant});
+		auto it = moves.find({geneBreedSpecies(a.species), geneBreedSlot(a.species, a.variant)});
 		if (it == moves.end() || it->second < 0)
 			return false;
-		a.variant = (uint8_t)it->second;
+		setGeneBreed(a.species, a.variant, geneBreedSpecies(a.species), it->second);
 		return true;
 	});
 }
@@ -488,7 +487,7 @@ std::vector<uint8_t> GenomeWithSlotsMoved(const std::vector<uint8_t>& genome, co
 std::set<std::pair<int, int>> GenomeAppearanceSlots(const std::vector<uint8_t>& genome) {
 	std::set<std::pair<int, int>> out;
 	editGenome(genome, [&](creatureAppearanceGene& a) {
-		out.insert({(int)a.species, (int)a.variant});
+		out.insert({geneBreedSpecies(a.species), geneBreedSlot(a.species, a.variant)});
 		return false;
 	});
 	return out;

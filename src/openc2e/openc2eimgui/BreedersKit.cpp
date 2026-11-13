@@ -1012,7 +1012,7 @@ static void BreedsPage() {
 				r >> gf;
 				for (auto& gp : gf.genes)
 					if (auto* a = dynamic_cast<creatureAppearanceGene*>(gp.get()))
-						fmt::print("* rewritten genome ({} bytes): appearance part {} species {} slot {}\n", g.size(), (int)a->part, (int)a->species, breedSlotName(a->variant));
+						fmt::print("* rewritten genome ({} bytes): appearance part {} species {} slot {}\n", g.size(), (int)a->part, geneBreedSpecies(a->species), breedSlotName(geneBreedSlot(a->species, a->variant)));
 			}
 		}
 	}
@@ -1254,7 +1254,7 @@ static void BreedsPage() {
 	ImGui::SameLine();
 	if (ImGui::Button("Rescan"))
 		KnownBreeds(true);
-	KitNote("Slots run a-z, then aa, ab ... up to iv (256 for each species).");
+	KitNote("Slots run a-z, then aa ... zz, then aaa ... (16,384 for each species; a creature in a slot past iv cannot go back to the original game).");
 }
 
 void DrawBreedersKit() {
