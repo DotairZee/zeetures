@@ -199,5 +199,7 @@ class SkeletonPart : public AnimatablePart {
 // set of pictures to fit each life stage (OPENC2E_STAGE_SCALE; grendels and
 // ettins, norns with =norns). The Hatchery credits that work.
 bool BreedGrownForEveryStage(int species, int breed);
+bool StageGrowthForEveryBreed();
+int BreedOneSetLooksAge(int species, int breed);
 
 /* vim: set noet: */

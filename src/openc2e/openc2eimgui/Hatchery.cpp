@@ -1070,14 +1070,20 @@ static void DrawCard(float CW, float NH) {
 		std::string by = credit ? credit : b->imported ? (b->source.empty() ? "imported" : b->source) : "Creature Labs";
 		// no credit for the engine's own scaling of a breed's pictures to
 		// other life stages: no new pictures are made (owner, 2026-11-13)
-		bool grown = BreedGrownForEveryStage(b->species, b->slot);
 		CardRow("By", by, CW);
-		// the life stages it has its own sprites for; at the others a
-		// creature wears the nearest younger set, grown to the stage
-		CardRow("Sprites", b->stages.size() >= 7 ? std::string("every age")
-						   : grown		   ? std::string("every age (one set, grown to fit)")
-										   : AgesOf(b->stages),
-			CW);
+		// the life stages it has sprite files for (a breed drawn at one age
+		// only: the age its pictures look, by size), and whether the engine
+		// scales and ages them for the rest (owner, 2026-11-13)
+		std::string sprites;
+		if (b->stages.size() >= 7)
+			sprites = "every age";
+		else {
+			int looks = BreedOneSetLooksAge(b->species, b->slot);
+			sprites = looks >= 0 ? AgesOf({looks}) + "-sized" : AgesOf(b->stages);
+			if (StageGrowthForEveryBreed() || BreedGrownForEveryStage(b->species, b->slot))
+				sprites += "\n(fitted to every age)";
+		}
+		CardRow("Sprites", sprites, CW);
 	}
 	if (egg.taken) {
 		ImGui::Dummy(ImVec2(1, 6));

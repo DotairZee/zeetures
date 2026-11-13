@@ -414,6 +414,25 @@ static int oneSetDrawnAge(int species, bool female, int breed) {
 	return drawn;
 }
 
+// For the Hatchery card: whether the engine fits every breed's pictures to
+// the life stages it has none for (per-part growth), and the age a breed
+// drawn at one age only looks (its size against its species' reference;
+// a species with no reference of its own, the ettins, is taken as adult),
+// or -1 for a breed with pictures at more than one age.
+bool StageGrowthForEveryBreed() {
+	return partGrowthOn();
+}
+
+int BreedOneSetLooksAge(int species, int breed) {
+	for (bool female : {false, true}) {
+		int a = oneSetDrawnAge(species, female, breed);
+		if (a < 0)
+			continue;
+		return stageGrowth(species).species == species ? a : 4;
+	}
+	return -1;
+}
+
 // the factor for part `part` shown at `stage` from pictures found at
 // `foundstage`
 static float partGrowth(char part, int species, bool female, int breed, int foundstage, int stage) {
