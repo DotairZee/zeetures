@@ -27,6 +27,7 @@
 #include "Room.h"
 #include "SkeletalCreature.h"
 #include "MetaRoom.h"
+#include "Lift.h"
 #include "Map.h"
 #include "c2eBrain.h"
 #include "c2eCreature.h"
@@ -36,6 +37,7 @@
 #include "oldCreature.h"
 
 #include <algorithm>
+#include <functional>
 #include <cassert>
 #include <memory>
 
@@ -796,6 +798,32 @@ void oldCreature::keepInRoomSystem() {
 			}
 			g++;
 		}
+		// groups a lift joins are one: its cabin carries creatures between
+		// the rooms at its stops whatever the doors (the cage lift is the way
+		// into the airlock's underground west side, ten rooms closed off by
+		// doors)
+		std::vector<int> parent(g);
+		for (int k = 0; k < g; k++)
+			parent[k] = k;
+		std::function<int(int)> find = [&](int k) { return parent[k] == k ? k : parent[k] = find(parent[k]); };
+		for (auto& ag : world.agents)
+			if (Lift* lift = dynamic_cast<Lift*>(ag.get())) {
+				float lx = lift->x + lift->getWidth() / 2.0f;
+				int first = -1;
+				for (int y : lift->callbuttony)
+					if (std::shared_ptr<Room> r = world.map->roomAt(lx, y - 4); r && group.count(r.get())) {
+						int k = find(group[r.get()]);
+						if (first < 0)
+							first = k;
+						else
+							parent[k] = find(first);
+					}
+			}
+		sizes.clear();
+		for (auto& [r, k] : group) {
+			k = find(k);
+			sizes[k]++;
+		}
 		groupSize = sizes;
 		worldGroup = -1;
 		int most = 0;
@@ -809,25 +837,41 @@ void oldCreature::keepInRoomSystem() {
 				if (k != worldGroup)
 					list += fmt::format(" {}(group {})", r->id, k);
 			fmt::print("* Room groups: {}, the world {} rooms; outside it:{}\n", g, most, list);
+			// and every lift's stops: the room its cabin stands in there and
+			// that room's group (a group cut off by doors may still be reached
+			// by lift)
+			for (auto& ag : world.agents) {
+				Lift* lift = dynamic_cast<Lift*>(ag.get());
+				if (!lift)
+					continue;
+				std::string stops;
+				float lx = lift->x + lift->getWidth() / 2.0f;
+				for (int y : lift->callbuttony) {
+					std::shared_ptr<Room> r = world.map->roomAt(lx, y - 4);
+					stops += r ? fmt::format(" {}(room {} group {}{})", y, r->id, group.count(r.get()) ? group[r.get()] : -1,
+									 group.count(r.get()) && group[r.get()] == worldGroup ? " world" : "")
+							   : fmt::format(" {}(no room)", y);
+				}
+				fmt::print("* Lift {} {} {} at x {:.0f}-{:.0f}: stops{}\n", (int)lift->family, (int)lift->genus, lift->species, lift->x,
+					lift->x + lift->getWidth(), stops);
+			}
 		}
 	}
 	if (std::shared_ptr<Room> foot = world.map->roomAt(cx, a->y + a->getHeight() - 2)) {
-		// (only a pocket of one or two rooms: a bigger group cut off from the
-		// rest may be somewhere creatures are taken on purpose)
-		int pocketRooms = 0;
-		if (group.count(foot.get()))
-			for (auto& [r, k] : group)
-				pocketRooms += k == group[foot.get()];
 		// (not when its feet stand in a room of the world: a creature pressed
 		// against the far east wall (x 8240) had its middle 2 px into the
 		// sealed pocket beyond and was lifted 900 px to the surface; owner,
 		// 2026-11-12)
-		auto livable = [&](Room* r) { return group.count(r) && (group[r] == worldGroup || groupSize[group[r]] > 2); };
+		// (only the world: a sealed group of four rooms, the tunnel under the
+		// bridge, was taken as somewhere creatures are brought on purpose,
+		// and a grendel starved there; 2026-11-12. Groups a lift joins to the
+		// world are part of it.)
+		auto livable = [&](Room* r) { return group.count(r) && group[r] == worldGroup; };
 		bool feetInWorld = false;
 		if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
 			if (std::shared_ptr<Room> fr = sc->footRoom(); fr && livable(fr.get()))
 				feetInWorld = true;
-		if (!feetInWorld && group.count(foot.get()) && group[foot.get()] != worldGroup && pocketRooms <= 2) {
+		if (!feetInWorld && group.count(foot.get()) && group[foot.get()] != worldGroup) {
 			// first the nearest room of the world beside it, at its feet's height
 			float fy = a->y + a->getHeight() - 2;
 			// (across the seam of a wrapping world too: the pocket at the far
