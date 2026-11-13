@@ -47,6 +47,11 @@ struct SeenAgent {
 	// feels about it (creatures/Relationships.h); empty for objects
 	std::string who;
 	float affinity = 0, fear = 0, familiarity = 0;
+	// another creature's kind, sex and life stage (genus 1 norn, 2 grendel,
+	// 3 ettin; -1 for objects): for remembering where mates were met
+	int genus = -1;
+	bool female = false;
+	int stage = -1;
 };
 
 // An instinct from the genome, translated into neutral terms (see
@@ -95,6 +100,20 @@ struct MindPerception {
 	bool asleep = false;
 	bool dreaming = false;
 	bool female = false;
+	int genus = -1; // 1 norn, 2 grendel, 3 ettin
+	// Sense of place (owner, 2026-11-13): the room the creature is in (by its
+	// feet, as its senses use; -1 outside every room), that room's middle
+	// and floor, its metaroom, and the rooms next to it through doorways the
+	// creature fits through (side: 10 west, 11 east, -1 up, 1 down)
+	int room = -1, metaroom = -1;
+	float roomX = 0, roomFloor = 0;
+	struct RoomNear {
+		int id = -1;
+		int side = 0;
+		float x = 0, floor = 0; // its middle and floor
+		bool water = false;
+	};
+	std::vector<RoomNear> roomsNear;
 	std::array<unsigned char, 17> drives{}; // C2 has 17, C1 uses the first 16
 	const unsigned char* chemicals = nullptr; // 256 levels, read-only
 	std::vector<SeenAgent> visible; // at most one agent per category
@@ -189,6 +208,7 @@ struct MindView {
 		int tried = 0; // times it has done this to this kind of thing
 		bool chosen = false;
 		bool food = false, forage = false, route = false, escape = false, scent = false, travel = false;
+		std::string place; // a trip from the sense of place ("mate:<moniker>", "favourite:<need>", "leave:<need>", "explore")
 	};
 	std::vector<Option> options;
 	unsigned int choseAt = 0; // when it last chose
@@ -222,6 +242,22 @@ struct MindView {
 		int uses = 0;
 	};
 	std::vector<Ride> rides;
+	// sense of place: the rooms it remembers (visits 0: only seen next door)
+	struct PlaceMemory {
+		int room = -1;
+		float x = 0, floor = 0; // the room's middle and floor
+		int visits = 0;
+		unsigned int last = 0;
+		float ticks = 0; // time spent there
+		bool felt = false; // long enough there to know how it feels
+		std::array<float, 17> feel{}; // each need's change over a stay, against the usual (+ worse)
+		bool avoided = false;
+		std::vector<int> goodFor; // needs it goes there for
+		std::vector<std::pair<int, int>> things; // category, sightings
+		std::vector<std::pair<std::string, int>> met; // moniker, meetings
+		bool here = false;
+	};
+	std::vector<PlaceMemory> places;
 
 	// how its last few choices turned out, oldest first: what it did, how
 	// long it took, why it stopped and what happened to its needs

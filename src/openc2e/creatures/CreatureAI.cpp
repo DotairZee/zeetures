@@ -832,6 +832,7 @@ MindPerception oldCreature::buildPerception() {
 	p.asleep = asleep;
 	p.dreaming = dreaming;
 	p.female = female;
+	p.genus = (int)genus;
 	unsigned int ndrives = (engine.version == 1) ? 16 : 17;
 	for (unsigned int i = 0; i < ndrives; i++)
 		p.drives[i] = getDrive(i);
@@ -864,6 +865,9 @@ MindPerception oldCreature::buildPerception() {
 		if (auto* ca = dynamic_cast<CreatureAgent*>(a.get()); ca && engine.version == 2)
 			if (auto* oc = dynamic_cast<oldCreature*>(ca->getCreature())) {
 				sa.who = world.history->findMoniker(oc->getGenome());
+				sa.genus = oc->getGenus();
+				sa.female = oc->isFemale();
+				sa.stage = (int)oc->getStage();
 				if (const Bond* b = Relationships::bondOf(this, sa.who)) {
 					sa.affinity = b->affinity;
 					sa.fear = b->fear;
@@ -913,6 +917,37 @@ MindPerception oldCreature::buildPerception() {
 			auto westOf = [&](const Room& n) { return n.x_right + seamShift(n, hc, w) <= here->x_left + 2; };
 			auto eastOf = [&](const Room& n) { return n.x_left + seamShift(n, hc, w) + 2 >= here->x_right; };
 			p.scentHere = here->foodscent;
+			// sense of place: this room, its metaroom and its neighbours
+			p.room = (int)here->id;
+			if (MetaRoom* mr = world.map->metaRoomAt((unsigned int)std::max(0.0f, cx), (unsigned int)std::max(0.0f, cy)))
+				p.metaroom = (int)mr->id;
+			p.roomX = (here->x_left + here->x_right) / 2.0f;
+			p.roomFloor = (float)std::max(here->y_left_floor, here->y_right_floor);
+			{
+				const int fitNear = std::max(1, parentagent->size);
+				unsigned int hFloor = std::max(here->y_left_floor, here->y_right_floor);
+				unsigned int hCeiling = std::min(here->y_left_ceiling, here->y_right_ceiling);
+				for (auto& [n, door] : here->getDoors()) {
+					if (door.perm < fitNear)
+						continue;
+					MindPerception::RoomNear rn;
+					rn.id = (int)n->id;
+					rn.x = (n->x_left + n->x_right) / 2.0f + seamShift(*n, hc, w);
+					rn.floor = (float)std::max(n->y_left_floor, n->y_right_floor);
+					rn.water = n->type == 2;
+					if (westOf(*n))
+						rn.side = 10;
+					else if (eastOf(*n))
+						rn.side = 11;
+					else if (std::max(n->y_left_floor, n->y_right_floor) <= hCeiling + 2)
+						rn.side = -1;
+					else if (std::min(n->y_left_ceiling, n->y_right_ceiling) + 2 >= hFloor)
+						rn.side = 1;
+					else
+						continue;
+					p.roomsNear.push_back(rn);
+				}
+			}
 			// only doorways the creature fits through count for its senses of
 			// direction (smell spreads through narrower gaps, but following it
 			// there walked creatures into walls: the middle lift's lower stop

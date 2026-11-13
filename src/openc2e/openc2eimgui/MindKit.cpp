@@ -8,6 +8,8 @@
 //   Memory map  the world as it remembers it: where it has been, food,
 //               lift rides, where it is
 //   Mood        how content it has been over the last 15 minutes
+//   Places      the rooms it remembers: what it saw and whom it met there,
+//               how it felt there, and the ones it seeks out or keeps away from
 // Things are named from the game's own word list (the player's copy).
 
 #include "C2Kits.h"
@@ -99,6 +101,44 @@ std::string thing(int category) {
 	return fmt::format("thing {}", category);
 }
 
+
+// what a need is sought for, in a few words (a favourite place)
+const char* needFor(const std::string& need) {
+	if (need == "Cold")
+		return "to warm up";
+	if (need == "Hot")
+		return "to cool down";
+	if (need == "Tired")
+		return "to rest";
+	if (need == "Sleepy")
+		return "to sleep";
+	if (need == "Lonely")
+		return "for company";
+	return "for its needs";
+}
+const char* needForIndex(int need) {
+	static const char* const names[17] = {"Pain", "Pleasure", "Hunger", "Cold", "Hot", "Tired", "Sleepy", "Lonely",
+		"Crowded", "Fear", "Bored", "Anger", "Sex", "Injury", "Suffocate", "Thirst", "Stress"};
+	return needFor(need >= 0 && need < 17 ? names[need] : "");
+}
+
+// a trip from the sense of place, in plain words
+std::string nameOf(const std::string& moniker);
+std::string placeTrip(const std::string& place) {
+	if (place.rfind("mate:", 0) == 0)
+		return "go where it last met " + nameOf(place.substr(5));
+	if (place.rfind("favourite:", 0) == 0)
+		return fmt::format("go to a favourite place {}", needFor(place.substr(10)));
+	if (place.rfind("leave:", 0) == 0) {
+		std::string need = place.substr(6);
+		for (auto& ch : need)
+			ch = (char)tolower((unsigned char)ch);
+		return fmt::format("leave a room it dislikes ({})", need == "suffocate" ? "breathless" : need);
+	}
+	if (place == "explore")
+		return "explore a room it has not been in";
+	return place;
+}
 std::string nameOf(const std::string& moniker) {
 	// following another ("toward <moniker>", the mind's own key)
 	if (moniker.rfind("toward ", 0) == 0)
@@ -112,6 +152,8 @@ std::string nameOf(const std::string& moniker) {
 }
 
 std::string optionLabel(const MindView::Option& o) {
+	if (!o.place.empty())
+		return placeTrip(o.place);
 	if (!o.who.empty())
 		return fmt::format("{} {}", verb(o.decision), nameOf(o.who));
 	if (o.category < 0)
@@ -555,6 +597,25 @@ void MapPage(const MindView& v) {
 		if (mouse.x > a.x - 4 && mouse.x < a.x + 4 && mouse.y > a.y && mouse.y < b.y)
 			tip = fmt::format("A ride it knows: {} {} time{}", r.toY < r.fromY ? "up" : "down", r.uses, r.uses == 1 ? "" : "s");
 	}
+	for (auto& pm : v.places) {
+		if (pm.visits == 0 || (pm.goodFor.empty() && !pm.avoided))
+			continue;
+		ImVec2 c = at(pm.x, pm.floor - 20);
+		if (pm.avoided) {
+			dl->AddLine(c - ImVec2(4, 4), c + ImVec2(4, 4), IM_COL32(235, 90, 80, 255), 2.0f);
+			dl->AddLine(c + ImVec2(-4, 4), c + ImVec2(4, -4), IM_COL32(235, 90, 80, 255), 2.0f);
+		} else {
+			dl->AddCircleFilled(c, 4, IM_COL32(250, 215, 100, 255), 12);
+			dl->AddCircle(c, 4, IM_COL32(90, 70, 20, 255), 12);
+		}
+		float mdx = mouse.x - c.x, mdy = mouse.y - c.y;
+		if (mdx * mdx + mdy * mdy < 36) {
+			std::string good;
+			for (int need : pm.goodFor)
+				good += (good.empty() ? "" : ", ") + std::string(needForIndex(need));
+			tip = pm.avoided ? fmt::format("Room {}: a room it keeps away from", pm.room) : fmt::format("Room {}: a favourite place {}", pm.room, good);
+		}
+	}
 	ImVec2 here = at(v.x, v.y);
 	dl->AddTriangleFilled(here + ImVec2(0, -9), here + ImVec2(-6, 3), here + ImVec2(6, 3), IM_COL32(255, 255, 255, 255));
 	if (!tip.empty())
@@ -563,8 +624,8 @@ void MapPage(const MindView& v) {
 		ImGui::SetTooltip("Where it is now");
 	// key, each mark drawn as it is on the map
 	ImVec2 k = ImGui::GetCursorScreenPos() + ImVec2(4, 4);
-	const char* labels[4] = {"been there (brighter: lately)", "food it remembers", "lift rides it knows", "where it is now"};
-	for (int i = 0; i < 4; i++) {
+	const char* labels[6] = {"been there (brighter: lately)", "food it remembers", "lift rides it knows", "where it is now", "a favourite place", "a room it keeps away from"};
+	for (int i = 0; i < 6; i++) {
 		ImVec2 p = k + ImVec2((i % 2) * 300.0f, (i / 2) * 18.0f);
 		ImVec2 c = p + ImVec2(5, 5);
 		switch (i) {
@@ -582,11 +643,106 @@ void MapPage(const MindView& v) {
 			case 3:
 				dl->AddTriangleFilled(c + ImVec2(0, -7), c + ImVec2(-5, 4), c + ImVec2(5, 4), IM_COL32(255, 255, 255, 255));
 				break;
+			case 4:
+				dl->AddCircleFilled(c, 4, IM_COL32(250, 215, 100, 255), 12);
+				dl->AddCircle(c, 4, IM_COL32(90, 70, 20, 255), 12);
+				break;
+			case 5:
+				dl->AddLine(c - ImVec2(4, 4), c + ImVec2(4, 4), IM_COL32(235, 90, 80, 255), 2.0f);
+				dl->AddLine(c + ImVec2(-4, 4), c + ImVec2(4, -4), IM_COL32(235, 90, 80, 255), 2.0f);
+				break;
 		}
 		dl->AddText(p + ImVec2(16, -3), DIM, labels[i]);
 	}
-	ImGui::Dummy(ImVec2((float)w, 42));
+	ImGui::Dummy(ImVec2((float)w, 60));
 	ImGui::TextDisabled("%zu places, %zu food places, %zu rides remembered", v.visited.size(), v.food.size(), v.rides.size());
+}
+
+
+void PlacesPage(const MindView& v) {
+	std::vector<const MindView::PlaceMemory*> been;
+	int heardOf = 0;
+	for (auto& pm : v.places) {
+		if (pm.visits > 0)
+			been.push_back(&pm);
+		else
+			heardOf++;
+	}
+	if (been.empty()) {
+		ImGui::TextWrapped("It does not remember any rooms yet.");
+		return;
+	}
+	std::sort(been.begin(), been.end(), [](auto* a, auto* b) { return a->here != b->here ? a->here : a->ticks > b->ticks; });
+	KitNoteColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "The rooms it remembers, where it spent most time first. How it felt there is against how it feels anywhere.");
+	ImGui::BeginChild("places", ImVec2(0, 380), false);
+	const ImVec4 green(0.55f, 0.85f, 0.55f, 1), red(0.92f, 0.5f, 0.45f, 1), pink(0.89f, 0.67f, 0.82f, 1);
+	for (auto* pm : been) {
+		float dx = pm->x - v.x, dy = pm->floor - v.y;
+		std::string where = pm->here ? "here"
+							: std::fabs(dx) < 400 ? "near by"
+							: fmt::format("{} {}", std::fabs(dx) > 2500 ? "far" : "a way", dx < 0 ? "west" : "east");
+		if (!pm->here && std::fabs(dy) >= 150)
+			where += dy < 0 ? ", higher up" : ", lower down";
+		ImGui::TextColored(ImVec4(0.95f, 0.85f, 0.55f, 1), "Room %d", pm->room);
+		ImGui::SameLine();
+		ImGui::TextDisabled("(%s): %d visit%s, %s there, last %s", where.c_str(), pm->visits, pm->visits == 1 ? "" : "s",
+			secondsText(secondsOf((unsigned int)pm->ticks)).c_str(), pm->here ? "now" : (secondsText(secondsOf(v.tick > pm->last ? v.tick - pm->last : 0)) + " ago").c_str());
+		ImGui::Indent(14);
+		if (!pm->goodFor.empty()) {
+			std::string good;
+			for (int need : pm->goodFor)
+				good += (good.empty() ? "" : ", ") + std::string(needForIndex(need));
+			ImGui::TextColored(green, "Favourite place %s", good.c_str());
+		}
+		if (pm->avoided) {
+			std::vector<std::pair<float, int>> worse;
+			for (int need : {0, 3, 4, 9, 13, 14})
+				if (pm->feel[need] > 0.005f)
+					worse.push_back({pm->feel[need], need});
+			std::sort(worse.rbegin(), worse.rend());
+			std::string why;
+			for (size_t k = 0; k < worse.size() && k < 2; k++) {
+				std::string n = NEED_NAMES[worse[k].second];
+				for (auto& ch : n)
+					ch = (char)tolower((unsigned char)ch);
+				why += (why.empty() ? "" : " and ") + (n == "suffocate" ? std::string("breathless") : n);
+			}
+			ImGui::TextColored(red, "Keeps away: it felt %s there", why.empty() ? "worse" : why.c_str());
+		}
+		if (pm->felt && pm->goodFor.empty() && !pm->avoided) {
+			// its needs' biggest differences there, either way
+			std::vector<std::pair<float, int>> diff;
+			for (int k = 0; k < 17; k++)
+				if (std::fabs(pm->feel[k]) > 0.02f)
+					diff.push_back({std::fabs(pm->feel[k]), k});
+			std::sort(diff.rbegin(), diff.rend());
+			std::string felt;
+			for (size_t k = 0; k < diff.size() && k < 3; k++)
+				felt += fmt::format("{}{} {}", felt.empty() ? "" : ", ", NEED_NAMES[diff[k].second], pm->feel[diff[k].second] < 0 ? "eased" : "rose");
+			if (!felt.empty())
+				ImGui::TextDisabled("Felt there: %s", felt.c_str());
+		}
+		if (!pm->things.empty()) {
+			auto things = pm->things;
+			std::sort(things.begin(), things.end(), [](auto& a, auto& b) { return a.second > b.second; });
+			std::string seen;
+			for (size_t k = 0; k < things.size() && k < 6; k++)
+				seen += fmt::format("{}{}{}", seen.empty() ? "" : ", ", thing(things[k].first), things[k].second > 1 ? fmt::format(" ({})", things[k].second) : "");
+			ImGui::TextWrapped("Saw: %s%s", seen.c_str(), things.size() > 6 ? ", ..." : "");
+		}
+		if (!pm->met.empty()) {
+			std::string met;
+			for (size_t k = 0; k < pm->met.size() && k < 5; k++)
+				met += (met.empty() ? "" : ", ") + nameOf(pm->met[k].first);
+			ImGui::PushStyleColor(ImGuiCol_Text, pink);
+			ImGui::TextWrapped("Met: %s%s", met.c_str(), pm->met.size() > 5 ? ", ..." : "");
+			ImGui::PopStyleColor();
+		}
+		ImGui::Unindent(14);
+		ImGui::Spacing();
+	}
+	ImGui::EndChild();
+	ImGui::TextDisabled("%zu room%s been in; %d more seen next door", been.size(), been.size() == 1 ? "" : "s", heardOf);
 }
 
 void MoodPage(const MindView& v) {
@@ -667,6 +823,10 @@ void DrawMindKit() {
 		}
 		if (KitTab("Memory map")) {
 			MapPage(v);
+			ImGui::EndTabItem();
+		}
+		if (KitTab("Places")) {
+			PlacesPage(v);
 			ImGui::EndTabItem();
 		}
 		if (KitTab("Mood")) {

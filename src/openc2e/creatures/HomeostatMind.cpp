@@ -279,6 +279,39 @@ struct Params {
 	float restlessLeaveFloor = 0.6f; // chance per new heading of trying another floor, at full restlessness
 	unsigned int floorSearched = 1500; // both ways visited this recently: the floor counts as searched
 
+	// Sense of place (owner, 2026-11-13). Each creature remembers the rooms
+	// it has been in: how often and how long, what it saw there, whom it met
+	// there, and how its needs went while there, against how they go
+	// anywhere (a room's "feel"). Uses: (1) finding things again: a wanted
+	// thing out of sight, its last-seen spot already checked, is sought in
+	// the room it was most often and most lately seen in; (2) mates: an adult
+	// wanting to mate with no mate in view goes where it last met one; (3)
+	// favourite places: a strong need sends it to the room that eased that
+	// need best (a warm room when cold, its usual bed when sleepy), and
+	// (4) avoided places: a room where pain, cold, heat, fear or injury rose
+	// is left and not sought; (5) exploring: curiosity about rooms next door
+	// it has never been in, more when bored.
+	size_t roomMemoryMax = 500;
+	float feelMinTicks = 60.0f; // mind ticks in a room before its feel counts
+	float feelKeepTicks = 3000.0f; // older feel fades (halved past this)
+	unsigned int sightingGap = 100; // a thing seen again after this long is another sighting
+	float recallRecency = 30000.0f; // ticks for a sighting's weight to fall by e
+	unsigned int recallEmptyTicks = 1500; // a room checked and found without it: not tried for this long
+	float mateSex = 0.35f; // Sex drive (0-1) at which a creature goes to where it met a mate
+	float mateSeekShare = 0.8f;
+	unsigned int mateCheckedTicks = 1500;
+	float favouriteNeed = 0.4f; // a need this strong sends it to a room that eased it
+	float favouriteMinEase = 0.0004f; // per tick better than usual, for a room to count as good for a need
+	float favouriteHorizon = 400.0f; // ticks of that easing it expects from going
+	float favouriteShare = 0.6f;
+	// resting and sleeping work anywhere: going to its usual bed is a stroll
+	// while only fairly tired or sleepy, and not far; past this it lies down
+	float bedNeedMax = 0.75f;
+	float bedReach = 1200.0f;
+	float avoidFeel = 0.0006f; // per tick worse than usual (pain, cold, heat, fear, injury, suffocation)
+	float leaveNeed = 0.2f; // that need at least this high: leave the room
+	float exploreWant = 0.025f; // curiosity about an unvisited room next door
+	float exploreReach = 1500.0f; // a known but unvisited room on this floor this near
 	float foragePass = 80.0f;
 	unsigned int forageStuckTicks = 60;
 	float foodTripGain = 100.0f;
@@ -477,6 +510,7 @@ struct Candidate {
 	bool boatCall = false; // pressing a button to call a boat
 	bool blindPress = false; // pressing a call button with no lift in view or known
 	bool route = false; // a step along a route on the place map
+	std::string place; // a trip from the sense of place: "mate:<moniker>", "favourite:<need>", "leave:<need>", "explore"
 };
 
 struct CallButton {
@@ -713,6 +747,7 @@ class HomeostatMind : public CreatureMind {
 			o.escape = c.escape;
 			o.scent = c.scent || !c.urge.empty();
 			o.travel = c.seekCategory >= 0 || c.chain;
+			o.place = c.place;
 			v.options.push_back(o);
 		}
 		auto lesson = [&](int category, int decision, const std::string& who, const Expectation& e) {
@@ -753,6 +788,28 @@ class HomeostatMind : public CreatureMind {
 			v.food.push_back({f.x, f.y, f.confidence, f.meals, f.tick});
 		for (auto& l : links)
 			v.rides.push_back({l.x, l.fromY, l.toY, l.uses});
+		for (auto& [id, r] : rooms) {
+			MindView::PlaceMemory pm;
+			pm.room = id;
+			pm.x = r.x;
+			pm.floor = r.floor;
+			pm.visits = r.visits;
+			pm.last = r.last;
+			pm.ticks = r.ticks;
+			pm.felt = r.feelTicks >= prm.feelMinTicks;
+			for (int i = 0; i < NUM_DRIVES && i < 17; i++)
+				pm.feel[i] = roomFeel(r, i) * prm.favouriteHorizon; // over a stay of favouriteHorizon ticks
+			pm.avoided = roomAvoided(r);
+			for (int need : {COLD, HOT, TIRED, SLEEPY, LONELY})
+				if (-roomFeel(r, need) >= prm.favouriteMinEase && !pm.avoided && !r.water)
+					pm.goodFor.push_back(need);
+			for (auto& [category, sg] : r.seen)
+				pm.things.push_back({category, sg.times});
+			for (auto& [who, n] : r.met)
+				pm.met.push_back({who, n});
+			pm.here = id == roomNow;
+			v.places.push_back(pm);
+		}
 		for (auto& m : moodLog)
 			v.mood.push_back({m.tick, m.content, m.strongest, m.strength});
 		v.outcomes.assign(outcomeLog.begin(), outcomeLog.end());
@@ -776,6 +833,7 @@ class HomeostatMind : public CreatureMind {
 			applyInstinct(p, inst);
 		visited[{(int)std::floor(p.x / prm.visitBinWidth), (int)std::floor(p.y / prm.visitBinHeight)}] = p.tick;
 		updatePlaceMap(p);
+		updatePlaces(p, d);
 		if (lastTick != 0 && p.tick > lastTick) {
 			if (d[HUNGER] >= prm.restlessHunger)
 				hungryTicks += (float)(p.tick - lastTick);
@@ -1222,6 +1280,23 @@ class HomeostatMind : public CreatureMind {
 		for (auto& [from, edges] : placeMap)
 			for (auto& e : edges)
 				s += fmt::format("pedge {} {} {} {} {} {:.0f} {} {}\n", from.first, from.second, e.to.first, e.to.second, e.dir, e.cost, e.uses, e.fails);
+		// sense of place
+		s += fmt::format("feelbase {}", feelBaseTicks);
+		for (float f : feelBase)
+			s += fmt::format(" {}", f);
+		s += "\n";
+		for (auto& [id, r] : rooms) {
+			s += fmt::format("room {} {:.0f} {:.0f} {} {} {} {} {} {:.0f} {:.0f}", id, r.x, r.floor, r.metaroom, r.water ? 1 : 0, r.visits, r.first, r.last, r.ticks, r.feelTicks);
+			for (float f : r.feelSum)
+				s += fmt::format(" {}", f);
+			s += "\n";
+			for (auto& [category, sg] : r.seen)
+				s += fmt::format("rseen {} {} {:.0f} {:.0f} {} {}\n", id, category, sg.x, sg.y, sg.last, sg.times);
+			for (auto& [who, n] : r.met)
+				s += fmt::format("rmet {} {} {}\n", id, who, n);
+		}
+		for (auto& [who, m] : metAt)
+			s += fmt::format("metat {} {} {:.0f} {:.0f} {} {} {} {} {}\n", who, m.room, m.x, m.y, m.last, m.genus, m.category, m.stage, m.female ? 1 : 0);
 		return s;
 	}
 
@@ -1268,6 +1343,39 @@ class HomeostatMind : public CreatureMind {
 					placeMap[from].push_back(e);
 					placeEdges++;
 				}
+			} else if (what == "feelbase") {
+				l >> feelBaseTicks;
+				for (float& f : feelBase)
+					l >> f;
+			} else if (what == "room") {
+				int id, water;
+				RoomMemory r;
+				l >> id >> r.x >> r.floor >> r.metaroom >> water >> r.visits >> r.first >> r.last >> r.ticks >> r.feelTicks;
+				for (float& f : r.feelSum)
+					l >> f;
+				r.water = water != 0;
+				if (l && rooms.size() < prm.roomMemoryMax)
+					rooms[id] = r;
+			} else if (what == "rseen") {
+				int id, category;
+				RoomSighting sg;
+				l >> id >> category >> sg.x >> sg.y >> sg.last >> sg.times;
+				if (l && rooms.count(id))
+					rooms[id].seen[category] = sg;
+			} else if (what == "rmet") {
+				int id, n;
+				std::string who;
+				l >> id >> who >> n;
+				if (l && rooms.count(id))
+					rooms[id].met[who] = n;
+			} else if (what == "metat") {
+				std::string who;
+				MetCreature m;
+				int female;
+				l >> who >> m.room >> m.x >> m.y >> m.last >> m.genus >> m.category >> m.stage >> female;
+				m.female = female != 0;
+				if (l)
+					metAt[who] = m;
 			} else if (what == "tlink") {
 				TravelLink tl;
 				l >> tl.fromX >> tl.fromY >> tl.toX >> tl.toY >> tl.category >> tl.decision >> tl.uses;
@@ -1413,6 +1521,42 @@ class HomeostatMind : public CreatureMind {
 	std::vector<std::pair<AgentRef, unsigned int>> triedDevices; // passed over while escaping, and when
 	std::map<int, BoatLink> boatLinks; // decision -> learned ride
 	std::vector<TravelLink> travelLinks;
+
+	// ---- Sense of place: rooms remembered ----
+	struct RoomSighting {
+		float x = 0, y = 0; // where it was seen
+		unsigned int last = 0; // last seen
+		int times = 0; // sightings (one per sightingGap)
+		unsigned int emptyAt = 0; // last time looked for here and not found
+	};
+	struct RoomMemory {
+		float x = 0, floor = 0; // its middle and floor
+		int metaroom = -1;
+		bool water = false;
+		int visits = 0; // 0: known only as a room next door
+		unsigned int first = 0, last = 0;
+		float ticks = 0; // mind ticks spent here
+		std::array<float, NUM_DRIVES> feelSum{}; // drive change while here
+		float feelTicks = 0;
+		std::map<int, RoomSighting> seen; // by category
+		std::map<std::string, int> met; // creatures met here: moniker -> meetings
+	};
+	struct MetCreature {
+		int room = -1;
+		float x = 0, y = 0;
+		unsigned int last = 0;
+		int genus = -1, category = -1, stage = -1;
+		bool female = false;
+		unsigned int checked = 0; // gone there and not found
+	};
+	std::map<int, RoomMemory> rooms;
+	std::map<std::string, MetCreature> metAt; // where each creature was last met
+	std::array<float, NUM_DRIVES> feelBase{}; // drive change anywhere (the usual)
+	float feelBaseTicks = 0;
+	std::array<float, NUM_DRIVES> placePrevD{};
+	bool placePrevValid = false;
+	int roomNow = -1;
+	std::map<int, int> recalledFrom; // category -> room its seek target was recalled from
 
 	// ---- The place map ----
 	using Cell = std::pair<int, int>;
@@ -2551,6 +2695,343 @@ class HomeostatMind : public CreatureMind {
 		return false;
 	}
 
+
+	// ---- Sense of place ----
+	// a room's feel for a need: how much faster (positive) or slower that
+	// need rose there than it does anywhere, per tick; 0 until known
+	float roomFeel(const RoomMemory& r, int need) const {
+		if (r.feelTicks < prm.feelMinTicks || feelBaseTicks < prm.feelMinTicks)
+			return 0.0f;
+		return r.feelSum[need] / r.feelTicks - feelBase[need] / feelBaseTicks;
+	}
+	// how much worse than usual the body fared there (pain, cold, heat,
+	// fear, injury, suffocation), and which need most
+	float roomBadness(const RoomMemory& r, int* worst = nullptr) const {
+		float bad = 0, most = 0;
+		for (int need : {PAIN, COLD, HOT, FEAR, INJURY, SUFFOCATE}) {
+			float f = std::max(0.0f, roomFeel(r, need));
+			bad += f;
+			if (f > most) {
+				most = f;
+				if (worst)
+					*worst = need;
+			}
+		}
+		return bad;
+	}
+	bool roomAvoided(const RoomMemory& r) const {
+		return roomBadness(r) > prm.avoidFeel;
+	}
+
+	void updatePlaces(const MindPerception& p, const std::array<float, NUM_DRIVES>& d) {
+		if (p.room < 0 || p.riding || p.carried) {
+			placePrevValid = false;
+			return;
+		}
+		if (!rooms.count(p.room) && rooms.size() >= prm.roomMemoryMax) {
+			// forget the room least lately been in (or only heard of)
+			auto oldest = rooms.begin();
+			for (auto it = rooms.begin(); it != rooms.end(); ++it)
+				if (it->first != roomNow && it->second.last < oldest->second.last)
+					oldest = it;
+			rooms.erase(oldest);
+		}
+		RoomMemory& r = rooms[p.room];
+		r.x = p.roomX;
+		r.floor = p.roomFloor;
+		r.metaroom = p.metaroom;
+		r.water = p.inWater;
+		if (p.room != roomNow) {
+			r.visits++;
+			if (!r.first)
+				r.first = p.tick;
+			roomNow = p.room;
+		}
+		r.last = p.tick;
+		r.ticks += 1.0f;
+		// how its needs go here, and anywhere
+		if (placePrevValid) {
+			for (int i = 0; i < NUM_DRIVES; i++) {
+				float change = d[i] - placePrevD[i];
+				r.feelSum[i] += change;
+				feelBase[i] += change;
+			}
+			r.feelTicks += 1.0f;
+			feelBaseTicks += 1.0f;
+			if (r.feelTicks > prm.feelKeepTicks) {
+				for (float& f : r.feelSum)
+					f *= 0.5f;
+				r.feelTicks *= 0.5f;
+			}
+			if (feelBaseTicks > prm.feelKeepTicks * 4) {
+				for (float& f : feelBase)
+					f *= 0.5f;
+				feelBaseTicks *= 0.5f;
+			}
+		}
+		placePrevD = d;
+		placePrevValid = true;
+		// what it sees from here, and whom it meets
+		for (auto& s : p.visible) {
+			if (s.who.empty()) {
+				if (std::fabs(s.y - p.y) > prm.seekMaxHeight)
+					continue; // seen on another level: not "here"
+				RoomSighting& sg = r.seen[s.category];
+				if (!sg.last || p.tick > sg.last + prm.sightingGap)
+					sg.times++;
+				sg.x = s.x;
+				sg.y = s.y;
+				sg.last = p.tick;
+			} else {
+				MetCreature& m = metAt[s.who];
+				if (m.room != p.room || !m.last || p.tick > m.last + prm.sightingGap)
+					r.met[s.who]++;
+				m.room = p.room;
+				m.x = s.x;
+				m.y = s.y;
+				m.last = p.tick;
+				m.genus = s.genus;
+				m.category = s.category;
+				m.stage = s.stage;
+				m.female = s.female;
+				m.checked = 0;
+			}
+		}
+		// rooms next door: known of, if not yet been in
+		for (auto& n : p.roomsNear) {
+			if (rooms.count(n.id) || rooms.size() >= prm.roomMemoryMax)
+				continue;
+			RoomMemory& k = rooms[n.id];
+			k.x = n.x;
+			k.floor = n.floor;
+			k.water = n.water;
+			k.metaroom = p.metaroom;
+		}
+	}
+
+	// a trip from the sense of place: walk toward (x, y) on this floor, or
+	// take steps toward changing floors
+	// A long trip is valued as food trips are, by time: worth half as much at
+	// travelHalf pixels, and the stronger the need (`need`, 0-1) the more
+	// patient the creature (a straight per-pixel cost made any mate across
+	// the world worth less than nothing).
+	void addGoTo(const MindPerception& p, float want, float x, float y, const std::string& why, bool canWest, bool canEast, std::vector<Candidate>& out, float need = 0.0f) {
+		if (want < prm.seekMinWant)
+			return;
+		size_t before = out.size();
+		float dx = dxTo(p, x), dy = y - p.y;
+		if (std::fabs(dy) <= prm.seekMaxHeight) {
+			if (std::fabs(dx) < prm.seekArrived)
+				return;
+			int decision = dx < 0 ? 10 : 11;
+			if ((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision) || waterAhead(p, decision) || wallAhead(p, decision))
+				return;
+			Candidate c{-1, decision, std::fabs(dx), want, 0, 0};
+			c.score = want / (1.0f + std::fabs(dx) / (prm.travelHalf * (1.0f + prm.hungerPatience * need * need)));
+			c.chain = true;
+			out.push_back(c);
+		} else
+			addFloorChange(p, want * prm.floorChangeDiscount, y, -1, canWest, canEast, out);
+		for (size_t i = before; i < out.size(); i++)
+			out[i].place = why;
+	}
+
+	// (1) Finding things again: for each wanted kind of thing out of sight
+	// with no last-seen spot left to try, the room it was seen in most often
+	// and most lately (not one checked lately and found without it, nor one
+	// avoided) becomes where to look.
+	void recallPlaces(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D) {
+		std::map<int, std::pair<float, int>> best; // category -> (weight, room)
+		for (auto& [id, r] : rooms) {
+			if (r.visits == 0 || roomAvoided(r))
+				continue;
+			for (auto& [category, sg] : r.seen) {
+				if (places.count(category) || isVisible(p, category))
+					continue;
+				if (sg.emptyAt && p.tick < sg.emptyAt + prm.recallEmptyTicks)
+					continue;
+				if (id == p.room)
+					continue; // here, and not in sight
+				float age = (float)(p.tick > sg.last ? p.tick - sg.last : 0);
+				float dist = std::fabs(dxTo(p, sg.x)) + std::fabs(sg.y - p.y);
+				float w = std::sqrt((float)sg.times) * std::exp(-age / prm.recallRecency) / (1.0f + dist / 1500.0f);
+				auto it = best.find(category);
+				if (it == best.end() || w > it->second.first)
+					best[category] = {w, id};
+			}
+		}
+		for (auto& [category, wr] : best) {
+			if (knownRelief(p, d, D, category) * prm.seekDiscount < prm.seekMinWant)
+				continue;
+			const RoomSighting& sg = rooms[wr.second].seen[category];
+			places[category] = {sg.x, sg.y, p.tick};
+			recalledFrom[category] = wr.second;
+			fmt::print("[homeostat] creature {} t{}: remembers seeing {} in room {} (seen there {} time{}); looks there\n", p.creatureId, p.tick,
+				category, wr.second, sg.times, sg.times == 1 ? "" : "s");
+		}
+	}
+	// a last-seen or recalled spot reached and the thing not there
+	void placeFoundEmpty(const MindPerception& p, int category) {
+		if (auto it = recalledFrom.find(category); it != recalledFrom.end()) {
+			if (auto r = rooms.find(it->second); r != rooms.end())
+				if (auto sg = r->second.seen.find(category); sg != r->second.seen.end())
+					sg->second.emptyAt = p.tick;
+			recalledFrom.erase(it);
+		}
+		if (auto r = rooms.find(p.room); r != rooms.end())
+			if (auto sg = r->second.seen.find(category); sg != r->second.seen.end())
+				sg->second.emptyAt = p.tick;
+	}
+
+	// (2) Finding mates: wanting to mate, an adult with no adult of its kind
+	// and the other sex in view goes to where it last met one (most lately
+	// met first, nearer first).
+	void addMateSeek(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		auto adult = [](int stage) { return stage >= (int)youth && stage <= (int)old; };
+		if (d[SEX] < prm.mateSex || !adult((int)p.stage) || p.genus < 0)
+			return;
+		for (auto& s : p.visible)
+			if (!s.who.empty() && s.genus == p.genus && s.female != p.female && adult(s.stage))
+				return; // one in view: the usual choosing takes over
+		const std::string* bestWho = nullptr;
+		float bestW = 0;
+		for (auto& [who, m] : metAt) {
+			if (m.genus != p.genus || m.female == p.female || !adult(m.stage))
+				continue;
+			if (m.checked && p.tick < m.checked + prm.mateCheckedTicks)
+				continue;
+			if (auto r = rooms.find(m.room); r != rooms.end() && roomAvoided(r->second))
+				continue;
+			float age = (float)(p.tick > m.last ? p.tick - m.last : 0);
+			float dist = std::fabs(dxTo(p, m.x)) + std::fabs(m.y - p.y);
+			if (dist < prm.seekArrived && std::fabs(m.y - p.y) < prm.seekMaxHeight) {
+				m.checked = p.tick; // here, and not here
+				fmt::print("[homeostat] creature {} t{}: came to where it met {} and they are gone\n", p.creatureId, p.tick, who);
+				continue;
+			}
+			float w = std::exp(-age / prm.recallRecency) / (1.0f + dist / 1500.0f);
+			if (w > bestW) {
+				bestW = w;
+				bestWho = &who;
+			}
+		}
+		if (!bestWho)
+			return;
+		const MetCreature& m = metAt[*bestWho];
+		Expectation mating;
+		mating.delta[SEX] = -0.3f * d[SEX];
+		float want = std::max(knownRelief(p, d, D, m.category), predictedRelief(d, D, mating)) * prm.mateSeekShare;
+		addGoTo(p, want, m.x, m.y, "mate:" + *bestWho, canWest, canEast, out, d[SEX]);
+	}
+
+	// (3) Favourite places: a strong need, and a room known to ease it
+	// better than anywhere else (not this one, not one avoided): go there.
+	void addFavourites(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		for (int need : {COLD, HOT, TIRED, SLEEPY, LONELY}) {
+			if (d[need] < prm.favouriteNeed)
+				continue;
+			if (auto here = rooms.find(p.room); here != rooms.end() && -roomFeel(here->second, need) >= prm.favouriteMinEase)
+				continue; // already somewhere good for it
+			int bestId = -1;
+			float bestScore = -1e9f, bestWant = 0;
+			bool bed = need == TIRED || need == SLEEPY;
+			if (bed && d[need] > prm.bedNeedMax)
+				continue;
+			for (auto& [id, r] : rooms) {
+				if (id == p.room || r.visits == 0 || r.water || roomAvoided(r))
+					continue;
+				if (bed && std::fabs(dxTo(p, r.x)) + std::fabs(r.floor - p.y) > prm.bedReach)
+					continue;
+				float ease = -roomFeel(r, need);
+				if (ease < prm.favouriteMinEase)
+					continue;
+				Expectation e;
+				e.delta[need] = -std::min(0.5f, ease * prm.favouriteHorizon);
+				float want = predictedRelief(d, D, e) * prm.favouriteShare;
+				float score = want / (1.0f + (std::fabs(dxTo(p, r.x)) + std::fabs(r.floor - p.y)) / (prm.travelHalf * (1.0f + prm.hungerPatience * d[need] * d[need])));
+				if (score > bestScore) {
+					bestScore = score;
+					bestWant = want;
+					bestId = id;
+				}
+			}
+			if (bestId >= 0)
+				addGoTo(p, bestWant, rooms[bestId].x, rooms[bestId].floor - 40.0f, std::string("favourite:") + DRIVE_NAMES[need], canWest, canEast, out, d[need]);
+		}
+	}
+
+	// (4) Avoided places: in a room where the body fares worse than usual,
+	// with that need up, leave it for the room next door that fared best.
+	void addLeave(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		auto here = rooms.find(p.room);
+		if (here == rooms.end())
+			return;
+		int worst = -1;
+		if (roomBadness(here->second, &worst) <= prm.avoidFeel || worst < 0 || d[worst] < prm.leaveNeed)
+			return;
+		// a favourite place for that need already offered: go there instead
+		for (auto& c : out)
+			if (c.place == std::string("favourite:") + DRIVE_NAMES[worst])
+				return;
+		const MindPerception::RoomNear* way = nullptr;
+		float bestBad = 1e9f;
+		for (auto& n : p.roomsNear) {
+			if (n.side != 10 && n.side != 11)
+				continue;
+			if (n.water && !p.inWater)
+				continue;
+			float bad = 0;
+			if (auto r = rooms.find(n.id); r != rooms.end())
+				bad = roomBadness(r->second);
+			if (bad < bestBad) {
+				bestBad = bad;
+				way = &n;
+			}
+		}
+		if (!way || bestBad > prm.avoidFeel)
+			return;
+		Expectation away;
+		away.delta[worst] = -0.3f * d[worst];
+		addGoTo(p, predictedRelief(d, D, away) * 0.6f, way->x, way->floor - 40.0f, std::string("leave:") + DRIVE_NAMES[worst], canWest, canEast, out);
+	}
+
+	// (5) Exploring: curiosity about rooms next door it has never been in
+	// (or a known one not far along this floor), more when bored or curious
+	// by temperament, quieted by pressing needs.
+	void addExplore(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		float survival = std::max({d[PAIN], d[HUNGER], d[COLD], d[HOT], d[INJURY], d[SUFFOCATE], d[THIRST]});
+		float want = prm.exploreWant * (0.5f + d[BORED]) * std::clamp(1.0f + 0.5f * appliedTemperament[1], 0.3f, 2.0f) *
+					 (1.0f - prm.survivalCuriosityDamp * std::clamp(survival, 0.0f, 1.0f));
+		if (want < prm.seekMinWant)
+			return;
+		const RoomMemory* target = nullptr;
+		float bestDist = 1e9f;
+		for (auto& n : p.roomsNear) {
+			if ((n.side != 10 && n.side != 11) || (n.water && !p.inWater))
+				continue;
+			auto r = rooms.find(n.id);
+			if (r != rooms.end() && r->second.visits > 0)
+				continue;
+			float dist = std::fabs(dxTo(p, n.x));
+			if (r != rooms.end() && dist < bestDist) {
+				bestDist = dist;
+				target = &r->second;
+			}
+		}
+		if (!target)
+			for (auto& [id, r] : rooms) {
+				if (r.visits > 0 || r.water || std::fabs(r.floor - p.roomFloor) > prm.seekMaxHeight)
+					continue;
+				float dist = std::fabs(dxTo(p, r.x));
+				if (dist < prm.exploreReach && dist < bestDist) {
+					bestDist = dist;
+					target = &r;
+				}
+			}
+		if (target)
+			addGoTo(p, want, target->x, target->floor - 40.0f, "explore", canWest, canEast, out, d[BORED]);
+	}
+
 	// Seeking: for each remembered place whose category is out of sight, how
 	// much would the best action on it help? If enough, offer walking toward
 	// it (C2 decisions 10 and 11: travel west and east).
@@ -2569,6 +3050,7 @@ class HomeostatMind : public CreatureMind {
 			canWest = false;
 		if (p.wallEast)
 			canEast = false;
+		recallPlaces(p, d, D);
 		std::vector<int> forget;
 		std::vector<int> offLevel;
 		for (auto& [category, place] : places) {
@@ -2594,8 +3076,10 @@ class HomeostatMind : public CreatureMind {
 			c.seekCategory = category;
 			out.push_back(c);
 		}
-		for (int category : forget)
+		for (int category : forget) {
 			places.erase(category);
+			placeFoundEmpty(p, category);
+		}
 
 		// The most wanted thing remembered on another floor: take steps
 		// toward changing floors.
@@ -2616,6 +3100,10 @@ class HomeostatMind : public CreatureMind {
 		addScentFollow(p, d, D, canWest, canEast, out);
 		addScentUrges(p, d, D, canWest, canEast, out);
 		addForage(p, d, D, canWest, canEast, out);
+		addMateSeek(p, d, D, canWest, canEast, out);
+		addFavourites(p, d, D, canWest, canEast, out);
+		addLeave(p, d, D, canWest, canEast, out);
+		addExplore(p, d, canWest, canEast, out);
 	}
 
 	void addScentFollow(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
@@ -3180,7 +3668,7 @@ class HomeostatMind : public CreatureMind {
 			if (p.drives[i] >= 64)
 				needs += fmt::format(" {} {}", DRIVE_NAMES[i], (int)p.drives[i]);
 		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f} | at {:.0f},{:.0f} | restless {:.2f} | food map {}\n",
-			p.creatureId, p.tick, !choice.urge.empty() ? fmt::format("{}:{}", choice.urge, actionName(choice.decision)) : choice.route ? fmt::format("route:{}", actionName(choice.decision)) : choice.boatCall ? fmt::format("callboat:{}", actionName(choice.decision)) : choice.escape ? fmt::format("escape:{}", actionName(choice.decision)) : choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
+			p.creatureId, p.tick, !choice.place.empty() ? fmt::format("place:{}:{}", choice.place, actionName(choice.decision)) : !choice.urge.empty() ? fmt::format("{}:{}", choice.urge, actionName(choice.decision)) : choice.route ? fmt::format("route:{}", actionName(choice.decision)) : choice.boatCall ? fmt::format("callboat:{}", actionName(choice.decision)) : choice.escape ? fmt::format("escape:{}", actionName(choice.decision)) : choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
 			choice.who.empty() ? fmt::format("{}", choice.category) : fmt::format("{}:{}", choice.category, choice.who), choice.want, choice.novelty,
 			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown, p.x, p.y, std::clamp(hungryTicks / prm.restlessRamp, 0.0f, 1.0f),
 			[&] { std::string m; for (auto& fp : foodPlaces) m += fmt::format(" {:.0f},{:.0f}x{:.2f}", fp.x, fp.y, fp.confidence); return m.empty() ? std::string(" none") : m; }());
