@@ -279,6 +279,22 @@ void DrawAgentInjector() {
 			s_object_injector.update();
 			hideListed();
 			s_read_agents = true;
+			// developer aid: OPENC2E_DUMP_COB_PICTURES=<folder> saves each
+			// listed object's thumbnail there (<index>.bmp, names in list.txt)
+			if (const char* dir = getenv("OPENC2E_DUMP_COB_PICTURES")) {
+				std::ofstream list(fs::path(dir) / "list.txt");
+				for (size_t i = 0; i < s_object_injector.objects.size(); i++) {
+					auto& obj = s_object_injector.objects[i];
+					Image img = s_object_injector.getPicture(obj);
+					list << i << "\t" << obj.name << "\t" << obj.filename.string() << "\n";
+					if (img.width <= 0 || img.height <= 0)
+						continue;
+					Texture t = get_backend()->createTextureFromImage(img);
+					auto rt = get_backend()->newRenderTarget(img.width, img.height);
+					rt->renderTexture(t, Rect2i(0, 0, img.width, img.height), Rect2f(0, 0, img.width, img.height));
+					rt->saveToFile((fs::path(dir) / fmt::format("{}.bmp", i)).string());
+				}
+			}
 		}
 		importPicked();
 

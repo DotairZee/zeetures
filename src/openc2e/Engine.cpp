@@ -306,6 +306,11 @@ void Engine::loadGameData() {
 				}
 			}
 		}
+		// developer aid: OPENC2E_PRINT_WORDS prints the word list (C2: nouns,
+		// the names of object categories, are words 16-55)
+		if (getenv("OPENC2E_PRINT_WORDS"))
+			for (size_t i = 0; i < wordlist.size(); i++)
+				fmt::print("* WORD {} {}\n", i, wordlist[i]);
 	}
 }
 
