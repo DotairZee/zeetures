@@ -39,6 +39,34 @@ namespace fs = std::filesystem;
 
 namespace Openc2eImgui {
 
+// Who made the breed packs the owner imported (owner, 2026-11-11: credit
+// third-party creators by name), matched on the pack's file name. From the
+// packs' own files where they name their authors, else creatures.wiki
+// (Kai Norn and Scorpio Norn pages, read 2026-11-12). The Boney Grendels
+// were an official Creatures 2 release, later updated by Lis Morris (owner,
+// 2026-11-12; the wiki files them with the official grendel breeds).
+static const char* PackCredit(const std::string& source) {
+	static const std::pair<const char*, const char*> credits[] = {
+		{"FrogNorn", "Alex (Norns of the Round Table): Frog Norn V3, an overhaul of Nornenmeister's V2 Frog Norns"},
+		{"Midsummer", "Martina Hilsenbeck (Nimue) and Amanora; genome by Katira"},
+		{"goatnorn", "Angela Allan"},
+		{"Kai", "Wafuru (pictures, and the milk bottle); genome by Lis Morris"},
+		{"Scorpio", "Wafuru (pictures and body data); genome by Mannkind"},
+		{"Boney", "Creature Labs, an official Creatures 2 release; updated by Lis Morris"},
+	};
+	std::string lower = source;
+	for (auto& c : lower)
+		c = (char)std::tolower((unsigned char)c);
+	for (auto& [key, who] : credits) {
+		std::string k = key;
+		for (auto& c : k)
+			c = (char)std::tolower((unsigned char)c);
+		if (lower.find(k) != std::string::npos)
+			return who;
+	}
+	return nullptr;
+}
+
 // ---- Reproductive --------------------------------------------------------------
 
 static void ReproductivePage() {
@@ -1131,6 +1159,8 @@ static void BreedsPage() {
 			KitNoteColored(ImVec4(1, 0.7f, 0.4f, 1), "No body data (.att) in this slot: creatures fall back to another breed's.");
 		if (b->imported && !b->source.empty())
 			ImGui::TextDisabled("From %s", b->source.c_str());
+		if (const char* by = b->imported ? PackCredit(b->source) : nullptr)
+			ImGui::TextWrapped("By %s", by);
 		if (b->kind >= 0 && b->kind != b->species)
 			KitNote("Its pictures are filed in the %s set (slot %s): the pack's authors put them there.", BreedSpeciesName(b->species),
 				breedSlotName(b->slot).c_str());
