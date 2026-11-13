@@ -1004,8 +1004,15 @@ static void DrawCard(float CW, float NH) {
 	CardRow("Genome", genome, CW);
 	if (b) {
 		const char* credit = b->imported ? PackCredit(b->source) : nullptr;
-		CardRow("By", credit ? credit : b->imported ? (b->source.empty() ? "imported" : b->source) : "Creature Labs, with the game", CW);
-		CardRow("Ages", AgesOf(b->stages), CW);
+		CardRow("By", credit ? credit : b->imported ? (b->source.empty() ? "imported" : b->source) : "Creature Labs", CW);
+		// the life stages it has its own sprites for; at the others a
+		// creature wears the nearest younger set
+		std::string sprites = AgesOf(b->stages);
+		if (b->stages.size() < 7 && !b->stages.empty())
+			sprites += "; other ages wear the nearest younger set";
+		else if (b->stages.size() >= 7)
+			sprites = "every age";
+		CardRow("Sprites", sprites, CW);
 	}
 	if (egg.taken) {
 		ImGui::Dummy(ImVec2(1, 6));
