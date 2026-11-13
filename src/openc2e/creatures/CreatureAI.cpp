@@ -904,6 +904,13 @@ MindPerception oldCreature::buildPerception() {
 		if (MetaRoom* m = world.map->wrappingMetaRoomNear(cx, cy))
 			p.wrapWidth = (float)m->width();
 	p.riding = (bool)parentagent->invehicle;
+	if (auto* sc = dynamic_cast<SkeletalCreature*>(parentagent); sc && sc->lastFall.tick && sc->lastFall.tick != fallSeenTick) {
+		fallSeenTick = sc->lastFall.tick;
+		p.fellHeight = sc->lastFall.height;
+		p.fellHurt = sc->lastFall.hurt;
+		p.fellFromX = sc->lastFall.fromX;
+		p.fellFromY = sc->lastFall.fromY;
+	}
 	p.carried = (bool)parentagent->carriedby;
 	if (world.map)
 		p.inRoom = (bool)world.map->roomAt(cx, cy);

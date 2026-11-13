@@ -38,6 +38,7 @@ class oldCreature : public Creature {
   protected:
 	// biochemistry
 	unsigned char chemicals[256];
+	unsigned int fallSeenTick = 0; // the latest fall of its own told to the mind
 
 	class oldBrain* brain;
 

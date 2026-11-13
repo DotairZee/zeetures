@@ -34,6 +34,7 @@ bool walkOffEndsInWater(const Room& r, bool east, int fit); // CreatureAI.cpp
 #include "BreedSlots.h"
 #include "common/Random.h"
 #include "creatures/oldCreature.h"
+#include "historyManager.h"
 
 #include "Creature.h"
 #include "Engine.h"
@@ -1420,6 +1421,15 @@ void SkeletalCreature::tick() {
 void SkeletalCreature::physicsTick() {
 	// TODO: mmh
 
+	if (carriedby || invehicle)
+		lastHeldTick = world.tickcount;
+	if (engine.version == 2 && falling && !fallTracking) {
+		fallTracking = true;
+		fallTopY = y;
+		lastFall.fromX = x + getWidth() / 2.0f;
+		lastFall.fromY = y + getHeight();
+		fallOwn = engine.worldready && !carriedby && !invehicle && world.tickcount > lastHeldTick + 5 && world.tickcount > lastScriptMoveTick + 5;
+	}
 	if (engine.version > 1 && falling) {
 		float fx0 = x, fy0 = y;
 		if (validInRoomSystem() || engine.version == 2) {
@@ -1447,6 +1457,11 @@ void SkeletalCreature::physicsTick() {
 			}
 		} else
 			fallStuck = 0;
+	}
+	if (fallTracking && !falling) {
+		fallTracking = false;
+		if (fallOwn && !carriedby && !invehicle)
+			landed(y - fallTopY);
 	}
 
 	if ((engine.version == 1 || !falling) && !carriedby && !invehicle)
@@ -1645,3 +1660,33 @@ std::pair<int, int> SkeletalCreature::getCarryPoint() {
 }
 
 /* vim: set noet: */
+
+// A creature landing from a fall of its own: up to 100 px is a step down and
+// harmless; beyond that it hurts (Pain, chemical 1) more the further it
+// fell, and past 300 px it is injured too (Injury, chemical 14). Landing in
+// water does not hurt. The mind is told (lastFall), to learn which drops to
+// keep away from (owner, 2026-11-13).
+void SkeletalCreature::landed(float height) {
+	if (height <= 0 || !world.map)
+		return;
+	std::shared_ptr<Room> r = world.map->roomAt(x + getWidth() / 2.0f, y + getHeight() - 2);
+	bool water = r && r->type == 2;
+	float pain = water ? 0.0f : std::clamp((height - 100.0f) * 0.6f, 0.0f, 255.0f);
+	float injury = water ? 0.0f : std::clamp((height - 300.0f) * 0.4f, 0.0f, 255.0f);
+	auto* oc = dynamic_cast<oldCreature*>(creature);
+	if (oc && pain > 0)
+		oc->addChemical(1, (unsigned char)pain);
+	if (oc && injury > 0)
+		oc->addChemical(14, (unsigned char)injury);
+	lastFall.height = height;
+	lastFall.hurt = (pain + injury) / 255.0f;
+	lastFall.tick = world.tickcount;
+	if (pain > 0 || getenv("OPENC2E_WATCH_FALLS"))
+		fmt::print("* {} fell {:.0f} px from {:.0f},{:.0f}{}\n", world.history ? world.history->findMoniker(creature->getGenome()) : std::string("?"), height,
+			lastFall.fromX, lastFall.fromY, pain > 0 ? fmt::format(": hurt (pain {:.0f}, injury {:.0f})", pain, injury) : std::string(water ? " into water" : ""));
+}
+
+void SkeletalCreature::scriptMoved() {
+	downfootroom.reset();
+	lastScriptMoveTick = world.tickcount;
+}

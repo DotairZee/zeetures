@@ -400,7 +400,14 @@ struct Params {
 	// Drops: walking off a ledge or dock more than cliffDrop px high is
 	// avoided when searching or following smell, unless the trip is headed
 	// that much lower anyway.
-	float cliffDrop = 150.0f;
+	float cliffDrop = 150.0f; // (no longer used: drops are judged by what falls have taught)
+	// Falls (owner, 2026-11-13: creatures learn not to walk off ledges): a
+	// drop up to harmlessDrop px is a step; beyond it, what a fall is expected
+	// to hurt is learned, per pixel and per place, from falls that hurt.
+	float harmlessDrop = 100.0f;
+	float fallAvoidHurt = 0.05f; // keep from a drop expected to hurt this much
+	float fallAvoidHurtGoingDown = 0.15f; // on a trip that leads lower anyway
+	float fallSpotNear = 80.0f;
 	float boatCallShare = 0.8f; // calling a boat over with a switch: this share of the crossing's
 	// Learning what a switch does: a button pressed to call a boat, then a
 	// boat within reach within boatCallWait ticks, is a known boat switch
@@ -853,6 +860,7 @@ class HomeostatMind : public CreatureMind {
 		visited[{(int)std::floor(p.x / prm.visitBinWidth), (int)std::floor(p.y / prm.visitBinHeight)}] = p.tick;
 		updatePlaceMap(p);
 		updatePlaces(p, d);
+		learnFromFall(p);
 		if (lastTick != 0 && p.tick > lastTick) {
 			if (d[HUNGER] >= prm.restlessHunger)
 				hungryTicks += (float)(p.tick - lastTick);
@@ -1309,6 +1317,9 @@ class HomeostatMind : public CreatureMind {
 		for (auto& [from, edges] : placeMap)
 			for (auto& e : edges)
 				s += fmt::format("pedge {} {} {} {} {} {:.0f} {} {}\n", from.first, from.second, e.to.first, e.to.second, e.dir, e.cost, e.uses, e.fails);
+		s += fmt::format("fallrate {}\n", fallHurtPerPx);
+		for (auto& f : painfulDrops)
+			s += fmt::format("pdrop {:.0f} {:.0f} {} {}\n", f.x, f.y, f.dir, f.hurt);
 		// sense of place
 		s += fmt::format("feelbase {}", feelBaseTicks);
 		for (float f : feelBase)
@@ -1372,6 +1383,13 @@ class HomeostatMind : public CreatureMind {
 					placeMap[from].push_back(e);
 					placeEdges++;
 				}
+			} else if (what == "fallrate") {
+				l >> fallHurtPerPx;
+			} else if (what == "pdrop") {
+				PainfulDrop f;
+				l >> f.x >> f.y >> f.dir >> f.hurt;
+				if (l && painfulDrops.size() < 32)
+					painfulDrops.push_back(f);
 			} else if (what == "feelbase") {
 				l >> feelBaseTicks;
 				for (float& f : feelBase)
@@ -2003,6 +2021,8 @@ class HomeostatMind : public CreatureMind {
 					continue;
 				// nor a way found blocked here lately
 				if ((dir == 10 || dir == 11) && isBlocked(p, dir))
+					continue;				// nor a drop it has learned hurts
+				if ((dir == 10 || dir == 11) && cliffAhead(p, dir))
 					continue;
 				add(-1, a.decision, 0.0f, 0.0f);
 			}
@@ -2589,11 +2609,56 @@ class HomeostatMind : public CreatureMind {
 
 	// A trip walking dir would go into water: if a boat is in view, offer
 	// rowing that way instead (and do not offer the walk).
-	bool cliffAhead(const MindPerception& p, int dir, float targetY = -1e9f) const {
+	// A drop ahead it expects to hurt: learned from its own falls (none at
+	// first: a young creature walks off ledges until a fall teaches it).
+	float fallHurtExpected(const MindPerception& p, int dir) const {
 		float drop = dir == 10 ? p.dropWest : dir == 11 ? p.dropEast : 0.0f;
-		if (drop <= prm.cliffDrop)
+		if (drop <= prm.harmlessDrop)
+			return 0.0f;
+		float expect = fallHurtPerPx * (drop - prm.harmlessDrop);
+		for (auto& f : painfulDrops)
+			if (f.dir == dir && std::fabs(dxTo(p, f.x)) < prm.fallSpotNear && std::fabs(f.y - p.y) < prm.sameLevel + 60.0f)
+				expect = std::max(expect, f.hurt);
+		return expect;
+	}
+	bool cliffAhead(const MindPerception& p, int dir, float targetY = -1e9f) const {
+		float expect = fallHurtExpected(p, dir);
+		if (expect <= 0.0f)
 			return false;
-		return !(targetY > p.y + drop * 0.5f); // a trip going that much lower may take the drop
+		float drop = dir == 10 ? p.dropWest : dir == 11 ? p.dropEast : 0.0f;
+		bool goingDown = targetY > p.y + drop * 0.5f; // a trip going that much lower
+		return expect > (goingDown ? prm.fallAvoidHurtGoingDown : prm.fallAvoidHurt);
+	}
+	// what falls have taught
+	float fallHurtPerPx = 0.0f;
+	struct PainfulDrop {
+		float x = 0, y = 0; // where it stepped off (its middle, its feet's height)
+		int dir = 0;
+		float hurt = 0;
+	};
+	std::vector<PainfulDrop> painfulDrops;
+	void learnFromFall(const MindPerception& p) {
+		if (p.fellHeight <= 0.0f)
+			return;
+		if (p.fellHurt <= 0.0f || p.fellHeight <= prm.harmlessDrop)
+			return; // a step down, or into water: nothing to learn
+		int dir = dxTo(p, p.fellFromX) > 0 ? 10 : 11; // it went from there to here
+		float perPx = p.fellHurt / (p.fellHeight - prm.harmlessDrop);
+		fallHurtPerPx = fallHurtPerPx <= 0.0f ? perPx : fallHurtPerPx + 0.5f * (perPx - fallHurtPerPx);
+		bool known = false;
+		for (auto& f : painfulDrops)
+			if (f.dir == dir && std::fabs(dxTo(p, f.x)) < prm.fallSpotNear && std::fabs(f.y - p.fellFromY) < prm.sameLevel) {
+				f.hurt = std::max(f.hurt, p.fellHurt);
+				known = true;
+			}
+		if (!known) {
+			if (painfulDrops.size() >= 32)
+				painfulDrops.erase(painfulDrops.begin());
+			// (its middle's height then, as the perception's y is its middle)
+			painfulDrops.push_back({p.fellFromX, p.fellFromY - 40.0f, dir, p.fellHurt});
+		}
+		fmt::print("[homeostat] creature {} t{}: fell {:.0f} px and it hurt ({:.2f}); keeps away from that drop (and from falls like it: {:.4f} a px)\n",
+			p.creatureId, p.tick, p.fellHeight, p.fellHurt, fallHurtPerPx);
 	}
 	bool waterAhead(const MindPerception& p, int dir) const {
 		return !p.inWater && ((dir == 10 && p.waterWest) || (dir == 11 && p.waterEast));
@@ -3000,7 +3065,8 @@ class HomeostatMind : public CreatureMind {
 			if (std::fabs(dx) < prm.seekArrived)
 				return;
 			int decision = dx < 0 ? 10 : 11;
-			if ((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision) || waterAhead(p, decision) || wallAhead(p, decision))
+			if ((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision) || waterAhead(p, decision) || wallAhead(p, decision) ||
+				cliffAhead(p, decision, y))
 				return;
 			Candidate c{-1, decision, std::fabs(dx), want, 0, 0};
 			c.score = want / (1.0f + std::fabs(dx) / (prm.travelHalf * (1.0f + prm.hungerPatience * need * need)));

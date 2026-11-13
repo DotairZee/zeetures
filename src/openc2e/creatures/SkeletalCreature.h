@@ -48,6 +48,13 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	int oldfootx, oldfooty;
 	int lastgoodfootx, lastgoodfooty; // TODO: sucky code
 	int fallStuck = 0; // ticks falling without moving (part of its box in rock): eased sideways
+	// Falls of its own (owner, 2026-11-13: creatures should learn not to walk
+	// off ledges): a fall it walked into, not one from the hand, a vehicle or
+	// a script, hurts on landing by the height fallen (dry landings only)
+	bool fallTracking = false, fallOwn = false;
+	float fallTopY = 0;
+	unsigned int lastHeldTick = 0, lastScriptMoveTick = 0;
+	void landed(float height);
 	bool downfoot_left;
 	std::shared_ptr<class Room> downfootroom;
 
@@ -165,7 +172,13 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	std::shared_ptr<class Room> footRoom() const { return downfootroom; }
 	// a script moved it (MVTO, MVBY): its foot room is found afresh where it
 	// now stands, not judged as a step from the room it stood in
-	void scriptMoved() { downfootroom.reset(); }
+	void scriptMoved();
+	// its latest fall of its own: how far, how much it hurt (0-1), where it
+	// stepped off (its middle and feet then) and when (0: none yet)
+	struct Fall {
+		float height = 0, hurt = 0, fromX = 0, fromY = 0;
+		unsigned int tick = 0;
+	} lastFall;
 	// the way its body faces now, in DIRN's terms (0 away, 1 toward the
 	// viewer, 2 right, 3 left), from its current pose
 	unsigned int facing() const { static const unsigned int dirn[4] = {2, 3, 1, 0}; return posedirection < 4 ? dirn[posedirection] : 2; }
