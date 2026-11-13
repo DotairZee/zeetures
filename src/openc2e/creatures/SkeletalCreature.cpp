@@ -1173,6 +1173,15 @@ void SkeletalCreature::setGaitGene(unsigned int gaitdrive) { // TODO: not sure i
 	gaitgene = g;
 	gaiti = 0;
 	skeleton->animation.clear();
+	// developer aid (OPENC2E_WATCH_CREATURES): each change of walk cycle,
+	// and whether it has any steps (a first pose of 0 means none)
+	static const bool watchgait = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	if (watchgait) {
+		std::string poses;
+		for (int k = 0; k < 8; k++)
+			poses += fmt::format(" {}", (int)g->pose[k]);
+		fmt::print("* WATCH GAIT t{} unid {} gait {} poses{}{}\n", world.tickcount, unid, gaitdrive, poses, g->pose[0] == 0 ? " (no steps: it can't walk)" : "");
+	}
 }
 
 void SkeletalCreature::tick() {
@@ -1230,6 +1239,12 @@ void SkeletalCreature::tick() {
 			}
 		}
 
+		// developer aid (OPENC2E_WATCH_CREATURES): what a walk ran into,
+		// every 20 ticks while it is asked to walk
+		static const bool watchwalk = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+		if (watchwalk && (walking || approaching) && world.tickcount % 20 == 0)
+			fmt::print("* WATCH WALK t{} unid {} walking {} approaching {} edgeStop {} falling {} at {:.0f},{:.0f}\n", world.tickcount, unid,
+				walking, approaching, edgeStop, (bool)falling, x, y);
 		if ((walking || approaching) && !edgeStop) {
 			// TODO: we shouldn't bother with this unless it changed?
 			setGaitGene(creature->getGait());

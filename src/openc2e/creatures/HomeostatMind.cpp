@@ -638,6 +638,8 @@ class HomeostatMind : public CreatureMind {
 		wrapW = p.wrapWidth;
 		applyTemperament(p.temperament, p.creatureId);
 		MindOutput out = tickChoose(p);
+		if (gaitWalk && (out.decision == 10 || out.decision == 11))
+			out.decision += 16; // walk-a / walk-b: the same way, by gait
 		out.say = chooseSpeech(p, normalize(p.drives));
 		// for the Mind Kit: how it feels now, and every 5 ticks (2 s) a
 		// moment of its mood, the last 450 (15 minutes)
@@ -1193,6 +1195,8 @@ class HomeostatMind : public CreatureMind {
 		for (auto& fp : foodPlaces)
 			s += fmt::format("food {} {} {} {} {}\n", fp.x, fp.y, fp.tick, fp.confidence, fp.meals);
 		s += fmt::format("restless {}\n", hungryTicks);
+		if (gaitWalk)
+			s += "gaitwalk 1\n";
 		for (auto& e : exits)
 			s += fmt::format("exit {} {} {} {} {}\n", e.x, e.y, e.category, e.decision, e.uses);
 		for (auto& f : flooders)
@@ -1274,6 +1278,10 @@ class HomeostatMind : public CreatureMind {
 				l >> f.x >> f.y >> f.category >> f.decision >> f.uses;
 				if (l && f.decision >= 1 && f.decision <= 3 && flooders.size() < prm.exitMax)
 					flooders.push_back(f);
+			} else if (what == "gaitwalk") {
+				int v = 0;
+				l >> v;
+				gaitWalk = v != 0;
 			} else if (what == "restless") {
 				l >> hungryTicks;
 			} else if (what == "food") {
@@ -1483,6 +1491,16 @@ class HomeostatMind : public CreatureMind {
 	};
 	std::deque<MoodSample> moodLog;
 	std::deque<MindView::Outcome> outcomeLog; // the last few episodes (view)
+	// Walking by gait (owner, 2026-11-12): travelling west or east runs the
+	// world's stepping scripts (26/27: poses 61-64 played as an animation, the
+	// planted foot carrying the body along). A grendel whose genes give those
+	// poses no stride stepped on the spot for good, starving in the cave
+	// under the bridge with food a short walk away, while its gait walk
+	// (scripts 42/43, WALK) worked. A stepping walk that gets nowhere with
+	// nothing ahead (no wall, water or drop) switches this mind to the gait
+	// walk for travel.
+	int stepFails = 0;
+	bool gaitWalk = false;
 	void noteChoiceForView(const std::vector<Candidate>& candidates, const Candidate& choice, const std::array<float, NUM_DRIVES>& d, float D) {
 		std::vector<Candidate> sorted = candidates;
 		std::sort(sorted.begin(), sorted.end(), [](const Candidate& a, const Candidate& b) { return a.score > b.score; });
@@ -2976,8 +2994,22 @@ class HomeostatMind : public CreatureMind {
 		}
 
 		float blockedMove = prm.blockedMove * (d[TIRED] >= prm.tiredWalk ? prm.tiredBlockedShare : 1.0f);
+		bool steppedNowhere = false;
+		if ((current.decision == 10 || current.decision == 11) && current.category < 0 && !gaitWalk) {
+			bool west = current.decision == 10;
+			bool open = !(west ? p.wallWest : p.wallEast) && !(west ? p.waterWest : p.waterEast) && (west ? p.dropWest : p.dropEast) <= 0.0f;
+			if (std::fabs(dxTo(p, startX)) < blockedMove && open && !p.inWater && !p.riding) {
+				steppedNowhere = true;
+				if (++stepFails >= 1) { // (once is enough: every creature's gait walk works)
+					gaitWalk = true;
+					blocked[0] = blocked[1] = Blocked{};
+					fmt::print("[homeostat] creature {} t{}: stepping gets it nowhere with the way open; it walks by gait from now on\n", p.creatureId, p.tick);
+				}
+			} else if (std::fabs(dxTo(p, startX)) >= blockedMove)
+				stepFails = 0;
+		}
 		if ((current.decision == 10 || current.decision == 11) && current.category < 0 && (current.seekCategory >= 0 || current.chain) &&
-			std::fabs(dxTo(p, startX)) < blockedMove) {
+			std::fabs(dxTo(p, startX)) < blockedMove && !(steppedNowhere && gaitWalk)) {
 			blocked[current.decision == 10 ? 0 : 1] = {p.x, p.tick + prm.blockedTicks};
 			if (current.route)
 				for (auto& e : placeMap[cellOf(p.x, p.y)])

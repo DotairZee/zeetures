@@ -450,8 +450,10 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 			break;
 	}
 
-	if (trace_events && family != 4 && event != 9)
-		fmt::print("[event] {} {} {} event {} from {} -> {}\n", (int)family, (int)genus, species, event,
+	// (creatures' own events too with OPENC2E_TRACE_CREATURE_EVENTS)
+	static const bool trace_creatures = getenv("OPENC2E_TRACE_CREATURE_EVENTS") != nullptr;
+	if (((trace_events && family != 4) || (trace_creatures && family == 4)) && event != 9)
+		fmt::print("[event] {} {} {} unid {} event {} from {} -> {}\n", (int)family, (int)genus, species, unid, event,
 			from ? fmt::format("{} {} {}", (int)from->family, (int)from->genus, from->species) : std::string("none"),
 			ranscript ? "ran" : (findScript(event) ? "refused or failed" : "no script"));
 	return ranscript;
