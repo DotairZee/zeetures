@@ -1174,6 +1174,18 @@ void Agent::physicsTickC2() {
 
 	if (suffercollisions()) {
 		MetaRoom* m = world.map->metaRoomAt(x, y);
+		// C2: the top of the map is a ceiling. The east seabed's launcher
+		// throws a creature so hard that its top went above y 0, out of every
+		// room ("out of room system") until it fell back (2026-11-12): it
+		// bumps the top and falls instead
+		if (!m && engine.version == 2 && y < 0) {
+			if (MetaRoom* top = world.map->metaRoomAt(x, 0)) {
+				moveTo(x, (float)top->y());
+				if (vely < 0)
+					vely = 0;
+				m = top;
+			}
+		}
 		if (!m) {
 			if (!outofroomsystem)
 				unhandledException(fmt::format("{} out of room system at ({}, {})", identify(), x, y), false);
