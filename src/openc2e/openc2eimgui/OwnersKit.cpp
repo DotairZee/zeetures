@@ -503,6 +503,7 @@ void WorldHistoryPage() {
 }
 
 static std::vector<lifeLogEntry> s_notices; // shown on the status bar until clicked or dismissed
+static int s_notice_menu = -1; // the notice right-clicked for its menu (-1: the "+N" button)
 
 void DrawLifeNotices(float room) {
 	if (engine.version != 2 || !world.history)
@@ -562,7 +563,11 @@ void DrawLifeNotices(float room) {
 			OpenC2KitAt("owners", "Life log");
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%d older notice%s: click to see the life log", first, first == 1 ? "" : "s");
+			ImGui::SetTooltip("%d older notice%s: click to see the life log; right-click to clear them all", first, first == 1 ? "" : "s");
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+			s_notice_menu = -1;
+			ImGui::OpenPopup("##noticemenu");
+		}
 	}
 	int remove = -1;
 	for (int i = first; i < (int)s_notices.size(); i++) {
@@ -590,11 +595,34 @@ void DrawLifeNotices(float room) {
 							   : e.kind == lifeLogEntry::pregnancy ? "go to it and open the Breeder's Kit"
 							   : e.kind == lifeLogEntry::birth ? "go to it and open the Owner's Kit"
 															   : "go to it";
-			ImGui::SetTooltip("%s %s\n%s\nClick to %s; right-click to dismiss.",
+			ImGui::SetTooltip("%s %s\n%s\nClick to %s; right-click to dismiss it or clear them all.",
 				kindWord(e.kind), KitDateText(e.tick).c_str(), entryDetail(e).c_str(), does);
 		}
-		if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
-			remove = i;
+		if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+			s_notice_menu = i;
+			ImGui::OpenPopup("##noticemenu");
+		}
+	}
+	// developer aid: OPENC2E_TEST_NOTICE_MENU opens the menu on the newest
+	// notice once, for a snapshot of it
+	static bool testMenu = getenv("OPENC2E_TEST_NOTICE_MENU") != nullptr;
+	if (testMenu && world.tickcount > 30) {
+		testMenu = false;
+		s_notice_menu = (int)s_notices.size() - 1;
+		ImGui::OpenPopup("##noticemenu");
+	}
+	// right-click on a notice: dismiss it, or clear them all (owner, 2026-11-13)
+	bool clearAll = false;
+	if (ImGui::BeginPopup("##noticemenu")) {
+		if (s_notice_menu >= 0 && s_notice_menu < (int)s_notices.size() && ImGui::MenuItem("Dismiss"))
+			remove = s_notice_menu;
+		if (ImGui::MenuItem("Clear all"))
+			clearAll = true;
+		ImGui::EndPopup();
+	}
+	if (clearAll) {
+		s_notices.clear();
+		return;
 	}
 	if (remove >= 0)
 		s_notices.erase(s_notices.begin() + remove);
