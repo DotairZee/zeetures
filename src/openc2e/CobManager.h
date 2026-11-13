@@ -32,6 +32,21 @@ class CobManager {
 	// a list of agent names, one per line (# starts a comment), as in the
 	// Additions folder's builtin-cobs.txt and hidden-cobs.txt; empty if none
 	static std::vector<std::string> readNameList(const std::filesystem::path& file);
+	// adds a name to such a list (after a comment line, if given), or takes
+	// it out (with the comment written for it, if that is just above);
+	// false if the file could not be written
+	static bool addToNameList(const std::filesystem::path& file, const std::string& name, const std::string& comment);
+	static bool removeFromNameList(const std::filesystem::path& file, const std::string& name);
+	// C2 (owner, 2026-11-13): the lists the Agent Injector keeps. Built into
+	// every world: the Additions folder's builtin-cobs.txt. Uninstalled:
+	// uninstalled-cobs.txt in the user data folder (left out of the
+	// injector; the COB files themselves are kept).
+	static std::filesystem::path builtinListFile();
+	static std::filesystem::path uninstalledListFile();
+	// objects from this COB in the world that the player added by hand
+	// become like built-in ones: no longer saved with the world (the
+	// built-in list makes them anew at each load). Returns how many.
+	static int adoptHandAdded(const std::string& name);
 	Image getPicture(const CobFileInfo& info);
 	// byHand: added from the Agent Injector, so the objects it makes are
 	// saved with the world and its scripts installed again at each load

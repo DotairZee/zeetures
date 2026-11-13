@@ -1817,6 +1817,13 @@ bool Engine::initialSetup() {
 					fmt::print("* Built-in object \"{}\": no COB for it\n", name);
 					continue;
 				}
+				// this world already has ones the player added by hand (saved
+				// before it was built in): those become the built-in ones, so
+				// there are not two sets (owner, 2026-11-13)
+				if (int n = CobManager::adoptHandAdded(name)) {
+					fmt::print("* Built-in object \"{}\": {} added by hand already here, kept as the built-in ones\n", name, n);
+					continue;
+				}
 				try {
 					cobs.inject(*it);
 					fmt::print("* Built-in object \"{}\" injected\n", name);

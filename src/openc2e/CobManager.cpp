@@ -42,6 +42,91 @@ std::vector<std::string> CobManager::readNameList(const fs::path& file) {
 	return names;
 }
 
+static std::string trimmedName(std::string line) {
+	auto hash = line.find('#');
+	if (hash != std::string::npos)
+		line = line.substr(0, hash);
+	while (!line.empty() && std::isspace((unsigned char)line.back()))
+		line.pop_back();
+	size_t start = 0;
+	while (start < line.size() && std::isspace((unsigned char)line[start]))
+		start++;
+	return line.substr(start);
+}
+
+bool CobManager::addToNameList(const fs::path& file, const std::string& name, const std::string& comment) {
+	auto names = readNameList(file);
+	if (std::find(names.begin(), names.end(), name) != names.end())
+		return true;
+	std::error_code ec;
+	fs::create_directories(file.parent_path(), ec);
+	// a newline first if the file doesn't end with one
+	bool needNewline = false;
+	{
+		std::ifstream in(file, std::ios::binary);
+		if (in) {
+			in.seekg(0, std::ios::end);
+			if (in.tellg() > 0) {
+				in.seekg(-1, std::ios::end);
+				needNewline = in.get() != '\n';
+			}
+		}
+	}
+	std::ofstream out(file, std::ios::app);
+	if (needNewline)
+		out << "\n";
+	if (!comment.empty())
+		out << "# " << comment << "\n";
+	out << name << "\n";
+	return (bool)out;
+}
+
+bool CobManager::removeFromNameList(const fs::path& file, const std::string& name) {
+	std::ifstream in(file);
+	if (!in)
+		return true;
+	std::vector<std::string> lines;
+	std::string line;
+	while (std::getline(in, line))
+		lines.push_back(line);
+	in.close();
+	std::vector<std::string> kept;
+	for (auto& l : lines) {
+		if (trimmedName(l) == name) {
+			// the note written when it was added from the injector goes too
+			if (!kept.empty() && kept.back().rfind("# added from the Agent Injector", 0) == 0)
+				kept.pop_back();
+			continue;
+		}
+		kept.push_back(l);
+	}
+	std::ofstream out(file, std::ios::trunc);
+	for (auto& l : kept)
+		out << l << "\n";
+	return (bool)out;
+}
+
+fs::path CobManager::builtinListFile() {
+	return getUserDataDir() / "Additions" / "builtin-cobs.txt";
+}
+
+fs::path CobManager::uninstalledListFile() {
+	return getUserDataDir() / "uninstalled-cobs.txt";
+}
+
+int CobManager::adoptHandAdded(const std::string& name) {
+	int n = 0;
+	for (auto& a : world.agents)
+		if (a && a->injectedFrom == name) {
+			a->injectedFrom.clear();
+			n++;
+		}
+	auto& list = world.injectedCobs;
+	list.erase(std::remove(list.begin(), list.end(), name), list.end());
+	world.injectedScripts.erase(name);
+	return n;
+}
+
 void CobManager::update() {
 	objects.clear();
 

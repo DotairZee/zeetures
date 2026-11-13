@@ -2,6 +2,7 @@
 #include "Agent.h"
 #include <ctime>
 #include <map>
+#include <set>
 #include "creatures/CreatureSpeech.h"
 
 #include "C2Kits.h"
@@ -123,18 +124,93 @@ static std::string installObjectFile(const std::string& name, const std::vector<
 	return fmt::format("{}: added{}", name, dest.filename() != fs::path(name).filename() ? fmt::format(" as {}", dest.filename().string()) : "");
 }
 
-// objects built into every world (builtin-cobs.txt) and ones that clash
-// with the project's changes (hidden-cobs.txt) are not offered
+// ones that clash with the project's changes (hidden-cobs.txt) are never
+// offered; objects built into every world (builtin-cobs.txt) and ones the
+// player uninstalled (uninstalled-cobs.txt) have their own tabs (owner,
+// 2026-11-13), so they can be put back
+static std::set<std::string> s_builtin, s_uninstalled;
+enum { SET_INJECTOR, SET_BUILTIN, SET_UNINSTALLED };
+static int s_set = SET_INJECTOR;
+
+static void readLists() {
+	auto b = CobManager::readNameList(CobManager::builtinListFile());
+	auto u = CobManager::readNameList(CobManager::uninstalledListFile());
+	s_builtin = std::set<std::string>(b.begin(), b.end());
+	s_uninstalled = std::set<std::string>(u.begin(), u.end());
+}
+
+static int setOf(const std::string& name) {
+	if (s_builtin.count(name))
+		return SET_BUILTIN;
+	if (s_uninstalled.count(name))
+		return SET_UNINSTALLED;
+	return SET_INJECTOR;
+}
+
 static void hideListed() {
-	auto built = CobManager::readNameList(getUserDataDir() / "Additions" / "builtin-cobs.txt");
 	auto hidden = CobManager::readNameList(getUserDataDir() / "Additions" / "hidden-cobs.txt");
 	auto& objs = s_object_injector.objects;
 	objs.erase(std::remove_if(objs.begin(), objs.end(), [&](auto& o) {
-		return std::find(built.begin(), built.end(), o.name) != built.end() || std::find(hidden.begin(), hidden.end(), o.name) != hidden.end();
+		return std::find(hidden.begin(), hidden.end(), o.name) != hidden.end();
 	}),
 		objs.end());
 	if (s_object_selected_index >= objs.size())
 		s_object_selected_index = 0;
+	readLists();
+}
+
+static std::string s_list_message; // what the last move between tabs did
+
+static std::string todayText() {
+	std::time_t t = std::time(nullptr);
+	char buf[32];
+	std::strftime(buf, sizeof(buf), "%Y-%m-%d", std::localtime(&t));
+	return buf;
+}
+
+// built into every world: in builtin-cobs.txt, so every world gets it at
+// each load. In this world, the ones the player added by hand become the
+// built-in ones (not saved with the world any more, so a load doesn't make
+// a second set); with none here, one is made now.
+static void buildIntoWorlds(const CobManager::CobFileInfo& o) {
+	if (!CobManager::addToNameList(CobManager::builtinListFile(), o.name, "added from the Agent Injector, " + todayText())) {
+		s_list_message = fmt::format("Couldn't write {}.", CobManager::builtinListFile().string());
+		return;
+	}
+	int n = CobManager::adoptHandAdded(o.name);
+	if (n == 0) {
+		try {
+			s_object_injector.inject(o, false);
+		} catch (std::exception& e) {
+			s_list_message = fmt::format("{} is built into every world from the next load (adding it now failed: {}).", o.name, e.what());
+			readLists();
+			return;
+		}
+	}
+	s_list_message = n ? fmt::format("{} is built into every world. The {} you added here are now the built-in ones.", o.name, n)
+					   : fmt::format("{} is built into every world, and was added to this one now.", o.name);
+	readLists();
+}
+
+static void takeOutOfWorlds(const CobManager::CobFileInfo& o) {
+	CobManager::removeFromNameList(CobManager::builtinListFile(), o.name);
+	s_list_message = fmt::format("{} is back in the injector. Worlds no longer get it at each load; the ones in this world go when it next loads.", o.name);
+	readLists();
+}
+
+static void uninstall(const CobManager::CobFileInfo& o) {
+	if (!CobManager::addToNameList(CobManager::uninstalledListFile(), o.name, "")) {
+		s_list_message = fmt::format("Couldn't write {}.", CobManager::uninstalledListFile().string());
+		return;
+	}
+	s_list_message = fmt::format("{} is uninstalled: it is under Uninstalled, where Reinstall puts it back.", o.name);
+	readLists();
+}
+
+static void reinstall(const CobManager::CobFileInfo& o) {
+	CobManager::removeFromNameList(CobManager::uninstalledListFile(), o.name);
+	s_list_message = fmt::format("{} is back in the injector.", o.name);
+	readLists();
 }
 
 static void importPicked() {
@@ -426,6 +502,8 @@ void DrawAgentInjector() {
 		std::vector<size_t> shown;
 		for (size_t i = 0; i < objs.size(); i++) {
 			auto& o = objs[i];
+			if (setOf(o.name) != s_set)
+				continue;
 			if (!q.empty() && to_ascii_lowercase(o.name).find(q) == std::string::npos && to_ascii_lowercase(o.description).find(q) == std::string::npos &&
 				to_ascii_lowercase(kindWord(o.category, false)).find(q) == std::string::npos)
 				continue;
@@ -468,13 +546,78 @@ void DrawAgentInjector() {
 		// to the first one shown
 		if (!shown.empty() && std::find(shown.begin(), shown.end(), s_object_selected_index) == shown.end())
 			s_object_selected_index = shown[0];
+		bool chosenShown = std::find(shown.begin(), shown.end(), s_object_selected_index) != shown.end();
+		// developer aid: OPENC2E_TEST_INJECTOR_LIST="build=Name,uninstall=Name,
+		// takeout=Name,reinstall=Name,set=N,select=Name" (applied once, in order;
+		// these write the real lists: back them up first)
+		static const char* s_test_list = getenv("OPENC2E_TEST_INJECTOR_LIST");
+		if (s_test_list && world.tickcount > 5) {
+			std::string all = s_test_list;
+			s_test_list = nullptr;
+			for (size_t at = 0; at <= all.size();) {
+				size_t end = all.find(',', at);
+				std::string item = all.substr(at, end == std::string::npos ? std::string::npos : end - at);
+				auto eq = item.find('=');
+				std::string key = item.substr(0, eq), val = eq == std::string::npos ? "" : item.substr(eq + 1);
+				auto it = std::find_if(objs.begin(), objs.end(), [&](auto& o) { return o.name == val; });
+				if (key == "set")
+					s_set = std::clamp(atoi(val.c_str()), 0, 2);
+				else if (it == objs.end())
+					fmt::print("* Injector test: no object \"{}\"\n", val);
+				else if (key == "build")
+					buildIntoWorlds(*it);
+				else if (key == "uninstall")
+					uninstall(*it);
+				else if (key == "takeout")
+					takeOutOfWorlds(*it);
+				else if (key == "reinstall")
+					reinstall(*it);
+				else if (key == "select")
+					s_object_selected_index = it - objs.begin();
+				if (!s_list_message.empty() && key != "set" && key != "select")
+					fmt::print("* Injector test: {}: {}\n", key, s_list_message);
+				if (end == std::string::npos)
+					break;
+				at = end + 1;
+			}
+		}
+
+		// the tabs: the injector, objects built into every world, uninstalled
+		{
+			int counts[3] = {0, 0, 0};
+			for (auto& o : objs)
+				counts[setOf(o.name)]++;
+			static const char* const names[3] = {"In the injector", "Built into every world", "Uninstalled"};
+			static const char* const tips[3] = {"Objects to add to a world by hand",
+				"Added to every world each time one loads (builtin-cobs.txt); not offered in the injector",
+				"Taken out of the injector; their files are kept, and Reinstall puts them back"};
+			for (int k = 0; k < 3; k++) {
+				bool on = s_set == k;
+				if (on)
+					ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
+				if (ImGui::Button(fmt::format("{} ({})##set{}", names[k], counts[k], k).c_str()) && s_set != k) {
+					s_set = k;
+					s_list_message.clear();
+				}
+				if (on)
+					ImGui::PopStyleColor();
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s", tips[k]);
+				if (k < 2)
+					ImGui::SameLine(0, 4);
+			}
+		}
 
 		// the objects: a list (with kind headings when sorted by kind) or tiles
 		ImGui::BeginChild("Objects", ImVec2(listW, paneH), true);
 		ImDrawList* dl = ImGui::GetWindowDrawList();
 		const ImU32 GOLD = IM_COL32(205, 170, 95, 255), DIM = IM_COL32(140, 146, 156, 255), GREEN = IM_COL32(88, 196, 104, 255);
 		if (shown.empty())
-			KitNote(objs.empty() ? "No objects. Import adds COB files." : "Nothing matches the search.");
+			KitNote(objs.empty() ? "No objects. Import adds COB files."
+					: !q.empty()     ? "Nothing matches the search."
+					: s_set == SET_BUILTIN ? "Nothing is built into every world yet. Choose an object in the injector and Build into every world."
+					: s_set == SET_UNINSTALLED ? "Nothing is uninstalled."
+											: "Every object is built in or uninstalled.");
 		if (!s_tiles) {
 			int lastKind = -2;
 			for (size_t n = 0; n < shown.size(); n++) {
@@ -553,7 +696,7 @@ void DrawAgentInjector() {
 		// the chosen object
 		ImGui::SameLine();
 		ImGui::BeginChild("Details", ImVec2(detailW, paneH), true);
-		if (s_object_selected_index < objs.size()) {
+		if (s_object_selected_index < objs.size() && chosenShown) {
 			auto& o = objs[s_object_selected_index];
 			ImDrawList* dd = ImGui::GetWindowDrawList();
 			ImVec2 p = ImGui::GetCursorScreenPos();
@@ -583,28 +726,93 @@ void DrawAgentInjector() {
 			ImGui::TextWrapped("%s", o.description.empty() ? "No description." : o.description.c_str());
 			ImGui::PopTextWrapPos();
 			// the buttons at the foot of the pane
-			float footY = paneH - 2 * ImGui::GetFrameHeightWithSpacing() - 30;
+			static std::string s_confirm; // the move awaiting a yes: "build" or "uninstall"
+			float footY = paneH - 3 * ImGui::GetFrameHeightWithSpacing() - 34;
 			if (ImGui::GetCursorPosY() < footY)
 				ImGui::SetCursorPosY(footY);
-			ImGui::TextDisabled("Objects you add are saved with the world.");
-			ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
-			if (ImGui::Button("Add to world")) {
-				s_object_injector.inject(o, true);
-				CobManager::noteUsed(o.name);
+			int set = setOf(o.name);
+			ImGui::TextDisabled("%s", set == SET_INJECTOR ? "Objects you add are saved with the world."
+									  : set == SET_BUILTIN ? "Added to every world each time one loads."
+														   : "Uninstalled: not offered in the injector.");
+			if (set == SET_INJECTOR) {
+				ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
+				if (ImGui::Button("Add to world")) {
+					s_object_injector.inject(o, true);
+					CobManager::noteUsed(o.name);
+				}
+				ImGui::PopStyleColor();
+				ImGui::SameLine();
 			}
-			ImGui::PopStyleColor();
-			ImGui::SameLine();
-			if (o.is_removable) {
-				if (ImGui::Button("Remove from world"))
-					s_object_injector.remove(o, true);
+			if (set != SET_UNINSTALLED) {
+				if (o.is_removable) {
+					if (ImGui::Button("Remove from world"))
+						s_object_injector.remove(o, true);
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("Runs the object's own removal script: every one of it goes, not only those you added");
+				} else
+					ImGuiUtils::DisabledButton("Remove from world");
+			}
+			if (set == SET_INJECTOR) {
+				if (ImGui::Button("Build into every world"))
+					s_confirm = "build";
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("Runs the object's own removal script: every one of it goes, not only those you added");
-			} else
-				ImGuiUtils::DisabledButton("Remove from world");
+					ImGui::SetTooltip("Every world gets it each time one loads, and it leaves the injector");
+				ImGui::SameLine();
+				if (ImGui::Button("Uninstall"))
+					s_confirm = "uninstall";
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Take it out of the injector (its file is kept; Reinstall puts it back)");
+			} else if (set == SET_BUILTIN) {
+				if (ImGui::Button("Take out of every world"))
+					takeOutOfWorlds(o);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Back to the injector; worlds stop getting it at each load");
+			} else {
+				ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
+				if (ImGui::Button("Reinstall"))
+					reinstall(o);
+				ImGui::PopStyleColor();
+			}
+			if (!s_confirm.empty())
+				ImGui::OpenPopup("Confirm##injector");
+			if (ImGui::BeginPopupModal("Confirm##injector", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+				ImGui::PushTextWrapPos(380);
+				if (s_confirm == "build") {
+					int here = 0;
+					for (auto& a : world.agents)
+						if (a && a->injectedFrom == o.name)
+							here++;
+					ImGui::TextWrapped("Build %s into every world?", o.name.c_str());
+					ImGui::TextWrapped("Every world will get it each time it loads, and it leaves the injector. %s",
+						here ? "The ones you added to this world become the built-in ones." : "One is added to this world now.");
+					ImGui::TextDisabled("You can take it out again from Built into every world.");
+				} else {
+					ImGui::TextWrapped("Uninstall %s?", o.name.c_str());
+					ImGui::TextWrapped("It leaves the injector; its file is kept. Any you added to worlds stay.");
+					ImGui::TextDisabled("You can put it back from Uninstalled.");
+				}
+				ImGui::PopTextWrapPos();
+				if (ImGui::Button(s_confirm == "build" ? "Build it in" : "Uninstall it")) {
+					if (s_confirm == "build")
+						buildIntoWorlds(o);
+					else
+						uninstall(o);
+					s_confirm.clear();
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Cancel")) {
+					s_confirm.clear();
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndPopup();
+			}
 		}
 		ImGui::EndChild();
 
 		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + listW + detailW);
+		if (!s_list_message.empty())
+			ImGui::TextWrapped("%s", s_list_message.c_str());
 		for (auto& line : s_import_report)
 			ImGui::TextWrapped("%s", line.c_str());
 		ImGui::PopTextWrapPos();
