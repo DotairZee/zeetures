@@ -1627,6 +1627,32 @@ std::pair<int, int> Agent::getCarriedPoint() {
 	std::map<unsigned int, std::pair<int, int> >::iterator i = carried_points.find(theirpose);
 	if (i != carried_points.end()) {
 		pos = i->second;
+	} else if (s && engine.version == 2 && family == 2 && genus == 5) {
+		// C2: an egg is held by the top of the egg in its picture (its
+		// topmost painted pixel), not by the corner of the picture's empty
+		// box above it (owner, 2026-11-12), by the hand and by creatures
+		static std::map<std::pair<const creaturesImage*, unsigned int>, std::pair<int, int>> s_tops;
+		auto key = std::make_pair((const creaturesImage*)s->getSprite().get(), s->getCurrentSprite());
+		auto t = s_tops.find(key);
+		if (t == s_tops.end()) {
+			std::pair<int, int> top(0, 0);
+			unsigned int w = s->getWidth(), h = s->getHeight();
+			bool found = false;
+			for (unsigned int yy = 0; yy < h && !found; yy++) {
+				unsigned int first = w, last = 0;
+				for (unsigned int xx = 0; xx < w; xx++)
+					if (!s->transparentAt(xx, yy)) {
+						first = std::min(first, xx);
+						last = xx;
+					}
+				if (first < w) {
+					top = {(int)(first + last) / 2, (int)yy};
+					found = true;
+				}
+			}
+			t = s_tops.emplace(key, top).first;
+		}
+		pos = t->second;
 	} else if (s && engine.version > 2) {
 		// TODO: why fudge pickup location here and not in default carried points or something?
 		// (this is nornagon's code which i moved - fuzzie)

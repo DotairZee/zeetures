@@ -320,6 +320,32 @@ void World::tick() {
 					fmt::print("* TEST SHOVE tick {} pose {}{}\n", tickcount, sp->getPose(), hand()->draw_mirrored ? " mirrored" : "");
 		}
 	}
+	// developer aid: OPENC2E_TEST_HAND_PICKUP="family genus [species]" has the hand
+	// pick up the first such object 100 ticks in, hold it beside the egg
+	// pile's spot, and print where it holds it (the hand's carry point, the
+	// object's place and picture size)
+	if (const char* hp = getenv("OPENC2E_TEST_HAND_PICKUP")) {
+		static unsigned int s_from = tickcount;
+		static AgentRef s_held;
+		int f, g, sp = -1;
+		if (sscanf(hp, "%d %d %d", &f, &g, &sp) >= 2 && hand()) {
+			if (!s_held && tickcount == s_from + 100)
+				for (auto& a : agents)
+					if (a && a->family == f && a->genus == g && (sp < 0 || a->species == sp) && !a->carriedby) {
+						hand()->moveTo(a->x, a->y - 40);
+						a->fireScript(4, hand(), {}, {});
+						s_held = a;
+						break;
+					}
+			if (s_held && tickcount > s_from + 100 && tickcount < s_from + 400) {
+				hand()->moveTo(5100, 620);
+				if ((tickcount - s_from) % 50 == 0)
+					fmt::print("* TEST HAND PICKUP hand at {:.0f},{:.0f} (pointer {},{}) holds {} {} {} at {:.0f},{:.0f} size {}x{}\n", hand()->x, hand()->y,
+						hand()->pointerX(), hand()->pointerY(), (int)s_held->family, (int)s_held->genus, s_held->species, s_held->x, s_held->y,
+						s_held->getWidth(), s_held->getHeight());
+			}
+		}
+	}
 	// developer aid: OPENC2E_TEST_HAND_INVISIBLE="x y" turns the toolbar's
 	// invisible hand on and keeps the hand at that place (for snapshots)
 	if (const char* hi = getenv("OPENC2E_TEST_HAND_INVISIBLE")) {
