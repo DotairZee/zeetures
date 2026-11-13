@@ -658,13 +658,26 @@ void v_FLTY(caosVM* vm) {
 
 /**
  MCRT (command) x (integer) y (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 
  Remove limits from target object and move it to (x, y).
+ openc2e: a creature is centred on x (its top at y; the placement then sets
+ its feet on the floor there). C2's teleporters pass the destination pad's
+ centre (POSX, POSY); moved by its corner, as MVTO does, a creature landed
+ to the right of the pad, half off the small ones' ledges (2026-11-12).
 */
 void c_MCRT(caosVM* vm) {
-	c_MVTO(vm); // TODO
+	VM_VERIFY_SIZE(2)
+	VM_PARAM_FLOAT(y)
+	VM_PARAM_FLOAT(x)
+	valid_agent(vm->targ);
+	auto* sc = dynamic_cast<SkeletalCreature*>(vm->targ.get());
+	if (sc)
+		x -= vm->targ->getWidth() / 2.0f;
+	vm->targ->moveTo(x, y);
+	if (sc)
+		sc->scriptMoved();
 }
 
 /**
