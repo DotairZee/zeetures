@@ -1188,6 +1188,18 @@ void Agent::physicsTickC2() {
 				m = top;
 			}
 		}
+		// and the bottom of the map is a floor: the bottom pool's floor (room
+		// 43, y 2399) is the map's edge, and a walking pumpkin (Halloween
+		// pack, 2 6 3) that sank to it slipped 2 px below, out of every room,
+		// and stuck there raising errors (2026-11-13)
+		if (m && engine.version == 2) {
+			float bottom = (float)(m->y() + m->height() - 1);
+			if (y + getHeight() > bottom) {
+				moveTo(x, bottom - getHeight());
+				if (vely > 0)
+					vely = 0;
+			}
+		}
 		if (!m) {
 			if (!outofroomsystem)
 				unhandledException(fmt::format("{} out of room system at ({}, {})", identify(), x, y), false);
