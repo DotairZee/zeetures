@@ -424,15 +424,25 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 			say({known[rand_size_t(0, known.size() - 1)]}, "?");
 			return u;
 		}
+		// chatter: words it has not learned, in its own tongue. Picked from
+		// the words it doesn't know; before, it drew at random until it had
+		// enough unknown ones, which never ended for a creature that knows
+		// every word (the Stone of Knowledge teaches them all) and froze the
+		// game (2026-11-12, two force-quits). Knowing them all, it tries out
+		// a word it knows instead.
+		std::vector<int> unknown;
+		for (size_t w = 0; w < engine.wordlist.size(); w++)
+			if (isWord((int)w) && !knowsWord(c, (int)w))
+				unknown.push_back((int)w);
+		if (unknown.empty()) {
+			if (!known.empty())
+				say({known[rand_size_t(0, known.size() - 1)]}, "?");
+			return u;
+		}
 		std::vector<int> chatter;
 		int n = (int)rand_size_t(1, stage == 1 ? 1 : 3);
-		while ((int)chatter.size() < n) {
-			int w = (int)rand_size_t(0, engine.wordlist.size() ? engine.wordlist.size() - 1 : 0);
-			if (isWord(w) && !knowsWord(c, w))
-				chatter.push_back(w);
-			if (engine.wordlist.empty())
-				break;
-		}
+		for (int i = 0; i < n; i++)
+			chatter.push_back(unknown[rand_size_t(0, unknown.size() - 1)]);
 		say(chatter, "");
 		return u;
 	}
