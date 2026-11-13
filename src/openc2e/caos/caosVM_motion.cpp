@@ -662,10 +662,13 @@ void v_FLTY(caosVM* vm) {
  %variants c1 c2
 
  Remove limits from target object and move it to (x, y).
- openc2e: a creature is centred on x (its top at y; the placement then sets
- its feet on the floor there). C2's teleporters pass the destination pad's
- centre (POSX, POSY); moved by its corner, as MVTO does, a creature landed
- to the right of the pad, half off the small ones' ledges (2026-11-12).
+ openc2e: a creature is centred on x and stands on the floor of the room
+ at (x, y), its feet there (else its top at y). C2's teleporters pass the
+ destination pad's centre (POSX, POSY); moved by its corner, as MVTO does,
+ a creature landed to the right of the pad, half off the small ones'
+ ledges (2026-11-12); with its top at the pad's centre, its feet went
+ 70 px into the floor at the pad by the stone arch (3001,1257: floor 1285;
+ 2026-11-13).
 */
 void c_MCRT(caosVM* vm) {
 	VM_VERIFY_SIZE(2)
@@ -673,8 +676,12 @@ void c_MCRT(caosVM* vm) {
 	VM_PARAM_FLOAT(x)
 	valid_agent(vm->targ);
 	auto* sc = dynamic_cast<SkeletalCreature*>(vm->targ.get());
-	if (sc)
+	if (sc) {
+		std::shared_ptr<Room> r = world.map ? world.map->roomAt(x, y) : nullptr;
 		x -= vm->targ->getWidth() / 2.0f;
+		if (r)
+			y = r->floorYatX(x + vm->targ->getWidth() / 2.0f) - vm->targ->getHeight() - 1;
+	}
 	vm->targ->moveTo(x, y);
 	if (sc)
 		sc->scriptMoved();

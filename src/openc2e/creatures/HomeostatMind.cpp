@@ -300,6 +300,17 @@ struct Params {
 	float mateSex = 0.35f; // Sex drive (0-1) at which a creature goes to where it met a mate
 	float mateSeekShare = 0.8f;
 	unsigned int mateCheckedTicks = 1500;
+	// Longing (owner, 2026-11-13): a male's Sex falls to nothing within a
+	// minute of being apart, so wanting a mate is remembered in the mind:
+	// time with an adult of its kind and the other sex while wanting to mate
+	// builds a longing for that one, which fades over about half an hour
+	// apart and, strong enough, sends the creature to where they met even
+	// with no Sex drive left; together again, their bodies do the rest.
+	float longingSex = 0.3f; // Sex at which time together builds longing
+	float longingGain = 0.004f; // per tick together, times Sex (and liking)
+	float longingFade = 15000.0f; // ticks to fade by e
+	float longingSeek = 0.15f; // enough to go looking
+	float longingWant = 0.12f; // what finding them is worth at full longing
 	float favouriteNeed = 0.4f; // a need this strong sends it to a room that eased it
 	float favouriteMinEase = 0.0004f; // per tick better than usual, for a room to count as good for a need
 	float favouriteHorizon = 400.0f; // ticks of that easing it expects from going
@@ -810,6 +821,9 @@ class HomeostatMind : public CreatureMind {
 			pm.here = id == roomNow;
 			v.places.push_back(pm);
 		}
+		for (auto& [who, m] : metAt)
+			if (float L = longingNow(m, lastTickForView); L >= 0.05f)
+				v.longing.push_back({who, L});
 		for (auto& m : moodLog)
 			v.mood.push_back({m.tick, m.content, m.strongest, m.strength});
 		v.outcomes.assign(outcomeLog.begin(), outcomeLog.end());
@@ -1296,7 +1310,7 @@ class HomeostatMind : public CreatureMind {
 				s += fmt::format("rmet {} {} {}\n", id, who, n);
 		}
 		for (auto& [who, m] : metAt)
-			s += fmt::format("metat {} {} {:.0f} {:.0f} {} {} {} {} {}\n", who, m.room, m.x, m.y, m.last, m.genus, m.category, m.stage, m.female ? 1 : 0);
+			s += fmt::format("metat {} {} {:.0f} {:.0f} {} {} {} {} {} {} {}\n", who, m.room, m.x, m.y, m.last, m.genus, m.category, m.stage, m.female ? 1 : 0, m.longing, m.longingAt);
 		return s;
 	}
 
@@ -1374,8 +1388,15 @@ class HomeostatMind : public CreatureMind {
 				int female;
 				l >> who >> m.room >> m.x >> m.y >> m.last >> m.genus >> m.category >> m.stage >> female;
 				m.female = female != 0;
-				if (l)
+				if (l) {
+					float longing;
+					unsigned int at;
+					if (l >> longing >> at) {
+						m.longing = longing;
+						m.longingAt = at;
+					}
 					metAt[who] = m;
+				}
 			} else if (what == "tlink") {
 				TravelLink tl;
 				l >> tl.fromX >> tl.fromY >> tl.toX >> tl.toY >> tl.category >> tl.decision >> tl.uses;
@@ -1548,7 +1569,14 @@ class HomeostatMind : public CreatureMind {
 		int genus = -1, category = -1, stage = -1;
 		bool female = false;
 		unsigned int checked = 0; // gone there and not found
+		float longing = 0; // as it was at longingAt (fades with time)
+		unsigned int longingAt = 0;
 	};
+	float longingNow(const MetCreature& m, unsigned int tick) const {
+		if (m.longing <= 0.0f)
+			return 0.0f;
+		return m.longing * std::exp(-(float)(tick > m.longingAt ? tick - m.longingAt : 0) / prm.longingFade);
+	}
 	std::map<int, RoomMemory> rooms;
 	std::map<std::string, MetCreature> metAt; // where each creature was last met
 	std::array<float, NUM_DRIVES> feelBase{}; // drive change anywhere (the usual)
@@ -2795,6 +2823,12 @@ class HomeostatMind : public CreatureMind {
 				m.stage = s.stage;
 				m.female = s.female;
 				m.checked = 0;
+				if (d[SEX] >= prm.longingSex && s.genus == p.genus && s.female != p.female && s.stage >= (int)youth && s.stage <= (int)old &&
+					p.stage >= youth && p.stage <= old) {
+					float now = longingNow(m, p.tick);
+					m.longing = std::min(1.0f, now + prm.longingGain * d[SEX] * (1.0f + std::max(0.0f, s.affinity)));
+					m.longingAt = p.tick;
+				}
 			}
 		}
 		// rooms next door: known of, if not yet been in
@@ -2888,7 +2922,12 @@ class HomeostatMind : public CreatureMind {
 	// met first, nearer first).
 	void addMateSeek(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
 		auto adult = [](int stage) { return stage >= (int)youth && stage <= (int)old; };
-		if (d[SEX] < prm.mateSex || !adult((int)p.stage) || p.genus < 0)
+		if (!adult((int)p.stage) || p.genus < 0)
+			return;
+		float strongest = 0;
+		for (auto& [who, m] : metAt)
+			strongest = std::max(strongest, longingNow(m, p.tick));
+		if (d[SEX] < prm.mateSex && strongest < prm.longingSeek)
 			return;
 		for (auto& s : p.visible)
 			if (!s.who.empty() && s.genus == p.genus && s.female != p.female && adult(s.stage))
@@ -2906,10 +2945,17 @@ class HomeostatMind : public CreatureMind {
 			float dist = std::fabs(dxTo(p, m.x)) + std::fabs(m.y - p.y);
 			if (dist < prm.seekArrived && std::fabs(m.y - p.y) < prm.seekMaxHeight) {
 				m.checked = p.tick; // here, and not here
+				m.longing = longingNow(m, p.tick) * 0.7f; // a little less hopeful
+				m.longingAt = p.tick;
 				fmt::print("[homeostat] creature {} t{}: came to where it met {} and they are gone\n", p.creatureId, p.tick, who);
 				continue;
 			}
-			float w = std::exp(-age / prm.recallRecency) / (1.0f + dist / 1500.0f);
+			// with the drive itself up, any mate will do; on longing alone,
+			// the one longed for
+			float L = longingNow(m, p.tick);
+			if (d[SEX] < prm.mateSex && L < prm.longingSeek)
+				continue;
+			float w = std::exp(-age / prm.recallRecency) * (0.3f + L) / (1.0f + dist / 1500.0f);
 			if (w > bestW) {
 				bestW = w;
 				bestWho = &who;
@@ -2920,8 +2966,10 @@ class HomeostatMind : public CreatureMind {
 		const MetCreature& m = metAt[*bestWho];
 		Expectation mating;
 		mating.delta[SEX] = -0.3f * d[SEX];
-		float want = std::max(knownRelief(p, d, D, m.category), predictedRelief(d, D, mating)) * prm.mateSeekShare;
-		addGoTo(p, want, m.x, m.y, "mate:" + *bestWho, canWest, canEast, out, d[SEX]);
+		float L = longingNow(m, p.tick);
+		float want = d[SEX] >= prm.mateSex ? std::max(knownRelief(p, d, D, m.category), predictedRelief(d, D, mating)) * prm.mateSeekShare : 0.0f;
+		want = std::max(want, prm.longingWant * L);
+		addGoTo(p, want, m.x, m.y, "mate:" + *bestWho, canWest, canEast, out, std::max(d[SEX], L));
 	}
 
 	// (3) Favourite places: a strong need, and a room known to ease it

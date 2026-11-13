@@ -258,6 +258,7 @@ struct MindView {
 		bool here = false;
 	};
 	std::vector<PlaceMemory> places;
+	std::vector<std::pair<std::string, float>> longing; // creatures it longs to find again, 0-1
 
 	// how its last few choices turned out, oldest first: what it did, how
 	// long it took, why it stopped and what happened to its needs

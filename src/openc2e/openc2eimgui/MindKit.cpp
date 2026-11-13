@@ -674,6 +674,14 @@ void PlacesPage(const MindView& v) {
 	}
 	std::sort(been.begin(), been.end(), [](auto* a, auto* b) { return a->here != b->here ? a->here : a->ticks > b->ticks; });
 	KitNoteColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "The rooms it remembers, where it spent most time first. How it felt there is against how it feels anywhere.");
+	if (!v.longing.empty()) {
+		auto longing = v.longing;
+		std::sort(longing.begin(), longing.end(), [](auto& a, auto& b) { return a.second > b.second; });
+		std::string who;
+		for (auto& [m, L] : longing)
+			who += fmt::format("{}{} ({})", who.empty() ? "" : ", ", nameOf(m), L > 0.6f ? "strongly" : L > 0.15f ? "enough to look" : "a little");
+		ImGui::TextColored(ImVec4(0.89f, 0.67f, 0.82f, 1), "Longs to find again: %s", who.c_str());
+	}
 	ImGui::BeginChild("places", ImVec2(0, 380), false);
 	const ImVec4 green(0.55f, 0.85f, 0.55f, 1), red(0.92f, 0.5f, 0.45f, 1), pink(0.89f, 0.67f, 0.82f, 1);
 	for (auto* pm : been) {
