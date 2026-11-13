@@ -31,6 +31,7 @@
 
 #include <array>
 #include <cassert>
+#include <filesystem>
 #include <imgui.h>
 #include <memory>
 
@@ -58,6 +59,38 @@ static void ImGuiInit(SDL_Window* window, SDL_Renderer* renderer) {
 	}
 
 	io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines;
+
+	// the default font first (Fonts[0], used everywhere), then a bold sans
+	// at a few exact sizes for the Hatchery's shelf labels, headings and card
+	// (named "nursery N"; ImGuiUtils::NurseryFont finds them). From the
+	// system's fonts when one is there; otherwise the default stands in.
+	io.Fonts->AddFontDefault();
+	{
+		static const char* candidates[] = {
+			"/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+			"/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+			"/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+			"/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf",
+			"/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+			"/usr/share/fonts/liberation-sans/LiberationSans-Bold.ttf",
+			"C:\\Windows\\Fonts\\arialbd.ttf",
+			"/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+		};
+		for (const char* path : candidates) {
+			if (!std::filesystem::exists(path))
+				continue;
+			for (int size : {8, 9, 10, 11, 15, 17}) {
+				ImFontConfig cfg;
+				// drawn at its own size through a nearest-filtered texture:
+				// no oversampling, glyphs on whole pixels
+				cfg.OversampleH = cfg.OversampleV = 1;
+				cfg.PixelSnapH = true;
+				snprintf(cfg.Name, sizeof(cfg.Name), "nursery %d", size);
+				io.Fonts->AddFontFromFileTTF(path, (float)size, &cfg);
+			}
+			break;
+		}
+	}
 
 	// fix for imgui#4768
 	{

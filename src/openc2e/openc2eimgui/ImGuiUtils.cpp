@@ -8,6 +8,7 @@
 #include "fileformats/peFile.h"
 
 #include <fmt/format.h>
+#include <cstring>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <string>
@@ -55,6 +56,15 @@ void DrawTexture(Texture texture, ImVec2 p, float transparency) {
 		ImVec2(0, 0),
 		ImVec2(1, 1),
 		IM_COL32(255, 255, 255, transparency * 255));
+}
+
+ImFont* NurseryFont(int size) {
+	char want[40];
+	snprintf(want, sizeof(want), "nursery %d", size);
+	for (ImFont* f : ImGui::GetIO().Fonts->Fonts)
+		if (f->ConfigData && strcmp(f->ConfigData->Name, want) == 0)
+			return f;
+	return nullptr;
 }
 
 void DisabledButton(const char* text) {

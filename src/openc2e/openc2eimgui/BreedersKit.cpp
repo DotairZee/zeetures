@@ -45,7 +45,7 @@ namespace Openc2eImgui {
 // (Kai Norn and Scorpio Norn pages, read 2026-11-12). The Boney Grendels
 // were an official Creatures 2 release, later updated by Lis Morris (owner,
 // 2026-11-12; the wiki files them with the official grendel breeds).
-static const char* PackCredit(const std::string& source) {
+const char* PackCredit(const std::string& source) {
 	static const std::pair<const char*, const char*> credits[] = {
 		{"FrogNorn", "Alex (Norns of the Round Table): Frog Norn V3, an overhaul of Nornenmeister's V2 Frog Norns"},
 		{"Midsummer", "Martina Hilsenbeck (Nimue) and Amanora; genome by Katira"},

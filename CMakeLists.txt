@@ -293,6 +293,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/caos/caosVM_world.cpp
 	src/openc2e/Catalogue.cpp
 	${GEN}/cmddata.cpp
+	${GEN}/embedded_files.cpp
 	src/openc2e/CompoundAgent.cpp
 	src/openc2e/AnimatablePart.cpp
 	src/openc2e/ButtonPart.cpp
@@ -555,6 +556,18 @@ add_custom_command(
 	WORKING_DIRECTORY ${SRC})
 
 add_custom_target(docs ALL DEPENDS ${BIN}/caosdocs.html)
+
+# openc2e's own art (the Hatchery nursery), built into the program
+set(EMBEDDED_FILES
+	${SRC}/data/hatchery/wall.png
+	${SRC}/data/hatchery/board.png
+	${SRC}/data/hatchery/nests.png
+	${SRC}/data/hatchery/nests.txt)
+add_custom_command(
+	OUTPUT ${GEN}/embedded_files.cpp
+	COMMAND ${Python_EXECUTABLE} scripts/embed_files.py ${GEN}/embedded_files.cpp ${EMBEDDED_FILES}
+	DEPENDS scripts/embed_files.py ${EMBEDDED_FILES}
+	WORKING_DIRECTORY ${SRC})
 
 install(FILES
 	AUTHORS

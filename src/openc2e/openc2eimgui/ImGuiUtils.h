@@ -39,6 +39,10 @@ void EndWindow();
 
 void DrawTexture(Texture texture, ImVec2 p, float transparency = 1.0);
 
+// the bold sans loaded at start-up at an exact size (8, 9, 10, 11, 15 or
+// 17: the Hatchery's labels, headings and card), or null if there is none
+ImFont* NurseryFont(int size);
+
 void DisabledButton(const char* text);
 bool ImageButton(Texture texture, bool enabled = true);
 

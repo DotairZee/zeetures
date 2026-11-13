@@ -1,0 +1,9 @@
+# variant rim bottom (pixel rows in each nest frame)
+0 18 38
+1 18 38
+2 18 38
+3 18 38
+4 18 38
+5 18 38
+6 18 38
+7 18 38

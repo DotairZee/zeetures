@@ -44,6 +44,9 @@ struct BreedInfo {
 
 const char* BreedSpeciesName(int species);
 
+// who made an imported breed pack, by the pack's file name; null if unknown
+const char* PackCredit(const std::string& source);
+
 // A data folder's subfolder ("Images", "Body Data", "Genetics", "Eggs"),
 // matched without regard to case; the plain path if it doesn't exist yet.
 std::filesystem::path BreedDataSubdir(const std::filesystem::path& main, const char* sub);
