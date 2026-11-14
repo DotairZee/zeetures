@@ -1158,6 +1158,13 @@ class HomeostatMind : public CreatureMind {
 			bool walled = p.walledCount >= episodeWalledStart + 2 && (p.walledDir == 10 || p.walledDir == 11);
 			if (walled && !finished) {
 				noteBlocked(p, p.walledDir);
+				// and the walk itself, if it was one: which way a creature's
+				// travel actions go depends on its genes (some norns' "west"
+				// walks east), so blocking only the way it was going left the
+				// same action free; norns in the gene lab's lower room walked
+				// into its end walls about 150 times a minute each
+				if ((current.decision == 10 || current.decision == 11) && current.category < 0 && current.decision != p.walledDir)
+					noteBlocked(p, current.decision);
 				if (current.category >= 0 && episodeAgent && !current.chain)
 					pendingPassOver = episodeAgent;
 				fmt::print("[homeostat] creature {} t{}: {}@{} walked into a wall going {} at x {:.0f}; stops\n", p.creatureId, p.tick,
@@ -1196,6 +1203,13 @@ class HomeostatMind : public CreatureMind {
 		if (!p.inWater && !flooders.empty())
 			candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](const Candidate& c) { return isFlooder(p, c.category, c.decision); }),
 				candidates.end());
+		// a walk found blocked here, whatever it is for: food, smell and
+		// route trips chose their walk without asking, and a starving norn in
+		// the gene lab's lower room walked east into its end wall for good,
+		// food being somewhere east (2026-11-13)
+		candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](const Candidate& c) {
+			return c.category < 0 && (c.decision == 10 || c.decision == 11) && (isBlocked(p, c.decision) || wallAhead(p, c.decision));
+		}), candidates.end());
 		if (!futile.empty()) {
 			futile.erase(std::remove_if(futile.begin(), futile.end(), [&](const Futile& f) { return p.tick >= f.until; }), futile.end());
 			candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](const Candidate& c) { return isFutile(p, c.category, c.decision); }),

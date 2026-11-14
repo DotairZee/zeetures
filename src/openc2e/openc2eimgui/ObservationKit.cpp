@@ -38,7 +38,10 @@ static void DetailsPage() {
 	static const char* stages[] = {"baby", "child", "adolescent", "youth", "adult", "old", "senile"};
 	// every column as wide as what it holds, so the kit fits its table
 	// (owner, 2026-11-12: it had been a window sized by hand, mostly empty)
-	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Sortable | ImGuiTableFlags_SizingFixedFit;
+	// (NoHostExtendX: the table is as wide as its columns, not as the list
+	// around it; filling the list, which fits itself to the table plus a
+	// scrollbar, made the kit grow wider every frame; owner, 2026-11-13)
+	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Sortable | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoHostExtendX;
 	// the list scrolls past 20 rows (or 60% of the window's height), so the
 	// kit no longer fills the screen with a big population (owner,
 	// 2026-11-13: 121 creatures); its width still fits the columns
