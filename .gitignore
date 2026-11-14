@@ -8,3 +8,4 @@ out/
 .*.sw?
 *~
 .DS_Store
+build-fast/
