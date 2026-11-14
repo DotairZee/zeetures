@@ -97,6 +97,10 @@ class Engine {
 
 	bool done;
 	bool dorendering, fastticks, refreshdisplay;
+	// game speed (owner, 2026-11-13: fast forward up to 10x): world ticks
+	// run this many times as often; 1 is the game's own pace
+	int speed = 1;
+	unsigned int tickInterval() const;
 	unsigned int version;
 	std::string gametype;
 	bool bmprenderer;

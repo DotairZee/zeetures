@@ -444,6 +444,19 @@ static void DrawC2MenuBar() {
 			OpenC2Kit("chronicles");
 		if (ImGui::MenuItem("Ecology Kit", nullptr, false, IsC2KitAvailable("ecology")))
 			OpenC2Kit("ecology");
+		ImGui::Separator();
+		// fast forward (owner, 2026-11-13): the world's ticks run this many
+		// times as often; a busy world may not reach 10x and runs as fast as
+		// the machine allows
+		if (ImGui::BeginMenu("Game Speed")) {
+			static const int speeds[] = {1, 2, 4, 10};
+			for (int sp : speeds) {
+				std::string label = sp == 1 ? std::string("Normal") : fmt::format("{}x", sp);
+				if (ImGui::MenuItem(label.c_str(), nullptr, engine.speed == sp))
+					engine.speed = sp;
+			}
+			ImGui::EndMenu();
+		}
 		ImGui::EndMenu();
 	}
 	// the Creatures menu stops short of the screen's foot and scrolls

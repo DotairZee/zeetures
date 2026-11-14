@@ -344,13 +344,18 @@ std::string Engine::executeNetwork(std::string in) {
 	}
 }
 
+unsigned int Engine::tickInterval() const {
+	unsigned int t = world.ticktime / (unsigned int)std::max(1, speed);
+	return std::max(1u, t);
+}
+
 unsigned int Engine::msUntilTick() {
 	if (fastticks)
 		return 0;
 	if (world.paused)
 		return world.ticktime; // TODO: correct?
 
-	int ival = (tickdata + world.ticktime) - get_ticks_msec();
+	int ival = (tickdata + tickInterval()) - get_ticks_msec();
 	return (ival < 0) ? 0 : ival;
 }
 
@@ -473,7 +478,7 @@ void Engine::zoomStep(int steps, int anchorx, int anchory) {
 float Engine::tickFraction() const {
 	if (world.paused || world.ticktime == 0)
 		return 1.0f;
-	float f = (float)(get_ticks_msec() - tickdata) / (float)world.ticktime;
+	float f = (float)(get_ticks_msec() - tickdata) / (float)tickInterval();
 	return f < 0 ? 0.0f : (f > 1 ? 1.0f : f);
 }
 
@@ -874,6 +879,9 @@ bool Engine::tick() {
 			world.showrooms = true;
 		if (getenv("OPENC2E_FAST"))
 			fastticks = true; // run the world as fast as possible (headless tests)
+		// developer aid: OPENC2E_SPEED=n starts at that game speed
+		if (const char* sp = getenv("OPENC2E_SPEED"))
+			speed = std::clamp(atoi(sp), 1, 10);
 		int x0, y0, x1, y1;
 		if (const char* s = getenv("OPENC2E_DUMP_ROOMS"); s && sscanf(s, "%d,%d,%d,%d", &x0, &y0, &x1, &y1) == 4) {
 			for (unsigned int i = 0; i < world.map->getMetaRoomCount(); i++) {
@@ -954,9 +962,33 @@ bool Engine::tick() {
 	assert(get_backend());
 
 	// tick if necessary
-	bool needupdate = fastticks || !get_ticks_msec() || (get_ticks_msec() - tickdata >= world.ticktime - 5);
+	const unsigned int interval = tickInterval();
+	bool needupdate = fastticks || !get_ticks_msec() || (get_ticks_msec() - tickdata >= (speed > 1 ? interval : world.ticktime - 5));
 	if (needupdate && !world.paused) {
-		if (fastticks) {
+		if (!fastticks && speed > 1) {
+			// fast forward: ticks fall due faster than frames are drawn, so
+			// run every tick that is due, keeping to the schedule, but no
+			// more than about 40 ms of them before the next frame (a machine
+			// that cannot keep up runs as fast as it can, and the view and
+			// the hand stay responsive)
+			unsigned int t0 = get_ticks_msec();
+			unsigned int sched = tickdata + interval;
+			for (int n = 0; n < 50; n++) {
+				update(); // (sets tickdata to now)
+				unsigned int now = get_ticks_msec();
+				tickdata = sched; // this tick's due time: the next is due one interval on
+				sched += interval;
+				if (now < sched)
+					break; // caught up
+				if (now - sched > 4 * interval) {
+					// far behind: let the schedule go rather than spiral
+					tickdata = now;
+					break;
+				}
+				if (now - t0 > 40 || world.paused || done)
+					break;
+			}
+		} else if (fastticks) {
 			using clock = std::chrono::steady_clock;
 			using std::chrono::duration_cast;
 			using std::chrono::milliseconds;
