@@ -997,7 +997,7 @@ void SkeletalCreature::snapDownFoot() {
 		footy = newfooty;
 	}
 
-	bool newroomchosen = (newroom != downfootroom) && downfootroom;
+	bool newroomchosen = (newroom != downfootroom) && downfootroom; // (set again after a push back)
 	bool hadroom = downfootroom != nullptr;
 	// developer aid: OPENC2E_WATCH_ROOMS prints each change of a creature's
 	// foot room and which way it was found
@@ -1069,7 +1069,17 @@ void SkeletalCreature::snapDownFoot() {
 		wrapshift = wrapFoot(lastgoodfootx);
 		footx = lastgoodfootx + wrapshift;
 		footy = lastgoodfooty;
-		downfootroom = m->roomAt(footx, footy);
+		// C2: back on the floor it stood on. A walking foot's point lies a
+		// few pixels under the floor line, so looking the room up there found
+		// the room below whenever that room's top is the floor: walking into
+		// the wall at the east end of the floor under the lab dome (rooms
+		// 210/211, the room below 38) dropped norns 300 px onto the hut
+		// platform (owner, 2026-11-13; four of six norns in a test).
+		if (engine.version == 2 && prevroom && prevroom->x_left <= footx && prevroom->x_right >= footx)
+			downfootroom = prevroom;
+		else
+			downfootroom = m->roomAt(footx, footy);
+		newroomchosen = downfootroom != prevroom && prevroom;
 		queueScript(6);
 
 		if (!downfootroom) {
