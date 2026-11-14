@@ -139,6 +139,11 @@ static void DetailsPage() {
 		ImGui::PopID();
 	}
 	ImGui::EndTable();
+	// room for the list's scrollbar beside the table (its width is not
+	// counted when the list fits itself to the table; the Go buttons were
+	// cut off, owner 2026-11-13)
+	ImGui::SameLine(0, 0);
+	ImGui::Dummy(ImVec2(ImGui::GetStyle().ScrollbarSize + 2, 1));
 	ImGui::EndChild();
 }
 
