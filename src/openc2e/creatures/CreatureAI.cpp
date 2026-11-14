@@ -1032,22 +1032,50 @@ MindPerception oldCreature::buildPerception() {
 				if (!west && !east)
 					continue;
 				float bx = west ? (float)here->x_left : (float)here->x_right;
-				float drop = n->floorYatX(bx - seamShift(*n, hc, w)) - here->floorYatX(bx);
-				if (drop > 60.0f)
-					(west ? p.dropWest : p.dropEast) = std::max(west ? p.dropWest : p.dropEast, drop);
-				// where would the step end? follow open floors down a few rooms
+				// where would the step end? follow open floors down a few
+				// rooms, a little way past the side (where a creature
+				// stepping off comes down): the drop is to the floor it would
+				// land on, not the next room's floor line when that is open
+				// air (the upper-east ledge's end: 63 px to room 179's open
+				// floor, but 400 px to where norns landed; 2026-11-13)
+				float nx = bx - seamShift(*n, hc, w) + (west ? -25.0f : 25.0f);
+				float land = n->floorYatX(nx);
 				std::shared_ptr<Room> r = n;
-				for (int depth = 0; r && depth < 3; depth++) {
+				for (int depth = 0; r && depth < 4; depth++) {
 					if (r->deepWater()) {
 						(west ? p.waterWest : p.waterEast) = true;
 						break;
 					}
 					std::shared_ptr<Room> below;
-					float rfloor = std::max(r->y_left_floor, r->y_right_floor);
+					float rfloor = r->floorYatX(nx);
 					for (auto& [m, d2] : r->getDoors())
-						if (d2.perm >= fit && std::min(m->y_left_ceiling, m->y_right_ceiling) + 2 >= rfloor)
+						if (d2.perm >= fit && std::min(m->y_left_ceiling, m->y_right_ceiling) + 2 >= std::max(r->y_left_floor, r->y_right_floor) &&
+							m->x_left <= nx && m->x_right >= nx && m->type != 2 && std::fabs(m->y_left_ceiling + (m->y_right_ceiling - m->y_left_ceiling) * (nx - m->x_left) / std::max(1.0f, (float)(m->x_right - m->x_left)) - rfloor) < 6.0f)
 							below = m;
+					if (!below) {
+						// (water below: the loop above's first test, next time)
+						for (auto& [m, d2] : r->getDoors())
+							if (d2.perm >= fit && m->deepWater() && std::min(m->y_left_ceiling, m->y_right_ceiling) + 2 >= std::max(r->y_left_floor, r->y_right_floor))
+								below = m;
+						if (!below)
+							break;
+					} else
+						land = below->floorYatX(nx);
 					r = below;
+				}
+				float drop = land - here->floorYatX(bx);
+				if (drop > 60.0f)
+					(west ? p.dropWest : p.dropEast) = std::max(west ? p.dropWest : p.dropEast, drop);
+			}
+			{
+				// developer aid: OPENC2E_WATCH_DROPS prints each change of the
+				// drops a creature sees ahead
+				static const bool watchdrops = getenv("OPENC2E_WATCH_DROPS") != nullptr;
+				static std::map<int, std::pair<int, int>> lastdrops;
+				std::pair<int, int> nowd{(int)p.dropWest, (int)p.dropEast};
+				if (watchdrops && lastdrops[parentagent->getUNID()] != nowd) {
+					fmt::print("* WATCH DROPS unid {} room {} at {:.0f},{:.0f}: west {} east {}\n", parentagent->getUNID(), here->id, p.x, p.y, nowd.first, nowd.second);
+					lastdrops[parentagent->getUNID()] = nowd;
 				}
 			}
 			{
