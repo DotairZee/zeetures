@@ -788,6 +788,21 @@ void oldCreature::keepInRoomSystem() {
 	keepcheck = 5;
 	Agent* a = parentagent;
 	float cx = a->x + a->getWidth() / 2.0f, cy = a->y + a->getHeight() / 2.0f;
+	// across the world's seam: a creature whose middle is past the map's
+	// east edge (walking down the volcano passage into the potion room,
+	// x 8352 = 0) is judged in the map's own terms (shift), and moved back
+	// in its own (Map::roomAt finds no room past the edge, so it was taken
+	// for a creature in rock and "rescued" 760 px into the library;
+	// owner, 2026-11-13)
+	float shift = 0;
+	if (MetaRoom* wm = world.map->wrappingMetaRoomNear(cx, cy); wm && wm->wraparound()) {
+		if (cx >= (float)wm->x() + wm->width())
+			shift = -(float)wm->width();
+		else if (cx < (float)wm->x())
+			shift = (float)wm->width();
+	}
+	cx += shift;
+	float ax = a->x + shift; // its x in those terms
 
 	// A sealed pocket: a room no open door (permeability above 0) joins to
 	// the rest of the world, like room 208 under the incubator lift's shaft,
@@ -942,16 +957,16 @@ void oldCreature::keepInRoomSystem() {
 				// overhung the open sea beyond, fell through again by its corner
 				// and was lifted again, 1,228 times in 20 minutes (3RPA,
 				// starving; 2026-11-12)
-				float nx = a->x, w = a->getWidth();
+				float nx = ax, w = a->getWidth();
 				if ((float)r->x_right - (float)r->x_left > w + 4)
 					nx = std::clamp(nx, (float)r->x_left + 2, (float)r->x_right - w - 2);
-				if (nx != a->x) {
+				if (nx != ax) {
 					cx = nx + w / 2.0f;
 					bottom = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
 					if (r->floorpoints.size())
 						bottom = std::min(bottom, r->floorYatX(cx));
 				}
-				a->moveTo(nx, bottom - a->getHeight() - 1);
+				a->moveTo(nx - shift, bottom - a->getHeight() - 1);
 				a->velx = 0;
 				a->vely = 0;
 				if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
@@ -1000,8 +1015,8 @@ void oldCreature::keepInRoomSystem() {
 			float oldx = a->x, oldy = a->y;
 			// all of it just inside that room's edge, hanging over the drop
 			float edge = bestdx > 0 ? (float)over->x_left + 2 : (float)over->x_right - 2;
-			float nx = bestdx > 0 ? std::max(a->x, edge) : std::min(a->x, edge - w);
-			a->moveTo(nx, a->y);
+			float nx = bestdx > 0 ? std::max(ax, edge) : std::min(ax, edge - w);
+			a->moveTo(nx - shift, a->y);
 			a->velx = 0;
 			if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
 				sc->scriptMoved();
@@ -1037,17 +1052,17 @@ void oldCreature::keepInRoomSystem() {
 	// upper-east deck (room 145, which ends at x 7745) at the same x
 	// overhung its end and dropped back into the rock below, again and again
 	// (2026-11-13)
-	float nx = a->x, w = a->getWidth();
+	float nx = ax, w = a->getWidth();
 	if ((float)r->x_right - (float)r->x_left > w + 4 && r->type != 2) {
 		nx = std::clamp(nx, (float)r->x_left + 2, (float)r->x_right - w - 2);
-		if (nx != a->x) {
+		if (nx != ax) {
 			cx = nx + w / 2.0f;
 			bottom = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
 			if (r->floorpoints.size())
 				bottom = std::min(bottom, r->floorYatX(cx));
 		}
 	}
-	a->moveTo(nx, bottom - a->getHeight() - 1);
+	a->moveTo(nx - shift, bottom - a->getHeight() - 1);
 	a->velx = 0;
 	a->vely = 0;
 	if (auto* sc = dynamic_cast<SkeletalCreature*>(a))

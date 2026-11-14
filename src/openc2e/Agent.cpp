@@ -224,8 +224,18 @@ void Agent::moveTo(float _x, float _y, bool force) {
 	// C2: a creature moved far in one go is logged with what moved it (a
 	// norn went from the land at 5856,557 to the east seabed in 18 ticks and
 	// nothing in the logs said how; owner, 2026-11-12)
-	if (engine.version == 2 && engine.worldready && (std::fabs(xoffset) > 300 || std::fabs(yoffset) > 300) && std::fabs(xoffset) < 4000 && family == 4)
-		logBigMove(_x, _y);
+	// (across the world's seam the short way round: a move from one end of
+	// the map to the other there is a step, and a jump hidden in a wrap was
+	// not logged at all)
+	if (engine.version == 2 && engine.worldready && family == 4) {
+		float dx = xoffset;
+		if (std::fabs(dx) >= 4000 && world.map)
+			for (unsigned int i = 0; i < world.map->getMetaRoomCount(); i++)
+				if (MetaRoom* m = world.map->getMetaRoom(i); m && m->wraparound())
+					dx -= std::round(dx / (float)m->width()) * (float)m->width();
+		if (std::fabs(dx) > 300 || std::fabs(yoffset) > 300)
+			logBigMove(_x, _y);
+	}
 
 	x = _x;
 	y = _y;
