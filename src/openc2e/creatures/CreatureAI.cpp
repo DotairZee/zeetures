@@ -911,6 +911,10 @@ MindPerception oldCreature::buildPerception() {
 		p.fellFromX = sc->lastFall.fromX;
 		p.fellFromY = sc->lastFall.fromY;
 	}
+	if (auto* sc = dynamic_cast<SkeletalCreature*>(parentagent)) {
+		p.walledCount = sc->wallBumps();
+		p.walledDir = sc->wallBumpDir();
+	}
 	p.carried = (bool)parentagent->carriedby;
 	if (world.map)
 		p.inRoom = (bool)world.map->roomAt(cx, cy);

@@ -117,6 +117,10 @@ struct MindPerception {
 	// a fall of its own just ended (owner, 2026-11-13): how far, how much it
 	// hurt (0-1), and where it stepped off (its middle and feet then)
 	float fellHeight = 0, fellHurt = 0, fellFromX = 0, fellFromY = 0;
+	// how many times its walking has been pushed back by a wall so far, and
+	// the way it was going the last time (10 west, 11 east)
+	unsigned int walledCount = 0;
+	int walledDir = 0;
 	std::array<unsigned char, 17> drives{}; // C2 has 17, C1 uses the first 16
 	const unsigned char* chemicals = nullptr; // 256 levels, read-only
 	std::vector<SeenAgent> visible; // at most one agent per category

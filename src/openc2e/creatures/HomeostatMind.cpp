@@ -1147,7 +1147,23 @@ class HomeostatMind : public CreatureMind {
 					stalled = true;
 				}
 			}
-			if (finished || objectGone || stalled || episodeTicks >= limit) {
+			// Walking into a wall, whatever the action (owner, 2026-11-13:
+			// creatures paced into walls for long spells). The blocked-way
+			// memory knew only its own walks east and west; walking up to
+			// something on the far side of a wall (another creature, food, a
+			// smell, or a genome action that walks to whatever it last
+			// noticed) went on into the wall. Pushed back twice in one
+			// action: it stops, keeps away from walking that way here for a
+			// while, and an object it was walking to is passed over.
+			bool walled = p.walledCount >= episodeWalledStart + 2 && (p.walledDir == 10 || p.walledDir == 11);
+			if (walled && !finished) {
+				noteBlocked(p, p.walledDir);
+				if (current.category >= 0 && episodeAgent && !current.chain)
+					pendingPassOver = episodeAgent;
+				fmt::print("[homeostat] creature {} t{}: {}@{} walked into a wall going {} at x {:.0f}; stops\n", p.creatureId, p.tick,
+					actionName(current.decision), current.category, p.walledDir == 10 ? "west" : "east", p.x);
+				endEpisode(p, d, D, "walled", true);
+			} else if (finished || objectGone || stalled || episodeTicks >= limit) {
 				endEpisode(p, d, D, finished ? "finished" : objectGone ? "object gone" : stalled ? "stalled" : "time", stalled);
 			} else {
 				return out; // let the current action run
@@ -1242,6 +1258,7 @@ class HomeostatMind : public CreatureMind {
 		episodeTicks = 0;
 		closest = 1e9f;
 		lastProgress = 0;
+		episodeWalledStart = p.walledCount;
 		startDrives = d;
 		startD = D;
 		startX = p.x;
@@ -1765,6 +1782,7 @@ class HomeostatMind : public CreatureMind {
 	}
 	unsigned int lastTickForView = 0;
 	float closest = 1e9f; // nearest the creature has been to its target this episode
+	unsigned int episodeWalledStart = 0; // MindPerception::walledCount when it began
 	int lastProgress = 0;
 	Candidate current{};
 	int episodeTicks = 0;

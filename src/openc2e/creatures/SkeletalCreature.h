@@ -47,6 +47,10 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	bool calculated;
 	int oldfootx, oldfooty;
 	int lastgoodfootx, lastgoodfooty; // TODO: sucky code
+	// walks pushed back by a wall (C2): how many so far, and the way it was
+	// walking the last time (10 west, 11 east), for the mind
+	unsigned int walledCount = 0;
+	int walledDir = 0;
 	int fallStuck = 0; // ticks falling without moving (part of its box in rock): eased sideways
 	// Falls of its own (owner, 2026-11-13: creatures should learn not to walk
 	// off ledges): a fall it walked into, not one from the hand, a vehicle or
@@ -142,6 +146,9 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// how wide its picture is in this pose, from its x (its box is a fixed
 	// 50 wide; a big grendel is drawn much wider)
 	int drawnWidth() const { return drawnwidth; }
+	// walks pushed back by a wall so far, and the way of the last (10 west, 11 east)
+	unsigned int wallBumps() const { return walledCount; }
+	int wallBumpDir() const { return walledDir; }
 	unsigned int getSkelHeight() { return height; }
 
 	int attachmentX(unsigned int part, unsigned int id);

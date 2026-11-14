@@ -828,6 +828,16 @@ void SkeletalCreature::recalculateSkeleton() {
 			std::shared_ptr<Room> r = world.map->roomAt(cx, feet - 1);
 			if (std::fabs(vely) > 3.0f || !r || r->floorYatX(cx) - feet > 8.0f)
 				dx = 0;
+			// settling on the floor after a hop (still "falling", so no foot
+			// snapping checks walls): a pose change does not carry it into a
+			// room it could not walk into. Knocked back by a hit at the end of
+			// the floor under the lab dome, norns were stepped through the
+			// wall (a doorway of 50) onto the open floor beyond, and fell.
+			if (dx != 0 && r) {
+				std::shared_ptr<Room> to = world.map->roomAt(cx - dx, feet - 1);
+				if (to != r && (!to || !world.map->hasDoor(r, to) || world.map->getDoorPerm(r, to) < size))
+					dx = 0;
+			}
 		}
 		moveTo(x - dx, y - (attachmentY(orig_footpart, 1) - oldfooty));
 		if (engine.version == 2 && falling) {
@@ -1033,8 +1043,10 @@ void SkeletalCreature::snapDownFoot() {
 				watchRoom("walled", here, prevroom);
 			}
 		}
-		if (walled)
-			; // pushed back below
+		if (walled) {
+			walledCount++;
+			walledDir = movedx < 0 ? 11 : 10; // (the foot went east of where it last stood: east)
+		} // pushed back below
 		else if (fabs(movedx) > 50.0f || fabs(movedy) > 50.0f) {
 			// Retry once from the room the foot is in now. Only once: if the
 			// retry also finds no room it may enter (e.g. every way on is a
