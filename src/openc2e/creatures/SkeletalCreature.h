@@ -153,6 +153,7 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	unsigned int wallBumps() const { return walledCount; }
 	int wallBumpDir() const { return walledDir; }
 	unsigned int scriptMoveTick() const { return lastScriptMoveTick; }
+	float tickstartx = 0, tickstarty = 0; // where it was when this tick began (smooth drawing of scripted moves)
 	unsigned int getSkelHeight() { return height; }
 
 	int attachmentX(unsigned int part, unsigned int id);

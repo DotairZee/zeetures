@@ -256,11 +256,14 @@ void World::tick() {
 		return;
 	}
 
-	// remember where vehicles start this tick, for smooth drawing
+	// remember where vehicles, and creatures, start this tick, for smooth drawing
 	for (auto& a : agents) {
 		if (auto* v = dynamic_cast<Vehicle*>(a.get())) {
 			v->tickstartx = v->x;
 			v->tickstarty = v->y;
+		} else if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get())) {
+			sc->tickstartx = sc->x;
+			sc->tickstarty = sc->y;
 		}
 	}
 
@@ -748,6 +751,18 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 		if (!p || glide <= 0)
 			return;
 		Agent* a = p->getParent();
+		// a creature carried along by a script (the stream under the cave
+		// lift's dock moves it a few px every tick) glides too, rather than
+		// jumping ten times a second (owner, 2026-11-14: "really jerky")
+		if (auto* sc = dynamic_cast<SkeletalCreature*>(a); sc && !a->invehicle && !a->carriedby && sc->scriptMoveTick() > 0 &&
+															 world.tickcount - sc->scriptMoveTick() <= 1) {
+			float dx = sc->x - sc->tickstartx, dy = sc->y - sc->tickstarty;
+			if (std::fabs(dx) > 64 || std::fabs(dy) > 64)
+				return;
+			gx = -(int)std::lround(dx * glide);
+			gy = -(int)std::lround(dy * glide);
+			return;
+		}
 		Vehicle* v = dynamic_cast<Vehicle*>(a->invehicle ? a->invehicle.get() : a);
 		if (!v)
 			return;

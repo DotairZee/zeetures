@@ -978,8 +978,8 @@ void oldCreature::keepInRoomSystem() {
 					a->vely = 0;
 					if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
 						sc->scriptMoved();
-					fmt::print("* {} was in a sealed pocket (room {}) at {:.0f},{:.0f}; moved beside it into room {} at {:.0f},{:.0f}\n",
-						world.history->findMoniker(genome), foot->id, oldx, oldy, r->id, a->x, a->y);
+					fmt::print("* {} (unid {}) was in a sealed pocket (room {}) at {:.0f},{:.0f}; moved beside it into room {} at {:.0f},{:.0f}\n",
+						world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y);
 					return;
 				}
 			for (float yy = a->y + a->getHeight() - 12; yy > a->y - 800; yy -= 10) {
@@ -1010,8 +1010,8 @@ void oldCreature::keepInRoomSystem() {
 				a->vely = 0;
 				if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
 					sc->scriptMoved(); // its feet find their room afresh, not the pocket's floor
-				fmt::print("* {} was in a sealed pocket (room {}) at {:.0f},{:.0f}; lifted to the floor of room {} at {:.0f},{:.0f}\n",
-					world.history->findMoniker(genome), foot->id, oldx, oldy, r->id, a->x, a->y);
+				fmt::print("* {} (unid {}) was in a sealed pocket (room {}) at {:.0f},{:.0f}; lifted to the floor of room {} at {:.0f},{:.0f}\n",
+					world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y);
 				return;
 			}
 		}
