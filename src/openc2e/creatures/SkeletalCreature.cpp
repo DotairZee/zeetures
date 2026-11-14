@@ -1479,6 +1479,19 @@ void SkeletalCreature::physicsTick() {
 	if (watchfalls && falling && fallTracking)
 		fmt::print("* FALLTICK t{} unid {} at {:.0f},{:.0f} walking {} approaching {} velx {:.1f}\n", world.tickcount, unid, x + getWidth() / 2.0f, y + getHeight(),
 			walking, approaching, velx);
+	// C2: a creature sliding along a floor slows quickly. A hit from another
+	// creature (the world's creature-on-creature script) knocks it back at
+	// 50 px a tick, and with only air friction (a tenth a tick) it slid
+	// about 450 px, off ledges: a norn on the volcano's east ledge was hit
+	// twice and thrown into the volcano (2026-11-13). With its feet on the
+	// floor and not moving up or down, sideways speed now halves each tick.
+	if (engine.version == 2 && falling && !carriedby && !invehicle && std::fabs(velx) > 0 && std::fabs(vely) <= 3 && world.map) {
+		float cx = x + getWidth() / 2.0f, feet = y + getHeight();
+		std::shared_ptr<Room> r = world.map->roomAt(cx, feet - 1);
+		if (r && std::fabs(r->floorYatX(cx) - feet) <= 4.0f) {
+			velx = std::fabs(velx) < 2.0f ? 0.0f : velx * 0.5f;
+		}
+	}
 	if (fallTracking && !falling) {
 		fallTracking = false;
 		if (fallOwn && !carriedby && !invehicle)
