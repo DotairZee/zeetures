@@ -1398,8 +1398,9 @@ static void TestLineup() {
 	std::string token = fmt::format("l{}{}", digits[pid % 36], digits[(pid / 36) % 36]);
 	auto [mum, dad] = WriteEggGenomes({genome}, token);
 	// a clear stretch of floor: plain objects there (bushes, toys) are
-	// removed (a test copy of the world only)
-	std::string script = fmt::format("enum 2 0 0 doif posx gt {} doif posx lt {} doif posy gt {} doif posy lt {} kill targ endi endi endi endi next\n",
+	// removed (a test copy of the world only); scenery pieces (2 3, such as
+	// our rock overlays) stay
+	std::string script = fmt::format("enum 2 0 0 doif gnus ne 3 doif posx gt {} doif posx lt {} doif posy gt {} doif posy lt {} kill targ endi endi endi endi endi next\n",
 		x0 - 120, x0 + (last - first) * gap + 200, y0 - 200, y0 + 300);
 	for (int st = first; st <= last; st++)
 		script += fmt::format("new: gene tokn {} tokn {} var9 new: crea var9 {} mvto {} {} ages {}\n", mum, dad, sex == "female" ? 2 : 1, x0 + (st - first) * gap, y0, st);
