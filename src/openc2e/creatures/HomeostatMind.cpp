@@ -1276,7 +1276,9 @@ class HomeostatMind : public CreatureMind {
 		logChoice(p, choice, candidates, D);
 		thinkAbout(p, choice, out);
 
-		if (choice.category == prm.liftCategory)
+		// (only working the lift can take a creature up or down: activate 1
+		// or 2, deactivate; see learnRide)
+		if (choice.category == prm.liftCategory && ((choice.decision >= 1 && choice.decision <= 3) || getenv("OPENC2E_KEEP_BADLINKS")))
 			lastLiftDecision = choice.decision;
 		current = choice;
 		inEpisode = true;
@@ -1557,7 +1559,9 @@ class HomeostatMind : public CreatureMind {
 			} else if (what == "link") {
 				Link lk;
 				l >> lk.x >> lk.fromY >> lk.toY >> lk.decision >> lk.uses;
-				if (l)
+				// (links by eating, picking up and the like are dropped: see learnRide)
+				// (developer aid: OPENC2E_KEEP_BADLINKS keeps them, for comparison)
+				if (l && ((lk.decision >= 1 && lk.decision <= 3) || getenv("OPENC2E_KEEP_BADLINKS")))
 					links.push_back(lk);
 			} else if (what == "instinct") {
 				std::string sig;
@@ -3740,7 +3744,13 @@ class HomeostatMind : public CreatureMind {
 
 	void learnRide(const MindPerception& p) {
 		float dy = p.y - rideFromY;
-		if (std::fabs(dy) < prm.minRide || lastLiftDecision < 0)
+		// A ride is credited to the creature's last action on the lift only if
+		// that worked it (activate 1 or 2, deactivate). A creature that bit or
+		// picked at the cave lift as another's ride moved it learned "eat the
+		// lift to go up", and sat in the cabin eating it for good: 43% of the
+		// 4,204 lift links saved in Home were by eating, picking up, hitting and
+		// the like (2026-11-14). (Travel links had the same rule already.)
+		if (std::fabs(dy) < prm.minRide || lastLiftDecision < 0 || ((lastLiftDecision < 1 || lastLiftDecision > 3) && !getenv("OPENC2E_KEEP_BADLINKS")))
 			return;
 		for (auto& l : links) {
 			if (std::fabs(l.x - rideFromX) < prm.atPlace && std::fabs(l.fromY - rideFromY) < prm.sameLevel &&
