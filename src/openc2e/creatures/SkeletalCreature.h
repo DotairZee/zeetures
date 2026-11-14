@@ -66,6 +66,7 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	attFile att[17];
 
 	int width, height, adjustx, adjusty;
+	int drawnwidth = 50;
 	int partx[17], party[17];
 
 	std::string dataString(unsigned int _stage, bool sprite, unsigned int dataspecies, unsigned int databreed);
@@ -138,6 +139,9 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 		facialexpression = f;
 	}
 	unsigned int getSkelWidth() { return width; }
+	// how wide its picture is in this pose, from its x (its box is a fixed
+	// 50 wide; a big grendel is drawn much wider)
+	int drawnWidth() const { return drawnwidth; }
 	unsigned int getSkelHeight() { return height; }
 
 	int attachmentX(unsigned int part, unsigned int id);

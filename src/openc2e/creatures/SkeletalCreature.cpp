@@ -807,6 +807,7 @@ void SkeletalCreature::recalculateSkeleton() {
 
 	adjustx = -lowestx;
 	adjusty = -lowesty;
+	drawnwidth = std::max(1, highestx - lowestx);
 
 	// TODO: muh, we should cooperate with physics system etc
 	if (!carriedby && !invehicle && calculated) {

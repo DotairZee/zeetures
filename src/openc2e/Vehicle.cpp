@@ -18,6 +18,7 @@
  */
 
 #include "Vehicle.h"
+#include "creatures/SkeletalCreature.h"
 #include <fmt/core.h>
 #include <cstdlib>
 
@@ -58,6 +59,41 @@ void Vehicle::tick() {
 
 	// move by xvec/yvec!
 	moveTo(x + xvec / 256.0, y + yvec / 256.0);
+
+	if (engine.version == 2)
+		fitCreaturePassengers();
+}
+
+// C2: creatures riding stay inside the cabin as drawn (owner, 2026-11-13:
+// "a lot of cases where I see creatures halfway hanging out of lifts"). A
+// creature's box is a fixed 50 px wide from its x, but its picture can be
+// far wider (a grendel in a cage lift stuck out past the cage's side), and
+// it was only ever pushed in by the box, once, when it boarded. Its pose
+// changes as it rides, and a ride does not move it to keep its feet down,
+// so its feet also sank below the cabin's floor. Each tick: its picture is
+// kept within the cabin's sides (centred when it is wider), and feet below
+// the cabin's floor are raised to it.
+void Vehicle::fitCreaturePassengers() {
+	for (auto& p : passengers) {
+		auto* sc = dynamic_cast<SkeletalCreature*>(p.get());
+		if (!sc || sc->isDying())
+			continue;
+		float left = x + cabinleft, right = x + cabinright;
+		float w = (float)sc->drawnWidth();
+		float nx = sc->x;
+		if (w >= right - left)
+			nx = left + (right - left - w) / 2.0f;
+		else if (nx + w > right)
+			nx = right - w;
+		else if (nx < left)
+			nx = left;
+		float ny = sc->y;
+		float floor = y + cabinbottom;
+		if (ny + sc->getHeight() > floor)
+			ny = floor - sc->getHeight();
+		if (nx != sc->x || ny != sc->y)
+			sc->moveTo(nx, ny);
+	}
 }
 
 void Vehicle::carry(AgentRef passenger) {

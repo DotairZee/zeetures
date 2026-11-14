@@ -60,6 +60,7 @@ class Vehicle : public CompoundAgent {
 	virtual void adjustCarried(float xoffset, float yoffset);
 
 	virtual void tick();
+	void fitCreaturePassengers();
 	virtual void kill();
 };
 
