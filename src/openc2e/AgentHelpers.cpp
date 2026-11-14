@@ -18,6 +18,9 @@
  */
 
 #include "Agent.h"
+#include "SpritePart.h"
+#include <set>
+#include "Engine.h"
 #include "Map.h"
 #include "MetaRoom.h"
 #include "Room.h"
@@ -209,11 +212,20 @@ std::shared_ptr<Room> roomContainingAgent(AgentRef agent) {
 // "Hunger Decrease" chemical, summed and scaled to 0-1; -1 if it also gives a
 // poison (it smells of poison: the mind never eats it). Being read from the scripts, it also works for add-on objects.
 // Cached per script.
-float edibleScent(Agent* a) {
-	static std::map<const script*, float> cache;
+namespace {
+struct FoodInfo {
+	float scent = 0.0f;
+	bool anyPose = true; // feeds whatever its pose
+	std::set<int> poses; // else only in these (its stimulus sits inside "doif pose eq N")
+};
+} // namespace
+
+static const FoodInfo& foodInfo(Agent* a) {
+	static std::map<const script*, FoodInfo> cache;
+	static const FoodInfo none;
 	std::shared_ptr<script> sc = a->findScript(12);
 	if (!sc)
-		return 0.0f;
+		return none;
 	auto it = cache.find(sc.get());
 	if (it != cache.end())
 		return it->second;
@@ -230,10 +242,30 @@ float edibleScent(Agent* a) {
 		v = std::atoi(w.c_str());
 		return true;
 	};
+	FoodInfo info;
+	bool anyFeeding = false;
 	int total = 0;
 	bool poison = false;
-	for (size_t i = 0; i + 1 < tok.size(); i++) {
-		if (tok[i] != "stim")
+	// the conditions the script is inside: a pose (N >= 0) or anything else (-1)
+	std::vector<int> conds;
+	for (size_t i = 0; i < tok.size(); i++) {
+		if (tok[i] == "doif") {
+			int n;
+			if (i + 3 < tok.size() && tok[i + 1] == "pose" && tok[i + 2] == "eq" && number(tok[i + 3], n) && n >= 0)
+				conds.push_back(n);
+			else
+				conds.push_back(-1);
+			continue;
+		}
+		if (tok[i] == "else" && !conds.empty()) {
+			conds.back() = -1;
+			continue;
+		}
+		if (tok[i] == "endi" && !conds.empty()) {
+			conds.pop_back();
+			continue;
+		}
+		if (tok[i] != "stim" || i + 1 >= tok.size())
 			continue;
 		size_t j = i + 1;
 		if (tok[j] == "writ")
@@ -243,12 +275,13 @@ float edibleScent(Agent* a) {
 		else
 			continue;
 		j += 4; // significance, input, intensity, features
+		int here = 0;
 		for (int k = 0; k < 4 && j + 1 < tok.size(); k++, j += 2) {
 			int chem, amount;
 			if (!number(tok[j], chem) || !number(tok[j + 1], amount))
 				break;
 			if (chem == 37 || (chem >= 70 && chem <= 74) || chem == 79 || chem == 80)
-				total += amount;
+				here += amount;
 			// C2 poisons (heavy metals, cyanide, belladonna, geddonase,
 			// glycotoxin, the toxins 234-239): food that carries them does
 			// not smell like food (the game's poisonous berries give cyanide
@@ -256,12 +289,62 @@ float edibleScent(Agent* a) {
 			if (amount > 0 && (chem == 140 || chem == 141 || chem == 143 || chem == 144 || chem == 145 || (chem >= 234 && chem <= 239)))
 				poison = true;
 		}
+		if (here <= 0)
+			continue;
+		total = std::max(total, here); // the most one bite gives
+		int pose = -1;
+		for (int c : conds)
+			if (c >= 0)
+				pose = c;
+		if (pose < 0)
+			anyFeeding = true;
+		else
+			info.poses.insert(pose);
 	}
-	float scent = poison ? -1.0f : std::clamp(total / 255.0f, 0.0f, 1.0f);
-	cache[sc.get()] = scent;
+	info.anyPose = anyFeeding || info.poses.empty();
+	info.scent = poison ? -1.0f : std::clamp(total / 255.0f, 0.0f, 1.0f);
 	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
-	if (watch)
-		fmt::print("* WATCH SCENT {} {} {} category {} edible {:.2f}\n", (int)a->family, (int)a->genus, a->species, a->category, scent);
+	if (watch) {
+		std::string ps;
+		for (int q : info.poses)
+			ps += fmt::format(" {}", q);
+		fmt::print("* WATCH SCENT {} {} {} category {} edible {:.2f}{}\n", (int)a->family, (int)a->genus, a->species, a->category, info.scent,
+			info.anyPose ? std::string("") : " in poses" + ps);
+	}
+	return cache[sc.get()] = info;
+}
+
+// Edible scent: how nourishing an object smells. Read from the object's own
+// eat script (event 12): the nutrients one bite's stimulus gives the eater
+// (glucose, fatty acid, glycogen, starch, fat, protein, amino acid) plus the
+// direct "Hunger Decrease" chemical, summed and scaled to 0-1; -1 if it also
+// gives a poison (it smells of poison: the mind never eats it). Being read
+// from the scripts, it also works for add-on objects. Cached per script.
+float edibleScent(Agent* a) {
+	return foodInfo(a).scent;
+}
+
+// Edible scent as the object is now (2026-11-14: of 1,767 meals in 51
+// minutes 489 fed). C2 marks what creatures may do to an object with BHVR's
+// touch value, and food that cannot be eaten (a tomato core or nut shell
+// left after eating, rotting fruit, our fruit still on the bush) has no eat
+// bit (64); and many C2 foods' eat scripts feed only in some poses (a
+// tomato or nut only fresh, poses 0-1: a ripening nut, poses 2-3, still has
+// the eat bit and gives nothing). Their scripts still name nourishing
+// chemicals, so creatures went on "eating" them. Such food neither smells
+// of food nor looks like it.
+float edibleNow(Agent* a) {
+	const FoodInfo& info = foodInfo(a);
+	float scent = info.scent;
+	// (developer aid: OPENC2E_IGNORE_TOUCH=1 turns this off, for comparison)
+	static const bool ignore = getenv("OPENC2E_IGNORE_TOUCH") != nullptr;
+	if (scent <= 0.0f || ignore || engine.version > 2)
+		return scent;
+	if (a->c2touch >= 0 && !(a->c2touch & 64))
+		return 0.0f;
+	if (!info.anyPose)
+		if (auto* sp = dynamic_cast<SpritePart*>(a->part(0)); sp && !info.poses.count((int)sp->getPose()))
+			return 0.0f;
 	return scent;
 }
 

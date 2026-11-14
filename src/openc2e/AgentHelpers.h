@@ -40,6 +40,7 @@ std::shared_ptr<Room> roomContainingAgent(AgentRef agent);
 
 // how nourishing an object's eat script makes it smell, 0-1
 float edibleScent(Agent* a);
+float edibleNow(Agent* a);
 
 #endif
 

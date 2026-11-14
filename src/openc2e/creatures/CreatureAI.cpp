@@ -734,7 +734,7 @@ AgentRef oldCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> 
 			cost += 5000.0f;
 		// nor scenery it can do nothing with (not activatable, carryable or
 		// food), like the airlock's drain machine, if anything else is there
-		if (engine.version <= 2 && !(a->attr & (1 | 4)) && edibleScent(a.get()) <= 0)
+		if (engine.version <= 2 && !(a->attr & (1 | 4)) && edibleNow(a.get()) <= 0)
 			cost += 3000.0f;
 		// passed over by the mind (its use kept doing nothing): notice others first
 		for (auto& po : passedover)
@@ -743,7 +743,7 @@ AgentRef oldCreature::selectRepresentativeAgent(int type, std::vector<AgentRef> 
 		// The smell of food draws attention: in a category that mixes food
 		// with things that are not (a fruit and its seed), the food is
 		// noticed first unless it is much farther away.
-		cost *= 1.0f - 0.6f * std::max(0.0f, edibleScent(a.get()));
+		cost *= 1.0f - 0.6f * std::max(0.0f, edibleNow(a.get()));
 		if (!best || cost < bestcost) {
 			best = a;
 			bestcost = cost;
@@ -889,7 +889,7 @@ MindPerception oldCreature::buildPerception() {
 		// world's creature-on-creature scripts), whatever its attributes
 		if (dynamic_cast<CreatureAgent*>(a.get()))
 			activatable = true;
-		SeenAgent sa{(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay, edibleScent(a.get()), reachable, activatable};
+		SeenAgent sa{(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay, edibleNow(a.get()), reachable, activatable};
 		// another creature: who it is and what this one feels about it
 		if (auto* ca = dynamic_cast<CreatureAgent*>(a.get()); ca && engine.version == 2)
 			if (auto* oc = dynamic_cast<oldCreature*>(ca->getCreature())) {

@@ -383,6 +383,10 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 		case 12: // eat
 			if (c && !cr_can_eat)
 				return false;
+			// C2: food whose BHVR touch has no eat bit cannot be eaten (a
+			// core or shell, rotting fruit; see edibleNow)
+			if (engine.version <= 2 && c2touch >= 0 && !(c2touch & 64) && dynamic_cast<CreatureAgent*>(from) && !getenv("OPENC2E_IGNORE_TOUCH"))
+				return false;
 			break;
 		case 13: // hold hands with pointer
 			if (c) {

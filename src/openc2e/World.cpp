@@ -1154,7 +1154,7 @@ void World::tickFoodScent() {
 	for (auto& a : agents) {
 		if (!a || a->family != 2 || a->isDying() || a->carriedby)
 			continue;
-		float edible = edibleScent(a.get());
+		float edible = edibleNow(a.get());
 		if (edible <= 0.0f)
 			continue;
 		// a room with food smells at least as strong as its most edible item

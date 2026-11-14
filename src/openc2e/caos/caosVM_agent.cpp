@@ -2046,10 +2046,11 @@ void c_SLIM(caosVM*) {
  %variants c1 c2
 */
 void c_BHVR_c2(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(touch)
+	VM_PARAM_INTEGER(touch)
 	VM_PARAM_INTEGER(click)
 
 	valid_agent(vm->targ);
+	vm->targ->c2touch = touch; // see edibleNow
 
 	// see Agent::handleClick for details of what these values mean
 	switch (click) {

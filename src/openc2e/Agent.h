@@ -159,6 +159,9 @@ class Agent : public std::enable_shared_from_this<Agent> {
 	bool cr_can_hit : 1;
 	bool cr_can_eat : 1;
 	bool cr_can_pickup : 1;
+	// C1/C2 BHVR touch: what creatures may do to the object (C2: 64 eat;
+	// 1, 2, 4, 8 activate 1, activate 2, deactivate, hit); -1 if never given
+	int c2touch = -1;
 	// imsk
 	bool imsk_key_down : 1;
 	bool imsk_key_up : 1;
