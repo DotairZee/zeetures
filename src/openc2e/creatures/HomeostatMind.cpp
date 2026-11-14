@@ -1147,6 +1147,22 @@ class HomeostatMind : public CreatureMind {
 		if (inEpisode) {
 			episodeTicks++;
 			bool objectGone = current.category >= 0 && !isVisible(p, current.category);
+			// or another of its kind in its place: the engine sees one thing
+			// of each kind, and when the one acted on is gone (eaten) or out
+			// of sight it takes up another, which the creature then walked to
+			// though it might be out of reach (on a ledge above, past a
+			// wall); a third of meals ended "stalled", many after the meal
+			// itself had been eaten (2026-11-14)
+			// (developer aid: OPENC2E_NO_STALLFIX=1 turns this and the
+			// "helped" exception below off, for comparison)
+			static const bool noStallFix = getenv("OPENC2E_NO_STALLFIX") != nullptr;
+			if (current.category >= 0 && !objectGone && episodeAgent && !noStallFix) {
+				bool same = false;
+				for (auto& s : p.visible)
+					if (s.category == current.category && s.agent == episodeAgent)
+						same = true;
+				objectGone = !same;
+			}
 			bool finished = p.actionFinished && episodeTicks > 1;
 			int limit = current.category >= 0 ? prm.maxObjectEpisodeTicks : prm.maxEpisodeTicks;
 			bool stalled = false;
@@ -1160,6 +1176,15 @@ class HomeostatMind : public CreatureMind {
 					lastProgress = episodeTicks;
 				} else if (episodeTicks - lastProgress >= prm.stallTicks) {
 					stalled = true;
+					// developer aid: OPENC2E_WATCH_STALLS prints each stalled
+					// action on an object: where both were and how far it got
+					static const bool watchStalls = getenv("OPENC2E_WATCH_STALLS") != nullptr;
+					if (watchStalls)
+						for (auto& s : p.visible)
+							if (s.category == current.category)
+								fmt::print("[homeostat] creature {} t{}: STALL {}@{} creature {:.0f},{:.0f} (from {:.0f},{:.0f}) target {:.0f},{:.0f} dx {:.0f} dy {:.0f} dist {:.0f} closest {:.0f} reachable {} edible {:.2f} walled {}\n",
+									p.creatureId, p.tick, actionName(current.decision), current.category, p.x, p.y, episodeStartX, episodeStartY, s.x, s.y,
+									s.x - p.x, s.y - p.y, s.distance, closest, s.reachable ? 1 : 0, s.edible, p.walledCount - episodeWalledStart);
 				}
 			}
 			// Walking into a wall, whatever the action (owner, 2026-11-13:
@@ -1297,6 +1322,8 @@ class HomeostatMind : public CreatureMind {
 		closest = 1e9f;
 		lastProgress = 0;
 		episodeWalledStart = p.walledCount;
+		episodeStartX = p.x;
+		episodeStartY = p.y;
 		startDrives = d;
 		startD = D;
 		startX = p.x;
@@ -1832,6 +1859,7 @@ class HomeostatMind : public CreatureMind {
 	float closest = 1e9f; // nearest the creature has been to its target this episode
 	unsigned int episodeWalledStart = 0; // MindPerception::walledCount when it began
 	int lastProgress = 0;
+	float episodeStartX = 0, episodeStartY = 0; // where the creature was when it began
 	Candidate current{};
 	int episodeTicks = 0;
 	std::array<float, NUM_DRIVES> startDrives{};
@@ -3839,7 +3867,13 @@ class HomeostatMind : public CreatureMind {
 		// an object action that keeps getting nowhere: stop offering it here
 		if (current.category >= 0) {
 			bool stayed = std::fabs(dxTo(p, startX)) < prm.futileMove && std::fabs(p.y - startY) < prm.futileMove;
-			if (stalled && stayed) {
+			// (an action that eased its needs did something, stalled or not:
+			// a norn chewing a many-bite food gets no nearer to it, and three
+			// such meals in a row marked eating there futile)
+			bool helped = reward > prm.surpriseReward * 0.2f || (current.decision == prm.eatDecision && felt[HUNGER] < -0.05f);
+			if (getenv("OPENC2E_NO_STALLFIX"))
+				helped = false;
+			if (stalled && stayed && !helped) {
 				bool same = current.category == futileCategory && current.decision == futileDecision;
 				futileInARow = same ? futileInARow + 1 : 1;
 				futileCategory = current.category;
