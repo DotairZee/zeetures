@@ -95,6 +95,8 @@ void Map::setDoorPerm(const std::shared_ptr<Room>& r1, const std::shared_ptr<Roo
 		r1->doors[r2] = RoomDoor{perm};
 		r2->doors[r1] = RoomDoor{perm};
 	}
+	if (perm > 0)
+		r1->doors[r2].everOpen = r2->doors[r1].everOpen = true;
 }
 
 int Map::getDoorPerm(const std::shared_ptr<Room>& r1, const std::shared_ptr<Room>& r2) {

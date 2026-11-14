@@ -815,8 +815,12 @@ void oldCreature::keepInRoomSystem() {
 				auto r = todo.back();
 				todo.pop_back();
 				sizes[g]++;
+				// (a door open at any time this session counts: the
+				// airlock's chamber, both its doors shut mid-cycle, was
+				// taken for a sealed pocket and a norn in it was lifted
+				// 800 px onto the dock; owner's screencast, 2026-11-13)
 				for (auto& d : r->getDoors())
-					if (d.second.perm > 0 && d.first && !group.count(d.first.get())) {
+					if ((d.second.perm > 0 || d.second.everOpen) && d.first && !group.count(d.first.get())) {
 						group[d.first.get()] = g;
 						todo.push_back(d.first);
 					}

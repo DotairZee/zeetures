@@ -38,6 +38,10 @@ class RenderTarget;
 
 struct RoomDoor {
 	int perm;
+	// open at any time this session: a door scripts open and shut (the
+	// airlock's) still joins its rooms when shut, for telling sealed pockets
+	// from rooms closed for the moment
+	bool everOpen = false;
 };
 
 class Room {
