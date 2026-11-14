@@ -4057,6 +4057,17 @@ class HomeostatMind : public CreatureMind {
 			choice.who.empty() ? fmt::format("{}", choice.category) : fmt::format("{}:{}", choice.category, choice.who), choice.want, choice.novelty,
 			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown, p.x, p.y, std::clamp(hungryTicks / prm.restlessRamp, 0.0f, 1.0f),
 			[&] { std::string m; for (auto& fp : foodPlaces) m += fmt::format(" {:.0f},{:.0f}x{:.2f}", fp.x, fp.y, fp.confidence); return m.empty() ? std::string(" none") : m; }());
+		// developer aid: OPENC2E_WATCH_CANDS (1, or a creature id) prints every
+		// candidate of each choice, with the walls and blocked ways sensed
+		static const char* watchCands = getenv("OPENC2E_WATCH_CANDS");
+		if (watchCands && (std::string(watchCands) == "1" || std::to_string(p.creatureId) == watchCands)) {
+			std::string all;
+			for (auto& c : cands)
+				all += fmt::format(" {}{}{}{}{}@{}={:+.3f}", c.scent ? "scent:" : "", c.forage ? "forage:" : "", c.route ? "route:" : "", c.escape ? "escape:" : "",
+					actionName(c.decision), c.category, c.score);
+			fmt::print("[homeostat] creature {} t{}: candidates{} | wall{}{} blocked{}{} | drop W {:.0f} E {:.0f}\n", p.creatureId, p.tick, all,
+				p.wallWest ? " W" : "", p.wallEast ? " E" : "", isBlocked(p, 10) ? " W" : "", isBlocked(p, 11) ? " E" : "", p.dropWest, p.dropEast);
+		}
 	}
 };
 

@@ -598,8 +598,13 @@ void Engine::update() {
 		}
 	}
 	// developer aid: OPENC2E_TEST_KILL=N kills the selected creature at world
-	// tick N (headless; OPENC2E_TEST_DEATH needs the Owner's Kit drawn)
-	if (static const char* k = getenv("OPENC2E_TEST_KILL"); k && world.tickcount == (unsigned int)atoi(k) && world.selectedcreature)
+	// tick N, or "+N" N ticks into the session (headless; OPENC2E_TEST_DEATH
+	// needs the Owner's Kit drawn)
+	static unsigned int killAt = [] {
+		const char* k = getenv("OPENC2E_TEST_KILL");
+		return !k ? 0u : k[0] == '+' ? world.tickcount + (unsigned int)atoi(k + 1) : (unsigned int)atoi(k);
+	}();
+	if (killAt && world.tickcount == killAt && world.selectedcreature)
 		if (auto* ca = dynamic_cast<CreatureAgent*>(world.selectedcreature.get()))
 			if (ca->getCreature()->isAlive())
 				ca->getCreature()->die();

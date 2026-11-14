@@ -75,6 +75,8 @@ class oldCreature : public Creature {
 	bool wasriding = false;
 	MindPerception buildPerception();
 	void notifyMindOfDeath();
+	void tickBody(); // a dead creature's body (see Creature.cpp)
+	unsigned int deadTicks = 0;
 	void applyStimulusChemistry(StimulusEvent& s);
 
 	oldCreature(std::shared_ptr<genomeFile> g, bool is_female, unsigned char _variant, CreatureAgent* a);

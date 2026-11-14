@@ -36,6 +36,8 @@
 #include "historyManager.h"
 #include "oldBrain.h"
 #include "oldCreature.h"
+#include "caosVM.h"
+#include "caosScript.h"
 
 #include <algorithm>
 #include <functional>
@@ -582,15 +584,52 @@ void c2Creature::updateUnderwater() {
 		fmt::print("* Couldn't make a bubble: {}\n", result);
 }
 
+// C2: a dead creature's body. The death script (event 72) lets it lie for
+// 30 s, then makes it pass through walls and floors (attr 0, size 0) and
+// float up out of the top of the world, where it is removed (death.cos).
+// - A lying body is kept in the room system: a dead ettin came to rest in the
+//   rock under the upper-east deck's end (7743,968), out of every room, and
+//   raised an error 737 times through the night until it was cleared
+//   (2026-11-13). A rising one is not: it passes through rock on purpose,
+//   and being set down on a floor with its speed taken away left it there
+//   for good, its script waiting for it to reach the top (34 bodies in Home,
+//   2026-11-14).
+// - Should the death script not be running, it is started again; should a
+//   rising body have stopped, it is set rising again. Five bodies lay at the
+//   gene lab's lower room's east wall for hours without ever rising, and
+//   hungry creatures crowded round them (owner, 2026-11-14).
+void oldCreature::tickBody() {
+#ifndef _CREATURE_STANDALONE
+	Agent* a = parentagent;
+	if (!a || engine.version != 2)
+		return;
+	bool lying = (a->attr & 64) != 0;
+	if (lying)
+		keepInRoomSystem();
+	if (a->carriedby || a->invehicle)
+		return;
+	deadTicks++;
+	if (deadTicks < 400 || deadTicks % 50 != 0)
+		return;
+	bool running = a->vm && !a->vm->stopped() && a->vm->currentscript && a->vm->currentscript->scrp == 72;
+	if (!running) {
+		fmt::print("* The body of {} at {:.0f},{:.0f} was not running its death script; started it again\n",
+			world.history->findMoniker(genome), a->x, a->y);
+		a->stopScript();
+		a->queueScript(72);
+	} else if (!lying && a->size == 0 && a->vely == 0.0f) {
+		fmt::print("* The body of {} at {:.0f},{:.0f} had stopped rising; set rising again\n",
+			world.history->findMoniker(genome), a->x, a->y);
+		a->vely = -2;
+	}
+#endif
+}
+
 void c2Creature::tick() {
 	// TODO: should we tick some things even if dead?
 	if (!alive) {
 		notifyMindOfDeath();
-		// a body, too, is kept in the room system: a dead ettin came to rest
-		// in the rock under the upper-east deck's end (7743,968), out of
-		// every room, and raised an error 737 times through the night until
-		// it was cleared (2026-11-13)
-		keepInRoomSystem();
+		tickBody();
 		return;
 	}
 

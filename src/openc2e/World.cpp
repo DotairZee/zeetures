@@ -527,6 +527,10 @@ void World::tick() {
 			bool creature = a->family == 4;
 			if (!creature && (a->family != 2 || !(a->attr & 64)))
 				continue;
+			// (a dead creature's body rising out of the world passes through
+			// rock on purpose: see oldCreature::tickBody)
+			if (creature && !(a->attr & 64))
+				continue;
 			float cx = a->x + a->getWidth() / 2.0f, bottom = a->y + a->getHeight();
 			// across the seam of a wrapping world, the middle is on the other
 			// side: a creature against the library's west wall (x ~0) has its
