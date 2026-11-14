@@ -27,6 +27,7 @@
 	* sanity checks: eg check that sprites have enough frames at load time
 */
 
+#include "Profile.h"
 #include "SkeletalCreature.h"
 
 bool walkOffEndsInWater(const Room& r, bool east, int fit); // CreatureAI.cpp
@@ -1354,12 +1355,19 @@ void SkeletalCreature::setGaitGene(unsigned int gaitdrive) { // TODO: not sure i
 }
 
 void SkeletalCreature::tick() {
-	Agent::tick();
+	{
+		PROFILE_SCOPE("creature: agent tick (physics, scripts)");
+		Agent::tick();
+	}
 
 	if (paused)
 		return;
 
-	CreatureAgent::tick();
+	{
+		PROFILE_SCOPE("creature: creature tick (mind, chemistry)");
+		CreatureAgent::tick();
+	}
+	PROFILE_SCOPE("creature: body (blink, walk, pose)");
 
 	eyesclosed = creature->isAsleep() || !creature->isAlive();
 

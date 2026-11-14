@@ -17,6 +17,7 @@
  *
  */
 
+#include "Profile.h"
 #include "Creature.h"
 
 #include "Catalogue.h"
@@ -458,6 +459,7 @@ unsigned int c2eCreature::getGait() {
 void c1Creature::tick() {
 	// TODO: should we tick some things even if dead?
 	if (!alive) {
+		PROFILE_SCOPE("creature: dead bodies");
 		notifyMindOfDeath();
 		return;
 	}
@@ -483,8 +485,14 @@ void c1Creature::tick() {
 	if (pregnant != 0 && parentagent && parentagent->babymoniker == 0)
 		pregnant = 0;
 
-	watchPregnancy();
-	keepInRoomSystem();
+	{
+		PROFILE_SCOPE("creature: pregnancy watch");
+		watchPregnancy();
+	}
+	{
+		PROFILE_SCOPE("creature: keep in room system");
+		keepInRoomSystem();
+	}
 
 	if (dead != 0) {
 		// the genome's own death signal (C2's "dead" locus): its chemistry
@@ -614,10 +622,19 @@ void c2Creature::tick() {
 	senses[12] = 0; // wind towards (TODO)
 	senses[13] = 0; // wind behind (TODO)
 
-	tickBrain();
+	{
+		PROFILE_SCOPE("creature: tickBrain (whole)");
+		tickBrain();
+	}
 	// TODO: update brain organ every 0.4ms (ie: when brain is processed)!
-	tickBiochemistry();
-	updateConsciousness();
+	{
+		PROFILE_SCOPE("creature: biochemistry");
+		tickBiochemistry();
+	}
+	{
+		PROFILE_SCOPE("creature: consciousness");
+		updateConsciousness();
+	}
 
 	// developer aid: with OPENC2E_WATCH_CREATURES, organ health every 400 ticks
 	static const bool watchorgans = getenv("OPENC2E_WATCH_CREATURES") != nullptr;

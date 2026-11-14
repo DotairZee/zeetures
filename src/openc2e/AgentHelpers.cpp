@@ -41,9 +41,18 @@ bool agentIsVisible(Agent* seeing, Agent* a, float ownerx, float ownery, MetaRoo
 	if (seeing == a)
 		return false;
 
-	// verify we're in the same metaroom as owner, and in a room
+	// out of range: no need to look up rooms (performance, 2026-11-13: the
+	// room lookups below scan every room, and creatures ran this for every
+	// object in the world each time they looked about)
 	float thisx = a->x + (a->getWidth() / 2.0f);
 	float thisy = a->y + (a->getHeight() / 2.0f);
+	{
+		double dx = thisx - ownerx, dy = thisy - ownery;
+		if (dx * dx + dy * dy > (double)seeing->range * seeing->range)
+			return false;
+	}
+
+	// verify we're in the same metaroom as owner, and in a room
 	MetaRoom* m = world.map->metaRoomAt(thisx, thisy);
 	if (m != ownermeta)
 		return false;
@@ -81,6 +90,15 @@ bool agentPartlyVisible(Agent* seeing, Agent* dest) {
 }
 
 bool agentPartlyVisible(Agent* seeing, Agent* dest, float ownerx, float ownery) {
+	// its nearest point out of range: neither test below can pass (checked
+	// first: they look up rooms; performance, 2026-11-13)
+	{
+		float px = std::clamp(ownerx, dest->x, dest->x + std::max(0.0f, dest->getWidth() - 1.0f));
+		float py = std::clamp(ownery, dest->y, dest->y + std::max(0.0f, dest->getHeight() - 1.0f));
+		double dx = px - ownerx, dy = py - ownery;
+		if (dx * dx + dy * dy > (double)seeing->range * seeing->range)
+			return false;
+	}
 	MetaRoom* ownermeta = world.map->metaRoomAt(ownerx, ownery);
 	std::shared_ptr<Room> ownerroom = world.map->roomAt(ownerx, ownery);
 	if (!ownermeta || !ownerroom || seeing == dest)

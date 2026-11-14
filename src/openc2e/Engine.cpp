@@ -17,6 +17,8 @@
  *
  */
 
+#include "Profile.h"
+#include <chrono>
 #include "Engine.h"
 
 #include <SDL3/SDL_events.h>
@@ -370,6 +372,9 @@ static int handViewX(Camera* cam, PointerAgent* hand) {
 }
 
 void Engine::drawWorld() {
+	PROFILE_SCOPE("draw: world and interface (per tick)");
+	if (Profile::enabled())
+		Profile::totals()["frames drawn (count, per tick)"] += 1.0;
 	// draw the world
 
 	// developer aid: OPENC2E_TEST_PAN="dx,dy" starts a smooth pan that far
@@ -533,7 +538,37 @@ void Engine::update() {
 	tickdata = get_ticks_msec();
 
 	// tick the world
+	// developer aid: OPENC2E_TICKRATE=s prints, every s seconds, how many
+	// world ticks ran and the average time one took (ms), with the number of
+	// creatures (for performance work)
+	static const int tickrate = getenv("OPENC2E_TICKRATE") ? std::max(1, atoi(getenv("OPENC2E_TICKRATE"))) : 0;
+	auto t0 = std::chrono::steady_clock::now();
 	world.tick();
+	if (tickrate) {
+		static double spent = 0;
+		static int ticks = 0;
+		static auto since = t0;
+		spent += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+		ticks++;
+		double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - since).count();
+		if (secs >= tickrate) {
+			int creatures = 0;
+			for (auto& a : world.agents)
+				if (a && a->family == 4)
+					creatures++;
+			fmt::print("* TICKRATE {:.1f} ticks/s, {:.2f} ms a tick, {} creatures, {} agents\n", ticks / secs, spent / ticks, creatures, world.agents.size());
+			std::vector<std::pair<double, std::string>> parts;
+			for (auto& [name, ms] : Profile::totals())
+				parts.push_back({ms / ticks, name});
+			std::sort(parts.rbegin(), parts.rend());
+			for (auto& [ms, name] : parts)
+				fmt::print("*   {:7.2f} ms  {}\n", ms, name);
+			Profile::totals().clear();
+			spent = 0;
+			ticks = 0;
+			since = std::chrono::steady_clock::now();
+		}
+	}
 
 	// C1/C2: save the open world every few minutes of play (File > Autosave;
 	// 5 by default, owner 2026-11-11: a crash had lost an hour). Not with

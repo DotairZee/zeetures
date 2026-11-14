@@ -98,6 +98,7 @@ class oldCreature : public Creature {
 	// c2Creature::updateConsciousness): it lies still and does not think
 	bool unconscious = false;
 	bool isUnconscious() const { return unconscious; }
+	bool mateInSight = false; // the sight cell for a possible mate (feedSensoryCells)
 	virtual void setUnconscious(bool u) { unconscious = u; } // UNCS (CAOS); c2Creature faints or brings round
 	virtual std::vector<float> getOrganState() { return {}; }
 	virtual void setOrganState(const std::vector<float>&) {}

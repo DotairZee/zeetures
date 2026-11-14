@@ -17,6 +17,7 @@
  *
  */
 
+#include "Profile.h"
 #include "creatures/Pheromones.h"
 #include "creatures/Breeding.h"
 #include "CreatureAgent.h"
@@ -64,22 +65,27 @@ void oldCreature::feedSensoryCells() {
 			cell->state = cell->output = ((int)n == attn && attention) ? 255 : 0;
 		}
 	if (oldLobe* sit = brain->getLobeByTissue(5); sit && sit->getNoNeurons() > 19) {
-		bool present = false;
-		for (auto& a : world.agents) {
-			if (!a || a.get() == parentagent || a->genus != parentagent->genus)
-				continue;
-			auto* ca = dynamic_cast<CreatureAgent*>(a.get());
-			if (!ca || !ca->getCreature() || !ca->getCreature()->isAlive() || ca->getCreature()->isFemale() == female)
-				continue;
-			if (kinBarred(parent, ca))
-				continue; // close kin, with someone else to choose (Breeding.h)
-			if (agentInSight(AgentRef(a))) {
-				present = true;
+		// looked for on the mind's cadence (every 4 ticks), not every tick:
+		// a scan of every agent, run by every creature (performance,
+		// 2026-11-13); creatures only, and the cheap tests first
+		if (ticks % 4 == 0) {
+			mateInSight = false;
+			for (auto& a : world.agents) {
+				if (!a || a->family != 4 || a.get() == parentagent || a->genus != parentagent->genus)
+					continue;
+				auto* ca = dynamic_cast<CreatureAgent*>(a.get());
+				if (!ca || !ca->getCreature() || !ca->getCreature()->isAlive() || ca->getCreature()->isFemale() == female)
+					continue;
+				if (!agentInSight(AgentRef(a)))
+					continue;
+				if (kinBarred(parent, ca))
+					continue; // close kin, with someone else to choose (Breeding.h)
+				mateInSight = true;
 				break;
 			}
 		}
 		oldNeuron* cell = sit->getNeuron(19);
-		cell->state = cell->output = present ? 255 : 0;
+		cell->state = cell->output = mateInSight ? 255 : 0;
 	}
 }
 
@@ -129,10 +135,16 @@ void oldCreature::tickBrain() {
 		tickMind();
 		// the brain is replaced, but its chemical relay lobes are body chemistry
 		static const bool norelay = getenv("OPENC2E_NO_RELAY") != nullptr; // for A/B testing
-		if (brain && !norelay)
-			brain->tickChemicalRelays();
-		feedSensoryCells();
-		tickInvoluntaryActions();
+		{
+			PROFILE_SCOPE("creature: brain relays");
+			if (brain && !norelay)
+				brain->tickChemicalRelays();
+		}
+		{
+			PROFILE_SCOPE("creature: senses and involuntary");
+			feedSensoryCells();
+			tickInvoluntaryActions();
+		}
 		return;
 	}
 
@@ -445,6 +457,19 @@ bool c2eCreature::processInstinct() {
 
 #include "AgentHelpers.h"
 
+// where a creature looks from (see agentInSight)
+static void eyePoint(Agent* parentagent, float& ex, float& ey) {
+	ex = parentagent->x + parentagent->getWidth() / 2.0f;
+	ey = parentagent->y + parentagent->getHeight() / 2.0f;
+	if (engine.version == 2)
+		if (auto* sc = dynamic_cast<SkeletalCreature*>(parentagent)) {
+			float raw = sc->x + sc->attachmentX(sc->isLeftFootDown() ? 11 : 12, 1);
+			float fx = sc->footX();
+			if (fx != raw)
+				ex = fx;
+		}
+}
+
 bool Creature::agentInSight(AgentRef a) {
 #ifndef _CREATURE_STANDALONE
 	if (a->invisible())
@@ -487,7 +512,10 @@ void Creature::chooseAgents() {
 
 	std::vector<std::vector<AgentRef> > possibles(chosenagents.size());
 
-	for (auto a : world.agents) {
+	// the eye point once, not for every object (performance, 2026-11-13)
+	float ex, ey;
+	eyePoint(parentagent, ex, ey);
+	for (auto& a : world.agents) {
 		if (!a)
 			continue;
 
@@ -501,7 +529,7 @@ void Creature::chooseAgents() {
 		if (chosenagents[a->category])
 			continue;
 
-		if (!agentInSight(a))
+		if (a->invisible() || !agentPartlyVisible(parentagent, a.get(), ex, ey))
 			continue;
 		// the Pointer toolbar's invisible hand: creatures do not notice it
 		if (world.handInvisible && a.get() == (Agent*)world.hand())
@@ -1231,7 +1259,8 @@ void oldCreature::tickMind() {
 	chooseAgents();
 	if (!mindborn)
 		buildMindActions();
-	MindPerception p = buildPerception();
+	MindPerception p = [&] { PROFILE_SCOPE("creature: perception"); return buildPerception(); }();
+	PROFILE_SCOPE("creature: tickMind after perception");
 	pendingstimuli.clear();
 	if (engine.version == 2) {
 		while (!unprocessedinstincts.empty()) {
@@ -1253,7 +1282,7 @@ void oldCreature::tickMind() {
 			v ? fmt::format(" vehicle {} {} {}", (int)v->family, (int)v->genus, v->species) : std::string());
 	}
 	wasriding = p.riding;
-	MindOutput out = mind->tick(p);
+	MindOutput out = [&] { PROFILE_SCOPE("creature: mind"); return mind->tick(p); }();
 	if (out.passOver) {
 		passedover.erase(std::remove_if(passedover.begin(), passedover.end(), [&](auto& po) { return !po.first || ticks >= po.second || po.first == out.passOver; }), passedover.end());
 		passedover.push_back({out.passOver, ticks + 2000}); // about 3 minutes

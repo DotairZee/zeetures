@@ -17,6 +17,7 @@
  *
  */
 
+#include "Profile.h"
 #include "World.h"
 #include "SkyTint.h"
 
@@ -275,10 +276,15 @@ void World::tick() {
 			continue;
 		}
 		i++;
-		a->tick();
+		if (Profile::enabled()) {
+			PROFILE_SCOPE(a->family == 4 ? "agents: creatures (all)" : a->family == 3 ? "agents: vehicles" : "agents: objects");
+			a->tick();
+		} else
+			a->tick();
 	}
 
 	// Process the script queue.
+	PROFILE_SCOPE("world: script queue and the rest");
 	std::list<scriptevent> newqueue;
 	for (auto& i : scriptqueue) {
 		std::shared_ptr<Agent> agent = i.agent.lock();
@@ -402,13 +408,28 @@ void World::tick() {
 		}
 	}
 
-	world.map->tick();
+	{
+		PROFILE_SCOPE("world: map");
+		world.map->tick();
+	}
 	if (engine.version == 2) {
-		tickFoodScent();
-		Pheromones::tick();
+		{
+			PROFILE_SCOPE("world: food scent");
+			tickFoodScent();
+		}
+		{
+			PROFILE_SCOPE("world: pheromones");
+			Pheromones::tick();
+		}
 		tickBreathBubbles();
-		Relationships::tick();
-		tickClimate();
+		{
+			PROFILE_SCOPE("world: relationships");
+			Relationships::tick();
+		}
+		{
+			PROFILE_SCOPE("world: climate");
+			tickClimate();
+		}
 	}
 	if (engine.version < 3)
 		WorldSave::TickLifeStageChanges();

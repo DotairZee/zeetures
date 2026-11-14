@@ -17,6 +17,7 @@
  *
  */
 
+#include "Profile.h"
 #include "Agent.h"
 #ifndef _WIN32
 #include <dlfcn.h>
@@ -1360,6 +1361,7 @@ void Agent::unhandledException(std::string info, bool wasscript) {
 
 void Agent::vmTick() {
 	// Tick the VM associated with this agent.
+	PROFILE_SCOPE(family == 4 ? "scripts: creatures" : "scripts: objects");
 
 	assert(vm); // There must *be* a VM to tick.
 	LifeAssert la(this); // sanity check

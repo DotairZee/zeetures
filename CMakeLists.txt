@@ -26,7 +26,10 @@ if(WINDOWS AND NOT BUILD_SHARED_LIBS)
 endif()
 
 include(CheckCXXSourceCompiles)
-if(NOT (WIN32 OR EMSCRIPTEN))
+# AddressSanitizer is on by default (as upstream); OPENC2E_ASAN=OFF builds
+# without it, for playing: it slows everything severalfold
+option(OPENC2E_ASAN "Build with AddressSanitizer" ON)
+if(OPENC2E_ASAN AND NOT (WIN32 OR EMSCRIPTEN))
 	set(CMAKE_REQUIRED_FLAGS "-fsanitize=address")
 	check_cxx_source_compiles("int main(int, char**) { return 0; }" have_fsanitize_address)
 	if(have_fsanitize_address)
