@@ -25,7 +25,8 @@ namespace Openc2eImgui {
 // A small window showing what the selected creature is paying attention to.
 // When the creature and the object it attends to both fit, the view frames
 // the two of them; when they're far apart, it shows the object. With nothing
-// in particular in mind, it shows the creature. The view glides from one
+// in particular in mind, it shows where the creature is (the creature
+// itself is left out of the picture). The view glides from one
 // target to the next, the object is marked with corner brackets, and a
 // caption says what it is and what the creature is doing.
 
@@ -198,7 +199,9 @@ void DrawEyeView() {
 		s_cy += gdy * 0.18f;
 	}
 	s_camera->moveToGlobal((int)std::lround(s_cx) - VIEW_W / 2, (int)std::lround(s_cy) - VIEW_H / 2, jump);
-	world.drawWorld(s_camera.get(), s_target.get());
+	// (without the creature itself: the view is, roughly, what it sees, and
+	// it does not see itself; owner, 2026-11-13)
+	world.drawWorld(s_camera.get(), s_target.get(), false, nullptr, false, c);
 
 	ImGui::SetNextWindowSize(ImVec2(VIEW_W + 16, VIEW_H + 62), ImGuiCond_FirstUseEver);
 	if (ImGui::Begin("Creature's View", &s_eye_view_open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar)) {

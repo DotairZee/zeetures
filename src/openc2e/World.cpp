@@ -696,7 +696,7 @@ std::shared_ptr<Agent> World::lookupUNID(int unid) {
 	return unidmap[unid].lock();
 }
 
-void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent* only_creature, bool bare) {
+void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent* only_creature, bool bare, Agent* skip_agent) {
 	assert(surface);
 	surface->renderClear();
 
@@ -765,10 +765,13 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 				lit = true;
 			}
 		}
-		if (skip_hand || only_creature) {
+		if (skip_hand || only_creature || skip_agent) {
 			auto* p = dynamic_cast<CompoundPart*>(render);
 			Agent* owner = p ? p->getParent() : nullptr;
 			if (skip_hand && owner && owner == (Agent*)world.hand())
+				continue;
+			// (the Creature's View: the creature does not see itself)
+			if (skip_agent && owner == skip_agent)
 				continue;
 			if (bare && only_creature && owner != only_creature)
 				continue;
