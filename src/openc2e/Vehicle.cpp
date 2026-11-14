@@ -200,6 +200,30 @@ void Vehicle::drop(AgentRef passenger) {
 		}
 	}
 
+	// A creature let out with its feet a few px below a floor it cannot pass
+	// stands on that floor. Lifts move several px a tick and can stop a
+	// little past a stop: the bamboo-cage lift by the waterfall stopped at
+	// its middle stop with the cabin's floor up to 7 px below the shaft
+	// room's floor (y 840), so its riders were let out in the room below
+	// and fell 330 px to the bottom (owner, 2026-11-13; ten such falls in
+	// home.log).
+	if (engine.version == 2 && passenger->family == 4 && world.map) {
+		float fx = passenger->x + passenger->getWidth() / 2.0f;
+		float fy = passenger->y + passenger->getHeight();
+		std::shared_ptr<Room> here = world.map->roomAt(fx, fy);
+		if (here) {
+			for (float yy = fy - 1; yy >= fy - 12; yy--) {
+				std::shared_ptr<Room> above = world.map->roomAt(fx, yy);
+				if (!above || above == here)
+					continue;
+				float floor = above->floorYatX(fx);
+				if (world.map->hasDoor(above, here) && passenger->size > world.map->getDoorPerm(above, here) && floor <= fy && floor >= fy - 12)
+					passenger->moveTo(passenger->x, floor - passenger->getHeight() - 1);
+				break;
+			}
+		}
+	}
+
 	if (engine.version >= 3)
 		passenger->queueScript(122, this); // Vehicle Drop, TODO: is this valid call?
 }

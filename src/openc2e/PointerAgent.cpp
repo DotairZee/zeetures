@@ -64,18 +64,24 @@ void shoveCreature(Agent* a, int dir) {
 // The hand's shove, as real C2 plays it (watched 2026-11-11, poses read
 // over DDE about six times a second while the owner pushed a grendel): a
 // shove west, the hand pressing on the creature's right, is frames 8, 9, 8
-// of the hand sprite, about half a second, then the usual pointer. C2 has
-// no shove drawn the other way (for a shove east it plays its ordinary
-// click, a finger pressing a button), so a shove east here is the same
-// shove mirrored (owner, 2026-11-11: a nudge with the back of the hand).
+// of the hand sprite, about half a second, then the usual pointer. A shove
+// east has its own drawing: frames 10, 11, 12, the hand turning up to press
+// on the creature's left (owner, 2026-11-13: C2's push hand has different
+// animations for pushing right and left). (The DDE readings showed frames
+// 1-2 for a shove east, the finger's click, and for a while a shove east
+// here was the west shove mirrored; frames 10-12 are the hand sprite's
+// pressing-east drawings, used nowhere else.)
 void PointerAgent::playShove(int dir) {
 	auto* sp = dynamic_cast<SpritePart*>(part(0));
 	if (engine.version != 2 || !sp)
 		return;
 	if (pushAnimAt >= pushAnim.size())
 		prePushPose = sp->getPose();
-	pushAnim = {8, 8, 9, 9, 8, 8};
-	draw_mirrored = dir > 0;
+	if (dir > 0)
+		pushAnim = {10, 10, 11, 11, 12, 12, 11, 11};
+	else
+		pushAnim = {8, 8, 9, 9, 8, 8};
+	draw_mirrored = false;
 	pushAnimAt = 0;
 	sp->setPose(pushAnim[0]);
 }
