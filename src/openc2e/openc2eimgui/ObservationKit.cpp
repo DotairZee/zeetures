@@ -39,8 +39,17 @@ static void DetailsPage() {
 	// every column as wide as what it holds, so the kit fits its table
 	// (owner, 2026-11-12: it had been a window sized by hand, mostly empty)
 	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Sortable | ImGuiTableFlags_SizingFixedFit;
-	if (!ImGui::BeginTable("creatures", 8, flags))
+	// the list scrolls past 20 rows (or 60% of the window's height), so the
+	// kit no longer fills the screen with a big population (owner,
+	// 2026-11-13: 121 creatures); its width still fits the columns
+	float rowh = ImGui::GetFrameHeight() + ImGui::GetStyle().CellPadding.y * 2;
+	float listh = std::min(rowh * (float)(creatures.size() + 1) + 4, std::min(rowh * 21 + 4, ImGui::GetIO().DisplaySize.y * 0.6f));
+	if (!ImGui::BeginChild("##creaturelist", ImVec2(0, listh), ImGuiChildFlags_AutoResizeX))
+		return ImGui::EndChild();
+	if (!ImGui::BeginTable("creatures", 8, flags)) {
+		ImGui::EndChild();
 		return;
+	}
 	ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort);
 	ImGui::TableSetupColumn("Kind");
 	ImGui::TableSetupColumn("Age");
@@ -130,6 +139,7 @@ static void DetailsPage() {
 		ImGui::PopID();
 	}
 	ImGui::EndTable();
+	ImGui::EndChild();
 }
 
 // ---- Alarms -----------------------------------------------------------------------
