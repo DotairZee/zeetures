@@ -162,7 +162,9 @@ void StatisticsPage() {
 				children[*p]++;
 	}
 	ImGui::TextUnformatted("Every creature this world has had");
-	if (ImGui::BeginTable("counts", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit)) {
+	// (across the window's width, as the records below; owner, 2026-11-13:
+	// no empty band at the right)
+	if (ImGui::BeginTable("counts", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
 		ImGui::TableSetupColumn("", 0, 120);
 		ImGui::TableSetupColumn("Living", 0, 80);
 		ImGui::TableSetupColumn("Died", 0, 80);
@@ -231,9 +233,12 @@ void StatisticsPage() {
 				recs[5].rows.push_back({(double)f, fmt::format("{}: {}", who, f)});
 		}
 	}
-	if (ImGui::BeginTable("records", 2, ImGuiTableFlags_SizingStretchSame)) {
+	// as many across as the window's width holds whole (up to three), so
+	// the records use the width without cutting lines short
+	int across = std::clamp((int)(ImGui::GetContentRegionAvail().x / 360.0f), 1, 3);
+	if (ImGui::BeginTable("records", across, ImGuiTableFlags_SizingStretchSame)) {
 		for (size_t i = 0; i < recs.size(); i++) {
-			if (i % 2 == 0)
+			if (i % across == 0)
 				ImGui::TableNextRow();
 			ImGui::TableNextColumn();
 			auto& r = recs[i];

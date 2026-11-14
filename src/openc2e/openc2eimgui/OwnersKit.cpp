@@ -468,7 +468,10 @@ void WorldHistoryPage() {
 		return;
 	}
 	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
-	if (ImGui::BeginTable("log", 5, flags, ImVec2(800, 300))) {
+	// the list fills the kit's window, which the player sizes (owner,
+	// 2026-11-13: a fixed 800 px left the window's right side empty and cut
+	// the details short)
+	if (ImGui::BeginTable("log", 5, flags, ImVec2(0, std::max(200.0f, ImGui::GetContentRegionAvail().y)))) {
 		ImGui::TableSetupScrollFreeze(0, 1);
 		ImGui::TableSetupColumn("When", 0, 180);
 		ImGui::TableSetupColumn("What", 0, 96); // room for "Unconscious"

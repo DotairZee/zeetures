@@ -234,6 +234,32 @@ static void drawStars(RenderTarget* surface, int adjustx, int adjusty, int wrapW
 void draw(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth) {
 	if (engine.version == 2)
 		drawStars(surface, adjustx, adjusty, wrapWidth);
+	// developer aid: OPENC2E_TEST_THOUGHT="hungry,east" (symbol names) makes
+	// the creature nearest the view's middle think that, again whenever its
+	// last has gone, for snapshots of the bubble
+	if (static const char* tt = getenv("OPENC2E_TEST_THOUGHT"); tt && engine.version == 2) {
+		std::vector<std::string> items;
+		std::string s = tt;
+		for (size_t p = 0; p != std::string::npos;) {
+			size_t q = s.find(',', p);
+			items.push_back(s.substr(p, q == std::string::npos ? q : q - p));
+			p = q == std::string::npos ? q : q + 1;
+		}
+		float mx = adjustx + surface->getWidth() / 2.0f, my = adjusty + surface->getHeight() / 2.0f;
+		Agent* best = nullptr;
+		float bestd = 1e18f;
+		for (auto& a : world.agents)
+			if (a && a->family == 4 && !a->isDying() && !speechBubbleShowing(a.get()) && !Bubble::hiddenRider(a.get())) {
+				float d = (a->x - mx) * (a->x - mx) + (a->y - my) * (a->y - my);
+				if (d < bestd)
+					bestd = d, best = a.get();
+			}
+		if (best && s_showing.find(best->getUNID()) == s_showing.end()) {
+			if (mode() == SELECTED)
+				world.selectCreature(AgentRef(best).lock());
+			think(best, items, fmt::format("test{}", world.tickcount));
+		}
+	}
 	if (s_showing.empty())
 		return;
 	unsigned int now = world.tickcount;
@@ -271,9 +297,11 @@ void draw(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth) {
 				continue;
 			surface->renderCreaturesImage(*syst, frame, (int)bx, (int)by);
 			// the pictures, centred in the bubble's body (its top 22 px; the
-			// tail's dots are below)
+			// tail's dots are below), set 2.5 px lower than the arithmetic
+			// middle: the body's rim is heavier at the top, and at the middle
+			// they looked 2-3 px high (owner, 2026-11-13)
 			float x = bx + (bw - (n * PIC + (n - 1) * GAP)) / 2.0f;
-			float y = by + 2;
+			float y = by + 4.5f;
 			for (auto& item : sh.items) {
 				if (item.symbol >= 0) {
 					if (auto sym = symbols())

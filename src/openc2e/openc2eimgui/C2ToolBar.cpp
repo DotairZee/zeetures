@@ -1,3 +1,4 @@
+#include <cfloat>
 #include "C2ToolBar.h"
 
 #include <algorithm>
@@ -444,6 +445,25 @@ static void DrawC2MenuBar() {
 		if (ImGui::MenuItem("Ecology Kit", nullptr, false, IsC2KitAvailable("ecology")))
 			OpenC2Kit("ecology");
 		ImGui::EndMenu();
+	}
+	// the Creatures menu stops short of the screen's foot and scrolls
+	// (owner, 2026-11-13): at most 20 rows, or 60% of the window if less
+	{
+		float row = ImGui::GetTextLineHeightWithSpacing();
+		float maxh = std::min(20 * row, ImGui::GetIO().DisplaySize.y * 0.6f) + ImGui::GetStyle().WindowPadding.y * 2;
+		ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(FLT_MAX, maxh));
+	}
+	// developer aid: OPENC2E_TEST_MENU="Creatures" opens that menu once, for
+	// a snapshot of it
+	if (static const char* tm = getenv("OPENC2E_TEST_MENU"); tm && std::string(tm) == "Creatures" && world.tickcount > 0) {
+		static int frames = 0;
+		if (++frames == 30)
+			ImGui::OpenPopup("Creatures");
+		// (the world does not tick while a menu is open, so the picture is
+		// taken from here: OPENC2E_TEST_MENU_SHOT=file.bmp)
+		if (frames == 60)
+			if (const char* shot = getenv("OPENC2E_TEST_MENU_SHOT"))
+				get_backend()->requestScreenshot(shot);
 	}
 	if (ImGui::BeginMenu("Creatures")) {
 		int n = 0;
