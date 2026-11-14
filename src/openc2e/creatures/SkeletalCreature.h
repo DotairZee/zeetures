@@ -152,6 +152,7 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// walks pushed back by a wall so far, and the way of the last (10 west, 11 east)
 	unsigned int wallBumps() const { return walledCount; }
 	int wallBumpDir() const { return walledDir; }
+	unsigned int scriptMoveTick() const { return lastScriptMoveTick; }
 	unsigned int getSkelHeight() { return height; }
 
 	int attachmentX(unsigned int part, unsigned int id);

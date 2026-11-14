@@ -152,6 +152,31 @@ void Vehicle::drop(AgentRef passenger) {
 	passenger->beDropped();
 	assert(passenger->invehicle != AgentRef(this));
 
+	// C2: a creature let out stands over the shaft's own room. Some cabins
+	// are wider than their shafts: the cave lift by the waterwheel (cabin x
+	// 2220-2324, shaft room 94 to x 2308) let riders in its east side out
+	// over room 96, whose floor is the water channel's surface, so they
+	// dropped into the channel and the stream carried them off; creatures
+	// learned the lift as a way east and crowded its shaft (owner,
+	// 2026-11-13). The foot is slid toward the cabin's middle until it is in
+	// the room under the middle.
+	// (cage lifts only, 3 2 3: a boat's or the submarine's middle is over
+	// water, where no creature should be slid)
+	if (engine.version == 2 && passenger->family == 4 && world.map && family == 3 && genus == 2 && species == 3) {
+		float floorY = y + cabinbottom - 2;
+		float mid = x + (cabinleft + cabinright) / 2.0f;
+		std::shared_ptr<Room> shaft = world.map->roomAt(mid, floorY);
+		float fx = passenger->x + passenger->getWidth() / 2.0f;
+		if (shaft && world.map->roomAt(fx, floorY) != shaft) {
+			float step = fx < mid ? 1.0f : -1.0f;
+			for (float nx = fx; (step > 0 ? nx <= mid : nx >= mid); nx += step)
+				if (world.map->roomAt(nx, floorY) == shaft) {
+					passenger->moveTo(passenger->x + (nx + step * 4.0f - fx), passenger->y);
+					break;
+				}
+		}
+	}
+
 	// A creature let out with its feet in water, where dry floor lies just
 	// above, stands on that floor. C2's submarine lets its passengers out at
 	// the east dock with their feet below its berth (room 146, floor 906), in

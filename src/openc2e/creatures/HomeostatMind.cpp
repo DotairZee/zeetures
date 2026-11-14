@@ -935,6 +935,20 @@ class HomeostatMind : public CreatureMind {
 				pendingRode = true;
 			float moved = std::fabs(dxTo(p, pendingLink.fromX)) + std::fabs(p.y - pendingLink.fromY);
 			bool landed = pendingRode ? !p.riding : std::fabs(p.y - pendingLink.fromY) > prm.minRide;
+			// a ride is judged where it ends: a short one (the cave lift by the
+			// waterwheel rises only 170 px) used to leave the link pending, and
+			// the walk after it, up to linkWindow ticks, was taken for the
+			// ride, so "press the lift" came to lead across the world and
+			// hungry creatures crowded in its shaft riding it up and down
+			// (owner, 2026-11-13)
+			bool rideOver = pendingRode && !p.riding;
+			// a lift, or a call button, that gave no ride took it nowhere:
+			// walking off after a press is not the device's doing
+			bool rideOnly = pendingLink.category == prm.liftCategory || pendingLink.category == prm.buttonCategory;
+			if (rideOnly && !pendingRode && std::fabs(dxTo(p, pendingLink.fromX)) > prm.atPlace * 2)
+				rideOver = true;
+			if (rideOnly && !pendingRode)
+				landed = false;
 			if (landed && moved >= prm.linkMove && p.tick < pendingLinkTick + prm.linkWindow) {
 				bool known = false;
 				for (auto& tl : travelLinks)
@@ -957,9 +971,10 @@ class HomeostatMind : public CreatureMind {
 				fmt::print("[homeostat] creature {} t{}: learned travel link {}@{} from {:.0f},{:.0f} to {:.0f},{:.0f}\n", p.creatureId, p.tick,
 					actionName(pendingLink.decision), pendingLink.category, pendingLink.fromX, pendingLink.fromY, p.x, p.y);
 				pendingLink.category = -1;
-			} else if (p.tick >= pendingLinkTick + prm.linkWindow) {
+			} else if (rideOver || p.tick >= pendingLinkTick + prm.linkWindow) {
 				// a known link that took it nowhere this time: twice, and it is
-				// forgotten
+				// forgotten (a short ride counts: links wrongly learned from one
+				// are forgotten this way)
 				for (auto it = travelLinks.begin(); it != travelLinks.end(); ++it)
 					if (it->category == pendingLink.category && it->decision == pendingLink.decision &&
 						std::fabs(it->fromX - pendingLink.fromX) < 200.0f && std::fabs(it->fromY - pendingLink.fromY) < prm.sameLevel) {
@@ -1167,6 +1182,15 @@ class HomeostatMind : public CreatureMind {
 					noteBlocked(p, current.decision);
 				if (current.category >= 0 && episodeAgent && !current.chain)
 					pendingPassOver = episodeAgent;
+				// the place map's ways out of here that go that way count it
+				// as a failure (twice over: a wall is plain), so a way wrongly
+				// learned through the rock is soon left out of routes planned
+				// from elsewhere too; one through a door that was shut comes
+				// back as it is walked again
+				if (auto it = placeMap.find(cellOf(p.x, p.y)); it != placeMap.end())
+					for (auto& e : it->second)
+						if (e.dir == p.walledDir)
+							e.fails += 2;
 				fmt::print("[homeostat] creature {} t{}: {}@{} walked into a wall going {} at x {:.0f}; stops\n", p.creatureId, p.tick,
 					actionName(current.decision), current.category, p.walledDir == 10 ? "west" : "east", p.x);
 				endEpisode(p, d, D, "walled", true);
@@ -1712,6 +1736,7 @@ class HomeostatMind : public CreatureMind {
 	unsigned int forageStartTick = 0;
 	int forageStuckFlips = 0; // turnarounds in a row without progress
 	int forageVertical = 1; // which way to try another floor: -1 up, 1 down
+	unsigned int lastFloorChangeTick = 0; // when a forage last reached another floor
 	float hungryTicks = 0; // time hungry without a meal that eased it (restlessness)
 	unsigned int lastTick = 0;
 	int foodTrip = -1; // index in foodPlaces of the place being headed for
@@ -2211,13 +2236,17 @@ class HomeostatMind : public CreatureMind {
 	// Every tick: a step from one cell into the next under the creature's
 	// own power (walking, climbing, dropping; not riding or carried) is a way
 	// between them. A level step is assumed to go back the same way too.
+	// (Moved by a script is not its own power: the stream under the cave
+	// lift carries creatures east along the channel 14 px a tick, which was
+	// taken for walking east from the shaft's floor through the rock, and
+	// creatures walked into that wall for ever; owner, 2026-11-13.)
 	void updatePlaceMap(const MindPerception& p) {
 		Cell c = cellOf(p.x, p.y);
-		if (!mapCellValid || p.riding || p.carried) {
+		if (!mapCellValid || p.riding || p.carried || p.scriptMoved) {
 			mapCell = c;
 			mapX = p.x;
 			mapY = p.y;
-			mapCellValid = !p.riding && !p.carried;
+			mapCellValid = !p.riding && !p.carried && !p.scriptMoved;
 			return;
 		}
 		if (c == mapCell)
@@ -2571,6 +2600,7 @@ class HomeostatMind : public CreatureMind {
 			if (std::fabs(p.y - forageStartY) > prm.minRide) {
 				forageStuckFlips = 0; // reached another floor
 				forageHeading = 0;
+				lastFloorChangeTick = p.tick;
 			}
 			return;
 		}
@@ -2603,6 +2633,30 @@ class HomeostatMind : public CreatureMind {
 			float searched = (float)prm.floorSearched * prm.forageLookBins;
 			bool floorDone = stale(10) < searched && stale(11) < searched;
 			float roll = (float)((p.tick * 2654435761u) % 1000u) / 1000.0f;
+			// just come from another floor, and that one is searched too:
+			// changing floors again only rides back and forth (hungry
+			// creatures crowded the cave lift's shaft riding it up and down
+			// between two searched floors; owner, 2026-11-13). Walk on along
+			// this floor instead, toward the less recently visited side,
+			// past the nearby bins.
+			float otherRow = staleRow(forageVertical);
+			bool justChanged = p.tick < lastFloorChangeTick + prm.forageCommit * 2;
+			if (justChanged && floorDone && otherRow < (float)prm.floorSearched * (2 * prm.forageLookBins + 1)) {
+				int choice = 0;
+				if (open(10) && open(11))
+					choice = stale(10) >= stale(11) ? 10 : 11;
+				else if (open(10))
+					choice = 10;
+				else if (open(11))
+					choice = 11;
+				if (choice) {
+					forageHeading = choice;
+					forageUntil = p.tick + prm.forageCommit * 3;
+					forageStuckFlips = 0;
+					floorDone = false;
+					roll = 1.0f;
+				}
+			}
 			if (floorDone || roll < prm.restlessLeaveFloor * restless) {
 				forageStuckFlips = 2; // look on another floor (handled next tick)
 				forageStartY = p.y;

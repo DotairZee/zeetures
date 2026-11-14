@@ -942,6 +942,7 @@ MindPerception oldCreature::buildPerception() {
 	if (auto* sc = dynamic_cast<SkeletalCreature*>(parentagent)) {
 		p.walledCount = sc->wallBumps();
 		p.walledDir = sc->wallBumpDir();
+		p.scriptMoved = sc->scriptMoveTick() > 0 && world.tickcount <= sc->scriptMoveTick() + 5;
 	}
 	p.carried = (bool)parentagent->carriedby;
 	if (world.map)
