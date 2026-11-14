@@ -375,7 +375,7 @@ struct Params {
 	// devices worth trying to get out (C2 categories are genus numbers):
 	// call buttons (2), machines such as the airlock pump (3), doors such as
 	// the airlock's (9), lifts (27)
-	std::vector<int> escapeDevices{2, 3, 9, 27};
+	std::vector<int> escapeDevices{2, 3, 9, 27, 33}; // (33 teleporters: see starveLeave)
 
 	// Boats (owner request): walking a trip into water is avoided; with a boat
 	// in view, rowing that way is worth the trip. C2 boats (category 31): the
@@ -392,6 +392,18 @@ struct Params {
 	// it and ends at least linkGain px closer to where it wants to be.
 	float linkMove = 300.0f;
 	float linkNear = 350.0f;
+	// Leaving a place to find food (2026-11-14): starving (Hunger at least
+	// starveLeaveHunger) and long without a meal (restlessRamp), a creature
+	// takes a known way from here that leads far off (a learned travel link
+	// at least starveLeaveFar px away), or tries a teleporter (category 33)
+	// in view, worth starveLeaveShare of a meal. The gene lab's lower room
+	// has no way out but its teleporter; creatures that had learned it still
+	// starved at the room's far end, acting on each other, as nothing offered
+	// outweighed that. Doors and machines are left out (airlocks).
+	float starveLeaveHunger = 0.85f;
+	float starveLeaveFar = 800.0f;
+	float starveLeaveShare = 0.7f;
+	int teleporterCategory = 33;
 	float linkGain = 400.0f;
 	unsigned int linkWindow = 600;
 	size_t linkMax = 16;
@@ -1280,6 +1292,11 @@ class HomeostatMind : public CreatureMind {
 		// or 2, deactivate; see learnRide)
 		if (choice.category == prm.liftCategory && ((choice.decision >= 1 && choice.decision <= 3) || getenv("OPENC2E_KEEP_BADLINKS")))
 			lastLiftDecision = choice.decision;
+		if (choice.place == "leave:Hunger") {
+			starveLeaveTick = p.tick;
+			starveLeaveX = p.x;
+			starveLeaveY = p.y;
+		}
 		current = choice;
 		inEpisode = true;
 		fellAsleep = false;
@@ -1914,6 +1931,8 @@ class HomeostatMind : public CreatureMind {
 	}
 	std::map<int, unsigned int> exploreBlockedUntil; // room -> not explored toward until then
 	int exploreTarget = -1; // the room the latest explore trip heads for
+	unsigned int starveLeaveTick = 0; // the latest try at leaving for food (see starveLeaveHunger)
+	float starveLeaveX = 0, starveLeaveY = 0;
 
 	// East-west distances the short way round a wrapping world (C2's joins
 	// its far west edge to its far east): wrapD folds a difference into
@@ -2561,6 +2580,62 @@ class HomeostatMind : public CreatureMind {
 			for (size_t i = before; i < out.size(); i++)
 				out[i].food = true;
 		}
+	}
+
+	// Leaving a place to find food (see starveLeaveHunger)
+	void addStarveLeave(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, std::vector<Candidate>& out) {
+		// (developer aid: OPENC2E_NO_STARVELEAVE turns this off, for comparison)
+		static const bool off = getenv("OPENC2E_NO_STARVELEAVE") != nullptr;
+		if (off || p.inWater || d[HUNGER] < prm.starveLeaveHunger || hungryTicks < prm.restlessRamp)
+			return;
+		for (auto& s : p.visible)
+			if (s.reachable && s.edible > 0.1f)
+				return; // food at hand
+		float want = expectedMealRelief(d, D) * prm.starveLeaveShare;
+		if (want < prm.seekMinWant)
+			return;
+		// a try from here lately that took it nowhere (the big teleporter pad
+		// by the incubator only receives: starving arrivals kept working it)
+		if (p.tick < starveLeaveTick + 300 && std::fabs(dxTo(p, starveLeaveX)) < 300.0f && std::fabs(p.y - starveLeaveY) < prm.sameLevel)
+			return;
+		// a known way from here that leads far off
+		const TravelLink* best = nullptr;
+		float bestFar = prm.starveLeaveFar;
+		for (auto& tl : travelLinks) {
+			if (tl.category == prm.liftCategory || tl.category == prm.buttonCategory || tl.category == 3 || tl.category == 9)
+				continue; // (lifts and their buttons: the floor-change steps have them; machines and doors: airlocks)
+			if (std::fabs(dxTo(p, tl.fromX)) > prm.linkNear || std::fabs(tl.fromY - p.y) > prm.sameLevel)
+				continue;
+			bool usable = false;
+			for (auto& sa : p.visible)
+				if (sa.category == tl.category && sa.reachable && sa.activatable)
+					usable = true;
+			if (!usable || isFutile(p, tl.category, tl.decision))
+				continue;
+			float far = std::fabs(dxTo(p, tl.toX)) + std::fabs(tl.toY - p.y);
+			if (far > bestFar) {
+				bestFar = far;
+				best = &tl;
+			}
+		}
+		if (best) {
+			Candidate c{best->category, best->decision, 0, want, 0, want};
+			c.chain = true;
+			c.food = true;
+			c.place = "leave:Hunger";
+			out.push_back(c);
+			return;
+		}
+		// or a teleporter in view, tried
+		for (auto& sa : p.visible)
+			if (sa.category == prm.teleporterCategory && sa.reachable && sa.activatable && !isFutile(p, sa.category, 1)) {
+				Candidate c{sa.category, 1, sa.distance, want * 0.8f, 0, want * 0.8f};
+				c.chain = true;
+				c.food = true;
+				c.place = "leave:Hunger";
+				out.push_back(c);
+				return;
+			}
 	}
 
 	// Foraging: searching when nothing better is known.
@@ -3507,6 +3582,7 @@ class HomeostatMind : public CreatureMind {
 		addScentFollow(p, d, D, canWest, canEast, out);
 		addScentUrges(p, d, D, canWest, canEast, out);
 		addForage(p, d, D, canWest, canEast, out);
+		addStarveLeave(p, d, D, out);
 		addMateSeek(p, d, D, canWest, canEast, out);
 		addFavourites(p, d, D, canWest, canEast, out);
 		addLeave(p, d, D, canWest, canEast, out);
