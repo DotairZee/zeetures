@@ -193,7 +193,47 @@ void think(Agent* creature, const std::vector<std::string>& items, const std::st
 		fmt::print("* THINKS {}: {}\n", creature->getUNID(), key);
 }
 
+// C2's stars for a creature out cold (owner, 2026-11-13: "a halo of stars
+// starts circling around their heads in the same location as the
+// indicator halo"): the player's own star.s16, ten frames of a ring of
+// stars turning, drawn by the engine (no world script uses it) over each
+// unconscious creature, where the selection halo sits: over its head,
+// the ring's middle a little above the head's top
+static void drawStars(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth) {
+	std::shared_ptr<creaturesImage> star;
+	for (auto& a : world.agents) {
+		if (!a || a->family != 4 || a->isDying())
+			continue;
+		auto* ca = dynamic_cast<CreatureAgent*>(a.get());
+		auto* oc = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+		if (!oc || !oc->isAlive() || !oc->isUnconscious())
+			continue;
+		if (!star) {
+			star = world.gallery ? world.gallery->getImage("star") : nullptr;
+			if (!star || star->numframes() == 0)
+				return;
+		}
+		unsigned int frame = world.tickcount % star->numframes();
+		int w = (int)star->width(frame), h = (int)star->height(frame);
+		// round its head (lying down, its head is off to one side)
+		float cx = a->x + a->getWidth() / 2.0f;
+		float top = a->y;
+		if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()))
+			sc->headTop(cx, top);
+		for (int pass = 0; pass < (wrapWidth > 0 ? 3 : 1); pass++) {
+			float shift = pass == 1 ? (float)wrapWidth : pass == 2 ? -(float)wrapWidth : 0.0f;
+			float sx = cx - w / 2.0f - adjustx + shift;
+			float sy = top - h * 0.6f - adjusty;
+			if (sx + w < 0 || sx > surface->getWidth())
+				continue;
+			surface->renderCreaturesImage(*star, frame, (int)sx, (int)sy);
+		}
+	}
+}
+
 void draw(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth) {
+	if (engine.version == 2)
+		drawStars(surface, adjustx, adjusty, wrapWidth);
 	if (s_showing.empty())
 		return;
 	unsigned int now = world.tickcount;
