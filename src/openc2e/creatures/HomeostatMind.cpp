@@ -1291,37 +1291,45 @@ class HomeostatMind : public CreatureMind {
 	}
 
 	// World saving: one fact per line, readable and hand-editable.
+	// (learned numbers are written to 4 significant figures: at 9, with 145
+	// creatures, the save was 28 MB; 2026-11-13)
 	std::string saveState() const override {
 		std::string s = fmt::format("statever 5\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
 		s += "drift";
 		for (float f : drift)
-			s += fmt::format(" {}", f);
+			s += fmt::format(" {:.4g}", f);
 		s += "\nhabituation";
 		for (float f : habituation)
-			s += fmt::format(" {}", f);
+			s += fmt::format(" {:.4g}", f);
 		s += "\n";
 		for (auto& [key, e] : expectations) {
+			// (one never tried and with nothing in it is not written: as
+			// good as absent)
+			if (e.count <= 0 && e.prior <= 0 && std::all_of(std::begin(e.delta), std::end(e.delta), [](float f) { return f == 0.0f; }))
+				continue;
 			// key = (category + 1) * 64 + decision
 			s += fmt::format("expect {} {} {}", key / 64 - 1, key % 64, e.count);
 			for (float f : e.delta)
-				s += fmt::format(" {}", f);
+				s += fmt::format(" {:.4g}", f);
 			s += "\n";
 			if (e.prior > 0)
 				s += fmt::format("prior {} {} {}\n", key / 64 - 1, key % 64, e.prior);
 		}
 		for (auto& [who, decisions] : individuals)
 			for (auto& [decision, e] : decisions) {
-				if (e.count <= 0)
+				// (one dealing only is not kept: two thirds of these records,
+				// each counting a quarter against the general expectation)
+				if (e.count <= 1)
 					continue;
 				s += fmt::format("individual {} {} {}", who, decision, e.count);
 				for (float f : e.delta)
-					s += fmt::format(" {}", f);
+					s += fmt::format(" {:.4g}", f);
 				s += "\n";
 			}
 		for (auto& [decision, e] : innateDefaults) {
 			s += fmt::format("innate {} {}", decision, e.prior);
 			for (float f : e.delta)
-				s += fmt::format(" {}", f);
+				s += fmt::format(" {:.4g}", f);
 			s += "\n";
 		}
 		for (auto& sig : appliedInstincts)
@@ -1354,12 +1362,12 @@ class HomeostatMind : public CreatureMind {
 		// sense of place
 		s += fmt::format("feelbase {}", feelBaseTicks);
 		for (float f : feelBase)
-			s += fmt::format(" {}", f);
+			s += fmt::format(" {:.4g}", f);
 		s += "\n";
 		for (auto& [id, r] : rooms) {
 			s += fmt::format("room {} {:.0f} {:.0f} {} {} {} {} {} {:.0f} {:.0f}", id, r.x, r.floor, r.metaroom, r.water ? 1 : 0, r.visits, r.first, r.last, r.ticks, r.feelTicks);
 			for (float f : r.feelSum)
-				s += fmt::format(" {}", f);
+				s += fmt::format(" {:.4g}", f);
 			s += "\n";
 			for (auto& [category, sg] : r.seen)
 				s += fmt::format("rseen {} {} {:.0f} {:.0f} {} {}\n", id, category, sg.x, sg.y, sg.last, sg.times);
@@ -1446,6 +1454,7 @@ class HomeostatMind : public CreatureMind {
 				l >> id >> who >> n;
 				if (l && rooms.count(id))
 					rooms[id].met[who] = n;
+					trimMet(rooms[id].met, who);
 			} else if (what == "metat") {
 				std::string who;
 				MetCreature m;
@@ -1624,7 +1633,7 @@ class HomeostatMind : public CreatureMind {
 		std::array<float, NUM_DRIVES> feelSum{}; // drive change while here
 		float feelTicks = 0;
 		std::map<int, RoomSighting> seen; // by category
-		std::map<std::string, int> met; // creatures met here: moniker -> meetings
+		std::map<std::string, int> met; // creatures met here: moniker -> meetings (the most met only; trimMet)
 	};
 	struct MetCreature {
 		int room = -1;
@@ -2990,6 +2999,20 @@ class HomeostatMind : public CreatureMind {
 		return roomBadness(r) > prm.avoidFeel;
 	}
 
+	// A room's meetings are kept for the creatures met there most (6): with
+	// 145 creatures every creature remembered every other one in every room,
+	// and the save grew to 28 MB, 287,000 lines of meetings (2026-11-13).
+	static void trimMet(std::map<std::string, int>& met, const std::string& keep) {
+		while (met.size() > 6) {
+			auto least = met.end();
+			for (auto it = met.begin(); it != met.end(); ++it)
+				if (it->first != keep && (least == met.end() || it->second < least->second))
+					least = it;
+			if (least == met.end())
+				break;
+			met.erase(least);
+		}
+	}
 	void updatePlaces(const MindPerception& p, const std::array<float, NUM_DRIVES>& d) {
 		if (p.room < 0 || p.riding || p.carried) {
 			placePrevValid = false;
@@ -3053,6 +3076,7 @@ class HomeostatMind : public CreatureMind {
 				MetCreature& m = metAt[s.who];
 				if (m.room != p.room || !m.last || p.tick > m.last + prm.sightingGap)
 					r.met[s.who]++;
+					trimMet(r.met, s.who);
 				m.room = p.room;
 				m.x = s.x;
 				m.y = s.y;

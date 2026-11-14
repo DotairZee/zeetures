@@ -1995,6 +1995,19 @@ bool Engine::initialSetup() {
 	return true;
 }
 
+bool Engine::saveForQuit() {
+	if (!(version < 3 && worldready && autosave && !currentworlddir.empty()))
+		return false;
+	std::string err;
+	fmt::print("* Auto-saving world '{}'\n", currentworld);
+	if (!WorldSave::SaveWorldState(currentworlddir, err)) {
+		fmt::print(stderr, "Auto-save failed: {}\n", err);
+		return false;
+	}
+	fmt::print("* Saved; quitting\n");
+	return true;
+}
+
 void Engine::shutdown() {
 	// C1/C2: auto-save the open world (on quit and when switching worlds)
 	if (version < 3 && worldready && autosave && !currentworlddir.empty()) {

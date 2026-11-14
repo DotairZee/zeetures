@@ -128,6 +128,9 @@ class Engine {
 	bool parseCommandLine(int argc, char* argv[]);
 	bool initialSetup();
 	void shutdown();
+	// C1/C2 on quitting: save the open world now (if it is saved on quit),
+	// true if that worked; the caller may then end the process at once
+	bool saveForQuit();
 
 	bool noRun() { return cmdline_norun; }
 };

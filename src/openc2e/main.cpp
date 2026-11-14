@@ -72,6 +72,17 @@ int main(int argc, char* argv[]) {
 		return true;
 	});
 
+	// C1/C2: once the world is saved, end at once. Tearing the world and
+	// the audio down after the save gained nothing and could hang: on
+	// 2026-11-13 stopping the mixer made PipeWire free corrupted memory,
+	// the C library aborted, and the crash report deadlocked in the abort
+	// (Home never closed). Test runs (--no-autosave) still shut down fully.
+	if (engine.saveForQuit()) {
+		fflush(stdout);
+		fflush(stderr);
+		std::_Exit(0);
+	}
+
 	// we're done, be sure to shut stuff down
 	engine.shutdown();
 
