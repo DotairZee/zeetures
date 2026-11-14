@@ -18,6 +18,7 @@
  */
 
 #include "Profile.h"
+#include "creatures/SkeletalCreature.h"
 #include <chrono>
 #include "Engine.h"
 
@@ -490,6 +491,12 @@ uint32_t Engine::get_ticks_msec() const {
 // draw order (bottom to top) of the agent parts whose agents lie between x0
 // and x1, with their planes, to check what is drawn over what
 static void dumpRenders() {
+	// developer aid: OPENC2E_DUMP_CREATURE_PARTS lists every creature's part
+	// pictures, frames and growth scales at each snapshot
+	if (getenv("OPENC2E_DUMP_CREATURE_PARTS"))
+		for (auto& a : world.agents)
+			if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()))
+				fmt::print("* PARTS unid {} at {:.0f},{:.0f}: {}\n", a->getUNID(), a->x, a->y, sc->describeParts());
 	int x0, x1;
 	const char* s = getenv("OPENC2E_DUMP_RENDERS");
 	if (!s || sscanf(s, "%d,%d", &x0, &x1) != 2)

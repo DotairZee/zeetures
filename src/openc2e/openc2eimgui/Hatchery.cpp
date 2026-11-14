@@ -1335,6 +1335,16 @@ static void TestLineup() {
 	static int shotFrames = -1;
 	if (shotFrames >= 0) {
 		shotFrames++;
+		// (aimed again just before: something can move the view meanwhile)
+		if (shotFrames == 15) {
+			int sx, sy;
+			if (sscanf(getenv("OPENC2E_LINEUP_SHOT"), "%d,%d", &sx, &sy) == 2) {
+				if (const char* z = getenv("OPENC2E_SNAPSHOT_ZOOM"))
+					engine.zoom = (float)atof(z);
+				engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+				engine.camera->moveToGlobal(sx, sy, jump);
+			}
+		}
 		if (shotFrames == 20) {
 			int sx, sy;
 			char file[512];
@@ -1405,7 +1415,7 @@ static void TestLineup() {
 		if (!a || a->family != 4 || before.count(a.get()))
 			continue;
 		if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()))
-			sc->poseInPlace("111111111111111"); // standing, facing you (as in birth photos)
+			sc->poseInPlace(getenv("OPENC2E_LINEUP_POSE") ? getenv("OPENC2E_LINEUP_POSE") : "111111111111111"); // standing, facing you (as in birth photos); OPENC2E_LINEUP_POSE: another pose string
 		float cx = a->x + a->getWidth() / 2.0f;
 		for (float yy = a->y + a->getHeight() - 2; yy < a->y + 600; yy += 2)
 			if (std::shared_ptr<Room> r = world.map->roomAt(cx, yy)) {

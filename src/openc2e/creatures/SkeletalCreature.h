@@ -67,6 +67,7 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	std::map<unsigned int, creatureGaitGene*> gaitgenes;
 
 	std::shared_ptr<creaturesImage> images[17];
+	float partk[17] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; // each part's growth scale (stage growth)
 	attFile att[17];
 
 	int width, height, adjustx, adjusty;
@@ -146,6 +147,8 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// how wide its picture is in this pose, from its x (its box is a fixed
 	// 50 wide; a big grendel is drawn much wider)
 	int drawnWidth() const { return drawnwidth; }
+	// developer aid: its parts' pictures, frames and growth scales
+	std::string describeParts();
 	// walks pushed back by a wall so far, and the way of the last (10 west, 11 east)
 	unsigned int wallBumps() const { return walledCount; }
 	int wallBumpDir() const { return walledDir; }

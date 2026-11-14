@@ -564,6 +564,7 @@ void SkeletalCreature::skeletonInit() {
 		// pictures and every joint point together, so the parts still meet
 		float k = partGrowthOn() ? partGrowth(x, spe, foundfemale, foundvar, foundstage, creature->getStage())
 								 : stageScale(spe, foundfemale, foundvar, creature->getStage());
+		partk[i] = k;
 		if (std::fabs(k - 1.0f) > 0.01f) {
 			images[i] = world.gallery->scaled(images[i], k);
 			for (auto& pose : att[i].attachments)
@@ -1453,7 +1454,22 @@ void SkeletalCreature::tick() {
 	if (shoveticks > 0) {
 		if (!falling && !carriedby && !invehicle) {
 			float step = 2.0f + shoveticks * 1.2f; // 14 px, easing to 3
-			moveTo(x + shovedir * step, y);
+			// not through a wall: a shove that would carry the feet into a
+			// room it could not walk into ends there (norns pushing a norn
+			// beside the wall of a sealed shaft west of the music room, x
+			// 1546, shoved it into the shaft; 2026-11-13)
+			bool walled = false;
+			if (engine.version == 2 && world.map) {
+				float cx = x + getWidth() / 2.0f, feet = y + getHeight();
+				std::shared_ptr<Room> r = world.map->roomAt(cx, feet - 1);
+				std::shared_ptr<Room> to = world.map->roomAt(cx + shovedir * step, feet - 1);
+				if (r && to != r && (!to || !world.map->hasDoor(r, to) || world.map->getDoorPerm(r, to) < size))
+					walled = true;
+			}
+			if (walled)
+				shoveticks = 1;
+			else
+				moveTo(x + shovedir * step, y);
 		}
 		shoveticks--;
 	}
@@ -1754,4 +1770,12 @@ void SkeletalCreature::landed(float height) {
 void SkeletalCreature::scriptMoved() {
 	downfootroom.reset();
 	lastScriptMoveTick = world.tickcount;
+}
+
+std::string SkeletalCreature::describeParts() {
+	std::string s = fmt::format("stage {} {}", (int)creature->getStage(), creature->isFemale() ? "female" : "male");
+	for (int i = 0; i < 17; i++)
+		if (images[i])
+			s += fmt::format(" {}:{}f{}k{:.2f}", i, images[i]->getName(), pose[i], partk[i]);
+	return s;
 }

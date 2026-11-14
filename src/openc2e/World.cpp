@@ -313,8 +313,10 @@ void World::tick() {
 	// developer aid: OPENC2E_TEST_PUSH=1 shoves the selected creature east
 	// once, at tick 100 (the push hand)
 	static bool testPush = getenv("OPENC2E_TEST_PUSH") != nullptr;
-	if (testPush && tickcount == 100 && selectedcreature) {
-		shoveCreature(selectedcreature.get(), 1);
+	// (=-1: west; =w: west every 20 ticks from tick 100, against a wall)
+	if (testPush && selectedcreature && (tickcount == 100 || (std::string(getenv("OPENC2E_TEST_PUSH")) == "w" && tickcount > 100 && tickcount % 20 == 0))) {
+		std::string tp = getenv("OPENC2E_TEST_PUSH");
+		shoveCreature(selectedcreature.get(), tp == "-1" || tp == "w" ? -1 : 1);
 		fmt::print("* TEST PUSH at {:.0f},{:.0f}\n", selectedcreature->x, selectedcreature->y);
 	}
 
