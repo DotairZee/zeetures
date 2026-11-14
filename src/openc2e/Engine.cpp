@@ -345,7 +345,7 @@ std::string Engine::executeNetwork(std::string in) {
 }
 
 unsigned int Engine::tickInterval() const {
-	unsigned int t = world.ticktime / (unsigned int)std::max(1, speed);
+	unsigned int t = (unsigned int)std::lround(world.ticktime / std::clamp(speed, 0.1f, 100.0f));
 	return std::max(1u, t);
 }
 
@@ -556,6 +556,19 @@ void Engine::update() {
 	static const int tickrate = getenv("OPENC2E_TICKRATE") ? std::max(1, atoi(getenv("OPENC2E_TICKRATE"))) : 0;
 	auto t0 = std::chrono::steady_clock::now();
 	world.tick();
+	// the pace reached, measured over about two seconds of real time, for
+	// the toolbar's speed control (a busy world may not keep up)
+	{
+		unsigned int now = get_ticks_msec();
+		if (!measureStart)
+			measureStart = now;
+		measureTicks++;
+		if (now - measureStart >= 2000) {
+			measuredSpeed = measureTicks * (float)world.ticktime / (float)(now - measureStart);
+			measureStart = now;
+			measureTicks = 0;
+		}
+	}
 	if (tickrate) {
 		static double spent = 0;
 		static int ticks = 0;
@@ -886,7 +899,7 @@ bool Engine::tick() {
 			fastticks = true; // run the world as fast as possible (headless tests)
 		// developer aid: OPENC2E_SPEED=n starts at that game speed
 		if (const char* sp = getenv("OPENC2E_SPEED"))
-			speed = std::clamp(atoi(sp), 1, 10);
+			speed = std::clamp((float)atof(sp), 0.5f, 10.0f);
 		int x0, y0, x1, y1;
 		if (const char* s = getenv("OPENC2E_DUMP_ROOMS"); s && sscanf(s, "%d,%d,%d,%d", &x0, &y0, &x1, &y1) == 4) {
 			for (unsigned int i = 0; i < world.map->getMetaRoomCount(); i++) {
@@ -968,9 +981,9 @@ bool Engine::tick() {
 
 	// tick if necessary
 	const unsigned int interval = tickInterval();
-	bool needupdate = fastticks || !get_ticks_msec() || (get_ticks_msec() - tickdata >= (speed > 1 ? interval : world.ticktime - 5));
+	bool needupdate = fastticks || !get_ticks_msec() || (get_ticks_msec() - tickdata >= (speed != 1.0f ? interval : world.ticktime - 5));
 	if (needupdate && !world.paused) {
-		if (!fastticks && speed > 1) {
+		if (!fastticks && speed > 1.0f) {
 			// fast forward: ticks fall due faster than frames are drawn, so
 			// run every tick that is due, keeping to the schedule, but no
 			// more than about 40 ms of them before the next frame (a machine

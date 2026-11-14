@@ -444,19 +444,6 @@ static void DrawC2MenuBar() {
 			OpenC2Kit("chronicles");
 		if (ImGui::MenuItem("Ecology Kit", nullptr, false, IsC2KitAvailable("ecology")))
 			OpenC2Kit("ecology");
-		ImGui::Separator();
-		// fast forward (owner, 2026-11-13): the world's ticks run this many
-		// times as often; a busy world may not reach 10x and runs as fast as
-		// the machine allows
-		if (ImGui::BeginMenu("Game Speed")) {
-			static const int speeds[] = {1, 2, 4, 10};
-			for (int sp : speeds) {
-				std::string label = sp == 1 ? std::string("Normal") : fmt::format("{}x", sp);
-				if (ImGui::MenuItem(label.c_str(), nullptr, engine.speed == sp))
-					engine.speed = sp;
-			}
-			ImGui::EndMenu();
-		}
 		ImGui::EndMenu();
 	}
 	// the Creatures menu stops short of the screen's foot and scrolls
@@ -1234,6 +1221,50 @@ void DrawC2Toolbar() {
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Zoom: the size of the view (also Ctrl+wheel; Ctrl+0 for actual size)");
+		// game speed, beside the zoom (owner, 2026-11-14: on the toolbar,
+		// not in a menu; arrows change it by 0.5 up to 10x, or type a
+		// number): 0.5x (slow) to 10x
+		{
+			auto speedText = [](float s) { return fmt::format("{:g}x", std::round(s * 10.0f) / 10.0f); };
+			auto setSpeed = [](float s) { engine.speed = std::clamp(std::round(s * 10.0f) / 10.0f, 0.5f, 10.0f); };
+			ImGui::Text("Speed:");
+			static char s_speedBuf[16] = "1x";
+			static bool s_speedEditing = false;
+			if (!s_speedEditing)
+				snprintf(s_speedBuf, sizeof s_speedBuf, "%s", speedText(engine.speed).c_str());
+			ImGui::SetNextItemWidth(46);
+			if (ImGui::InputText("##Speed", s_speedBuf, sizeof s_speedBuf, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll)) {
+				std::string t = s_speedBuf;
+				t.erase(std::remove_if(t.begin(), t.end(), [](char ch) { return ch == 'x' || ch == 'X' || ch == ' '; }), t.end());
+				char* end = nullptr;
+				float v = std::strtof(t.c_str(), &end);
+				if (end != t.c_str() && v > 0)
+					setSpeed(v);
+			}
+			s_speedEditing = ImGui::IsItemActive();
+			if (ImGui::IsItemDeactivated())
+				s_speedEditing = false;
+			auto speedTip = [&]() {
+				std::string tip = "Game speed: how fast the world runs (1x is normal). The arrows change it by 0.5, or type a number from 0.5 to 10.";
+				if (engine.speed > 1.0f && engine.measuredSpeed < engine.speed * 0.9f)
+					tip += fmt::format("\nThe world is busy and is running at about {:.1f}x.", engine.measuredSpeed);
+				ImGui::SetTooltip("%s", tip.c_str());
+			};
+			if (ImGui::IsItemHovered())
+				speedTip();
+			ImGui::BeginDisabled(engine.speed >= 10.0f);
+			if (ImGui::ArrowButton("##speedup", ImGuiDir_Up))
+				setSpeed(engine.speed + 0.5f);
+			ImGui::EndDisabled();
+			if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+				ImGui::SetTooltip("Faster (+0.5)");
+			ImGui::BeginDisabled(engine.speed <= 0.5f);
+			if (ImGui::ArrowButton("##speeddown", ImGuiDir_Down))
+				setSpeed(engine.speed - 0.5f);
+			ImGui::EndDisabled();
+			if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+				ImGui::SetTooltip("Slower (-0.5)");
+		}
 		};
 
 		DrawToolbarBands({bandStandard, bandPointer, bandApplets, bandFavourites});

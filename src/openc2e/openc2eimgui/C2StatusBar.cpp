@@ -142,7 +142,7 @@ void DrawC2StatusBar() {
 		// the day of the season (openc2e addition, owner 2026-11-11): C2's
 		// seasons are four days long
 		ImGui::Text("Day %u", world.dayofseason % 4 + 1);
-		ImGui::Text("Year: %03i", world.year);
+		ImGui::Text("Year %03i", world.year); // (no colon: owner, 2026-11-14)
 
 		static std::array<Texture, 6> s_healthicons_texs;
 		if (!s_healthicons_texs[0]) {
