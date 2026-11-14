@@ -17,6 +17,7 @@
  *
  */
 
+#include "creatures/CreatureSpeech.h"
 #include "Agent.h"
 #include "Catalogue.h"
 #include "Engine.h"
@@ -1014,10 +1015,12 @@ static const int noPopulationCap = 1000000;
  openc2e: no limit (a number larger than any population).
 */
 void v_EGGL(caosVM* vm) {
-	// openc2e: no cap on the population (owner, 2026-11-10). C2 read this
-	// from its options (16 by default); its egg and kiss scripts compare the
+	// openc2e: no cap on the population (owner, 2026-11-10), unless the
+	// player sets one in the Hatchery (owner, 2026-11-13). C2 read this from
+	// its options (16 by default); its egg and kiss scripts compare the
 	// number of norns with it.
-	vm->result.setInt(noPopulationCap);
+	int limit = populationLimit();
+	vm->result.setInt(limit > 0 ? limit : noPopulationCap);
 }
 
 /**
@@ -1029,8 +1032,10 @@ void v_EGGL(caosVM* vm) {
  openc2e: no limit (a number larger than any population).
 */
 void v_HATL(caosVM* vm) {
-	// openc2e: no cap on the population (owner, 2026-11-10); C2's was 12
-	vm->result.setInt(noPopulationCap);
+	// openc2e: no cap on the population (owner, 2026-11-10), unless the
+	// player sets one in the Hatchery (owner, 2026-11-13); C2's was 12
+	int limit = populationLimit();
+	vm->result.setInt(limit > 0 ? limit : noPopulationCap);
 }
 
 /* vim: set noet: */

@@ -175,6 +175,25 @@ void writePlayerSetting(const std::string& key, const std::string& value) {
 	writeSetting(key, value);
 }
 
+static int s_population_limit = -1; // -1: not read yet
+
+int populationLimit() {
+	if (s_population_limit < 0) {
+		// developer aid: OPENC2E_POPULATION_LIMIT=n starts with that limit
+		// (not saved), for tests that must not touch the player's settings
+		if (const char* e = getenv("OPENC2E_POPULATION_LIMIT"))
+			return s_population_limit = std::max(0, atoi(e));
+		std::string v = readSetting("population-limit");
+		s_population_limit = v.empty() ? 0 : std::max(0, atoi(v.c_str()));
+	}
+	return s_population_limit;
+}
+
+void setPopulationLimit(int norns) {
+	s_population_limit = std::max(0, norns);
+	writeSetting("population-limit", std::to_string(s_population_limit));
+}
+
 static int s_autosave_minutes = -1; // -1: not read yet
 
 int autosaveMinutes() {

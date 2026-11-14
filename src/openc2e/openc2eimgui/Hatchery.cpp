@@ -1288,6 +1288,38 @@ static void DrawNursery() {
 	ImGui::EndChild();
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar();
+
+	// the most norns the world allows (owner, 2026-11-13): the game's own
+	// egg and hatchery limits, which openc2e otherwise leaves open
+	{
+		int norns = 0;
+		for (auto& a : world.agents)
+			if (a && a->family == 4 && a->genus == 1 && !a->isDying())
+				norns++;
+		int limit = populationLimit();
+		bool on = limit > 0;
+		ImGui::Dummy(ImVec2(1, 2));
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Norns in the world: %d", norns);
+		ImGui::SameLine(0, 24);
+		if (ImGui::Checkbox("Limit the number of norns", &on))
+			setPopulationLimit(on ? std::max(norns, 16) : 0);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("At the limit, norns stop mating and their eggs wait to hatch until there are fewer.\nGrendels and ettins keep their own rules.");
+		if (on) {
+			ImGui::SameLine();
+			ImGui::TextUnformatted("at most");
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(110);
+			int v = limit;
+			if (ImGui::InputInt("##poplimit", &v, 1, 10))
+				setPopulationLimit(std::clamp(v, 2, 999));
+			if (norns >= limit) {
+				ImGui::SameLine(0, 12);
+				ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kGold), "At the limit");
+			}
+		}
+	}
 }
 
 // developer aid: OPENC2E_TEST_LINEUP="Boney,female" (a breed as the

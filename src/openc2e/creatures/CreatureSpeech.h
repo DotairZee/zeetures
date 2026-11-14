@@ -104,6 +104,12 @@ void writePlayerSetting(const std::string& key, const std::string& value);
 // (owner, 2026-11-11).
 int autosaveMinutes();
 void setAutosaveMinutes(int minutes);
+// the most norns the world allows (the player's setting "population-limit",
+// set in the Hatchery; owner, 2026-11-13): C2's egg and hatchery limits
+// (EGGL, HATL), which its kiss and egg scripts compare the number of norns
+// with; 0 is no limit
+int populationLimit();
+void setPopulationLimit(int norns);
 
 // Speech History (the toolbar's list): the last things creatures and the
 // hand said, newest first.
