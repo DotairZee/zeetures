@@ -1109,8 +1109,15 @@ void c_ROOM_c2(caosVM* vm) {
 
 	std::shared_ptr<Room> r = world.map->getRoom(roomno);
 	if (!r) {
+		// a new room: made in the metaroom around its middle, with the id
+		// asked for (it was made and then dropped, never added to the map)
 		r = std::shared_ptr<Room>(new Room(left, right, top, top, bottom, bottom));
+		MetaRoom* m = world.map->metaRoomAt((left + right) / 2, (top + bottom) / 2);
+		THROW_IFNOT(m);
+		m->addRoom(r);
 		r->id = roomno;
+		if (world.map->room_base <= (unsigned int)roomno)
+			world.map->room_base = roomno + 1;
 	} else {
 		// resize fully: the wall lines too, or the room's containment and
 		// collisions would stay at its old size
