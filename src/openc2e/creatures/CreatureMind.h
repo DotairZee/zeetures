@@ -43,6 +43,7 @@ struct SeenAgent {
 	float edible = 0; // scent: how nourishing its eat script is, 0-1 (see edibleScent)
 	bool reachable = true; // overlaps the creature's height, so walking can reach it
 	bool activatable = true; // its attributes let it be activated (C1/C2 attr 4)
+	bool carryable = true; // creatures may pick it up (C1/C2 attr 1)
 	// another creature: which one (its moniker), and what this creature
 	// feels about it (creatures/Relationships.h); empty for objects
 	std::string who;
@@ -136,6 +137,7 @@ struct MindPerception {
 	float wrapWidth = 0;
 	bool riding = false; // carried by a vehicle (a lift, a boat)
 	bool carried = false; // held by the hand (or another agent): not moving by itself
+	int carryingCategory = -1; // the category of what this creature holds, or -1
 	bool scriptMoved = false; // moved by a script in the last few ticks (a stream, a launcher): not by its own power
 	bool inRoom = true; // inside the room map (false: inside the ground, about to be lifted out)
 	bool breathesWater = false; // amphibious (its genome raises no suffocation under water)
@@ -150,6 +152,7 @@ struct MindPerception {
 		bool avoid = false;
 		int drive = -1;
 		float weight = 1.0f;
+		bool tend = false; // its source (a baby, a child, the senile) is tickled and brought food or a toy
 		float here = 0, west = 0, east = 0, up = 0, down = 0;
 	};
 	std::vector<ScentUrge> scentUrges;

@@ -48,6 +48,7 @@ struct Urge {
 	bool avoid = false;
 	int drive = -1;
 	float weight = 1.0f;
+	bool tend = false; // the source is tended (tickled, brought food or a toy)
 };
 
 // Reads pheromones.txt (at each world load). Without the file there are no

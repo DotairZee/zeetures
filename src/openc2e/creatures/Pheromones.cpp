@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fmt/core.h>
+#include <filesystem>
 #include <fstream>
 #include <map>
 #include <set>
@@ -76,6 +77,7 @@ struct Rule {
 	int drive = -1; // Follow/Avoid: the drive the urge serves, or -1
 	std::vector<int> felt; // Mark: the felt chemicals that set it off
 	unsigned int ticks = 0; // Mark: how long the mark lasts
+	bool tend = false; // Follow: the scent's source is to be tended ("... follow for lonely 1 tend")
 	std::vector<Condition> when;
 };
 
@@ -379,8 +381,19 @@ bool parseRule(int ln, const std::string& t, Rule& r) {
 					return false;
 				}
 			}
-			if (i < tok.size() && tok[i] != "when")
+			if (i < tok.size() && tok[i] != "when" && tok[i] != "tend")
 				r.strength = (float)atof(tok[i++].c_str());
+			// "tend": on reaching the scent's source (a baby, a child, the
+			// senile), tickle it and bring it food or a toy (owner,
+			// 2026-11-15; the mind's tend and bring)
+			if (i < tok.size() && tok[i] == "tend") {
+				if (r.kind != Rule::Follow) {
+					complain(ln, t, "only a follow can tend");
+					return false;
+				}
+				r.tend = true;
+				i++;
+			}
 		} else {
 			complain(ln, t, "smell needs chem, follow or avoid");
 			return false;
@@ -416,7 +429,9 @@ void load() {
 	rules.clear();
 	marks.clear();
 	emittedLast.clear();
-	std::ifstream in(getUserDataDir() / "pheromones.txt");
+	// (OPENC2E_PHEROMONES=FILE reads another file: for comparing rule sets in test copies)
+	const char* other = getenv("OPENC2E_PHEROMONES");
+	std::ifstream in(other ? std::filesystem::path(other) : getUserDataDir() / "pheromones.txt");
 	if (!in)
 		return;
 	std::string text;
@@ -678,6 +693,7 @@ std::vector<Urge> urgesFor(Agent* creature, oldCreature* c) {
 		u.avoid = r.kind == Rule::Avoid;
 		u.drive = r.drive;
 		u.weight = r.strength;
+		u.tend = r.tend;
 		out.push_back(u);
 	}
 	return out;

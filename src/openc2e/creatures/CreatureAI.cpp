@@ -890,6 +890,7 @@ MindPerception oldCreature::buildPerception() {
 		if (dynamic_cast<CreatureAgent*>(a.get()))
 			activatable = true;
 		SeenAgent sa{(int)i, a, std::hypot(ax - cx, ay - cy), ax, ay, edibleNow(a.get()), reachable, activatable};
+		sa.carryable = engine.version > 2 || (a->attr & 1); // C2 attr 1: creatures may pick it up
 		// another creature: who it is and what this one feels about it
 		if (auto* ca = dynamic_cast<CreatureAgent*>(a.get()); ca && engine.version == 2)
 			if (auto* oc = dynamic_cast<oldCreature*>(ca->getCreature())) {
@@ -945,6 +946,8 @@ MindPerception oldCreature::buildPerception() {
 		p.scriptMoved = sc->scriptMoveTick() > 0 && world.tickcount <= sc->scriptMoveTick() + 5;
 	}
 	p.carried = (bool)parentagent->carriedby;
+	if (parentagent->carrying)
+		p.carryingCategory = parentagent->carrying->category;
 	if (world.map)
 		p.inRoom = (bool)world.map->roomAt(cx, cy);
 	if (engine.version == 2 && world.map) {
@@ -1019,6 +1022,7 @@ MindPerception oldCreature::buildPerception() {
 				su.avoid = u.avoid;
 				su.drive = u.drive;
 				su.weight = u.weight;
+				su.tend = u.tend;
 				auto level = [&](const Room& r) { return (size_t)u.channel < r.scent.size() ? r.scent[u.channel] : 0.0f; };
 				su.here = level(*here);
 				for (auto& [n, door] : here->getDoors()) {

@@ -210,6 +210,21 @@ struct Params {
 	// (then scaled like food smell, scentFollowShare); one with no drive is
 	// worth its weight times this.
 	float pheromoneRelief = 0.4f;
+	// Tending (owner, 2026-11-15; pheromones.txt "... follow for lonely 1
+	// tend"): a grown creature drawn by a care scent, with one who gives it
+	// off (its own kind: a baby, a child, the senile) in sight, tickles it
+	// (activate 1 on it) and brings it food or a toy: picks one up nearby,
+	// walks it over and drops it beside them. Weighed as the scent's drive
+	// (loneliness, the owner's choice). The same one is not tickled again
+	// for tendAgain ticks, nor brought anything for bringAgain.
+	float tendSee = 350.0f; // a tendee this near (in sight, reachable) is gone to
+	float tendShare = 1.0f; // the tickle: this share of the urge's worth
+	float bringShare = 0.9f; // picking up, carrying over and dropping: this share
+	float bringSearch = 250.0f; // food or a toy this near is picked up to bring
+	float bringDropNear = 60.0f; // dropped when this near (centres, x)
+	unsigned int tendAgain = 900, bringAgain = 1800, bringFailWait = 600;
+	float tendCalmPower = 2.0f; // a tend urge without a drive: times (1 - most pressing need)^this
+	std::vector<int> bringCategories{6, 25, 13}; // food, fruit, toys
 	float pheromoneWantScale = 0.1f;
 	// Following a scent persists (owner chose this, 2026-11-13): mates apart
 	// never met, as each follow was one 12-tick step re-weighed from scratch
@@ -1287,6 +1302,13 @@ class HomeostatMind : public CreatureMind {
 			out.sleep = 0;
 		logChoice(p, choice, candidates, D);
 		thinkAbout(p, choice, out);
+		if (choice.urge.rfind("bring:", 0) == 0 && choice.decision == 6)
+			bringPickupCategory = choice.category;
+		if (choice.urge.rfind("tend:", 0) == 0 && choice.decision == 1 && !choice.who.empty()) {
+			tendedUntil[choice.who] = p.tick + prm.tendAgain;
+			if (getenv("OPENC2E_WATCH_TEND"))
+				fmt::print("[homeostat] creature {} t{}: TEND tickles {}\n", p.creatureId, p.tick, choice.who);
+		}
 
 		// (only working the lift can take a creature up or down: activate 1
 		// or 2, deactivate; see learnRide)
@@ -1809,6 +1831,13 @@ class HomeostatMind : public CreatureMind {
 	std::vector<Futile> futile; // object actions that got nowhere from here
 	int futileInARow = 0;
 	int futileCategory = -1, futileDecision = -1;
+	// tending: when each creature (by moniker) may be tickled or brought
+	// something again, and who the last bring was for
+	std::map<std::string, unsigned int> tendedUntil, broughtUntil;
+	std::map<int, unsigned int> bringFailUntil; // a category whose pickup to bring left the hands empty: not tried again till then
+	int bringPickupCategory = -1; // a pickup to bring was chosen: its category, to check it worked
+	std::string bringingFor;
+	int lastCarrying = -1;
 	std::map<int, float> scents; // strongest edible scent smelled, by category
 	// a scent being followed (persistent following): which, which way (10
 	// west, 11 east, -1 up, 1 down), the strongest smelled on the way,
@@ -1819,7 +1848,11 @@ class HomeostatMind : public CreatureMind {
 		float best = 0;
 		int left = 0;
 		int pastPeak = 0;
-	} trail;
+	};
+	// one for each scent: a single shared trail was taken over by any other
+	// scent's step that was only offered, not chosen, so the care scent
+	// (2026-11-15) cut mates' following by about a fifth
+	std::map<std::string, Trail> trails;
 	bool riding = false;
 	float rideFromX = 0, rideFromY = 0;
 	int lastLiftDecision = -1;
@@ -3777,17 +3810,100 @@ class HomeostatMind : public CreatureMind {
 
 	// Scent urges (pheromones.txt): follow a scent toward its strongest side,
 	// or move away from it, as food smell is followed.
+	bool bringable(int category) const {
+		return std::find(prm.bringCategories.begin(), prm.bringCategories.end(), category) != prm.bringCategories.end();
+	}
+
+	// Tending (see Params, tendSee): with one to tend in sight, tickle it and
+	// bring it food or a toy. False when there is none to tend here.
+	bool addTend(const MindPerception& p, float want, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		// a bring finished: what was carried for someone is no longer held
+		if (lastCarrying >= 0 && p.carryingCategory < 0 && !bringingFor.empty()) {
+			broughtUntil[bringingFor] = p.tick + prm.bringAgain;
+			static const bool watch = getenv("OPENC2E_WATCH_TEND") != nullptr;
+			if (watch)
+				fmt::print("[homeostat] creature {} t{}: TEND brought something to {}\n", p.creatureId, p.tick, bringingFor);
+			bringingFor.clear();
+		}
+		lastCarrying = p.carryingCategory;
+		// (a new decision is being made, so a pickup chosen before is over)
+		if (bringPickupCategory >= 0) {
+			if (p.carryingCategory < 0)
+				bringFailUntil[bringPickupCategory] = p.tick + prm.bringFailWait;
+			bringPickupCategory = -1;
+		}
+		const SeenAgent* tendee = nullptr;
+		for (auto& s : p.visible)
+			if (s.genus == p.genus && s.genus >= 0 && (s.stage == 0 || s.stage == 1 || s.stage == 6) && s.reachable && !s.who.empty() &&
+				s.distance < prm.tendSee && (!tendee || s.distance < tendee->distance))
+				tendee = &s;
+		if (!tendee)
+			return false;
+		bool added = false;
+		std::string lab = "tend:" + tendee->who;
+		// the tickle
+		auto tu = tendedUntil.find(tendee->who);
+		if (tu == tendedUntil.end() || p.tick >= tu->second) {
+			Candidate c{tendee->category, 1, tendee->distance, want * prm.tendShare, 0, 0};
+			c.score = c.want - prm.distanceCost * tendee->distance;
+			c.target = tendee->agent;
+			c.who = tendee->who;
+			c.urge = lab;
+			out.push_back(c);
+			added = true;
+		}
+		// the bring
+		auto bu = broughtUntil.find(tendee->who);
+		if (bu != broughtUntil.end() && p.tick < bu->second)
+			return added;
+		float bw = want * prm.bringShare;
+		if (bringable(p.carryingCategory)) {
+			float dx = dxTo(p, tendee->x);
+			Candidate c{-1, 7, 0, bw, 0, bw}; // drop it beside them
+			if (std::fabs(dx) > prm.bringDropNear) {
+				int kind = dx < 0 ? 10 : 11; // or walk it over
+				if ((kind == 10 && !canWest) || (kind == 11 && !canEast) || isBlocked(p, kind) || waterAhead(p, kind) || cliffAhead(p, kind))
+					return added;
+				c.decision = kind;
+				c.chain = true;
+			}
+			c.urge = "bring:" + tendee->who;
+			out.push_back(c);
+			bringingFor = tendee->who;
+			return true;
+		}
+		if (p.carryingCategory >= 0)
+			return added; // holding something else: tickling only
+		const SeenAgent* item = nullptr;
+		for (auto& s : p.visible)
+			if (bringable(s.category) && s.carryable && s.reachable && s.distance < prm.bringSearch && s.edible >= 0.0f &&
+				p.tick >= bringFailUntil[s.category] && (!item || s.distance < item->distance))
+				item = &s;
+		if (item) {
+			Candidate c{item->category, 6, item->distance, bw, 0, 0}; // pick it up to bring
+			c.score = bw - prm.distanceCost * item->distance;
+			c.chain = true;
+			c.urge = "bring:" + tendee->who;
+			out.push_back(c);
+			added = true;
+		}
+		return added;
+	}
+
 	void addScentUrges(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
-		// the trail ends when its urge is gone (the drive eased, or the
+		// a trail ends when its urge is gone (the drive eased, or the
 		// creature no longer smells it as a releaser)
-		if (trail.left > 0) {
+		for (auto& [name, t] : trails) {
+			if (t.left <= 0)
+				continue;
 			bool held = false;
 			for (auto& u : p.scentUrges)
-				held = held || (!u.avoid && u.scent == trail.scent);
+				held = held || (!u.avoid && u.scent == name);
 			if (!held)
-				trail.left = 0;
+				t.left = 0;
 		}
 		for (auto& u : p.scentUrges) {
+			Trail& trail = trails[u.scent];
 			float want;
 			if (u.drive >= 0 && u.drive < NUM_DRIVES) {
 				Expectation typical;
@@ -3795,6 +3911,13 @@ class HomeostatMind : public CreatureMind {
 				want = predictedRelief(d, D, typical) * prm.scentFollowShare;
 			} else
 				want = u.weight * prm.pheromoneWantScale;
+			// a tend urge with no drive of its own is for when nothing is
+			// pressing: it shrinks as the creature's most pressing need grows
+			if (u.tend && u.drive < 0) {
+				float pressing = std::max({d[PAIN], d[HUNGER], d[COLD], d[HOT], d[TIRED], d[SLEEPY], d[FEAR], d[INJURY], d[SUFFOCATE], d[THIRST]});
+				float calm = std::clamp(1.0f - pressing, 0.0f, 1.0f);
+				want *= std::pow(calm, prm.tendCalmPower);
+			}
 			static const bool watch = getenv("OPENC2E_WATCH_SCENTS") != nullptr;
 			if (watch && p.tick % 20 == 0)
 				fmt::print("[homeostat] creature {} t{}: scent {} {} want {:.3f} here {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f}\n", p.creatureId, p.tick,
@@ -3802,6 +3925,8 @@ class HomeostatMind : public CreatureMind {
 			if (want < prm.seekMinWant)
 				continue;
 			std::string label = (u.avoid ? "avoid:" : "follow:") + u.scent;
+			if (u.tend && !u.avoid && addTend(p, want, canWest, canEast, out))
+				continue; // one to tend is in sight: go to it rather than up the scent
 			// a step west or east, or a change of floor, toward the scent
 			auto go = [&](int kind, float w, const std::string& lab) {
 				if (kind == 10 || kind == 11) {
