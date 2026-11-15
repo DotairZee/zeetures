@@ -1023,16 +1023,16 @@ void oldCreature::keepInRoomSystem() {
 				}
 				return false;
 			};
-			if (liftUp(150.0f))
-				return;
-			// first the nearest room of the world beside it, at its feet's height
+			// the nearest room of the world beside it, at its feet's height, up
+			// to maxdx away
+			auto moveBeside = [&](float maxdx) -> bool {
 			float fy = a->y + a->getHeight() - 2;
 			// (across the seam of a wrapping world too: the pocket at the far
 			// east edge, room 183, lies beside the rooms at x 0)
 			MetaRoom* mr = world.map->metaRoomAt(cx, fy);
 			if (!mr)
 				mr = world.map->wrappingMetaRoomNear(cx, fy);
-			for (float dx = 4; dx <= 80; dx += 4)
+			for (float dx = 4; dx <= maxdx; dx += 4)
 				for (float side : {-1.0f, 1.0f}) {
 					std::shared_ptr<Room> r = mr ? mr->roomAt(cx + side * dx, fy) : world.map->roomAt(cx + side * dx, fy);
 					if (!r || r->type == 2 || !livable(r.get()))
@@ -1050,8 +1050,53 @@ void oldCreature::keepInRoomSystem() {
 						sc->scriptMoved();
 					fmt::print("* {} (unid {}) was in a sealed pocket (room {}) at {:.0f},{:.0f}; moved beside it into room {} at {:.0f},{:.0f}\n",
 						world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y);
-					return;
+					return true;
 				}
+			return false;
+			};
+			// first a short step onto a floor beside, when the creature is only
+			// a little past a wall (at the gene lab's west wall, x 6113, its
+			// middle 8 px into the rock beyond and its feet 30 px under the
+			// lab's floor, a creature was lifted 165 px onto the walkway above;
+			// 2026-11-15), then up onto the floor it sank through, then further
+			// beside
+			// a floor of the world just beside, at or a little above its feet
+			// (up to maxrise): it steps onto it, its box clear of the wall
+			auto stepOnto = [&](float maxdx, float maxrise) -> bool {
+				float fy = a->y + a->getHeight() - 2, w = a->getWidth();
+				for (float dx = 2; dx <= maxdx; dx += 2)
+					for (float side : {-1.0f, 1.0f}) {
+						float x2 = cx + side * dx;
+						for (float k = 0; k <= maxrise; k += 4) {
+							std::shared_ptr<Room> r = world.map->roomAt(x2, fy - k);
+							if (!r || r->type == 2 || !livable(r.get()) || floorOpensOntoWater(r.get(), x2))
+								continue;
+							float floor = r->floorYatX(x2);
+							if (floor > fy + 4 || floor < fy - maxrise - 4)
+								continue;
+							float nx = x2 + side * (w / 2.0f) - w / 2.0f; // middle half a width past the wall
+							std::shared_ptr<Room> at = world.map->roomAt(nx + w / 2.0f, floor - 2);
+							if (at != r)
+								break;
+							float oldx = a->x, oldy = a->y;
+							a->moveTo(nx - shift, r->floorYatX(nx + w / 2.0f) - a->getHeight() - 1);
+							a->velx = 0;
+							a->vely = 0;
+							if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
+								sc->scriptMoved();
+							fmt::print("* {} (unid {}) was in a sealed pocket (room {}) at {:.0f},{:.0f}; stepped onto the floor of room {} beside it at {:.0f},{:.0f}\n",
+								world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y);
+							return true;
+						}
+					}
+				return false;
+			};
+			if (stepOnto(32.0f, 40.0f))
+				return;
+			if (liftUp(150.0f))
+				return;
+			if (moveBeside(80.0f))
+				return;
 			if (liftUp(800.0f))
 				return;
 		}
