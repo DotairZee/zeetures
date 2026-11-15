@@ -1,6 +1,6 @@
 name: nightly
 
-# A nightly build of this fork (owner, 2026-11-15): each night, if anything
+# A nightly build of Zeetures, this fork (owner, 2026-11-15): each night, if anything
 # has been committed since the last nightly, build it and replace the
 # "nightly" pre-release with the new build. Run by hand (Actions > nightly >
 # Run workflow) to build now, changed or not.
@@ -58,7 +58,7 @@ jobs:
         cmake --build build
     - name: Package
       run: |
-        out=openc2e-nightly-linux-x86_64
+        out=zeetures-nightly-linux-x86_64
         cmake --install build --prefix "$out"
         # (without the debug information: the engine was 138 MB with it)
         strip "$out"/openc2e "$out"/cobdumper "$out"/mngdumper "$out"/mngplayer2 "$out"/praybuilder "$out"/praydumper "$out"/spritedumper || true
@@ -67,7 +67,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: linux
-        path: openc2e-nightly-linux-x86_64.tar.gz
+        path: zeetures-nightly-linux-x86_64.tar.gz
 
   windows:
     needs: check
@@ -85,14 +85,14 @@ jobs:
     - name: Package
       shell: bash
       run: |
-        out=openc2e-nightly-windows-x64
+        out=zeetures-nightly-windows-x64
         cmake --install build --config RelWithDebInfo --prefix "$out"
         cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
         7z a "$out.zip" "$out"
     - uses: actions/upload-artifact@v4
       with:
         name: windows
-        path: openc2e-nightly-windows-x64.zip
+        path: zeetures-nightly-windows-x64.zip
 
   release:
     needs: [check, linux, windows]
@@ -109,7 +109,7 @@ jobs:
       run: |
         prev="${{ needs.check.outputs.previous }}"
         {
-          echo "Nightly build of the creature-mind branch at ${GITHUB_SHA:0:8}, $(date -u +%Y-%m-%d)."
+          echo "Nightly build of Zeetures, a fan fork of [openc2e](https://github.com/openc2e/openc2e) (forked from its commit dfcd46f2, 7 October 2026), from the creature-mind branch at ${GITHUB_SHA:0:8}, $(date -u +%Y-%m-%d)."
           echo
           echo "You need your own copy of Creatures 2 (Steam's \"Creatures: The Albian Years\", or GOG). See README-NIGHTLY.txt in the download."
           echo
@@ -131,4 +131,4 @@ jobs:
         git push origin ":refs/tags/nightly" || true
         files=$(find dist -type f \( -name '*.tar.gz' -o -name '*.zip' \))
         gh release create nightly $files --prerelease --target "$GITHUB_SHA" \
-          --title "Nightly $(date -u +%Y-%m-%d) (${GITHUB_SHA:0:8})" --notes-file notes.md
+          --title "Zeetures nightly $(date -u +%Y-%m-%d) (${GITHUB_SHA:0:8})" --notes-file notes.md

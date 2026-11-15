@@ -229,8 +229,11 @@ static const char* GenusName(int genus) {
 // creatures and keeps its mode; the gene lab's east end sealed.
 #define OPENC2E_FORK_VERSION "0.6.0"
 // the openc2e this fork started from (an unreleased development build)
-#define OPENC2E_UPSTREAM_BASE "commit dfcd46f2, 6 October 2026 (825 commits after its v0.2 release)"
+#define OPENC2E_UPSTREAM_BASE "commit dfcd46f2, 7 October 2026 (825 commits after its v0.2 release)"
 #define OPENC2E_WEB "https://openc2e.github.io/"
+// this fork's name and home (owner, 2026-11-15: "let's call the game Zeetures")
+#define FORK_NAME "Zeetures"
+#define FORK_WEB "https://github.com/DotairZee/zeetures"
 static bool s_open_about = false;
 
 // Add Favourite Place (the Camera menu or the + by Places) opens the naming
@@ -503,28 +506,32 @@ static void DrawC2MenuBar() {
 	if (ImGui::BeginMenu("Help")) {
 		if (ImGui::MenuItem("Help Topics"))
 			SetHelpOpen(true);
+		if (ImGui::MenuItem(FORK_NAME " on GitHub"))
+			SDL_OpenURL(FORK_WEB);
 		if (ImGui::MenuItem("openc2e on the Web"))
 			SDL_OpenURL(OPENC2E_WEB);
 		ImGui::Separator();
-		if (ImGui::MenuItem("About openC2e..."))
+		if (ImGui::MenuItem("About " FORK_NAME "..."))
 			s_open_about = true;
 		ImGui::EndMenu();
 	}
 
-	// About openC2e (developer aid: OPENC2E_OPEN_KITS="about" opens it)
+	// About Zeetures (developer aid: OPENC2E_OPEN_KITS="about" opens it)
 	static bool s_test_about = getenv("OPENC2E_OPEN_KITS") && strstr(getenv("OPENC2E_OPEN_KITS"), "about");
 	if (s_test_about && world.worldtickcount > 5) {
 		s_test_about = false;
 		s_open_about = true;
 	}
 	if (s_open_about) {
-		ImGui::OpenPopup("About openC2e");
+		ImGui::OpenPopup("About " FORK_NAME);
 		s_open_about = false;
 	}
-	if (ImGui::BeginPopupModal("About openC2e", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+	if (ImGui::BeginPopupModal("About " FORK_NAME, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 		ImGui::SetWindowFontScale(1.6f);
-		ImGui::TextUnformatted("openC2e");
+		ImGui::TextUnformatted(FORK_NAME);
 		ImGui::SetWindowFontScale(1.0f);
+		// (said plainly under the name, with what it forks from: owner, 2026-11-15)
+		ImGui::TextUnformatted("A fork of openc2e (from its commit dfcd46f2, 7 October 2026)");
 		ImGui::Text("Version %s (built %s)", OPENC2E_FORK_VERSION, __DATE__);
 		ImGui::TextUnformatted("by DotairZee");
 		ImGui::Spacing();
@@ -532,8 +539,8 @@ static void DrawC2MenuBar() {
 		ImGui::TextUnformatted("Creatures 2 with creatures that think for themselves: a mind of their own, words, temperament and "
 							   "relationships, breeding, and a full set of kits.");
 		ImGui::Spacing();
-		ImGui::TextDisabled("A fork of openc2e, the open-source Creatures engine. openc2e is free software under the GNU Lesser "
-							"General Public License 2.1, and so are this fork's changes to it.");
+		ImGui::TextDisabled(FORK_NAME " is a fork of openc2e, the open-source Creatures engine, by the developers below. openc2e "
+							"is free software under the GNU Lesser General Public License 2.1, and so are " FORK_NAME "'s changes to it.");
 		ImGui::TextDisabled("Based on openc2e " OPENC2E_UPSTREAM_BASE ".");
 		ImGui::TextDisabled("The game's art, sounds and worlds come from your own copy of Creatures 2.");
 		ImGui::Spacing();
@@ -593,7 +600,7 @@ static void DrawC2MenuBar() {
 				if (w && WorldSave::SaveWorldState(w->dir, s_error)) {
 					engine.currentworld = w->name;
 					engine.currentworlddir = w->dir;
-					get_backend()->setWindowTitle(w->name + " - Creatures 2");
+					get_backend()->setWindowTitle(w->name + " - " FORK_NAME);
 					s_name[0] = 0;
 					ImGui::CloseCurrentPopup();
 				}

@@ -2,7 +2,7 @@
 
 # openc2e
 
-> **This is a fan fork, focused on Creatures 2.** It adds an original creature mind (`--mind homeostat`), a C2-style interface with the kits, world saving, scents and many fixes; see the `creature-mind` branch. Nightly builds are under [Releases](../../releases/tag/nightly) (they contain no game data: you need your own copy of Creatures 2). A noncommercial project, not affiliated with Gameware Europe or the openc2e developers. Everything below is upstream openc2e's README.
+> **Zeetures: a fan fork of openc2e, focused on Creatures 2** (forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2), 7 October 2026). It adds an original creature mind (`--mind homeostat`), a C2-style interface with the kits, world saving, scents and many fixes; see the `creature-mind` branch. Nightly builds are under [Releases](../../releases/tag/nightly) (they contain no game data: you need your own copy of Creatures 2). A noncommercial project, not affiliated with Gameware Europe or the openc2e developers. Everything below is upstream openc2e's README.
 
 openc2e is a free and open-source game engine for the [_Creatures_](https://creatures.wiki) artificial life games.
 

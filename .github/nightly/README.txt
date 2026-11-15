@@ -1,8 +1,9 @@
-NIGHTLY BUILD OF A FORK OF OPENC2E
-==================================
+ZEETURES: NIGHTLY BUILD
+=======================
 
-This is a nightly build of a noncommercial fan fork of openc2e, the
-open-source engine for the Creatures games, focused on Creatures 2. It
+Zeetures is a noncommercial fan fork of openc2e, the open-source engine
+for the Creatures games (https://github.com/openc2e/openc2e), forked from
+openc2e's commit dfcd46f2 of 7 October 2026, and focused on Creatures 2. It
 adds a new, original creature mind (the "homeostat" mind), a C2-style
 interface with kits, world saving, scents, and many fixes. Nightly
 builds are made automatically from whatever was committed that day, so
@@ -19,6 +20,8 @@ Gameware.
 
 Running it
 ----------
+(The program is still called openc2e.)
+
 Linux:
     ./openc2e -d "/path/to/Creatures 2" --mind homeostat
 
@@ -40,5 +43,5 @@ Your worlds, saves and settings are kept in openc2e's user folder
 License
 -------
 openc2e is free software under the GNU Lesser General Public License,
-version 2.1 (see COPYING). This fork's changes are under the same
-license. The source is on GitHub, in the fork this download came from.
+version 2.1 (see COPYING). Zeetures's changes are under the same
+license. The source: https://github.com/DotairZee/zeetures

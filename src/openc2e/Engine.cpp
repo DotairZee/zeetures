@@ -2095,7 +2095,8 @@ bool Engine::initialSetup() {
 		currentworlddir = w->dir;
 		cmdline_bootstrap = {Openc2eImgui::WorldFile(w->dir).string()};
 		fmt::print("* World: {}\n", currentworld);
-		get_backend()->setWindowTitle(currentworld + " - " + (version == 1 ? "Creatures" : "Creatures 2"));
+		// (C2: this fork's name, Zeetures; owner, 2026-11-15)
+		get_backend()->setWindowTitle(currentworld + " - " + (version == 1 ? "Creatures" : "Zeetures"));
 	}
 
 	fmt::print("* Executing initial scripts...\n");
