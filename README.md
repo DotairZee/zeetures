@@ -31,7 +31,7 @@ Linux is where Zeetures is played and tested every day; the Windows and macOS bu
 
 ## Status
 
-Zeetures is at version 0.6.0 (shown in Help > About). It is a work in progress, but Creatures 2 is playable from start to finish: creatures hatch, eat, learn, talk, breed, grow old and die, and worlds are saved.
+Zeetures is at version 0.6.1 (shown in Help > About). It is a work in progress, but Creatures 2 is playable from start to finish: creatures hatch, eat, learn, talk, breed, grow old and die, and worlds are saved.
 
 ### What works
 
