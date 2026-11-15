@@ -167,8 +167,12 @@ void CobManager::update() {
 				}
 				std::error_code ec;
 				auto t = fs::last_write_time(cob, ec);
-				if (!ec)
-					o.added = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::file_clock::to_sys(t).time_since_epoch()).count();
+				if (!ec) {
+					// (file time to system time by the two clocks' "now":
+					// MSVC's file_clock has no to_sys)
+					auto sys = std::chrono::system_clock::now() + std::chrono::duration_cast<std::chrono::system_clock::duration>(t - fs::file_time_type::clock::now());
+					o.added = std::chrono::duration_cast<std::chrono::seconds>(sys.time_since_epoch()).count();
+				}
 				std::string userdir = getUserDataDir().lexically_normal().string();
 				o.imported = cob.lexically_normal().string().rfind(userdir, 0) == 0;
 			}

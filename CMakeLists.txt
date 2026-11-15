@@ -400,6 +400,9 @@ target_link_libraries(openc2e_core PUBLIC
 	openc2e-fileformats
 	openc2e-mngmusic
 )
+# (the Breeder's Kit reads zip files: on Windows zlib is built from
+# externals, and its headers come only with the link)
+target_link_libraries(openc2e_core PRIVATE ZLIB::ZLIB)
 if (OPENC2E_USE_SERIALIZATION)
 	target_sources(openc2e_core PRIVATE src/openc2e/caos/caosVM_ser_real.cpp)
 	target_link_libraries(openc2e_core PUBLIC Boost::serialization)

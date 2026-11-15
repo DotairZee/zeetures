@@ -386,10 +386,12 @@ static void LoadC2Eggs() {
 		for (auto& f : b->files) {
 			std::error_code ec;
 			auto t = std::filesystem::last_write_time(getUserDataDir() / f, ec);
-			if (!ec)
-				egg.added = std::max(egg.added, (long long)std::chrono::duration_cast<std::chrono::seconds>(
-													std::chrono::clock_cast<std::chrono::system_clock>(t).time_since_epoch())
-													.count());
+			if (!ec) {
+				// (file time to system time by the two clocks' "now": Apple's
+				// libc++ has no clock_cast, MSVC's file_clock no to_sys)
+				auto sys = std::chrono::system_clock::now() + std::chrono::duration_cast<std::chrono::system_clock::duration>(t - std::filesystem::file_time_type::clock::now());
+				egg.added = std::max(egg.added, (long long)std::chrono::duration_cast<std::chrono::seconds>(sys.time_since_epoch()).count());
+			}
 		}
 		if (auto it = placed.find(egg.label); it != placed.end())
 			egg.placed = it->second;
