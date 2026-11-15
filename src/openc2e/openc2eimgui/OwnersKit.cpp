@@ -507,6 +507,8 @@ void WorldHistoryPage() {
 
 static std::vector<lifeLogEntry> s_notices; // shown on the status bar until clicked or dismissed
 static int s_notice_menu = -1; // the notice right-clicked for its menu (-1: the "+N" button)
+static ImVec2 s_more_at; // where the "+N" list opens (its bottom left)
+static int s_clear_older = 0; // "Clear these" in the "+N" list: how many of the oldest to clear
 
 void DrawLifeNotices(float room) {
 	if (engine.version != 2 || !world.history)
@@ -562,18 +564,32 @@ void DrawLifeNotices(float room) {
 	if (first > 0) {
 		std::string more = fmt::format("+{}##morenotices", first);
 		if (ImGui::SmallButton(more.c_str())) {
-			s_notices.erase(s_notices.begin(), s_notices.begin() + first);
-			OpenC2KitAt("owners", "Life log");
+			// a list of the notices not shown, above the button (owner,
+			// 2026-11-15: the click made them all disappear into the life log)
+			s_more_at = ImVec2(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y - 4);
+			ImGui::OpenPopup("##morenoticelist");
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%d older notice%s: click to see the life log; right-click to clear them all", first, first == 1 ? "" : "s");
+			ImGui::SetTooltip("%d older notice%s: click to list them; right-click to clear them all", first, first == 1 ? "" : "s");
+		// developer aid: OPENC2E_TEST_MORE_NOTICES opens the list once, when
+		// five or more notices are hidden, for a snapshot of it
+		static bool testMore = getenv("OPENC2E_TEST_MORE_NOTICES") != nullptr;
+		if (testMore && first >= 5) {
+			testMore = false;
+			s_more_at = ImVec2(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y - 4);
+			ImGui::OpenPopup("##morenoticelist");
+		}
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
 			s_notice_menu = -1;
 			ImGui::OpenPopup("##noticemenu");
 		}
 	}
 	int remove = -1;
-	for (int i = first; i < (int)s_notices.size(); i++) {
+	// one notice as a coloured button: a click follows it and clears it
+	// (a click is enough for every notice, eggs too: owner, 2026-11-13, the
+	// Hatchery's Find eggs is for finding eggs later); returns true when
+	// clicked. full: as wide as the list it is in
+	auto chip = [&](int i, bool full) {
 		auto& e = s_notices[i];
 		ImVec4 col = e.kind == lifeLogEntry::birth ? ImVec4(0.20f, 0.52f, 0.25f, 1) : e.kind == lifeLogEntry::death ? ImVec4(0.30f, 0.30f, 0.36f, 1)
 																: e.kind == lifeLogEntry::eggLaid			? ImVec4(0.62f, 0.50f, 0.18f, 1)
@@ -584,13 +600,12 @@ void DrawLifeNotices(float room) {
 		ImGui::PushStyleColor(ImGuiCol_Button, col);
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(col.x + 0.12f, col.y + 0.12f, col.z + 0.12f, 1));
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(col.x + 0.2f, col.y + 0.2f, col.z + 0.2f, 1));
-		if (ImGui::SmallButton(label(e, i).c_str())) {
+		bool clicked = full ? ImGui::Button(label(e, i).c_str(), ImVec2(-FLT_MIN, 0)) : ImGui::SmallButton(label(e, i).c_str());
+		ImGui::PopStyleColor(3);
+		if (clicked) {
 			followEntry(e);
-			// a click is enough for every notice, eggs too (owner,
-			// 2026-11-13: the Hatchery's Find eggs is for finding eggs later)
 			remove = i;
 		}
-		ImGui::PopStyleColor(3);
 		if (ImGui::IsItemHovered()) {
 			// what a click does (followEntry)
 			const char* does = e.kind == lifeLogEntry::eggLaid ? "go to the egg (or the baby, once it hatches)"
@@ -598,13 +613,51 @@ void DrawLifeNotices(float room) {
 							   : e.kind == lifeLogEntry::pregnancy ? "go to it and open the Breeder's Kit"
 							   : e.kind == lifeLogEntry::birth ? "go to it and open the Owner's Kit"
 															   : "go to it";
-			ImGui::SetTooltip("%s %s\n%s\nClick to %s; right-click to dismiss it or clear them all.",
+			ImGui::SetTooltip("%s %s\n%s\nClick to %s; right-click to dismiss it.",
 				kindWord(e.kind), KitDateText(e.tick).c_str(), entryDetail(e).c_str(), does);
 		}
+		return clicked;
+	};
+	for (int i = first; i < (int)s_notices.size(); i++) {
+		chip(i, false);
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
 			s_notice_menu = i;
 			ImGui::OpenPopup("##noticemenu");
 		}
+	}
+	// the "+N" list: every notice not shown on the bar, newest first, in a
+	// window above the button that scrolls when long; each clickable as on
+	// the bar, right-click to dismiss one
+	ImGui::SetNextWindowPos(s_more_at, ImGuiCond_Always, ImVec2(0, 1));
+	ImGui::SetNextWindowSizeConstraints(ImVec2(300, 0), ImVec2(460, 360));
+	if (ImGui::BeginPopup("##morenoticelist", ImGuiWindowFlags_AlwaysAutoResize)) {
+		int hidden = std::min(first, (int)s_notices.size());
+		ImGui::TextDisabled("%d older notice%s", hidden, hidden == 1 ? "" : "s");
+		float rowH = ImGui::GetFrameHeightWithSpacing();
+		ImGui::BeginChild("##morescroll", ImVec2(420, std::min(300.0f, rowH * hidden + 4)), ImGuiChildFlags_None);
+		for (int i = hidden - 1; i >= 0; i--) {
+			ImGui::PushID(i);
+			if (chip(i, true))
+				ImGui::CloseCurrentPopup();
+			if (ImGui::BeginPopupContextItem("##dismissone")) {
+				if (ImGui::MenuItem("Dismiss"))
+					remove = i;
+				ImGui::EndPopup();
+			}
+			ImGui::PopID();
+		}
+		ImGui::EndChild();
+		ImGui::Separator();
+		if (ImGui::SmallButton("Open the life log")) {
+			OpenC2KitAt("owners", "Life log");
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::SmallButton("Clear these")) {
+			s_clear_older = hidden;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
 	}
 	// developer aid: OPENC2E_TEST_NOTICE_MENU opens the menu on the newest
 	// notice once, for a snapshot of it
@@ -625,6 +678,11 @@ void DrawLifeNotices(float room) {
 	}
 	if (clearAll) {
 		s_notices.clear();
+		return;
+	}
+	if (s_clear_older > 0) {
+		s_notices.erase(s_notices.begin(), s_notices.begin() + std::min(s_clear_older, (int)s_notices.size()));
+		s_clear_older = 0;
 		return;
 	}
 	if (remove >= 0)
