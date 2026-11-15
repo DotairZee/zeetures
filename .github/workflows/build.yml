@@ -28,7 +28,18 @@ jobs:
         mv clang-format-11_linux-amd64 /usr/local/bin/clang-format
     - name: "clang-format"
       run: ./scripts/lint.py -v 0000000 # diff from null sha is every file
-      
+
+  # CHANGELOG.md is generated from the commit history; this fails when a
+  # push did not regenerate it (python3 .github/changelog.py --write)
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: "CHANGELOG.md up to date"
+      run: python3 .github/changelog.py --check
+
   build:
     name: build-${{ matrix.os }}
     runs-on: ${{ matrix.os }}

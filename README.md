@@ -1,6 +1,6 @@
 # Zeetures
 
-> **Zeetures: a fan fork of openc2e, focused on Creatures 2** (forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2), 7 October 2026). It adds an original creature mind (`--mind homeostat`), a C2-style interface with the kits, world saving, scents and many fixes; see the `creature-mind` branch. Nightly builds are under [Releases](../../releases/tag/nightly) (they contain no game data: you need your own copy of Creatures 2). A noncommercial labor of love by an old fan, not affiliated with Gameware Europe or the openc2e developers. See [Built on openc2e](#built-on-openc2e) below.
+> **Zeetures: a fan fork of openc2e, focused on Creatures 2** (forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2), 7 October 2026). It adds an original creature mind (`--mind homeostat`), a C2-style interface with the kits, world saving, scents and many fixes; see the `creature-mind` branch. Nightly builds are under [Releases](../../releases/tag/nightly) (they contain no game data: you need your own copy of Creatures 2). A noncommercial labor of love by an old fan, not affiliated with Gameware Europe or the openc2e developers. Every change is in the [changelog](CHANGELOG.md). See [Built on openc2e](#built-on-openc2e) below.
 
 ## What you need
 
@@ -51,7 +51,7 @@ Zeetures is at version 0.6.1 (shown in Help > About). It is a work in progress, 
 * Windows and macOS are built every night but played far less than Linux.
 * Creatures 2 is the focus. Creatures 1, Creatures 3 and Docking Station run as they do in upstream openc2e, and have not been tested in Zeetures.
 
-The full list of changes is in the commit history of the `creature-mind` branch.
+Every change, in technical detail, is in the [changelog](CHANGELOG.md).
 
 ## Building it yourself
 

@@ -191,6 +191,8 @@ jobs:
           echo
           echo "You need your own copy of Creatures 2 (Steam's \"Creatures: The Albian Years\", or GOG). See README-NIGHTLY.txt in the download."
           echo
+          echo "Every change since the fork, in technical detail: [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/CHANGELOG.md)."
+          echo
           if [ -n "$prev" ] && [ "$prev" != "$GITHUB_SHA" ]; then
             echo "Changes since the last nightly:"
             echo
