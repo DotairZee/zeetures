@@ -220,7 +220,11 @@ static const char* GenusName(int genus) {
 // 0.3.0 (2026-11-12): openc2e's last release was v0.2 (June 2020), and the
 // code this fork started from already ran 825 commits past it, so the fork
 // numbers on from there; still 0.x, as there is more to do before a 1.0.
-#define OPENC2E_FORK_VERSION "0.3.0"
+// 0.4.0 (2026-11-14): food that cannot be eaten no longer counts as food,
+// stalled meals, starving creatures leave, lift links, floating bodies,
+// the toolbar speed control, vivid babies (version log in the project's
+// NOTES.md).
+#define OPENC2E_FORK_VERSION "0.4.0"
 // the openc2e this fork started from (an unreleased development build)
 #define OPENC2E_UPSTREAM_BASE "commit dfcd46f2, 6 October 2026 (825 commits after its v0.2 release)"
 #define OPENC2E_WEB "https://openc2e.github.io/"
