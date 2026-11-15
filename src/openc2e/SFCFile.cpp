@@ -1125,7 +1125,14 @@ void SFCSimpleObject::copyToWorld() {
 void SFCPointerTool::copyToWorld() {
 	world.hand()->setClassifier(family, genus, species);
 	world.hand()->setZOrder(entity->zorder);
-	world.hand()->setHotspot(2, 2); // TODO: we should really copy this out of the SFC file (the first two numbers in the unknown data?)
+	// TODO: we should really copy this out of the SFC file (the first two
+	// numbers in the unknown data?). C2: the tip of the pointing finger in
+	// the hand's picture (syst.s16 frame 0: its nail at about 3-5, 4-7);
+	// (2, 2) was the empty space up and left of it, so the hand touched
+	// things a few pixels before the finger reached them (owner,
+	// 2026-11-15: "the tip area of the pointer finger" should be what
+	// picks up on what is clickable). C1 as before.
+	world.hand()->setHotspot(engine.version == 2 ? 4 : 2, engine.version == 2 ? 5 : 2);
 
 	ourAgent = world.hand();
 	SFCSimpleObject::copyToWorld(); // TODO: think about this call some more, is it appropriate for an already-finished agent?
