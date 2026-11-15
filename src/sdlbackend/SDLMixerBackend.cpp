@@ -231,7 +231,7 @@ void SDLMixerBackend::audio_channel_stop(AudioChannel source) {
 	});
 }
 
-static AudioChannel play_sdl_io(const std::string& name, const std::string& shortname, SDL_IOStream* io, bool looping) {
+static AudioChannel play_sdl_io(const std::string& name, const std::string& shortname, SDL_IOStream* io, bool looping, bool silent = false) {
 	// Use SDL_LoadWAV because MIX_LoadAudio will read loop points from WAV files
 	// and then loop the sound forever, which we don't want. See https://github.com/libsdl-org/SDL_mixer/issues/847
 	// These Creatures 1 files have loop points: fall, kito, kitp, tele, pian, show, hmle, hdsk, hfml, sqek
@@ -270,6 +270,9 @@ static AudioChannel play_sdl_io(const std::string& name, const std::string& shor
 	// (assumes mono audio, which isn't always true, there are a few true stereo WAV files)
 	audio_channel_set_pan(channel, 0.0f);
 
+	if (silent)
+		MIX_SetTrackGain(trackp, 0.0f); // the caller sets its volume next
+
 	// now start the track
 	MIX_PlayTrack(trackp, 0);
 
@@ -278,10 +281,10 @@ static AudioChannel play_sdl_io(const std::string& name, const std::string& shor
 	return channel;
 }
 
-AudioChannel SDLMixerBackend::play_clip(const fs::path& filename, bool looping) {
+AudioChannel SDLMixerBackend::play_clip(const fs::path& filename, bool looping, bool silent) {
 	// SDL takes UTF-8 paths so use u8string
 	const auto shortname = to_ascii_lowercase(filename.filename().string());
-	return play_sdl_io(filename.string(), shortname, SDL_IOFromFile(reinterpret_cast<const char*>(filename.u8string().c_str()), "rb"), looping);
+	return play_sdl_io(filename.string(), shortname, SDL_IOFromFile(reinterpret_cast<const char*>(filename.u8string().c_str()), "rb"), looping, silent);
 }
 
 AudioChannel SDLMixerBackend::play_wav_data(const std::string& name, const uint8_t* buf, size_t size, bool looping) {

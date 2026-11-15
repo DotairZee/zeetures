@@ -33,7 +33,10 @@ class AudioBackend {
 	virtual void init() = 0;
 	virtual void shutdown() = 0;
 
-	virtual AudioChannel play_clip(const std::filesystem::path& filename, bool looping = false) = 0;
+	// silent: started at no volume, for a caller that sets the volume at
+	// once (else the first moments play at full volume: a "peep" through
+	// muted sound, owner 2026-11-14)
+	virtual AudioChannel play_clip(const std::filesystem::path& filename, bool looping = false, bool silent = false) = 0;
 	virtual AudioChannel play_wav_data(const std::string& name, const uint8_t* data, size_t size, bool looping = false) = 0;
 
 	virtual void audio_channel_set_volume(AudioChannel, float) = 0;

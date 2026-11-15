@@ -189,7 +189,7 @@ Sound SoundManager::playSound(std::string name, bool loop) {
 		throw Exception(fmt::format("No such clip '{}.wav'", name));
 	}
 
-	auto handle = get_audio_backend()->play_clip(filename, loop);
+	auto handle = get_audio_backend()->play_clip(filename, loop, true); // getNewSound sets its volume
 	if (!handle) {
 		// note that more specific error messages can be thrown by implementations of play_clip
 		throw_exception("failed to load audio clip {:?}", filename.string());
@@ -283,7 +283,7 @@ Sound SoundManager::playVoice(std::string name, float pitch) {
 	}
 	filename = pitchedClip(filename, name, pitch);
 
-	auto handle = get_audio_backend()->play_clip(filename);
+	auto handle = get_audio_backend()->play_clip(filename, false, true); // getNewSound sets its volume
 	if (!handle) {
 		// note that more specific error messages can be thrown by implementations of play_clip
 		throw_exception("failed to load audio clip {:?}", filename.string());

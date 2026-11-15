@@ -37,7 +37,7 @@ class NullAudioBackend : public AudioBackend {
 	void init() {}
 	void shutdown() {}
 
-	AudioChannel play_clip(const std::filesystem::path& filename, bool) {
+	AudioChannel play_clip(const std::filesystem::path& filename, bool, bool) {
 		if (filename.empty())
 			return {};
 		return {1};

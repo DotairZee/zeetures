@@ -39,7 +39,7 @@ class SDLMixerBackend : public AudioBackend {
 	void init();
 	void shutdown();
 
-	AudioChannel play_clip(const std::filesystem::path& filename, bool looping = false);
+	AudioChannel play_clip(const std::filesystem::path& filename, bool looping = false, bool silent = false);
 	AudioChannel play_wav_data(const std::string& name, const uint8_t* data, size_t size, bool looping = false);
 
 	void audio_channel_set_volume(AudioChannel, float);
