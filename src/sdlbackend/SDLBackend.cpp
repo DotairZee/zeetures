@@ -225,7 +225,8 @@ static bool ImGuiConsumeEvent(const SDL_Event& event) {
 		imguiHasCursorPrev = imguiHasCursor;
 	}
 
-	if (io.WantCaptureMouse && (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP || event.type == SDL_EVENT_MOUSE_WHEEL)) {
+	if (io.WantCaptureMouse && (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP || event.type == SDL_EVENT_MOUSE_WHEEL ||
+								   event.type == SDL_EVENT_PINCH_BEGIN || event.type == SDL_EVENT_PINCH_UPDATE || event.type == SDL_EVENT_PINCH_END)) {
 		return true;
 	}
 	if (io.WantCaptureKeyboard && (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP || event.type == SDL_EVENT_TEXT_INPUT)) {
@@ -291,6 +292,12 @@ retry:
 			}
 			e.x = event.button.x;
 			e.y = event.button.y - mainrendertarget->viewport_offset_top;
+			break;
+
+		case SDL_EVENT_PINCH_UPDATE:
+			e.window_id = event.pinch.windowID;
+			e.type = eventpinch;
+			e.pinch = event.pinch.scale;
 			break;
 
 		case SDL_EVENT_MOUSE_WHEEL:

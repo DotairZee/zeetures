@@ -12,6 +12,7 @@ enum eventtype {
 	eventmousebuttonup,
 	eventmousemove,
 	eventresizewindow,
+	eventpinch, // a two-finger pinch on a touchpad (pinch: the scale change)
 };
 enum eventbuttons { buttonleft = 0x1,
 	buttonright = 0x2,
@@ -27,5 +28,6 @@ struct BackendEvent {
 	int key;
 	unsigned int button;
 	float wheel_x = 0, wheel_y = 0; // precise scroll amounts (touchpad two-finger scrolling)
+	float pinch = 1; // eventpinch: the scale change since the last (over 1 apart, under 1 together)
 	std::string text;
 };

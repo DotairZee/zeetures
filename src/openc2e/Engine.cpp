@@ -844,6 +844,24 @@ void Engine::update() {
 			fmt::print("* TEST WHEEL PAN tick {}: hand {},{} camera {},{}\n", t, world.hand()->pointerX(), world.hand()->pointerY(), camera->getX(), camera->getY());
 		}
 	}
+	// developer aid: OPENC2E_TEST_PINCH="N,scale,count": from tick N, one SDL
+	// pinch update of that scale each tick, count of them, printing the zoom
+	if (static const char* k = getenv("OPENC2E_TEST_PINCH"); k) {
+		static unsigned int last = 0;
+		int n = 0, count = 0;
+		float sc = 1;
+		if (sscanf(k, "%d,%f,%d", &n, &sc, &count) == 3 && world.tickcount != last && world.tickcount >= (unsigned int)n &&
+			world.tickcount <= (unsigned int)(n + count)) {
+			last = world.tickcount;
+			fmt::print("* TEST PINCH tick {}: zoom {:.2f} camera {},{}\n", world.tickcount, zoom, camera->getX(), camera->getY());
+			if (world.tickcount < (unsigned int)(n + count)) {
+				SDL_Event ev{};
+				ev.type = SDL_EVENT_PINCH_UPDATE;
+				ev.pinch.scale = sc;
+				SDL_PushEvent(&ev);
+			}
+		}
+	}
 	// developer aid: OPENC2E_TEST_EGG_DROP=N: at session tick N a creature
 	// egg (2 5 2, no genome) appears by the incubator, and 10 ticks later it
 	// gets the dropped event (5) from the hand, as when the hand puts it down
@@ -1161,6 +1179,23 @@ void Engine::processEvents() {
 				handleMouseMove(event);
 				break;
 
+			case eventpinch: {
+				// a two-finger pinch zooms about the hand, as Ctrl+wheel does
+				// (owner, 2026-11-15): a zoom step for each fifth or so of
+				// spread or squeeze
+				static float acc = 0;
+				if (version <= 2 && event.pinch > 0) {
+					acc += std::log(event.pinch);
+					const float step = std::log(1.2f);
+					while (std::fabs(acc) >= step) {
+						int dir = acc > 0 ? 1 : -1;
+						acc -= dir * step;
+						zoomStep(dir, (int)std::lround(handViewX(camera.get(), world.hand()) * zoom),
+							(int)std::lround((world.hand()->pointerY() - (int)camera->getY()) * zoom));
+					}
+				}
+				break;
+			}
 			case eventmousebuttonup:
 			case eventmousebuttondown:
 				handleMouseButton(event);
