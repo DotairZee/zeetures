@@ -951,9 +951,17 @@ void oldCreature::keepInRoomSystem() {
 		// world are part of it.)
 		auto livable = [&](Room* r) { return group.count(r) && group[r] == worldGroup; };
 		bool feetInWorld = false;
-		if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
-			if (std::shared_ptr<Room> fr = sc->footRoom(); fr && livable(fr.get()))
+		if (auto* sc = dynamic_cast<SkeletalCreature*>(a)) {
+			std::shared_ptr<Room> fr = sc->footRoom();
+			// (no foot room yet, after a load or a script's move: the room
+			// under the foot itself. A creature at the foot of the tree-trunk
+			// lift's shaft, its box over the rock beside it (room 103) and
+			// its foot in the shaft, was moved 40 px each time; 2026-11-15)
+			if (!fr)
+				fr = world.map->roomAt(sc->footX(), sc->footY() - 2);
+			if (fr && livable(fr.get()))
 				feetInWorld = true;
+		}
 		if (!feetInWorld && group.count(foot.get()) && group[foot.get()] != worldGroup) {
 			// up onto the floor it sank through: a floor of the world just
 			// above its feet (owner, 2026-11-14: creatures sinking at the gene

@@ -995,6 +995,42 @@ void SkeletalCreature::snapDownFoot() {
 		}
 	} else {
 		newroom = bestRoomAt(footx, footy, 3, m, std::shared_ptr<Room>());
+		// C2: a foot placed afresh (after a load, a lift's let-out or a
+		// script's move) beyond a wall from the creature's middle stays on
+		// the middle's side. Facing west, a creature's foot is near its box's
+		// left, so one let out of the tree-trunk lift at its shaft's west
+		// wall (rooms 79/80, from x 1546) had its foot placed in the sealed
+		// rock beyond (rooms 102/103) and was moved out again and again
+		// (2026-11-15). It is moved over so the foot is inside the middle's
+		// room.
+		// (only from a sealed room, one no doorway into is ever open, to one
+		// that is not: the other way round, a foot in the shaft with the
+		// middle over the rock, it stays where it is)
+		auto sealedRoom = [](const std::shared_ptr<Room>& r) {
+			for (auto& d : r->getDoors())
+				if (d.second.perm > 0 || d.second.everOpen)
+					return false;
+			return true;
+		};
+		static const bool noFootMiddle = getenv("OPENC2E_NO_FOOT_MIDDLE") != nullptr; // (to compare)
+		if (engine.version == 2 && !noFootMiddle && newroom && sealedRoom(newroom)) {
+			float midx = x + getWidth() / 2.0f;
+			std::shared_ptr<Room> mid = bestRoomAt(midx, footy, 3, m, std::shared_ptr<Room>());
+			if (mid && mid != newroom && !sealedRoom(mid) && (!world.map->hasDoor(mid, newroom) || world.map->getDoorPerm(mid, newroom) < size)) {
+				float dx = 0;
+				if (footx < (float)mid->x_left + 2)
+					dx = (float)mid->x_left + 2 - footx;
+				else if (footx > (float)mid->x_right - 2)
+					dx = (float)mid->x_right - 2 - footx;
+				if (dx != 0 && std::fabs(dx) <= getWidth()) {
+					x += dx;
+					footx += dx;
+					newroom = mid;
+					if (getenv("OPENC2E_WATCH_ROOMS"))
+						fmt::print("* WATCH ROOM t{} unid {} foot kept with its middle in room {} (moved {:.0f})\n", world.tickcount, unid, mid->id, dx);
+				}
+			}
+		}
 		// a foot placed a few pixels under a floor (a world's restore can put
 		// it 1-2 px low) stands on that floor, not on the floor of the room
 		// below: a grendel saved on room 34's floor (y 1858) was set on room
@@ -1505,10 +1541,41 @@ void SkeletalCreature::physicsTick() {
 	}
 	if (engine.version > 1 && falling) {
 		float fx0 = x, fy0 = y;
+		// (where its foot was before this tick's move: see below)
+		float footx0 = 0, footy0 = 0;
+		if (engine.version == 2 && world.map) {
+			footx0 = footX();
+			footy0 = footY();
+		}
 		if (validInRoomSystem() || engine.version == 2) {
 			Agent::physicsTick();
 		} else if (!validInRoomSystem()) {
 			falling = false;
+		}
+		// C2: a creature knocked sideways (another creature's hit sends it off
+		// at 50 px a tick) keeps out of rooms its feet cannot walk into.
+		// Physics checks only the box's corners, and a creature's box hangs
+		// past its foot: in the crowd at the foot of the tree-trunk lift's
+		// shaft (room 80, x 1546-1670) the boxes reached into the rock beside
+		// it (room 103, sealed), so a hit slid creatures into the rock, and
+		// the sealed-pocket rescue moved them back, over and over (29 times
+		// in 5 minutes of a test run, 2026-11-15). If the foot crossed into a
+		// room the one it stood in has no doorway to (open at its size), the
+		// sideways part of the move is undone.
+		if (engine.version == 2 && world.map && x != fx0 && !carriedby && !invehicle) {
+			std::shared_ptr<Room> r0 = world.map->roomAt(footx0, footy0 - 2);
+			std::shared_ptr<Room> r1 = world.map->roomAt(footX(), footY() - 2);
+			if (r0 && r1 && r0 != r1 && (!world.map->hasDoor(r0, r1) || world.map->getDoorPerm(r0, r1) < size)) {
+				// (unless it is falling straight down through an open floor,
+				// with the sideways part only a pixel or two)
+				std::shared_ptr<Room> below = world.map->roomAt(footx0, footY() - 2);
+				if (!(below == r1 && std::fabs(x - fx0) < 3)) {
+					moveTo(fx0, y);
+					velx = 0;
+					if (getenv("OPENC2E_WATCH_CREATURES"))
+						fmt::print("* WATCH SHOVE t{} unid {}: kept out of room {} (from room {})\n", world.tickcount, unid, r1->id, r0->id);
+				}
+			}
 		}
 		// C2: physics checks an object's four corners against the rooms, so a
 		// falling creature with a corner in rock that belongs to no room
