@@ -1301,6 +1301,13 @@ static void DrawNursery() {
 		ImGui::Dummy(ImVec2(1, 2));
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Norns in the world: %d", norns);
+		// whether the world's creatures can breed at all (owner, 2026-11-14:
+		// on the same line, left of the limit); each creature's own setting in
+		// the Breeder's Kit overrides this
+		ImGui::SameLine(0, 24);
+		ImGui::Checkbox("All creatures fertile", &world.allFertile);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Unticked, no creature conceives or fathers young, except those set fertile in the Breeder's Kit.\nA creature's own setting there always wins.");
 		ImGui::SameLine(0, 24);
 		if (ImGui::Checkbox("Limit the number of norns", &on))
 			setPopulationLimit(on ? std::max(norns, 16) : 0);
@@ -1320,11 +1327,7 @@ static void DrawNursery() {
 			}
 		}
 	}
-	// whether the world's creatures can breed at all (owner, 2026-11-14);
-	// each creature's own setting in the Breeder's Kit overrides this
-	ImGui::Checkbox("All creatures fertile", &world.allFertile);
-	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Unticked, no creature conceives or fathers young, except those set fertile in the Breeder's Kit.\nA creature's own setting there always wins.");
+
 }
 
 // developer aid: OPENC2E_TEST_LINEUP="Boney,female" (a breed as the

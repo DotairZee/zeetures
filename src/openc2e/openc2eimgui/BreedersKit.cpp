@@ -94,29 +94,28 @@ static void ReproductivePage() {
 		ImGui::TextDisabled("Too young to breed: creatures mate from adolescence.");
 	KitBar(c->getDrive(12) / 255.0f, "Sex drive", BW, true);
 	KitBar(c->getFertile() / 255.0f, female ? "Fertility" : "Fertility (sperm)", BW);
-	if (female)
-		KitBar(c->getReceptive() / 255.0f, "Receptiveness", BW);
-	ImGui::EndGroup();
-
-	// the owner's fertility switch for this creature (owner, 2026-11-14):
-	// ticked, it cannot conceive or father; it overrides the Hatchery's
-	// "All creatures fertile" until set back to follow it
+	// the owner's fertility switch for this creature (owner, 2026-11-14:
+	// under its fertility reading): ticked, it cannot conceive or father; it
+	// overrides the Hatchery's "All creatures fertile" until set back
 	{
 		bool infertile = !fertileBySetting(c);
-		ImGui::Dummy(ImVec2(1, 4));
 		if (ImGui::Checkbox("Infertile", &infertile))
 			c->fertilityOverride = infertile ? 1 : 0;
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Ticked, this creature cannot conceive or father young.\nUntick it to let its fertility cycle carry on.");
-		ImGui::SameLine(0, 16);
+		ImGui::SameLine(0, 12);
 		if (c->fertilityOverride >= 0) {
-			ImGui::TextDisabled("(its own setting)");
-			ImGui::SameLine(0, 12);
-			if (ImGui::SmallButton("Follow the Hatchery's setting"))
+			if (ImGui::SmallButton("Follow the Hatchery"))
 				c->fertilityOverride = -1;
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Its own setting is in use. Click to follow the Hatchery's \"All creatures fertile\" again.");
 		} else
-			ImGui::TextDisabled(world.allFertile ? "(as the Hatchery: all creatures fertile)" : "(as the Hatchery: creatures infertile)");
+			ImGui::TextDisabled(world.allFertile ? "(as the Hatchery)" : "(as the Hatchery: none fertile)");
 	}
+	if (female)
+		KitBar(c->getReceptive() / 255.0f, "Receptiveness", BW);
+	ImGui::EndGroup();
+
 
 	// pregnancy: how far along
 	if (female) {
