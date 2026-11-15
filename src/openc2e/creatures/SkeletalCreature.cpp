@@ -1063,8 +1063,9 @@ void SkeletalCreature::snapDownFoot() {
 	static const bool watchrooms = getenv("OPENC2E_WATCH_ROOMS") != nullptr;
 	auto watchRoom = [&](const char* how, std::shared_ptr<Room> from, std::shared_ptr<Room> to) {
 		if (watchrooms && from != to)
-			fmt::print("* WATCH ROOM t{} unid {} {} foot ({:.0f}, {:.0f}) x {:.0f} room {} -> {}\n", world.tickcount, unid, how,
-				footx, footy, x, from ? (int)from->id : -1, to ? (int)to->id : -1);
+			fmt::print("* WATCH ROOM t{} unid {} {} foot ({:.0f}, {:.0f}) x {:.0f} room {} -> {}{}\n", world.tickcount, unid, how,
+				footx, footy, x, from ? (int)from->id : -1, to ? (int)to->id : -1,
+				from && to && world.map->hasDoor(from, to) ? fmt::format(" (door perm {})", world.map->getDoorPerm(from, to)) : std::string());
 	};
 	watchRoom(hadroom ? "walk" : "place", downfootroom, newroom);
 	std::shared_ptr<Room> prevroom = downfootroom;
@@ -1084,12 +1085,25 @@ void SkeletalCreature::snapDownFoot() {
 		// west wall had its foot shift ~58 px west across the seam, and was
 		// taken into the sealed pocket beyond (room 213), where it fell to the
 		// map's bottom and was trapped (owner, 2026-11-10).
+		// A free creature (not carried, riding or just moved by a script)
+		// meets a shut door between two rooms as a wall however far its
+		// foot went: a shove (the hand's push, another creature's hit)
+		// threw a norn more than 50 px against the airlock's shut land door,
+		// which the retry below took for a script's move, accepting the
+		// chamber beyond it (owner, 2026-11-08: "walked through the
+		// airlock's closed land door").
 		bool walled = false;
-		if (engine.version == 2 && prevroom && fabs(movedx) <= 150.0f && fabs(movedy) <= 150.0f) {
-			std::shared_ptr<Room> here = bestRoomAt(footx, footy, 3, m, std::shared_ptr<Room>());
-			if (here && here != prevroom && (!world.map->hasDoor(prevroom, here) || world.map->getDoorPerm(prevroom, here) < size)) {
-				walled = true;
-				watchRoom("walled", here, prevroom);
+		if (engine.version == 2 && prevroom) {
+			bool near = fabs(movedx) <= 150.0f && fabs(movedy) <= 150.0f;
+			bool freebody = !carriedby && !invehicle && world.tickcount > lastHeldTick + 5 && world.tickcount > lastScriptMoveTick + 5;
+			std::shared_ptr<Room> here = (near || freebody) ? bestRoomAt(footx, footy, 3, m, std::shared_ptr<Room>()) : std::shared_ptr<Room>();
+			if (here && here != prevroom) {
+				bool door = world.map->hasDoor(prevroom, here);
+				bool shut = !door || world.map->getDoorPerm(prevroom, here) < size;
+				if (shut && (near || (door && freebody && !getenv("OPENC2E_NO_SHUT_DOOR_WALL")))) {
+					walled = true;
+					watchRoom(near ? "walled" : "walled (shut door)", here, prevroom);
+				}
 			}
 		}
 		if (walled) {
