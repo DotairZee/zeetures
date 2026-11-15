@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 361 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 362 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 1 commits, 15 November 2026
+- [Unreleased](#unreleased): 2 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
 - [0.5.0](#version-050): 6 commits, 14 November 2026
@@ -19,6 +19,26 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Add the world additions and the art recipes
+
+[`7b6c9157`](https://github.com/DotairZee/zeetures/commit/7b6c91572b9e209ba39785eac5edbb71669ee1af)
+
+Until now these lived outside the repository, in the project's working
+folder. additions/ holds the scripts openc2e runs from the player's
+Additions folder after a world loads (each .cos opens with what it
+changes and why: map and room fixes, walkways, lifts, airlocks, the
+waterwheel stream, seasonal bushes, boat catches and the rest), and the
+text files the engine reads with them: announcements.txt,
+script-patches.txt, builtin-cobs.txt, hidden-cobs.txt, pheromones.txt
+(copied to the user data folder itself) and breed-names.txt. art/ holds
+the Python recipes that draw the additions' sprites: most from scratch,
+some from the player's own installed game (bring-your-own-data), so the
+sprites themselves are not committed.
+
+They are copied as they stand on 2026-11-15; their history before this
+is in the changelog's engine commits that mention them. Not yet built
+into the program or the downloads.
 
 #### A changelog of every change since the fork
 
