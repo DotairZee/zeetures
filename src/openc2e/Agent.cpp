@@ -1785,9 +1785,18 @@ void Agent::adjustCarried(float unusedxoffset, float unusedyoffset) {
 	int xoffset = 0, yoffset = 0;
 	if (engine.version < 3 && world.hand() == this) {
 		// this appears to produce correct behaviour in the respective games, don't ask me  -nornagon
-		if (engine.version == 2)
+		if (engine.version == 2) {
 			yoffset = world.hand()->getHeight() / 2 - 2;
-		else
+			// an egg (held by its tip, getCarriedPoint) hangs from between
+			// the forefinger and the thumb of the carrying hand (syst.s16
+			// frame 6: fingertips at x 2-18, thumb at 28-35, the gap under
+			// the palm at x 23, y 18-25), not from the hand picture's left
+			// edge, at the fingertips (owner, 2026-11-14)
+			if (carrying->family == 2 && carrying->genus == 5) {
+				xoffset += 23;
+				yoffset += 2;
+			}
+		} else
 			yoffset = world.hand()->getHeight() / 2 - 3;
 	}
 

@@ -933,6 +933,34 @@ void DrawC2Toolbar() {
 	// developer aid: OPENC2E_TEST_TOOLBAR_DRAG="band,x,y" drags that band's
 	// grip to (x, y) in the window with the mouse, a few seconds in, and
 	// prints the layout after (headless tests of moving toolbars)
+	// developer aid: OPENC2E_TEST_UI_CLICKS="frame,x,y;frame,x,y" clicks the
+	// left mouse button at those screen points on those frames (headless
+	// tests of the toolbar's controls); prints the game speed after each
+	if (const char* tc = getenv("OPENC2E_TEST_UI_CLICKS")) {
+		static int s_uiframe = 0;
+		s_uiframe++;
+		std::string all = tc;
+		size_t pos = 0;
+		while (pos <= all.size()) {
+			size_t semi = all.find(';', pos);
+			std::string one = all.substr(pos, semi == std::string::npos ? std::string::npos : semi - pos);
+			int f = 0;
+			float x = 0, y = 0;
+			if (sscanf(one.c_str(), "%d,%f,%f", &f, &x, &y) == 3) {
+				if (s_uiframe == f)
+					io.AddMousePosEvent(x, y);
+				if (s_uiframe == f + 2)
+					io.AddMouseButtonEvent(ImGuiMouseButton_Left, true);
+				if (s_uiframe == f + 4)
+					io.AddMouseButtonEvent(ImGuiMouseButton_Left, false);
+				if (s_uiframe == f + 8)
+					fmt::print("* TEST UI CLICK at {:.0f},{:.0f}: speed {:g}\n", x, y, engine.speed);
+			}
+			if (semi == std::string::npos)
+				break;
+			pos = semi + 1;
+		}
+	}
 	if (const char* td = getenv("OPENC2E_TEST_TOOLBAR_DRAG")) {
 		static int s_frame = 0, s_band = -1;
 		static ImVec2 s_from, s_to;
@@ -1239,7 +1267,12 @@ void DrawC2Toolbar() {
 			static bool s_speedEditing = false;
 			if (!s_speedEditing)
 				snprintf(s_speedBuf, sizeof s_speedBuf, "%s", speedText(engine.speed).c_str());
-			ImGui::SetNextItemWidth(46);
+			// one field with its arrows stacked inside its right end, a spin
+			// box (owner, 2026-11-14: "stacked on top of each other and in
+			// the same field as the one that has the number")
+			const float arrowW = 15.0f;
+			ImGui::SetNextItemWidth(46 + arrowW);
+			ImGui::SetNextItemAllowOverlap(); // the arrows drawn over its right end take their own clicks
 			if (ImGui::InputText("##Speed", s_speedBuf, sizeof s_speedBuf, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll)) {
 				std::string t = s_speedBuf;
 				t.erase(std::remove_if(t.begin(), t.end(), [](char ch) { return ch == 'x' || ch == 'X' || ch == ' '; }), t.end());
@@ -1257,20 +1290,44 @@ void DrawC2Toolbar() {
 					tip += fmt::format("\nThe world is busy and is running at about {:.1f}x.", engine.measuredSpeed);
 				ImGui::SetTooltip("%s", tip.c_str());
 			};
-			if (ImGui::IsItemHovered())
-				speedTip();
-			ImGui::BeginDisabled(engine.speed >= 10.0f);
-			if (ImGui::ArrowButton("##speedup", ImGuiDir_Up))
+			ImVec2 fmin = ImGui::GetItemRectMin(), fmax = ImGui::GetItemRectMax();
+			bool fieldHovered = ImGui::IsItemHovered();
+			ImVec2 after = ImGui::GetCursorScreenPos();
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			float bx = fmax.x - arrowW, midY = (fmin.y + fmax.y) * 0.5f;
+			// a thin line between the number and the arrows, and between the arrows
+			ImU32 lineCol = ImGui::GetColorU32(ImGuiCol_Border);
+			dl->AddLine(ImVec2(bx, fmin.y + 2), ImVec2(bx, fmax.y - 2), lineCol);
+			dl->AddLine(ImVec2(bx + 2, midY), ImVec2(fmax.x - 2, midY), lineCol);
+			bool anyArrowHovered = false;
+			auto arrow = [&](const char* id, bool up, bool enabled, const char* tip) {
+				ImVec2 a(bx + 1, up ? fmin.y + 1 : midY), b(fmax.x - 1, up ? midY : fmax.y - 1);
+				ImGui::SetCursorScreenPos(a);
+				ImGui::BeginDisabled(!enabled);
+				bool pressed = ImGui::InvisibleButton(id, ImVec2(b.x - a.x, b.y - a.y), ImGuiButtonFlags_PressedOnClick);
+				ImGui::EndDisabled();
+				bool hov = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled);
+				anyArrowHovered |= hov;
+				if (enabled && (hov || ImGui::IsItemActive()))
+					dl->AddRectFilled(a, b, ImGui::GetColorU32(ImGui::IsItemActive() ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered), 2.0f);
+				float cx = (a.x + b.x) * 0.5f, cy = (a.y + b.y) * 0.5f, r = 3.0f;
+				ImU32 col = ImGui::GetColorU32(enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled);
+				if (up)
+					dl->AddTriangleFilled(ImVec2(cx - r, cy + r * 0.6f), ImVec2(cx + r, cy + r * 0.6f), ImVec2(cx, cy - r * 0.6f), col);
+				else
+					dl->AddTriangleFilled(ImVec2(cx - r, cy - r * 0.6f), ImVec2(cx + r, cy - r * 0.6f), ImVec2(cx, cy + r * 0.6f), col);
+				if (hov)
+					ImGui::SetTooltip("%s", tip);
+				return pressed && enabled;
+			};
+			if (arrow("##speedup", true, engine.speed < 10.0f, "Faster (+0.5)"))
 				setSpeed(engine.speed + 0.5f);
-			ImGui::EndDisabled();
-			if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-				ImGui::SetTooltip("Faster (+0.5)");
-			ImGui::BeginDisabled(engine.speed <= 0.5f);
-			if (ImGui::ArrowButton("##speeddown", ImGuiDir_Down))
+			if (arrow("##speeddown", false, engine.speed > 0.5f, "Slower (-0.5)"))
 				setSpeed(engine.speed - 0.5f);
-			ImGui::EndDisabled();
-			if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-				ImGui::SetTooltip("Slower (-0.5)");
+			if (fieldHovered && !anyArrowHovered)
+				speedTip();
+			ImGui::SetCursorScreenPos(after);
+			ImGui::Dummy(ImVec2(0, 0));
 		}
 		};
 

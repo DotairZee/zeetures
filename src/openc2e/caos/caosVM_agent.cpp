@@ -19,6 +19,7 @@
 
 #include "AgentHelpers.h"
 #include "AnimatablePart.h"
+#include "caosScript.h"
 #include "Blackboard.h"
 #include "Bubble.h"
 #include "Engine.h" // C2 hack in POSE
@@ -485,6 +486,21 @@ void v_NULL(caosVM* vm) {
 	vm->result.setAgent(nullref);
 }
 
+// developer aid: OPENC2E_WATCH_ANIM="f g s" logs each ANIM, POSE and BASE
+// set on such objects and the script that set it
+static void watchAnim(caosVM* vm, int partid, const std::string& what) {
+	static const char* watch = getenv("OPENC2E_WATCH_ANIM");
+	if (!watch || !vm->targ)
+		return;
+	int f = -1, g = -1, s = -1;
+	if (sscanf(watch, "%d %d %d", &f, &g, &s) != 3 || vm->targ->family != f || vm->targ->genus != g || vm->targ->species != s)
+		return;
+	auto sc = vm->currentscript;
+	fmt::print("* WATCH ANIM t{} {} part {} {} from scrp {} {} {} {} (ownr {})\n", world.tickcount, vm->targ->identify(), partid, what,
+		sc ? (int)sc->fmly : -1, sc ? (int)sc->gnus : -1, sc ? (int)sc->spcs : -1, sc ? (int)sc->scrp : -1,
+		vm->owner ? vm->owner->identify() : std::string("none"));
+}
+
 /**
  POSE (command) pose (integer)
  %status maybe
@@ -498,6 +514,7 @@ void c_POSE(caosVM* vm) {
 
 	AnimatablePart* p = vm->getCurrentAnimatablePart();
 	THROW_IFNOT(p);
+	watchAnim(vm, p->id, fmt::format("pose {}", pose));
 	p->animation.clear();
 	p->setPose(pose);
 }
@@ -727,6 +744,8 @@ void c_ANIM_c2(caosVM* vm) {
 	SpritePart* p = vm->getCurrentSpritePart();
 	THROW_IFNOT(p);
 
+	watchAnim(vm, p->id, "[" + animstring + "]");
+
 	p->animation.clear();
 
 	for (char i : animstring) {
@@ -812,6 +831,7 @@ void c_BASE(caosVM* vm) {
 
 	SpritePart* p = vm->getCurrentSpritePart();
 	THROW_IFNOT(p);
+	watchAnim(vm, p->id, fmt::format("base {}", index));
 	// Note that we don't check validity here because a lot of code changes BASE and then only afterwards POSE/ANIM.
 	p->setBase(index);
 }
