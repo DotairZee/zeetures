@@ -10,7 +10,14 @@ void AnimatablePart::updateAnimation() {
 
 	if (frameno == animation.size())
 		return;
-	assert(frameno < animation.size());
+	if (frameno > animation.size()) {
+		// (was an assert, which closed the game: owner's Home, 2026-11-15,
+		// on loading; a frame number from before the animation was changed)
+		fmt::print("* Animation frame {} past the end of a {}-frame animation on {} {} {} part {}; started again\n",
+			(int)frameno, (int)animation.size(), parent ? (int)parent->family : -1, parent ? (int)parent->genus : -1,
+			parent ? parent->species : -1, (int)id);
+		frameno = 0;
+	}
 
 	if (animation[frameno] == 255) {
 		if (frameno == (animation.size() - 1)) {

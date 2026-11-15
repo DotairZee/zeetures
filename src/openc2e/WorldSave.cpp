@@ -380,8 +380,19 @@ static void applyPart(SpritePart* p, const SavedPart& s) {
 	p->setPose(s.pose);
 	p->setFramerate((unsigned char)s.framerate);
 	p->animation.assign(s.anim.begin(), s.anim.end());
-	if (!p->animation.empty() && s.frameno < p->animation.size() && p->animation[s.frameno] != 255)
+	// the saved frame, or (an animation run to its end, frame == its length)
+	// none: the part otherwise kept the frame number from the world file's
+	// own animation, which may be longer (owner's Home, 2026-11-15: a glow,
+	// 2 18 5, saved at frame 3 of 3 kept the world file's frame 4, and the
+	// game closed on loading)
+	if (p->animation.empty())
+		return;
+	if (s.frameno < p->animation.size() && p->animation[s.frameno] != 255)
 		p->setFrameNo(s.frameno);
+	else if (s.frameno >= p->animation.size())
+		p->animation.clear(); // (finished, as an empty animation is to OVER)
+	else
+		p->setFrameNo(0);
 }
 
 static void applyVars(Agent* ag, const SavedInjected& o, const std::map<int, Agent*>& made);
