@@ -1,13 +1,14 @@
 ZEETURES: NIGHTLY BUILD
 =======================
 
-Zeetures is a noncommercial fan fork of openc2e, the open-source engine
-for the Creatures games (https://github.com/openc2e/openc2e), forked from
-openc2e's commit dfcd46f2 of 7 October 2026, and focused on Creatures 2. It
-adds a new, original creature mind (the "homeostat" mind), a C2-style
-interface with kits, world saving, scents, and many fixes. Nightly
-builds are made automatically from whatever was committed that day, so
-expect rough edges.
+Zeetures is a labor of love by an old fan: a noncommercial fan fork of
+openc2e, the open-source engine for the Creatures games
+(https://github.com/openc2e/openc2e), forked from openc2e's commit
+dfcd46f2 of 7 October 2026, and focused on Creatures 2. It adds a new,
+original creature mind (the "homeostat" mind), a C2-style interface with
+kits, world saving, scents, and many fixes. Nightly builds are made
+automatically from whatever was committed that day, so expect rough
+edges.
 
 You need your own copy of Creatures 2
 -------------------------------------

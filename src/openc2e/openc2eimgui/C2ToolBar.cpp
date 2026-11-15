@@ -534,6 +534,9 @@ static void DrawC2MenuBar() {
 		ImGui::TextUnformatted("A fork of openc2e (from its commit dfcd46f2, 7 October 2026)");
 		ImGui::Text("Version %s (built %s)", OPENC2E_FORK_VERSION, __DATE__);
 		ImGui::TextUnformatted("by DotairZee");
+		// (owner, 2026-11-15: "this build is a labor of love by an old fan";
+		// British spelling, as all the game's own text)
+		ImGui::TextUnformatted("A labour of love by an old fan.");
 		ImGui::Spacing();
 		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 420);
 		ImGui::TextUnformatted("Creatures 2 with creatures that think for themselves: a mind of their own, words, temperament and "

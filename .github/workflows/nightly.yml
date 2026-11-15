@@ -133,7 +133,7 @@ jobs:
       run: |
         prev="${{ needs.check.outputs.previous }}"
         {
-          echo "Nightly build of Zeetures, a fan fork of [openc2e](https://github.com/openc2e/openc2e) (forked from its commit dfcd46f2, 7 October 2026), from the creature-mind branch at ${GITHUB_SHA:0:8}, $(date -u +%Y-%m-%d)."
+          echo "Nightly build of Zeetures, a labor of love by an old fan: a fan fork of [openc2e](https://github.com/openc2e/openc2e) (forked from its commit dfcd46f2, 7 October 2026), from the creature-mind branch at ${GITHUB_SHA:0:8}, $(date -u +%Y-%m-%d)."
           echo
           echo "You need your own copy of Creatures 2 (Steam's \"Creatures: The Albian Years\", or GOG). See README-NIGHTLY.txt in the download."
           echo
@@ -151,6 +151,16 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
+        # The release's tag must be the branch's newest commit: GitHub
+        # refuses this token a tag on an older one whose workflow files
+        # differ (2026-11-15: a push during the build left no release at
+        # all, the old one already deleted). If the branch moved on during
+        # the build, the release is left as it was for the next run.
+        git fetch -q origin "${GITHUB_REF_NAME}"
+        if [ "$(git rev-parse FETCH_HEAD)" != "$GITHUB_SHA" ]; then
+          echo "The branch moved on during the build; the nightly release is left as it was."
+          exit 0
+        fi
         gh release delete nightly --cleanup-tag --yes || true
         git push origin ":refs/tags/nightly" || true
         files=$(find dist -type f \( -name '*.tar.gz' -o -name '*.zip' \))
