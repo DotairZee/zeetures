@@ -1,12 +1,13 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 362 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 365 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 2 commits, 15 November 2026
+- [Unreleased](#unreleased): 1 commits, 15 November 2026
+- [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
 - [0.5.0](#version-050): 6 commits, 14 November 2026
@@ -19,6 +20,47 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Changelog: version 0.7.0 in the version list
+
+[`e0829e03`](https://github.com/DotairZee/zeetures/commit/e0829e03a89b843d39f3e3cec06476de68fd80ca)
+
+## Version 0.7.0
+
+The memorial stone, an Easter egg for the four who grew old together, and the "Together" notice when four or more that hatched together die of old age together; the world's additions and art recipes in the repository; the waterwheel and seabed airlock rides a touch less smooth; this changelog.
+
+### 15 November 2026
+
+#### Version 0.7.0
+
+[`e97a386e`](https://github.com/DotairZee/zeetures/commit/e97a386eabe31bf786d8c9b4522c483ab5e3dace)
+
+#### The memorial stone: four who grew old together
+
+[`e0671006`](https://github.com/DotairZee/zeetures/commit/e0671006d646448b358e03c5122a10d4236f613e)
+
+An Easter egg (owner, 2026-11-15): four norns that hatched within
+seconds of each other died of old age at the same moment. A small
+headstone (2 3 254, sprite zmem from art/memorial.py) stands in the dark
+niche of the stone arcade west of the incubator (x 4996-5042, floor
+1172), where a 3-minute sample of Home saw 4 creatures against hundreds
+by the incubator. It is behind creatures and unseen by them (ATTR 20).
+Pressing it opens a sandstone tablet window (CBUB 2 1 159, sprite zmtb)
+with the owner's words, announcement 40; a click or 60 s closes it.
+
+When it happens again in a world, it is remembered:
+historyManager::checkTogether runs after each old-age death and, when
+four or more with known ages died of old age within 300 ticks of each
+other and were born within 300 ticks of each other, logs a new
+lifeLogEntry::together (names in cause, count in stage) and announces it
+as a purple "Together: 4 norns" notice that leads to the stone and opens
+its window. The tablet then adds announcement 41 with the latest group's
+names and date. OPENC2E_TEST_TOGETHER=1 makes four living creatures die
+of old age with one birth tick, to test it.
+
+Announcement text parts now draw their letters on a see-through
+background (palette 0 of the charset was opaque black, unseen on the
+game's black text areas but solid bars on a light panel).
 
 #### Add the world additions and the art recipes
 
