@@ -799,6 +799,9 @@ void Engine::update() {
 				ev.type = SDL_EVENT_MOUSE_WHEEL;
 				ev.wheel.x = 0.5f;
 				ev.wheel.y = -0.3f;
+				// (OPENC2E_TEST_WHEEL_XY="X,Y": other amounts per tick)
+				if (const char* xy = getenv("OPENC2E_TEST_WHEEL_XY"))
+					sscanf(xy, "%f,%f", &ev.wheel.x, &ev.wheel.y);
 				ev.wheel.mouse_x = 500;
 				ev.wheel.mouse_y = 380;
 			}

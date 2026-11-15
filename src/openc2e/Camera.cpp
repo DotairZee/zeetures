@@ -106,8 +106,21 @@ void Camera::moveToGlobal(int _x, int _y, panstyle pan) {
 }
 
 void MainCamera::moveTo(int _x, int _y, panstyle pan) {
+	// checkBounds clamps a move past the world's top or bottom (or wraps one
+	// past a looping world's side) by calling moveTo again from inside this
+	// one: only the outer call moves the floated agents, by the whole move.
+	// (The inner call used to move them back by the overshoot too, so the
+	// hand crept across the window while the view scrolled against the top
+	// or bottom: owner, 2026-11-15.)
+	static int depth = 0;
+	if (depth > 0) {
+		Camera::moveTo(_x, _y, pan);
+		return;
+	}
 	int oldx = x, oldy = y;
+	depth++;
 	Camera::moveTo(_x, _y, pan);
+	depth--;
 	int xoffset = x - oldx; // (none yet when a glide starts)
 	int yoffset = y - oldy;
 
