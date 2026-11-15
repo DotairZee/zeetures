@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 368 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 369 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 4 commits, 15 November 2026
+- [Unreleased](#unreleased): 5 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,22 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Skip a built-in addition whose art is not installed
+
+[`de8fd955`](https://github.com/DotairZee/zeetures/commit/de8fd9551dc9f787ac23a69d2899f609e925c0fd)
+
+The world additions are built into the program, but their sprites are
+not yet (the from-scratch art is to ship next, and the art made from the
+player's own game files needs the recipes ported). On a fresh install the
+17 additions that draw our sprites stopped at the first missing one,
+after some had already changed rooms (a walkway's floor with no walkway
+drawn). Now a built-in addition is checked first: any of our sprites it
+names (four letters starting with z, outside comment lines) with no
+.s16, .c16 or .png installed, and it is skipped whole, logged as
+"World addition X (built in) skipped: its art (zabc) is not installed".
+The player's own copies run as before. Fresh-folder check: 17 skipped,
+22 run, no script errors.
 
 #### Memorial stone: only creatures press it, and it eases their loneliness
 
