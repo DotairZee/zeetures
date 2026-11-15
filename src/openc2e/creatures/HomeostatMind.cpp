@@ -2583,7 +2583,7 @@ class HomeostatMind : public CreatureMind {
 	}
 
 	// Leaving a place to find food (see starveLeaveHunger)
-	void addStarveLeave(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, std::vector<Candidate>& out) {
+	void addStarveLeave(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
 		// (developer aid: OPENC2E_NO_STARVELEAVE turns this off, for comparison)
 		static const bool off = getenv("OPENC2E_NO_STARVELEAVE") != nullptr;
 		if (off || p.inWater || d[HUNGER] < prm.starveLeaveHunger || hungryTicks < prm.restlessRamp)
@@ -2636,6 +2636,28 @@ class HomeostatMind : public CreatureMind {
 				out.push_back(c);
 				return;
 			}
+		// or one out of view on this floor that it remembers: walk to it, and
+		// it is used when in view (above). The gene lab's lower room has its
+		// teleporter at the west end and starving creatures piled up at the
+		// east end, 750 px away, out of its sight (owner's screencast,
+		// 2026-11-14 night). OPENC2E_NO_STARVEWALK turns this part off.
+		static const bool noWalk = getenv("OPENC2E_NO_STARVEWALK") != nullptr;
+		if (noWalk)
+			return;
+		auto tp = places.find(prm.teleporterCategory);
+		if (tp == places.end() || isVisible(p, prm.teleporterCategory))
+			return;
+		float dx = dxTo(p, tp->second.x), dy = tp->second.y - p.y;
+		if (std::fabs(dy) > prm.seekMaxHeight || std::fabs(dx) < prm.seekArrived)
+			return;
+		int decision = dx < 0 ? 10 : 11;
+		if ((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision))
+			return;
+		Candidate c{-1, decision, std::fabs(dx), want * 0.8f, 0, want * 0.8f};
+		c.seekCategory = prm.teleporterCategory;
+		c.food = true;
+		c.place = "leave:Hunger";
+		out.push_back(c);
 	}
 
 	// Foraging: searching when nothing better is known.
@@ -3582,7 +3604,7 @@ class HomeostatMind : public CreatureMind {
 		addScentFollow(p, d, D, canWest, canEast, out);
 		addScentUrges(p, d, D, canWest, canEast, out);
 		addForage(p, d, D, canWest, canEast, out);
-		addStarveLeave(p, d, D, out);
+		addStarveLeave(p, d, D, canWest, canEast, out);
 		addMateSeek(p, d, D, canWest, canEast, out);
 		addFavourites(p, d, D, canWest, canEast, out);
 		addLeave(p, d, D, canWest, canEast, out);
