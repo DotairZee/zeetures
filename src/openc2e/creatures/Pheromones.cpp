@@ -50,13 +50,19 @@ struct Channel {
 	std::string name;
 	float spread = 0.12f; // share of the difference exchanged through a fully open door a step
 	float fade = 0.02f; // share lost a step
+	// habituation (pheromones.txt "scent NAME habituate T"; owner's idea,
+	// 2026-11-15): a creature in the scent gets used to it over about T
+	// ticks and its responses weaken by as much; out of it, it unlearns at
+	// the same pace. 0: none
+	float habituate = 0;
 };
 
 // a condition on the creature: a chemical above or below a level, carrying
 // something, dead, asleep or awake
 struct Condition {
-	enum Kind { ChemAbove, ChemBelow, Carrying, Dead, Asleep, Awake } kind = ChemAbove;
+	enum Kind { ChemAbove, ChemBelow, Carrying, Dead, Asleep, Awake, HereAbove, HereBelow } kind = ChemAbove;
 	int chem = 0, level = 0;
+	float strength = 0; // HereAbove/HereBelow: the rule's scent where the creature is, 0-1 (dose bands)
 };
 
 // which creatures (or objects) a rule is for
@@ -181,7 +187,13 @@ bool parseCondition(const std::string& t, Condition& c) {
 		c.kind = Condition::Asleep;
 	else if (t == "awake")
 		c.kind = Condition::Awake;
-	else {
+	else if (t.rfind("here>", 0) == 0 || t.rfind("here<", 0) == 0) {
+		// dose bands (owner's idea, 2026-11-15): one scent, different
+		// responses at different strengths, e.g. drawn to it when faint,
+		// fleeing it when strong
+		c.kind = t[4] == '>' ? Condition::HereAbove : Condition::HereBelow;
+		c.strength = (float)atof(t.substr(5).c_str());
+	} else {
 		size_t op = t.find_first_of("<>");
 		if (op == std::string::npos || op == 0)
 			return false;
@@ -239,9 +251,19 @@ bool matches(const Who& w, Agent* a, oldCreature* c) {
 	return stage >= w.stageFrom && stage <= w.stageTo;
 }
 
-bool holds(const std::vector<Condition>& when, Agent* a, oldCreature* c) {
+// (here: the rule's own scent where the creature is, for the dose
+// conditions; -1 where that does not apply, and the dose conditions fail)
+bool holds(const std::vector<Condition>& when, Agent* a, oldCreature* c, float here = -1) {
 	for (auto& k : when) {
 		switch (k.kind) {
+			case Condition::HereAbove:
+				if (here < 0 || here <= k.strength)
+					return false;
+				break;
+			case Condition::HereBelow:
+				if (here < 0 || here >= k.strength)
+					return false;
+				break;
 			case Condition::ChemAbove:
 				if (!c || c->getChemical((unsigned char)k.chem) <= k.level)
 					return false;
@@ -269,6 +291,14 @@ bool holds(const std::vector<Condition>& when, Agent* a, oldCreature* c) {
 		}
 	}
 	return true;
+}
+
+// habituation by creature (UNID), a level per scent (see Channel::habituate)
+std::map<int, std::vector<float>> habit;
+
+// how strongly a scent at `level` is felt by a creature used to `h` of it
+float felt(float level, float h) {
+	return std::max(0.0f, level - h);
 }
 
 std::shared_ptr<Room> roomOf(Agent* a) {
@@ -428,6 +458,7 @@ void load() {
 	signature = Signature();
 	rules.clear();
 	marks.clear();
+	habit.clear();
 	emittedLast.clear();
 	// (OPENC2E_PHEROMONES=FILE reads another file: for comparing rule sets in test copies)
 	const char* other = getenv("OPENC2E_PHEROMONES");
@@ -478,6 +509,8 @@ void load() {
 					ch.spread = std::clamp(v, 0.0f, 0.24f); // more would overshoot between rooms
 				else if (key == "fade")
 					ch.fade = std::clamp(v, 0.0f, 1.0f);
+				else if (key == "habituate")
+					ch.habituate = std::max(0.0f, v);
 			}
 			if (channelIndex(ch.name) < 0)
 				channels.push_back(ch);
@@ -642,18 +675,26 @@ void tick() {
 		oldCreature* c = creatureOf(a.get());
 		if (!c || !c->isAlive())
 			continue;
-		std::shared_ptr<Room> room;
+		std::shared_ptr<Room> room = roomOf(a.get());
+		if (!room || room->scent.size() < n)
+			continue;
 		auto own = emittedLast.find(a->getUNID());
+		// habituation: each scent that has it, followed toward what is here
+		// (its own scent: not smelled, so unlearnt)
+		std::vector<float>& h = habit[a->getUNID()];
+		h.resize(n, 0.0f);
+		for (size_t ch = 0; ch < n; ch++)
+			if (channels[ch].habituate > 0) {
+				bool ownScent = own != emittedLast.end() && own->second.count((int)ch);
+				float level = ownScent ? 0.0f : room->scent[ch];
+				h[ch] += (level - h[ch]) * std::min(1.0f, STEP_TICKS / channels[ch].habituate);
+			}
 		for (auto& r : rules) {
-			if (r.kind != Rule::Chem || !matches(r.who, a.get(), c) || !holds(r.when, a.get(), c))
+			if (r.kind != Rule::Chem || !matches(r.who, a.get(), c) || !holds(r.when, a.get(), c, room->scent[r.channel]))
 				continue;
 			if (own != emittedLast.end() && own->second.count(r.channel))
 				continue; // its own scent
-			if (!room)
-				room = roomOf(a.get());
-			if (!room || room->scent.size() < n)
-				break;
-			float amount = r.strength * room->scent[r.channel];
+			float amount = r.strength * felt(room->scent[r.channel], h[r.channel]);
 			if (amount <= 0.0f)
 				continue;
 			int whole = (int)amount;
@@ -685,8 +726,11 @@ std::vector<Urge> urgesFor(Agent* creature, oldCreature* c) {
 	if (!creature || !c || channels.empty())
 		return out;
 	auto own = emittedLast.find(creature->getUNID());
+	std::shared_ptr<Room> room = roomOf(creature);
+	auto hit = habit.find(creature->getUNID());
 	for (auto& r : rules) {
-		if ((r.kind != Rule::Follow && r.kind != Rule::Avoid) || !matches(r.who, creature, c) || !holds(r.when, creature, c))
+		float here = room && (size_t)r.channel < room->scent.size() ? room->scent[r.channel] : -1.0f;
+		if ((r.kind != Rule::Follow && r.kind != Rule::Avoid) || !matches(r.who, creature, c) || !holds(r.when, creature, c, here))
 			continue;
 		if (own != emittedLast.end() && own->second.count(r.channel))
 			continue;
@@ -695,6 +739,9 @@ std::vector<Urge> urgesFor(Agent* creature, oldCreature* c) {
 		u.avoid = r.kind == Rule::Avoid;
 		u.drive = r.drive;
 		u.weight = r.strength;
+		// (used to the scent: the urge weakens as much as it is felt less)
+		if (here > 0 && hit != habit.end() && (size_t)r.channel < hit->second.size())
+			u.weight *= felt(here, hit->second[r.channel]) / here;
 		u.tend = r.tend;
 		out.push_back(u);
 	}
