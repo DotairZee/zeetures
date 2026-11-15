@@ -505,7 +505,6 @@ void WorldHistoryPage() {
 	}
 }
 
-static std::vector<lifeLogEntry> s_notices; // shown on the status bar until clicked or dismissed
 static int s_notice_menu = -1; // the notice right-clicked for its menu (-1: the "+N" button)
 static ImVec2 s_more_at; // where the "+N" list opens (its bottom left)
 static int s_clear_older = 0; // "Clear these" in the "+N" list: how many of the oldest to clear
@@ -513,11 +512,9 @@ static int s_clear_older = 0; // "Clear these" in the "+N" list: how many of the
 void DrawLifeNotices(float room) {
 	if (engine.version != 2 || !world.history)
 		return;
-	static historyManager* seen = nullptr;
-	if (seen != world.history.get()) { // another world
-		seen = world.history.get();
-		s_notices.clear();
-	}
+	// the notices on the bar: the world's own list, saved with it, so they
+	// last through relaunches (owner, 2026-11-15)
+	std::vector<lifeLogEntry>& s_notices = world.history->shownNotices;
 	for (auto& e : world.history->notices)
 		s_notices.push_back(e);
 	world.history->notices.clear();

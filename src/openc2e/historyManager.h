@@ -162,6 +162,7 @@ class historyManager {
   public:
 	std::vector<lifeLogEntry> lifelog;
 	std::vector<lifeLogEntry> notices; // not yet shown by the interface (it takes them)
+	std::vector<lifeLogEntry> shownNotices; // on the status bar until clicked or dismissed (kept with the world)
 	bool quiet = false; // restoring creatures from a save: nothing is new
 	// default names ("Norn 0005"): how many of each genus this world has had
 	std::map<int, unsigned int> namecount;

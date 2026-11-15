@@ -630,11 +630,21 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 		out << "ecology-pin " << room << " " << color << "\n";
 	// the life log (Owner's Kit): kind, tick, genus, female, stage, age, age
 	// known, old age, moniker, then the name
-	for (auto& e : world.history->lifelog)
-		out << "life " << e.kind << " " << e.tick << " " << e.genus << " " << (e.female ? 1 : 0) << " " << e.stage << " " << e.age << " "
+	auto entry = [&](const char* key, const lifeLogEntry& e) {
+		out << key << " " << e.kind << " " << e.tick << " " << e.genus << " " << (e.female ? 1 : 0) << " " << e.stage << " " << e.age << " "
 			<< (e.ageknown ? 1 : 0) << " " << (e.oldage ? 1 : 0) << " " << (e.moniker.empty() ? "-" : e.moniker) << " " << escapeLine(e.name) << "\n"
 			<< (e.child.empty() ? "" : "life-egg " + e.child + "\n") // (belongs to the line before)
 			<< (e.cause.empty() ? "" : "life-cause " + escapeLine(e.cause) + "\n");
+	};
+	for (auto& e : world.history->lifelog)
+		entry("life", e);
+	// the status bar's notices not yet clicked or dismissed, and any not yet
+	// put on it (the same fields; owner, 2026-11-15: they were lost at
+	// every relaunch)
+	for (auto& e : world.history->shownNotices)
+		entry("notice", e);
+	for (auto& e : world.history->notices)
+		entry("notice", e);
 
 	int ncreatures = 0, neggs = 0;
 	for (auto& a : world.agents) {
@@ -1048,7 +1058,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 
 	std::vector<SavedCreature> creatures;
 	std::vector<SavedEgg> eggs;
-	std::vector<lifeLogEntry> lifelog;
+	std::vector<lifeLogEntry> lifelog, savedNotices;
+	std::vector<lifeLogEntry>* lastEntry = nullptr; // (the list the last life/notice line went to)
 	std::vector<SavedCreature> records;
 	std::map<int, unsigned int> namecount;
 	bool namesgiven = false;
@@ -1093,7 +1104,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 				world.season = sea % 4;
 				world.year = yr;
 			}
-		} else if (key == "life") {
+		} else if (key == "life" || key == "notice") {
 			lifeLogEntry le;
 			int female = 0, ageknown = 1, oldage = 0;
 			if (l >> le.kind >> le.tick >> le.genus >> female >> le.stage >> le.age >> ageknown >> oldage >> le.moniker) {
@@ -1101,14 +1112,17 @@ bool LoadWorldState(const fs::path& worlddir) {
 				le.ageknown = ageknown != 0;
 				le.oldage = oldage != 0;
 				le.name = unescapeLine(restOfLine(l));
-				lifelog.push_back(le);
+				if (le.moniker == "-")
+					le.moniker.clear();
+				(key == "life" ? lifelog : savedNotices).push_back(le);
+				lastEntry = key == "life" ? &lifelog : &savedNotices;
 			}
 		} else if (key == "life-cause") {
-			if (!lifelog.empty())
-				lifelog.back().cause = unescapeLine(restOfLine(l));
+			if (lastEntry && !lastEntry->empty())
+				lastEntry->back().cause = unescapeLine(restOfLine(l));
 		} else if (key == "life-egg") {
-			if (!lifelog.empty())
-				l >> lifelog.back().child;
+			if (lastEntry && !lastEntry->empty())
+				l >> lastEntry->back().child;
 		} else if (key == "names") {
 			int genus;
 			unsigned int n;
@@ -1288,6 +1302,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 
 	world.history->lifelog = lifelog;
 	world.history->notices.clear();
+	world.history->shownNotices = savedNotices;
 	world.history->namecount = namecount;
 	world.history->namesgiven = namesgiven;
 	world.history->ecologypins = ecologypins;
