@@ -60,6 +60,8 @@ jobs:
       run: |
         out=openc2e-nightly-linux-x86_64
         cmake --install build --prefix "$out"
+        # (without the debug information: the engine was 138 MB with it)
+        strip "$out"/openc2e "$out"/cobdumper "$out"/mngdumper "$out"/mngplayer2 "$out"/praybuilder "$out"/praydumper "$out"/spritedumper || true
         cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
         tar czf "$out.tar.gz" "$out"
     - uses: actions/upload-artifact@v4
