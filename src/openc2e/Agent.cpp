@@ -1101,6 +1101,16 @@ void Agent::findCollisionInDirection(unsigned int i, class MetaRoom* m, Point sr
 			else if (size > world.map->getDoorPerm(room, newroom)) {
 				collision = true;
 			}
+			// C2 flying critters (bees, flies, butterflies, moths: genus 16-18
+			// with collisions and no gravity) pass only fully open doorways.
+			// Small ones (bees 40, flies 20) slipped through the many room
+			// edges left at 100 to stop creatures, which are mostly drawn as
+			// solid rock, and so flew through rock (owner, 2026-11-14:
+			// "flying things ... seem to ignore room boundaries")
+			else if (engine.version == 2 && family == 2 && genus >= 16 && genus <= 18 && !sufferphysics() &&
+					 world.map->getDoorPerm(room, newroom) < 255) {
+				collision = true;
+			}
 
 			if (collision && (trycollisions || (!newroom))) {
 				collided = true;
