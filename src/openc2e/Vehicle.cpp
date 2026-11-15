@@ -18,6 +18,7 @@
  */
 
 #include "Vehicle.h"
+#include "Lift.h"
 #include "creatures/SkeletalCreature.h"
 #include <fmt/core.h>
 #include <cstdlib>
@@ -160,9 +161,12 @@ void Vehicle::drop(AgentRef passenger) {
 	// learned the lift as a way east and crowded its shaft (owner,
 	// 2026-11-13). The foot is slid toward the cabin's middle until it is in
 	// the room under the middle.
-	// (cage lifts only, 3 2 3: a boat's or the submarine's middle is over
-	// water, where no creature should be slid)
-	if (engine.version == 2 && passenger->family == 4 && world.map && family == 3 && genus == 2 && species == 3) {
+	// (lifts only: a boat's or the submarine's middle is over water, where no
+	// creature should be slid. First the cage lifts, 3 2 3; since 2026-11-15
+	// every lift: the library's lift, 3 2 4, has a cabin 5-9 px wider than
+	// its shaft at each stop, its east side over the rock beside the
+	// tree-trunk lift's shaft, room 102)
+	if (engine.version == 2 && passenger->family == 4 && world.map && dynamic_cast<Lift*>(this)) {
 		float floorY = y + cabinbottom - 2;
 		float mid = x + (cabinleft + cabinright) / 2.0f;
 		std::shared_ptr<Room> shaft = world.map->roomAt(mid, floorY);

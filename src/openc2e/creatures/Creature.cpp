@@ -931,10 +931,11 @@ void oldCreature::keepInRoomSystem() {
 				float lx = lift->x + lift->getWidth() / 2.0f;
 				for (int y : lift->callbuttony) {
 					std::shared_ptr<Room> r = world.map->roomAt(lx, y - 4);
-					stops += r ? fmt::format(" {}(room {} group {}{})", y, r->id, group.count(r.get()) ? group[r.get()] : -1,
+					stops += r ? fmt::format(" {}(room {} x {}-{} group {}{})", y, r->id, r->x_left, r->x_right, group.count(r.get()) ? group[r.get()] : -1,
 									 group.count(r.get()) && group[r.get()] == worldGroup ? " world" : "")
 							   : fmt::format(" {}(no room)", y);
 				}
+				stops += fmt::format("; cabin x {:.0f}-{:.0f}", lift->x + lift->cabinleft, lift->x + lift->cabinright);
 				fmt::print("* Lift {} {} {} at x {:.0f}-{:.0f}: stops{}\n", (int)lift->family, (int)lift->genus, lift->species, lift->x,
 					lift->x + lift->getWidth(), stops);
 			}
