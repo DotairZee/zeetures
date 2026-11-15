@@ -574,6 +574,17 @@ void SkeletalCreature::skeletonInit() {
 		float grey, lift;
 		if (creature->getStage() == 6 && senileTint(grey, lift))
 			images[i] = world.gallery->muted(images[i], grey, lift);
+		// Babies are drawn more vivid (owner, 2026-11-14: babies "more
+		// vibrant"; chose +100% of the options shown, "subtlety is not
+		// needed"): their pictures' colours are pushed away from grey by
+		// 1.0 (twice as saturated), the reverse of the old's grey above.
+		// OPENC2E_BABY_VIVID=s sets another strength (0 turns it off).
+		static const float babyVivid = [] {
+			const char* e = getenv("OPENC2E_BABY_VIVID");
+			return e ? (float)atof(e) : 1.0f;
+		}();
+		if (babyVivid > 0.0f && creature->getStage() == 0)
+			images[i] = world.gallery->muted(images[i], -babyVivid, 0.0f);
 	}
 }
 
