@@ -118,8 +118,62 @@ jobs:
         name: macos
         path: zeetures-nightly-macos-arm64.zip
 
+  # 32-bit builds (owner, 2026-11-15: it should run on 32-bit machines
+  # too); allowed to fail like the other new ones
+  windows-32:
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: |
+        cmake -S . -B build -A Win32 -DOPENC2E_ASAN=OFF
+        cmake --build build --config RelWithDebInfo
+    - name: Package
+      shell: bash
+      run: |
+        out=zeetures-nightly-windows-x86
+        cmake --install build --config RelWithDebInfo --prefix "$out"
+        cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
+        7z a "$out.zip" "$out"
+    - uses: actions/upload-artifact@v4
+      with:
+        name: windows-32
+        path: zeetures-nightly-windows-x86.zip
+
+  linux-32:
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install build tools
+      run: |
+        sudo dpkg --add-architecture i386
+        sudo apt-get update
+        sudo apt-get install -y cmake python3 gcc-multilib g++-multilib zlib1g-dev:i386 libpng-dev:i386 libx11-dev:i386 libxext-dev:i386 libxcursor-dev:i386 libxrandr-dev:i386 libxi-dev:i386 libxss-dev:i386 libxtst-dev:i386 libxfixes-dev:i386 libxkbcommon-dev:i386 libgl1-mesa-dev:i386 libegl1-mesa-dev:i386 libasound2-dev:i386 libpulse-dev:i386
+        echo "PKG_CONFIG_LIBDIR=/usr/lib/i386-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> "$GITHUB_ENV"
+    - name: Build
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_LIBRARY_ARCHITECTURE=i386-linux-gnu -DOPENC2E_BUNDLED_SDL=ON -DOPENC2E_ASAN=OFF -DSDL_WAYLAND=OFF
+        cmake --build build
+    - name: Package
+      run: |
+        out=zeetures-nightly-linux-i386
+        cmake --install build --prefix "$out"
+        strip "$out"/openc2e "$out"/cobdumper "$out"/mngdumper "$out"/mngplayer2 "$out"/praybuilder "$out"/praydumper "$out"/spritedumper || true
+        cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
+        tar czf "$out.tar.gz" "$out"
+    - uses: actions/upload-artifact@v4
+      with:
+        name: linux-32
+        path: zeetures-nightly-linux-i386.tar.gz
+
   release:
-    needs: [check, linux, windows, macos]
+    needs: [check, linux, windows, macos, windows-32, linux-32]
     if: always() && needs.check.outputs.build == 'true' && needs.linux.result == 'success'
     runs-on: ubuntu-latest
     steps:

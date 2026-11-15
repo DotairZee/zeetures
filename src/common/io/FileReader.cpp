@@ -3,6 +3,8 @@
 #include "common/io/IOException.h"
 
 #include <assert.h>
+#include <cstdint>
+#include <limits>
 #include <fmt/format.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -72,8 +74,11 @@ std::vector<uint8_t> FileReader::read_to_end() {
 			path_.string()));
 	}
 
-	static_assert(sizeof(size_t) >= sizeof(int64_t), "positive int64_t can fit into size_t");
-	// static_cast is safe because sb.st_size is non-negative and can fit into a size_t
+	// (on a 32-bit system a size_t is smaller than the file size type: a
+	// file too big to hold in memory is an error, not an assumption)
+	if (static_cast<uint64_t>(sb.st_size) > std::numeric_limits<size_t>::max()) {
+		throw IOException(fmt::format("file {:?} is too big to read into memory", path_.string()));
+	}
 	if (static_cast<size_t>(sb.st_size) < pos_) {
 		throw IOException(fmt::format(
 			"stat.st_size < pos_ for file {:?}", path_.string()));
@@ -102,8 +107,7 @@ void FileReader::seek_absolute(size_t n) {
 
 	// some static asserts to make sure the size check is well-formed
 	static_assert(std::numeric_limits<int64_t>::max() >= 0, "max(int64_t) >= 0");
-	static_assert(sizeof(size_t) >= sizeof(int64_t), "positive int64_t can fit into size_t");
-	if (n > static_cast<size_t>(std::numeric_limits<int64_t>::max())) {
+	if (static_cast<uint64_t>(n) > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
 		throw IOException(fmt::format(
 			"seek() failed for file {:?}: n is too big to fit into an int64_t", path_.string()));
 	}
@@ -124,9 +128,11 @@ void FileReader::seek_relative(int64_t off) {
 	// we might as well just call seek_absolute() with the final position anyways
 	// (and avoids a syscall on certain implementations of fseek(SEEK_CUR) which
 	// call tell() and fseek(SEEK_SET) under the hood).
-	static_assert(sizeof(size_t) >= sizeof(int64_t), "positive int64_t can fit into size_t");
 	if (off >= 0) {
-		// static_cast is safe because off is positive and fits into size_t.
+		// (a size_t may be 32 bits: an offset past what it holds is an error)
+		if (static_cast<uint64_t>(off) > std::numeric_limits<size_t>::max() - pos_) {
+			throw IOException(fmt::format("seek_relative() would go past the end of what can be addressed for file {:?}", path_.string()));
+		}
 		return seek_absolute(static_cast<size_t>(off) + pos_);
 	} else if (off < 0) {
 		// -(off + 1) is safe because it's guaranteed to fit into an off_t (we
@@ -134,6 +140,10 @@ void FileReader::seek_relative(int64_t off) {
 		// which can't fit into a positive).
 		// static_cast is safe because -(off + 1) is positive and fits into size_t.
 		// off_negated is mathematically: -(off + 1) + 1 = -off - 1 + 1 = -off.
+		if (static_cast<uint64_t>(-(off + 1)) >= std::numeric_limits<size_t>::max()) {
+			throw IOException(fmt::format("seek_relative() would end up in a negative offset for file {:?}",
+				path_.string()));
+		}
 		size_t off_negated = static_cast<size_t>(-(off + 1)) + 1;
 		if (off_negated > pos_) {
 			throw IOException(fmt::format("seek_relative() would end up in a negative offset for file {:?}",

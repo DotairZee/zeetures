@@ -81,7 +81,8 @@ jobs:
             configure: -A Win32
           - name: linux-i386
             os: ubuntu-26.04
-            configure: -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DOPENC2E_BUNDLED_SDL=ON -DOPENC2E_ASAN=OFF
+            # (SDL built for X11 only, without Wayland: fewer 32-bit packages)
+            configure: -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_LIBRARY_ARCHITECTURE=i386-linux-gnu -DOPENC2E_BUNDLED_SDL=ON -DOPENC2E_ASAN=OFF -DSDL_WAYLAND=OFF
     steps:
     - name: "Check out source"
       uses: actions/checkout@v3
@@ -90,7 +91,9 @@ jobs:
       run: |
         sudo dpkg --add-architecture i386
         sudo apt-get update
-        sudo apt-get install gcc-multilib g++-multilib zlib1g-dev:i386 libx11-dev:i386 libxext-dev:i386 libasound2-dev:i386 libpulse-dev:i386
+        sudo apt-get install gcc-multilib g++-multilib zlib1g-dev:i386 libpng-dev:i386 libx11-dev:i386 libxext-dev:i386 libxcursor-dev:i386 libxrandr-dev:i386 libxi-dev:i386 libxss-dev:i386 libxtst-dev:i386 libxfixes-dev:i386 libxkbcommon-dev:i386 libgl1-mesa-dev:i386 libegl1-mesa-dev:i386 libasound2-dev:i386 libpulse-dev:i386
+        # (pkg-config to find the 32-bit libraries)
+        echo "PKG_CONFIG_LIBDIR=/usr/lib/i386-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> "$GITHUB_ENV"
     - name: "Configure"
       run: cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{ matrix.configure }}
     - name: "Build"

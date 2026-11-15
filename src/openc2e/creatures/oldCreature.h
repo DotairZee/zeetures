@@ -307,7 +307,7 @@ class c2Creature : public oldCreature {
 	// still gets air for breathTicks (5 minutes at C2's 10 ticks a second)
 	// before its air runs out; surfacing refills the breath in a few seconds.
 	unsigned int breathHeld = 0;
-	static const unsigned int breathTicks = 3000;
+	static constexpr unsigned int breathTicks = 3000; // (constexpr: std::min takes it by reference, and a debug build then needs a definition)
 	// Breathes water as well as air: its genome has no emitter on the air
 	// sense (C2: creature, sensorimotor, locus 9), so being under water
 	// raises no suffocation in its body (the Frog Norn pack's genome; every

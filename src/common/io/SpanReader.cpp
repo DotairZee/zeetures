@@ -2,6 +2,9 @@
 
 #include "common/io/IOException.h"
 
+#include <cstdint>
+#include <limits>
+
 #include <span>
 #include <stddef.h>
 #include <stdexcept>
@@ -28,9 +31,11 @@ void SpanReader::seek_absolute(size_t n) {
 }
 
 void SpanReader::seek_relative(int64_t off) {
-	static_assert(sizeof(size_t) >= sizeof(int64_t), "positive int64_t can fit into size_t");
 	if (off >= 0) {
-		// static_cast is safe because off is positive and fits into size_t.
+		// (a size_t may be 32 bits: an offset past what it holds is an error)
+		if (static_cast<uint64_t>(off) > std::numeric_limits<size_t>::max() - pos) {
+			throw IOException("bad seek");
+		}
 		seek_absolute(pos + static_cast<size_t>(off));
 	} else if (off < 0) {
 		// -(off + 1) is safe because it's guaranteed to fit into an off_t (we
@@ -38,6 +43,9 @@ void SpanReader::seek_relative(int64_t off) {
 		// which can't fit into a positive).
 		// static_cast is safe because -(off + 1) is positive and fits into size_t.
 		// off_negated is mathematically: -(off + 1) + 1 = -off - 1 + 1 = -off.
+		if (static_cast<uint64_t>(-(off + 1)) >= std::numeric_limits<size_t>::max()) {
+			throw IOException("bad seek");
+		}
 		size_t off_negated = static_cast<size_t>(-(off + 1)) + 1;
 		if (off_negated > pos) {
 			throw IOException("bad seek");
