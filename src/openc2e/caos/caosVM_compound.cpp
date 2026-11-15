@@ -18,6 +18,7 @@
  */
 
 #include "Blackboard.h"
+#include "Bubble.h"
 #include "ButtonPart.h"
 #include "CameraPart.h"
 #include "CompoundAgent.h"
@@ -666,34 +667,53 @@ void c_BBD_VOCB(caosVM* vm) {
 	}
 }
 
+// text lines of an announcement window are parts numbered from 100, apart
+// from its picture parts (C2's scripts number both from 0)
+static const unsigned int BBTX_PART_BASE = 100;
+
 /**
  NEW: BBTX (command) part (integer) x (integer) y (integer) width (integer)
- %status stub
+ %status maybe
  %variants c2
 
  Create a new C2 text part for a compound bubble object. Text will wrap as required to fit width.
 */
 void c_NEW_BBTX(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(width)
-	VM_PARAM_INTEGER_UNUSED(y)
-	VM_PARAM_INTEGER_UNUSED(x)
-	VM_PARAM_INTEGER_UNUSED(part)
+	VM_PARAM_INTEGER(width)
+	VM_PARAM_INTEGER(y)
+	VM_PARAM_INTEGER(x)
+	VM_PARAM_INTEGER(part)
 
 	valid_agent(vm->targ);
-	// TODO
+	CompoundAgent* a = dynamic_cast<CompoundAgent*>(vm->targ.get());
+	THROW_IFNOT(a);
+	THROW_IFNOT(part >= 0 && part < 10 && width > 0);
+	if (a->part(BBTX_PART_BASE + part))
+		return;
+	// drawn just in front of the window's own parts
+	unsigned int top = 0;
+	for (unsigned int i = 0; i < 10; i++)
+		if (CompoundPart* p = a->part(i))
+			top = std::max(top, p->zorder);
+	auto* t = new AnnouncementTextPart(a, BBTX_PART_BASE + part, x, y, (int)top + 1, (unsigned int)width);
+	a->addPart(t);
 }
 
 /**
  BBTX (command) part (integer) stringindex (integer)
- %status stub
+ %status maybe
  %variants c2
 */
 void c_BBTX(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(stringindex)
-	VM_PARAM_INTEGER_UNUSED(part)
+	VM_PARAM_INTEGER(stringindex)
+	VM_PARAM_INTEGER(part)
 
 	valid_agent(vm->targ);
-	// TODO
+	AnnouncementBubble* a = dynamic_cast<AnnouncementBubble*>(vm->targ.get());
+	if (!a)
+		return;
+	if (auto* t = dynamic_cast<AnnouncementTextPart*>(a->part(BBTX_PART_BASE + part)))
+		t->setText(AnnouncementBubble::announcementText(a->stringid, stringindex));
 }
 
 /**
@@ -766,17 +786,21 @@ void c_BBLE(caosVM* vm) {
 
 /**
  BBFD (command) part (integer) red (integer) green (integer) blue (integer)
- %status stub
+ %status maybe
  %variants c2
 */
 void c_BBFD(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(blue)
-	VM_PARAM_INTEGER_UNUSED(green)
-	VM_PARAM_INTEGER_UNUSED(red)
-	VM_PARAM_INTEGER_UNUSED(part)
+	VM_PARAM_INTEGER(blue)
+	VM_PARAM_INTEGER(green)
+	VM_PARAM_INTEGER(red)
+	VM_PARAM_INTEGER(part)
 
 	valid_agent(vm->targ);
-	// TODO
+	CompoundAgent* a = dynamic_cast<CompoundAgent*>(vm->targ.get());
+	if (!a)
+		return;
+	if (auto* t = dynamic_cast<AnnouncementTextPart*>(a->part(BBTX_PART_BASE + part)))
+		t->setColour(((uint32_t)(red & 255) << 16) | ((uint32_t)(green & 255) << 8) | (uint32_t)(blue & 255));
 }
 
 /* vim: set noet: */

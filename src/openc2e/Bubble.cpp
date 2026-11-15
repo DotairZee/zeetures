@@ -28,8 +28,12 @@
 #include "common/backend/Keycodes.h"
 #include "common/creaturesImage.h"
 #include "imageManager.h"
+#include "PathResolver.h"
 
 #include <cassert>
+#include <filesystem>
+#include <fstream>
+#include <map>
 
 Bubble::Bubble(unsigned char family, unsigned char genus, unsigned short species, unsigned int plane,
 	std::string spritefile, unsigned int firstimage, unsigned int imagecount,
@@ -277,3 +281,116 @@ void BubblePart::setText(std::string str) {
 }
 
 /* vim: set noet: */
+
+AnnouncementBubble::AnnouncementBubble(std::string spritefile, unsigned int firstimage, unsigned int imagecount, int sid)
+	: CompoundAgent(spritefile, firstimage, imagecount), stringid(sid) {
+}
+
+std::string AnnouncementBubble::announcementText(int stringid, int index) {
+	// "<number> <text>" lines; later files (the world's own Additions) win
+	static std::map<int, std::string> texts;
+	static std::string loadedFor = "\x01";
+	std::string key = engine.currentworlddir.string();
+	if (loadedFor != key) {
+		loadedFor = key;
+		texts.clear();
+		std::vector<std::filesystem::path> files{getUserDataDir() / "Additions" / "announcements.txt"};
+		if (!engine.currentworlddir.empty())
+			files.push_back(engine.currentworlddir / "Additions" / "announcements.txt");
+		for (auto& path : files) {
+			std::ifstream in(path);
+			std::string line;
+			while (std::getline(in, line)) {
+				if (!line.empty() && line.back() == '\r')
+					line.pop_back();
+				if (line.empty() || line[0] == '*' || line[0] == '#')
+					continue;
+				size_t sp = line.find(' ');
+				if (sp == std::string::npos)
+					continue;
+				int n = atoi(line.substr(0, sp).c_str());
+				texts[n] = line.substr(sp + 1);
+			}
+		}
+	}
+	(void)index; // C2's windows show their first string (BBTX 0 0)
+	auto it = texts.find(stringid);
+	return it == texts.end() ? std::string() : it->second;
+}
+
+AnnouncementTextPart::AnnouncementTextPart(Agent* p, unsigned int _id, int _x, int _y, int _z, unsigned int w)
+	: CompoundPart(p, _id, _x, _y, _z), width(w), colour(0xB1F3E7) {
+	charset = world.gallery->getCharsetDta(if_bgr24, 0, colour, colour);
+}
+
+void AnnouncementTextPart::setColour(uint32_t c) {
+	if (c == colour)
+		return;
+	colour = c;
+	charset = world.gallery->getCharsetDta(if_bgr24, 0, colour, colour);
+}
+
+void AnnouncementTextPart::setText(const std::string& s) {
+	text = s;
+	layout();
+}
+
+// word wrap to the part's width; "|" breaks a line
+void AnnouncementTextPart::layout() {
+	lines.clear();
+	height = 0;
+	if (!charset)
+		return;
+	auto widthOf = [&](const std::string& w) {
+		unsigned int n = 0;
+		for (unsigned char c : w)
+			if (c < charset->numframes())
+				n += charset->width(c) + 1;
+		return n;
+	};
+	std::string line;
+	std::string word;
+	auto flushWord = [&]() {
+		if (word.empty())
+			return;
+		std::string tryLine = line.empty() ? word : line + " " + word;
+		if (!line.empty() && widthOf(tryLine) > width) {
+			lines.push_back(line);
+			line = word;
+		} else {
+			line = tryLine;
+		}
+		word.clear();
+	};
+	for (char c : text) {
+		if (c == ' ') {
+			flushWord();
+		} else if (c == '|') {
+			flushWord();
+			lines.push_back(line);
+			line.clear();
+		} else {
+			word += c;
+		}
+	}
+	flushWord();
+	if (!line.empty())
+		lines.push_back(line);
+	unsigned int lh = charset->numframes() > 'A' ? charset->height('A') + 2 : 12;
+	height = lh * lines.size();
+}
+
+void AnnouncementTextPart::partRender(RenderTarget* renderer, int xoffset, int yoffset) {
+	if (!charset)
+		return;
+	unsigned int lh = charset->numframes() > 'A' ? charset->height('A') + 2 : 12;
+	for (size_t i = 0; i < lines.size(); i++) {
+		unsigned int charpos = 0;
+		for (unsigned char c : lines[i]) {
+			if (c >= charset->numframes())
+				continue;
+			renderer->renderCreaturesImage(charset, c, xoffset + x + charpos, yoffset + y + (int)(i * lh));
+			charpos += charset->width(c) + 1;
+		}
+	}
+}

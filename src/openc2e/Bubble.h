@@ -81,5 +81,39 @@ class BubblePart : public CompoundPart {
 	void handleRawKey(uint8_t key) override;
 };
 
+// C2's announcement windows (NEW: CBUB, owner 2026-11-14: the gene lab
+// console's script died at "compound bubble objects are not supported yet"):
+// a compound object built by the game's own script (its frame and the
+// hologram are ordinary parts, NEW: PART), plus text lines (NEW: BBTX,
+// BBTX, BBFD). C2's announcement texts are not in any of the game's data
+// files, so the text for each string number comes from our own
+// announcements.txt in the Additions folders ("<number> <text>", a "|" for a
+// line break); a number with no line there shows no text.
+class AnnouncementBubble : public CompoundAgent {
+  public:
+	AnnouncementBubble(std::string spritefile, unsigned int firstimage, unsigned int imagecount, int stringid);
+	int stringid;
+	static std::string announcementText(int stringid, int index);
+};
+
+class AnnouncementTextPart : public CompoundPart {
+  public:
+	AnnouncementTextPart(Agent* p, unsigned int _id, int x, int y, int z, unsigned int width);
+	void setText(const std::string& s);
+	void setColour(uint32_t c);
+	void partRender(class RenderTarget* renderer, int xoffset, int yoffset) override;
+	unsigned int getWidth() override { return width; }
+	unsigned int getHeight() override { return height; }
+	bool canClick() override { return false; }
+
+  protected:
+	unsigned int width, height = 0;
+	std::string text;
+	uint32_t colour;
+	std::vector<std::string> lines;
+	std::shared_ptr<creaturesImage> charset;
+	void layout();
+};
+
 #endif
 /* vim: set noet: */

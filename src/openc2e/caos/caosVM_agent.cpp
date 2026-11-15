@@ -20,6 +20,7 @@
 #include "AgentHelpers.h"
 #include "AnimatablePart.h"
 #include "Blackboard.h"
+#include "Bubble.h"
 #include "Engine.h" // C2 hack in POSE
 #include "Map.h"
 #include "PointerAgent.h"
@@ -434,12 +435,18 @@ void c_NEW_BKBD(caosVM* vm) {
  %variants c2
 */
 void c_NEW_CBUB(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(stringid)
-	VM_PARAM_INTEGER_UNUSED(first_image)
-	VM_PARAM_INTEGER_UNUSED(image_count)
+	VM_PARAM_INTEGER(stringid)
+	VM_PARAM_INTEGER(first_image)
+	VM_PARAM_INTEGER(image_count)
 	VM_PARAM_STRING(sprite_file)
 
-	throw Exception("compound bubble objects are not supported yet"); // TODO
+	// an announcement window: the script adds its parts (NEW: PART) and its
+	// text (NEW: BBTX); see AnnouncementBubble (Bubble.h)
+	AnnouncementBubble* a = new AnnouncementBubble(sprite_file, first_image, image_count, stringid);
+	a->finishInit();
+	inheritInjected(vm, a);
+	vm->setTarg(a);
+	vm->part = 0;
 }
 
 /**
