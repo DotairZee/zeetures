@@ -10,3 +10,10 @@
 * 6: the generator (3 10 11, in the domed lab) started for the first time;
 * the camera swings to the splicer.
 6 Power is flowing to the gene splicer.|Put a creature in each pod, then press the console to splice them.
+* 40: the memorial stone (2 3 254, memorial.cos) in the stone arcade west of
+* the incubator: the four norns that hatched together and died of old age
+* together (owner, 2026-11-15; the owner's words). 41 is added after it once
+* a group in this world has done the same (the engine fills in {names} and
+* {date}; lifeLogEntry::together).
+40 The four who grew old together||Sad news, though I don't think it's a bug. While checking the save I found that four norns died of old age at the same moment this evening. They all hatched within a few seconds of each other yesterday and were each about 9.5 hours of play old, which is the lifespan their genomes give norns. They grew old together and reached the end together.
+41 In this world too, {names} hatched together, grew old together and reached the end together. {date}.

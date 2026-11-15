@@ -113,6 +113,7 @@ class AnnouncementTextPart : public CompoundPart {
 	std::vector<std::string> lines;
 	std::shared_ptr<creaturesImage> charset;
 	void layout();
+	void clearCharsetBackground();
 };
 
 #endif

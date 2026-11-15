@@ -1,0 +1,53 @@
+* The memorial stone (openc2e Creatures 2 project, our own script and our
+* own art from art/memorial.py). Run by openc2e after the world loads
+* (Additions folder); safe to repeat.
+*
+* An Easter egg (owner, 2026-11-15): four norns that hatched within seconds
+* of each other died of old age at the same moment, their genomes' lifespan
+* run out together. A small headstone (2 3 254, sprite zmem) stands in the
+* dark brick niche of the stone arcade west of the incubator (x 4996-5042,
+* its plinth on the floor at y 1172), where few creatures pass (a sample of
+* Home: 4 creature sightings in that part of the arcade in 3 minutes, against
+* hundreds by the incubator). It is behind creatures (plane 900) and hidden
+* from them (ATTR 16 + 4: only the hand presses it).
+*
+* Pressing it opens a window above it (2 1 159, sprite zmtb: a sandstone
+* tablet) with announcement 40 (announcements.txt), and, once four or more
+* that hatched together have died of old age together in this world, their
+* names (41; the engine's lifeLogEntry::together, which also puts a
+* "Together" notice on the status bar that leads here). A click on the
+* window closes it; it closes by itself after 60 s. One window at a time.
+enum 2 3 254 kill targ next
+enum 2 1 159 kill targ next
+inst
+new: simp zmem 1 0 900 0
+setv cls2 2 3 254
+setv attr 20
+mvto 4996 1118
+slow
+
+scrp 2 3 254 1
+  inst
+  enum 2 1 159 kill targ next
+  setv var0 posx
+  subv var0 170
+  setv var1 post
+  subv var1 244
+  new: cbub zmtb 1 0 40
+  setv cls2 2 1 159
+  setv attr 4
+  new: part 0 0 0 0 9100
+  new: bbtx 0 30 44 280
+  bbtx 0 0
+  bbfd 0 66 54 42
+  mvto var0 var1
+  tick 600
+endm
+
+scrp 2 1 159 1
+  kill ownr
+endm
+
+scrp 2 1 159 9
+  kill ownr
+endm

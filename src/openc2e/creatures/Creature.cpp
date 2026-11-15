@@ -275,6 +275,10 @@ void Creature::die() {
 			if (world.history->notices.size() > before) {
 				world.history->notices.back().cause = cause;
 				world.history->lifelog.back().cause = cause;
+				if (diedofoldage) {
+					lifeLogEntry d = world.history->lifelog.back(); // (a copy: the log may grow)
+					world.history->checkTogether(d);
+				}
 			}
 			world.history->tell(mon, storyEntry::died, "", cause);
 		}

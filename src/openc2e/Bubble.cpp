@@ -24,6 +24,7 @@
 #include "Engine.h"
 #include "SpritePart.h"
 #include "World.h"
+#include "historyManager.h"
 #include "common/backend/Backend.h"
 #include "common/backend/Keycodes.h"
 #include "common/creaturesImage.h"
@@ -34,6 +35,10 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+
+namespace Openc2eImgui {
+std::string KitDateText(unsigned int worldtick); // (the kits: "Summer, day 3, year 001")
+}
 
 Bubble::Bubble(unsigned char family, unsigned char genus, unsigned short species, unsigned int plane,
 	std::string spritefile, unsigned int firstimage, unsigned int imagecount,
@@ -315,12 +320,40 @@ std::string AnnouncementBubble::announcementText(int stringid, int index) {
 	}
 	(void)index; // C2's windows show their first string (BBTX 0 0)
 	auto it = texts.find(stringid);
-	return it == texts.end() ? std::string() : it->second;
+	std::string text = it == texts.end() ? std::string() : it->second;
+	// the memorial stone (memorial.cos): the latest group that grew old
+	// together in this world, after its own story ("{names}" and "{date}" in
+	// the file's line 41)
+	if (stringid == 40 && world.history) {
+		unsigned int tick = 0;
+		std::string names = world.history->latestTogether(&tick);
+		auto later = texts.find(41);
+		if (!names.empty() && later != texts.end()) {
+			std::string add = later->second;
+			for (auto [key, value] : {std::pair<std::string, std::string>{"{names}", names}, {"{date}", Openc2eImgui::KitDateText(tick)}})
+				for (size_t at; (at = add.find(key)) != std::string::npos;)
+					add.replace(at, key.size(), value);
+			text += "||" + add;
+		}
+	}
+	return text;
 }
 
 AnnouncementTextPart::AnnouncementTextPart(Agent* p, unsigned int _id, int _x, int _y, int _z, unsigned int w)
 	: CompoundPart(p, _id, _x, _y, _z), width(w), colour(0xB1F3E7) {
 	charset = world.gallery->getCharsetDta(if_bgr24, 0, colour, colour);
+	clearCharsetBackground();
+}
+
+// the letters' background (palette 0) see-through, not black: the game's
+// own windows have a black text area, so it never showed, but our light
+// panels (the memorial's tablet) do
+void AnnouncementTextPart::clearCharsetBackground() {
+	if (!charset)
+		return;
+	for (auto& im : charset->images)
+		if (im.palette)
+			im.palette[0].a = 0;
 }
 
 void AnnouncementTextPart::setColour(uint32_t c) {
@@ -328,6 +361,7 @@ void AnnouncementTextPart::setColour(uint32_t c) {
 		return;
 	colour = c;
 	charset = world.gallery->getCharsetDta(if_bgr24, 0, colour, colour);
+	clearCharsetBackground();
 }
 
 void AnnouncementTextPart::setText(const std::string& s) {

@@ -19,6 +19,9 @@
 
 #include "historyManager.h"
 
+#include <cstdint>
+#include <cstdlib>
+
 #include "Catalogue.h"
 #include "Engine.h" // version
 #include "World.h"
@@ -288,6 +291,64 @@ void historyManager::logLife(int kind, const std::string& mon, int stage, bool o
 	e.ageknown = m.bornknown;
 	lifelog.push_back(e);
 	notices.push_back(e);
+}
+
+// The four who grew old together (owner, 2026-11-15): four norns that hatched
+// within seconds of each other died of old age at the same moment, their
+// genomes' lifespan run out together. The memorial stone (Additions,
+// memorial.cos) keeps that story; when it happens again in a world, the
+// group is announced and its names are added to the stone's words.
+void historyManager::checkTogether(const lifeLogEntry& d) {
+	// within 30 s of each other, at C2's ten ticks a second: "hatched within
+	// a few seconds of each other", and so ending as close together
+	const int64_t span = 300;
+	if (d.kind != lifeLogEntry::death || !d.oldage || !d.ageknown || d.age > d.tick)
+		return;
+	int64_t born = (int64_t)d.tick - d.age;
+	// a group already announced (a fifth one dying with it adds nothing)
+	for (auto& e : lifelog)
+		if (e.kind == lifeLogEntry::together && std::llabs((int64_t)d.tick - (int64_t)e.tick) <= 2 * span)
+			return;
+	std::vector<const lifeLogEntry*> group;
+	for (auto& e : lifelog) {
+		if (e.kind != lifeLogEntry::death || !e.oldage || !e.ageknown || e.age > e.tick)
+			continue;
+		if (std::llabs((int64_t)d.tick - (int64_t)e.tick) > span)
+			continue;
+		if (std::llabs(born - ((int64_t)e.tick - e.age)) > span)
+			continue;
+		group.push_back(&e);
+	}
+	if (group.size() < 4)
+		return;
+	std::string names;
+	for (size_t i = 0; i < group.size(); i++) {
+		const lifeLogEntry& e = *group[i];
+		std::string n = hasMoniker(e.moniker) && !getMoniker(e.moniker).name.empty() ? getMoniker(e.moniker).name : !e.name.empty() ? e.name : e.moniker;
+		names += (i == 0 ? "" : i + 1 == group.size() ? " and " : ", ") + n;
+	}
+	lifeLogEntry t;
+	t.kind = lifeLogEntry::together;
+	t.tick = d.tick;
+	t.moniker = d.moniker;
+	t.genus = d.genus;
+	t.female = d.female;
+	t.stage = (int)group.size();
+	t.age = d.age;
+	t.oldage = true;
+	t.cause = names;
+	lifelog.push_back(t);
+	notices.push_back(t);
+}
+
+std::string historyManager::latestTogether(unsigned int* tick) const {
+	for (auto it = lifelog.rbegin(); it != lifelog.rend(); ++it)
+		if (it->kind == lifeLogEntry::together) {
+			if (tick)
+				*tick = it->tick;
+			return it->cause;
+		}
+	return {};
 }
 
 void monikerData::initRecord(std::string m, unsigned char g, int gen) {

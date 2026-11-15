@@ -10,6 +10,7 @@
 #include "WorldSave.h"
 #include "Camera.h"
 #include "Engine.h"
+#include "PointerAgent.h"
 #include "World.h"
 #include "common/backend/Backend.h"
 #include "creatures/CreatureAgent.h"
@@ -371,6 +372,7 @@ static const char* kindWord(int kind) {
 		case lifeLogEntry::unconscious: return "Unconscious";
 		case lifeLogEntry::cameRound: return "Came round";
 		case lifeLogEntry::changed: return "Changed";
+		case lifeLogEntry::together: return "Together";
 		default: return "Pregnant";
 	}
 }
@@ -385,6 +387,8 @@ static const char* genusWord(int genus) {
 
 // its name now (it may have been named since), else then, else "Unnamed norn"
 static std::string entryName(const lifeLogEntry& e) {
+	if (e.kind == lifeLogEntry::together) // "4 norns"
+		return fmt::format("{} {}s", e.stage, genusWord(e.genus));
 	if (world.history->hasMoniker(e.moniker) && !world.history->getMoniker(e.moniker).name.empty())
 		return world.history->getMoniker(e.moniker).name;
 	if (!e.name.empty())
@@ -407,6 +411,7 @@ static std::string entryDetail(const lifeLogEntry& e) {
 		case lifeLogEntry::unconscious: return fmt::format("a {}, {}: out of energy. Mend the cause soon (out of water, fed, a Health Kit injection)", who, stageWord(e.stage));
 		case lifeLogEntry::cameRound: return fmt::format("a {}, {}: came round", who, stageWord(e.stage));
 		case lifeLogEntry::changed: return fmt::format("a {}, {}: {}", who, stageWord(e.stage), e.cause.empty() ? "changed into something else" : e.cause);
+		case lifeLogEntry::together: return fmt::format("{} hatched together, grew old together and reached the end together", e.cause);
 		case lifeLogEntry::eggLaid: {
 			std::string s = fmt::format("laid by a {}, {}", who, stageWord(e.stage));
 			if (auto egg = KitEggOf(e.child))
@@ -429,7 +434,24 @@ static std::shared_ptr<Agent> entryBody(const lifeLogEntry& e) {
 	return AgentRef(a).lock();
 }
 
+// the memorial stone (memorial.cos), if this world has it
+static std::shared_ptr<Agent> memorialStone() {
+	for (auto& a : world.agents)
+		if (a && !a->isDying() && a->family == 2 && a->genus == 3 && a->species == 254)
+			return a;
+	return nullptr;
+}
+
 static void followEntry(const lifeLogEntry& e) {
+	// grew old together: the memorial stone, its words open (as if pressed)
+	if (e.kind == lifeLogEntry::together) {
+		if (auto stone = memorialStone()) {
+			KitLookAt(stone);
+			stone->queueScript(1, world.hand());
+		} else
+			OpenC2KitAt("chronicles", "History");
+		return;
+	}
 	// a death: its gravestone (the Graveyard Kit)
 	if (e.kind == lifeLogEntry::death) {
 		OpenGraveyardAt(e.moniker);
@@ -546,6 +568,25 @@ void DrawLifeNotices(float room) {
 			if (ca->getCreature()->isAlive())
 				ca->getCreature()->die();
 	}
+	// OPENC2E_TEST_TOGETHER=1: four living creatures are given the same
+	// birth tick and die of old age at once, for the memorial's notice
+	static bool testTogether = getenv("OPENC2E_TEST_TOGETHER") != nullptr;
+	if (testTogether && world.tickcount > 30) {
+		testTogether = false;
+		std::vector<CreatureAgent*> four;
+		for (auto& a : world.agents)
+			if (auto* ca = dynamic_cast<CreatureAgent*>(a.get()))
+				if (!a->isDying() && ca->getCreature()->isAlive() && four.size() < 4)
+					four.push_back(ca);
+		for (auto* ca : four) {
+			std::string mon = world.history->findMoniker(ca->getCreature()->getGenome());
+			monikerData& m = world.history->getMoniker(mon);
+			m.borntick = world.worldtickcount > 5000 ? world.worldtickcount - 5000 : 0;
+			m.bornknown = true;
+			ca->getCreature()->dieOfOldAge();
+		}
+		fmt::print("* TEST TOGETHER: {} died together\n", four.size());
+	}
 	if (s_notices.empty())
 		return;
 
@@ -596,6 +637,7 @@ void DrawLifeNotices(float room) {
 																: e.kind == lifeLogEntry::unconscious		? ImVec4(0.75f, 0.16f, 0.14f, 1)
 																: e.kind == lifeLogEntry::cameRound		? ImVec4(0.20f, 0.52f, 0.25f, 1)
 															: e.kind == lifeLogEntry::changed			? ImVec4(0.16f, 0.44f, 0.50f, 1)
+															: e.kind == lifeLogEntry::together			? ImVec4(0.42f, 0.36f, 0.56f, 1)
 																										  : ImVec4(0.70f, 0.30f, 0.50f, 1);
 		ImGui::PushStyleColor(ImGuiCol_Button, col);
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(col.x + 0.12f, col.y + 0.12f, col.z + 0.12f, 1));
@@ -608,7 +650,8 @@ void DrawLifeNotices(float room) {
 		}
 		if (ImGui::IsItemHovered()) {
 			// what a click does (followEntry)
-			const char* does = e.kind == lifeLogEntry::eggLaid ? "go to the egg (or the baby, once it hatches)"
+			const char* does = e.kind == lifeLogEntry::together ? "go to the memorial stone and read it"
+							   : e.kind == lifeLogEntry::eggLaid ? "go to the egg (or the baby, once it hatches)"
 							   : e.kind == lifeLogEntry::death ? "open its page in the Graveyard Kit"
 							   : e.kind == lifeLogEntry::pregnancy ? "go to it and open the Breeder's Kit"
 							   : e.kind == lifeLogEntry::birth ? "go to it and open the Owner's Kit"

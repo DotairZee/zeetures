@@ -140,7 +140,9 @@ struct lifeLogEntry {
 		eggLaid = 3, // a mother laid her egg (the status bar's notice goes to the egg)
 		unconscious = 4, // out of energy, it fell unconscious (C2)
 		cameRound = 5, // and came round
-		changed = 6 }; // became something else, not a death (C2: a frog norn turned back into a frog); cause says what
+		changed = 6, // became something else, not a death (C2: a frog norn turned back into a frog); cause says what
+		together = 7 }; // four or more that hatched together died of old age together (the memorial stone's
+						// Easter egg): cause holds their names, stage how many, moniker the last of them
 	int kind = birth;
 	unsigned int tick = 0; // world tick count
 	std::string moniker;
@@ -177,6 +179,12 @@ class historyManager {
 	monikerData& addRecord(const std::string& moniker, unsigned char genus, int gender);
 	// records a birth, death or pregnancy (unless quiet)
 	void logLife(int kind, const std::string& moniker, int stage, bool oldage = false);
+	// after an old-age death is logged: if four or more that hatched within
+	// moments of each other have now died of old age within moments of each
+	// other, log and announce them together (lifeLogEntry::together)
+	void checkTogether(const lifeLogEntry& death);
+	// the names of the latest such group ("A, B, C and D"), or empty; tick: when
+	std::string latestTogether(unsigned int* tick = nullptr) const;
 	// adds a line to a creature's life story (unless quiet)
 	void tell(const std::string& moniker, int kind, const std::string& other = "", const std::string& detail = "");
 
