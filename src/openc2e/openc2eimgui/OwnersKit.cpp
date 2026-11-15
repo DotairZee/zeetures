@@ -519,14 +519,17 @@ void DrawLifeNotices(float room) {
 		s_notices.push_back(e);
 	world.history->notices.clear();
 	// developer aid: OPENC2E_TEST_NOTICES=1 announces one of each for the
-	// selected creature (not logged); =follow also follows the last one
+	// selected creature (not logged), =N that many; =follow also follows the
+	// last one
 	static bool test = getenv("OPENC2E_TEST_NOTICES") != nullptr;
 	if (test && world.selectedcreature) {
 		test = false;
 		std::string mon = world.history->findMoniker(AgentRef(world.selectedcreature));
-		for (int k = 0; k < 3; k++) {
+		// (=N, a number over 3: N notices, the kinds in turn)
+		int count = std::max(3, atoi(getenv("OPENC2E_TEST_NOTICES")));
+		for (int k = 0; k < count; k++) {
 			lifeLogEntry e;
-			e.kind = k;
+			e.kind = k % 7;
 			e.tick = world.worldtickcount;
 			e.moniker = mon;
 			e.genus = world.selectedcreature->genus;
@@ -560,22 +563,22 @@ void DrawLifeNotices(float room) {
 	}
 	if (first > 0) {
 		std::string more = fmt::format("+{}##morenotices", first);
-		if (ImGui::SmallButton(more.c_str())) {
+		bool moreClicked = ImGui::SmallButton(more.c_str());
+		// the list stays just above the button, wherever the bar's layout
+		// puts it this frame
+		s_more_at = ImVec2(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y - 4);
+		if (moreClicked) {
 			// a list of the notices not shown, above the button (owner,
 			// 2026-11-15: the click made them all disappear into the life log)
-			s_more_at = ImVec2(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y - 4);
 			ImGui::OpenPopup("##morenoticelist");
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%d older notice%s: click to list them; right-click to clear them all", first, first == 1 ? "" : "s");
-		// developer aid: OPENC2E_TEST_MORE_NOTICES opens the list once, when
+		// developer aid: OPENC2E_TEST_MORE_NOTICES keeps the list open while
 		// five or more notices are hidden, for a snapshot of it
 		static bool testMore = getenv("OPENC2E_TEST_MORE_NOTICES") != nullptr;
-		if (testMore && first >= 5) {
-			testMore = false;
-			s_more_at = ImVec2(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y - 4);
+		if (testMore && first >= 5 && !ImGui::IsPopupOpen("##morenoticelist"))
 			ImGui::OpenPopup("##morenoticelist");
-		}
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
 			s_notice_menu = -1;
 			ImGui::OpenPopup("##noticemenu");
@@ -626,12 +629,20 @@ void DrawLifeNotices(float room) {
 	// window above the button that scrolls when long; each clickable as on
 	// the bar, right-click to dismiss one
 	ImGui::SetNextWindowPos(s_more_at, ImGuiCond_Always, ImVec2(0, 1));
-	ImGui::SetNextWindowSizeConstraints(ImVec2(300, 0), ImVec2(460, 360));
 	if (ImGui::BeginPopup("##morenoticelist", ImGuiWindowFlags_AlwaysAutoResize)) {
 		int hidden = std::min(first, (int)s_notices.size());
 		ImGui::TextDisabled("%d older notice%s", hidden, hidden == 1 ? "" : "s");
 		float rowH = ImGui::GetFrameHeightWithSpacing();
-		ImGui::BeginChild("##morescroll", ImVec2(420, std::min(300.0f, rowH * hidden + 4)), ImGuiChildFlags_None);
+		// as wide as the longest notice, no wider (owner, 2026-11-15: it was
+		// a fixed 420 px, about twice what it needed), with room for the
+		// scroll bar when the list scrolls
+		float listH = std::min(300.0f, rowH * hidden + 4);
+		float w = ImGui::CalcTextSize("Open the life log").x + ImGui::CalcTextSize("Clear these").x + style.FramePadding.x * 4 + style.ItemSpacing.x;
+		for (int i = 0; i < hidden; i++)
+			w = std::max(w, ImGui::CalcTextSize(label(s_notices[i], i).c_str(), nullptr, true).x + style.FramePadding.x * 2 + 8);
+		if (rowH * hidden + 4 > listH)
+			w += style.ScrollbarSize;
+		ImGui::BeginChild("##morescroll", ImVec2(w, listH), ImGuiChildFlags_None);
 		for (int i = hidden - 1; i >= 0; i--) {
 			ImGui::PushID(i);
 			if (chip(i, true))
