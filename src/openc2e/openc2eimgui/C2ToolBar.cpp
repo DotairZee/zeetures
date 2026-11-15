@@ -33,7 +33,6 @@
 #include "PointerAgent.h"
 #include "SpritePart.h"
 #include "World.h"
-#include "creatures/Pheromones.h"
 #include "Scriptorium.h"
 #include "caosVM.h"
 #include "fileformats/ImageUtils.h"
@@ -368,19 +367,6 @@ static void DrawC2MenuBar() {
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("What creatures are thinking, in pictures, when they set about something new");
-		// openc2e addition (owner's idea, pheromones-design.md; 2026-11-15):
-		// rooms tinted by a scent, to watch trails form
-		if (ImGui::BeginMenu("Scents", Pheromones::channelCount() > 0)) {
-			if (ImGui::MenuItem("Off", nullptr, world.showScent < 0))
-				world.showScent = -1;
-			ImGui::Separator();
-			for (int ch = 0; ch < Pheromones::channelCount(); ch++)
-				if (ImGui::MenuItem(Pheromones::channelName(ch).c_str(), nullptr, world.showScent == ch))
-					world.showScent = world.showScent == ch ? -1 : ch;
-			ImGui::EndMenu();
-		}
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-			ImGui::SetTooltip("Tint each room by how much of a scent it holds (the scents in pheromones.txt)");
 		bool statusbar = IsC2StatusBarShown();
 		if (ImGui::MenuItem("Status Bar", nullptr, &statusbar)) {
 			SetC2StatusBarShown(statusbar);

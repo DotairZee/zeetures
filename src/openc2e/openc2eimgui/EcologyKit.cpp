@@ -28,6 +28,7 @@
 #include "World.h"
 #include "common/backend/Backend.h"
 #include "creatures/CreatureAgent.h"
+#include "creatures/Pheromones.h"
 #include "fileformats/ImageUtils.h"
 #include "fileformats/peFile.h"
 
@@ -191,6 +192,16 @@ std::vector<Pin> s_pins;
 std::weak_ptr<Room> s_pinsWorld; // the first room of the map the pins belong to
 int s_measure = TEMPERATURE;
 bool s_showCreatures = true, s_showFood = false;
+// Scents on the map (owner, 2026-11-15: the scent overlay belongs in the
+// Ecology Kit, not the View menu): the scent shown in place of a measure
+// (a channel of pheromones.txt), or -1; and whether the world view is
+// tinted by it too (World::showScent)
+int s_scent = -1;
+bool s_scentOnWorld = false;
+
+float scentOf(const Room& r, int ch) {
+	return ch >= 0 && (size_t)ch < r.scent.size() ? r.scent[ch] : 0.0f;
+}
 
 std::array<float, MEASURES> readings(const Room& r) {
 	std::array<float, MEASURES> out;
@@ -327,13 +338,18 @@ void legend(int m, float width, float lo, float hi) {
 	float x0 = ImGui::GetCursorPosX();
 	auto label = [&](float v) { return m == TEMPERATURE ? degrees(v) : fmt::format("{:.0f}", v); };
 	std::string la = label(lo), lb = label((lo + hi) / 2), lc = label(hi);
+	// (placed by cursor position: SameLine's offset counts from the
+	// window's left, not this group's, which put the labels past the bar)
 	ImGui::TextDisabled("%s", la.c_str());
-	ImGui::SameLine(x0 + width / 2 - ImGui::CalcTextSize(lb.c_str()).x / 2);
+	ImGui::SameLine();
+	ImGui::SetCursorPosX(x0 + width / 2 - ImGui::CalcTextSize(lb.c_str()).x / 2);
 	ImGui::TextDisabled("%s", lb.c_str());
-	ImGui::SameLine(x0 + width - ImGui::CalcTextSize(lc.c_str()).x);
+	ImGui::SameLine();
+	ImGui::SetCursorPosX(x0 + width - ImGui::CalcTextSize(lc.c_str()).x);
 	ImGui::TextDisabled("%s", lc.c_str());
 }
 
+// the Monitor page's graph: the world's own measures, as radio buttons
 void measureChooser(bool wind) {
 	for (int m = 0; m < MEASURES; m++) {
 		if (m == WIND && !wind)
@@ -342,6 +358,38 @@ void measureChooser(bool wind) {
 			s_measure = m;
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", MEASURE_TIP[m]);
+	}
+}
+
+// the Map page's choice, a dropdown above the map (owner, 2026-11-15: the
+// tall list of choices beside the map left the space under the map empty):
+// the world's measures, then the scents (pheromones.txt)
+void showChooser(bool wind) {
+	int n = Pheromones::channelCount();
+	if (s_scent >= n)
+		s_scent = -1;
+	std::string current = s_scent >= 0 ? "Scent: " + Pheromones::channelName(s_scent) : MEASURE_NAME[s_measure];
+	ImGui::SetNextItemWidth(230);
+	if (ImGui::BeginCombo("##show", current.c_str(), ImGuiComboFlags_HeightLarge)) {
+		for (int m = 0; m < MEASURES; m++) {
+			if (m == WIND && !wind)
+				continue;
+			if (ImGui::Selectable(MEASURE_NAME[m], s_scent < 0 && s_measure == m))
+				s_measure = m, s_scent = -1;
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", MEASURE_TIP[m]);
+		}
+		if (n > 0) {
+			ImGui::SeparatorText("Scents");
+			for (int ch = 0; ch < n; ch++) {
+				std::string name = Pheromones::channelName(ch);
+				if (ImGui::Selectable((name + "##scent").c_str(), s_scent == ch))
+					s_scent = ch;
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("How much of the scent \"%s\" each room holds: creatures give it off\nand others follow or avoid it (the rules are in pheromones.txt)", name.c_str());
+			}
+		}
+		ImGui::EndCombo();
 	}
 }
 
@@ -357,18 +405,34 @@ void MapPage() {
 	if (s_measure == WIND && !wind)
 		s_measure = TEMPERATURE;
 
-	ImGui::BeginGroup();
+	// one row of choices above the map
+	ImGui::AlignTextToFramePadding();
 	ImGui::TextDisabled("Show");
-	measureChooser(wind);
-	ImGui::Spacing();
+	ImGui::SameLine();
+	showChooser(wind);
+	ImGui::SameLine(0, 20);
 	ImGui::Checkbox("Creatures", &s_showCreatures);
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("Where each creature is (click one to go to it)");
+	ImGui::SameLine();
 	ImGui::Checkbox("Food", &s_showFood);
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("Everything a creature can eat, where it is now");
-	ImGui::EndGroup();
-	ImGui::SameLine(0, 16);
+	if (Pheromones::channelCount() > 0) {
+		ImGui::SameLine();
+		ImGui::BeginDisabled(s_scent < 0);
+		ImGui::Checkbox("Tint the world too", &s_scentOnWorld);
+		ImGui::EndDisabled();
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+			ImGui::SetTooltip(s_scent < 0 ? "Choose a scent under Show first" : "Tint the rooms in the main view by the chosen scent,\nto watch trails form where the creatures are");
+	}
+	world.showScent = s_scentOnWorld && s_scent >= 0 ? s_scent : -1;
+
+	// the map as wide as the tab, keeping its shape (owner, 2026-11-15): the
+	// kit's window fits what it holds, so the map sets the width, about 880
+	// px, or the row of choices above it where that is wider
+	float scale = std::clamp(std::max(ImGui::GetContentRegionAvail().x, 880.0f) / std::max(w, 1), 0.5f, 4.0f);
+	w = (int)std::lround(w * scale), h = (int)std::lround(h * scale);
 
 	ImGui::BeginGroup();
 	ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -383,11 +447,19 @@ void MapPage() {
 	float wx = m->x() + (mouse.x - o.x) / sx, wy = m->y() + (mouse.y - o.y) / sy;
 
 	auto [lo, hi] = rangeOf(m, s_measure);
+	if (s_scent >= 0) { // a scent: from none to the strongest room (levels 0-1, shown as 0-100)
+		float peak = 0.0f;
+		for (auto& r : m->rooms)
+			peak = std::max(peak, scentOf(*r, s_scent));
+		lo = 0.0f;
+		hi = std::max(peak, 0.05f) * 100.0f;
+	}
+	auto shown = [&](const Room& r) { return s_scent >= 0 ? scentOf(r, s_scent) * 100.0f : roomValue(r, s_measure); };
 	std::shared_ptr<Room> under;
 	dl->PushClipRect(o, ImVec2(o.x + w, o.y + h), true);
 	for (auto& r : m->rooms) {
 		ImVec2 p[4] = {at(r->x_left, r->y_left_ceiling), at(r->x_right, r->y_right_ceiling), at(r->x_right, r->y_right_floor), at(r->x_left, r->y_left_floor)};
-		float v = (roomValue(*r, s_measure) - lo) / (hi - lo) * 255.0f;
+		float v = (shown(*r) - lo) / (hi - lo) * 255.0f;
 		dl->AddConvexPolyFilled(p, 4, colorFor(v, 140));
 		if (hovered && r->containsPoint(wx, wy))
 			under = r;
@@ -440,6 +512,12 @@ void MapPage() {
 			float v = roomValue(*under, k);
 			tip += fmt::format("\n{}: {}", MEASURE_NAME[k], valueText(v, k));
 		}
+		std::string scents;
+		for (int ch = 0; ch < Pheromones::channelCount(); ch++)
+			if (float sv = scentOf(*under, ch); sv >= 0.01f)
+				scents += fmt::format("\n  {}: {:.0f}", Pheromones::channelName(ch), sv * 100.0f);
+		if (!scents.empty())
+			tip += "\nScents (out of 100):" + scents;
 		Pin* p = pinOf(under);
 		tip += p ? "\n\nClick to go there; right-click to unpin it" : s_pins.size() < 7 ? "\n\nClick to go there; right-click to pin it for the Monitor" : "\n\nClick to go there (seven rooms are pinned already)";
 		ImGui::SetTooltip("%s", tip.c_str());
@@ -450,12 +528,12 @@ void MapPage() {
 	}
 
 	ImGui::BeginGroup();
-	legend(s_measure, 260, lo, hi);
+	legend(s_scent >= 0 ? LIGHT : s_measure, 260, lo, hi);
 	ImGui::EndGroup();
 	ImGui::SameLine(0, 24);
 	ImGui::BeginGroup();
-	ImGui::TextDisabled("lowest room to highest");
-	ImGui::TextDisabled(s_measure == TEMPERATURE ? "changes as heat spreads" : "stays as the world began");
+	ImGui::TextDisabled(s_scent >= 0 ? "none to the strongest room (out of 100)" : "lowest room to highest");
+	ImGui::TextDisabled(s_scent >= 0 ? "changes as creatures give it off" : s_measure == TEMPERATURE ? "changes as heat spreads" : "stays as the world began");
 	ImGui::EndGroup();
 	ImGui::EndGroup();
 }
@@ -772,6 +850,11 @@ void DrawEcologyKit() {
 		if (const char* m = getenv("OPENC2E_ECO_MEASURE"))
 			s_measure = std::clamp(atoi(m), 0, MEASURES - 1);
 		s_showFood = getenv("OPENC2E_ECO_FOOD") != nullptr;
+		// OPENC2E_ECO_SCENT=name shows that scent (and tints the world)
+		if (const char* sc = getenv("OPENC2E_ECO_SCENT"))
+			for (int ch = 0; ch < Pheromones::channelCount(); ch++)
+				if (Pheromones::channelName(ch) == sc)
+					s_scent = ch, s_scentOnWorld = true;
 	}
 	if (!world.map) {
 		KitNote("No world is loaded.");
