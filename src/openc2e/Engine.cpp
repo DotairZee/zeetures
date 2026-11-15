@@ -1181,18 +1181,23 @@ void Engine::processEvents() {
 
 			case eventpinch: {
 				// a two-finger pinch zooms about the hand, as Ctrl+wheel does
-				// (owner, 2026-11-15): a zoom step for each fifth or so of
-				// spread or squeeze
+				// (owner, 2026-11-15): a zoom step for each half again of
+				// spread (or a third of squeeze), at most one step each quarter
+				// second (owner: a step per fifth "moves way too fast");
+				// OPENC2E_PINCH_STEP=s sets the spread for a step (1.5)
 				static float acc = 0;
+				static uint32_t lastStep = 0;
+				static const float step = std::log(std::max(1.05f, getenv("OPENC2E_PINCH_STEP") ? (float)atof(getenv("OPENC2E_PINCH_STEP")) : 1.5f));
 				if (version <= 2 && event.pinch > 0) {
 					acc += std::log(event.pinch);
-					const float step = std::log(1.2f);
-					while (std::fabs(acc) >= step) {
+					if (std::fabs(acc) >= step && get_ticks_msec() - lastStep >= 250) {
 						int dir = acc > 0 ? 1 : -1;
-						acc -= dir * step;
+						acc = 0; // (what was pinched beyond the step is let go)
+						lastStep = get_ticks_msec();
 						zoomStep(dir, (int)std::lround(handViewX(camera.get(), world.hand()) * zoom),
 							(int)std::lround((world.hand()->pointerY() - (int)camera->getY()) * zoom));
 					}
+					acc = std::clamp(acc, -step, step);
 				}
 				break;
 			}
