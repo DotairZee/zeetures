@@ -5,6 +5,7 @@
 ## What you need
 
 * **Your own copy of Creatures 2.** Zeetures contains no part of the game: no sprites, sounds, genomes, scripts or worlds. It reads them from your installed copy. Creatures 2 comes with *Creatures: The Albian Years* on Steam, and is also sold on GOG. Creatures, Norns, Grendels, Ettins and Albia belong to Gameware Europe.
+* An internet connection the first time, for two breed packs (below), and `curl`, which Windows 10 and later, macOS and most Linux systems already have.
 * A Linux, Windows or macOS computer. There are 64-bit builds for all three, and 32-bit (x86) builds for Linux and Windows.
 
 ## Download and play
@@ -26,6 +27,8 @@ Unpack it and start the program (still called `openc2e`) with the path to your C
 * **macOS:** `./openc2e -d "/path/to/Creatures 2"`. The Steam release is for Windows, so copy the `Creatures 2` folder over from a Windows or Linux install. The download is not signed by Apple: the first time, right-click `openc2e` and choose Open, or run `xattr -dr com.apple.quarantine .` in its folder.
 
 The creatures use Zeetures's own mind (`--mind original` gives them openc2e's unfinished copy of the original brain, which does very little). Zeetures's world additions (new walkways, lifts, airlocks, plants and many map fixes) are built into the program and applied to every Creatures 2 world as it loads. Your worlds, saves and settings are kept in openc2e's user folder (`~/.openc2e` on Linux), never in the game's folder.
+
+**Two breed packs, fetched on your machine.** The first time a Creatures 2 world runs, Zeetures downloads two community breed packs from the [Eem Foo archive](https://eem.foo/archive), which already hosts them, and imports them: [Boney Grendels](https://eem.foo/archive/downloads/1fad-boney-grendels) (Creature Labs' own Creatures 2 release) and [Frog Norns V3](https://eem.foo/archive/downloads/2538-frog-norns-v3) (by Alex of Norns of the Round Table, from Nornenmeister's V2), which takes the place of the game's own frog norn. Zeetures itself does not carry or host them. The files are kept in your user folder's `Downloads`; to skip this, put the line `breed-packs off` in your user folder's `settings.txt`.
 
 Linux is where Zeetures is played and tested every day; the Windows and macOS builds are new and less tried, and the 32-bit builds are compiled every night but have not yet been tried on a 32-bit machine.
 

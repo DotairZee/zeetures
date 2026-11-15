@@ -200,6 +200,10 @@ struct ImportGroup {
 	// has answered the question about it
 	bool clash = false, asked = false;
 	int sameAs = -1, sameFiles = 0;
+	// installed in the Overrides folder in its own slot, in place of the
+	// game's own breed there (the Frog Norns V3 pack in C2's frog norn slot
+	// l; BreedPacks.cpp)
+	bool inPlaceOfGame = false;
 	bool duplicate() const { return sameAs >= 0 && sameFiles == (int)files.size(); }
 };
 
@@ -754,10 +758,17 @@ static void installPlan(ImportPlan& plan) {
 		b.genome = genomeName;
 		b.origSlot = g.target != g.slot || g.fromSpecies >= 0 ? g.slot : -1;
 		b.origSpecies = g.fromSpecies;
+		fs::path imagesHere = images, bodyDataHere = bodyData;
+		if (g.inPlaceOfGame) {
+			imagesHere = BreedDataSubdir(main / "Overrides", "Images");
+			bodyDataHere = BreedDataSubdir(main / "Overrides", "Body Data");
+			fs::create_directories(imagesHere, ec);
+			fs::create_directories(bodyDataHere, ec);
+		}
 		for (size_t i : g.files) {
 			auto& f = plan.files[i];
 			bool att = to_ascii_lowercase(fs::path(f.name).extension().string()) == ".att";
-			write(att ? bodyData : images, renamed(f.name, g.target, g.fromSpecies >= 0 ? g.species : -1), f.data, b.files);
+			write(att ? bodyDataHere : imagesHere, renamed(f.name, g.target, g.fromSpecies >= 0 ? g.species : -1), f.data, b.files);
 		}
 		b.files.insert(b.files.end(), shared.begin(), shared.end());
 		added.push_back(b);
@@ -785,6 +796,35 @@ static void installPlan(ImportPlan& plan) {
 	s_breed_message = installed || shared.empty()
 		? fmt::format("Installed {} breed{} from {}.", installed, installed == 1 ? "" : "s", plan.source)
 		: fmt::format("Installed {} file{} (genomes, eggs, objects) from {}.", shared.size(), shared.size() == 1 ? "" : "s", plan.source);
+}
+
+// a pack imported without the review (Zeetures's recommended packs,
+// BreedPacks.cpp): its breeds named name, in their own slots in place of the
+// game's when inPlaceOfGame, else where the review would put them. A plan
+// the player has open in the kit is kept.
+bool ImportBreedPackQuietly(const std::string& path, const std::string& name, bool inPlaceOfGame, std::string& message) {
+	auto open = std::move(s_plan);
+	std::string openMessage = s_breed_message;
+	planImport({path});
+	auto plan = std::move(s_plan);
+	s_plan = std::move(open);
+	bool ok = plan && !plan->groups.empty();
+	if (ok) {
+		std::snprintf(plan->name, sizeof(plan->name), "%s", name.c_str());
+		for (auto& g : plan->groups) {
+			g.install = true;
+			if (inPlaceOfGame) {
+				g.target = g.slot;
+				g.inPlaceOfGame = true;
+			}
+		}
+		installPlan(*plan);
+		message = s_breed_message;
+	} else {
+		message = plan && !plan->problems.empty() ? plan->problems[0] : "no breed found in it";
+	}
+	s_breed_message = openMessage;
+	return ok;
 }
 
 static void removeBreed(const BreedInfo& b) {

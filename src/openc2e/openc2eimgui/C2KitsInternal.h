@@ -145,6 +145,7 @@ void KitCenterNext(float width);
 
 // ---- alarms (Observation Kit), checked every frame whatever is open ----
 void KitAlarmsTick();
+void BreedPacksTick(); // BreedPacks.cpp: Zeetures's recommended breed packs, fetched and imported
 void KitAlarmsReadLine(const char* line);
 void KitAlarmsWrite(ImGuiTextBuffer* buf);
 

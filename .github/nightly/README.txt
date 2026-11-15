@@ -46,6 +46,14 @@ macOS:
 The creatures use Zeetures's own mind (--mind original gives them
 openc2e's unfinished copy of the original brain, which does very little).
 
+Two breed packs are fetched on your machine the first time a Creatures 2
+world runs (with curl, from the Eem Foo archive, which already hosts
+them) and imported: Boney Grendels (Creature Labs) and Frog Norns V3 (by
+Alex of Norns of the Round Table, from Nornenmeister's V2), which takes
+the place of the game's own frog norn. Zeetures does not carry them. To
+skip this, put the line "breed-packs off" in your user folder's
+settings.txt.
+
 Your worlds, saves and settings are kept in openc2e's user folder
 (~/.openc2e on Linux), never in the game's own folder.
 

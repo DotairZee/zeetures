@@ -1919,6 +1919,28 @@ bool Engine::parseCommandLine(int argc, char* argv[]) {
 	return true;
 }
 
+void Engine::injectMissingBuiltinCobs() {
+	if (missingBuiltinCobs.empty())
+		return;
+	CobManager cobs;
+	cobs.update();
+	std::vector<std::string> still;
+	for (auto& name : missingBuiltinCobs) {
+		auto it = std::find_if(cobs.objects.begin(), cobs.objects.end(), [&](auto& o) { return o.name == name; });
+		if (it == cobs.objects.end()) {
+			still.push_back(name);
+			continue;
+		}
+		try {
+			cobs.inject(*it);
+			fmt::print("* Built-in object \"{}\" injected (its COB arrived)\n", name);
+		} catch (std::exception& e) {
+			fmt::print("* Built-in object \"{}\" failed: {}\n", name, e.what());
+		}
+	}
+	missingBuiltinCobs = still;
+}
+
 // C1/C2: patches to the world's own scripts, applied on the player's
 	// machine to the player's own copy (the project ships only the recipe):
 	// "script-patches.txt" in the Additions folders, in blocks of
@@ -2170,6 +2192,7 @@ bool Engine::initialSetup() {
 	// the additions, which may then adjust them. A COB the player does not
 	// have is skipped.
 	if (version == 2) {
+		missingBuiltinCobs.clear();
 		auto names = CobManager::readNameList(CobManager::builtinListFile());
 		if (!names.empty()) {
 			CobManager cobs;
@@ -2178,6 +2201,7 @@ bool Engine::initialSetup() {
 				auto it = std::find_if(cobs.objects.begin(), cobs.objects.end(), [&](auto& o) { return o.name == name; });
 				if (it == cobs.objects.end()) {
 					fmt::print("* Built-in object \"{}\": no COB for it\n", name);
+					missingBuiltinCobs.push_back(name);
 					continue;
 				}
 				// this world already has ones the player added by hand (saved
