@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 365 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 366 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 1 commits, 15 November 2026
+- [Unreleased](#unreleased): 2 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,40 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Build the world additions into the program; Home's settings as defaults
+
+[`d632758a`](https://github.com/DotairZee/zeetures/commit/d632758af3895f973a7939029a756fefe4c36795)
+
+Toward the same world on any machine (owner, 2026-11-15: install the
+game, install Zeetures, get the same default world as Home's):
+
+- additions/ (every .cos and the text files) is embedded at build time
+  (scripts/embed_files.py gains --func, and a names function, so a
+  second set sits beside data/'s art: EmbeddedAddition). The new
+  Additions module answers for a file: the player's own copy (the
+  Additions folder; pheromones.txt and breed-names.txt in the user data
+  folder itself) wins, else the built-in one, which applies to C2 only.
+  An empty file of the same name switches a built-in one off.
+- The world-addition runner runs the merged set, sorted by name, logging
+  "(built in)" for embedded ones (World::executeInitScriptText runs a
+  script held in memory), then the world folder's own as before.
+  script-patches.txt, announcements.txt, builtin-cobs.txt,
+  hidden-cobs.txt, pheromones.txt and breed-names.txt are read the same
+  way. Before the Agent Injector edits builtin-cobs.txt, the built-in
+  copy is written to the player's Additions folder.
+- Defaults are Home's launch settings: --mind homeostat unless --mind
+  original (openc2e's original brain code) or another mind is given;
+  per-stage scaling, part growth and the senile tint on unless
+  OPENC2E_STAGE_SCALE=0, OPENC2E_STAGE_GROWTH=off or OPENC2E_SENILE_TINT=0;
+  population limit 150 until the player sets one. READMEs updated.
+
+Checked with an empty user data folder: all 39 additions run built in,
+the script patches apply, 9 of 10 built-in objects are injected (Bony
+Grendel Update needs the Boney pack), pheromones load, the mind is the
+homeostat. The 17 additions that draw our sprites still fail there
+until the art ships. Home's installed copies are identical to the
+built-in ones, so Home runs as before.
 
 #### Changelog: version 0.7.0 in the version list
 
