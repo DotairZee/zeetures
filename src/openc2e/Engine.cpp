@@ -441,6 +441,11 @@ void Engine::drawWorld() {
 				int my = (int)std::lround((hand->pointerY() - (int)camera->getY()) * zoom);
 				if (CompoundPart* p = hand->part(0))
 					p->render(main, mx - hand->pointerX(), my - hand->pointerY());
+				// and what it shows with it: the angel (pet), the devil
+				// (spank), the push hand's arrows (owner, 2026-11-15: none
+				// of them showed at any zoom but 100%)
+				if (CompoundPart* o = (CompoundPart*)hand->overlayPart())
+					o->render(main, mx - hand->pointerX(), my - hand->pointerY());
 			}
 		}
 	}
@@ -846,7 +851,8 @@ void Engine::update() {
 	}
 	// developer aid: OPENC2E_TEST_CREATURE_ZONES=N prints, at tick N, the
 	// selected creature as the hand finds it, every 2 px: P pet, S spank,
-	// B body (push), a letter for any other part, '.' see-through
+	// B the rest of the body and legs (push), a letter for any other part,
+	// '.' see-through
 	if (static const char* k = getenv("OPENC2E_TEST_CREATURE_ZONES"); k && world.tickcount == (unsigned int)atoi(k)) {
 		if (auto* sk = dynamic_cast<SkeletalCreature*>(world.selectedcreature.get())) {
 			fmt::print("* ZONES creature at {:.0f},{:.0f} {}x{}\n", sk->x, sk->y, sk->getWidth(), sk->getHeight());
@@ -855,7 +861,7 @@ void Engine::update() {
 				for (int xx = -4; xx < (int)sk->getWidth() + 4; xx += 2) {
 					float wx = sk->x + xx, wy = sk->y + yy;
 					int act = sk->handleClick(wx, wy), p = sk->partUnder(wx, wy);
-					row += act == 1 ? 'P' : act == 0 ? 'S' : p == 0 ? 'B' : p < 0 ? '.' : (char)('a' + p);
+					row += act == 1 ? 'P' : act == 0 ? 'S' : SkeletalCreature::bodyOrLeg(p) ? 'B' : p < 0 ? '.' : (char)('a' + p);
 				}
 				fmt::print("*   {}\n", row);
 			}
@@ -863,19 +869,46 @@ void Engine::update() {
 	}
 	// developer aid: OPENC2E_TEST_ZONE_CLICK="N,Z[,push]": at tick N, clicks
 	// the selected creature with the hand at the middle of its zone Z (P pet,
-	// S spank, B body; ",push" with the push hand on), printing what happened
+	// S spank, B the rest of the body and legs; ",push" with the push hand
+	// on, ",hover" to leave the hand there without clicking), printing what
+	// happened
 	if (static const char* k = getenv("OPENC2E_TEST_ZONE_CLICK"); k && world.hand()) {
 		int n = 0;
 		char z = 0;
-		if (sscanf(k, "%d,%c", &n, &z) == 2 && world.tickcount == (unsigned int)n)
-			if (auto* sk = dynamic_cast<SkeletalCreature*>(world.selectedcreature.get())) {
+		// (the selected creature, or, when it is riding or carried, hidden
+		// from the view, the first creature that is not; kept for later ticks)
+		// (",@X,Y" anywhere in it: the free creature nearest that point)
+		static AgentRef zoneTarget;
+		if (!zoneTarget && sscanf(k, "%d", &n) == 1 && world.tickcount >= (unsigned int)n) {
+			Agent* sel = world.selectedcreature.get();
+			float ax = 0, ay = 0;
+			const char* at = strchr(k, '@');
+			if (at && sscanf(at + 1, "%f,%f", &ax, &ay) == 2) {
+				float best = 1e18f;
+				for (auto& a : world.agents)
+					if (a && dynamic_cast<SkeletalCreature*>(a.get()) && !a->invehicle && !a->carriedby) {
+						float d = (a->x - ax) * (a->x - ax) + (a->y - ay) * (a->y - ay);
+						if (d < best)
+							best = d, zoneTarget = AgentRef(a);
+					}
+			} else if (sel && !sel->invehicle && !sel->carriedby)
+				zoneTarget = AgentRef(sel);
+			else
+				for (auto& a : world.agents)
+					if (a && dynamic_cast<SkeletalCreature*>(a.get()) && !a->invehicle && !a->carriedby && a->family == 4) {
+						zoneTarget = AgentRef(a);
+						break;
+					}
+		}
+		if (sscanf(k, "%d,%c", &n, &z) == 2 && (world.tickcount == (unsigned int)n || (strstr(k, "hover") && world.tickcount > (unsigned int)n)))
+			if (auto* sk = dynamic_cast<SkeletalCreature*>(zoneTarget.get())) {
 				float sx = 0, sy = 0;
 				int cnt = 0;
 				for (int yy = 0; yy < (int)sk->getHeight(); yy++)
 					for (int xx = 0; xx < (int)sk->getWidth(); xx++) {
 						float wx = sk->x + xx + 0.5f, wy = sk->y + yy + 0.5f;
 						int act = sk->handleClick(wx, wy), p = sk->partUnder(wx, wy);
-						char c = act == 1 ? 'P' : act == 0 ? 'S' : p == 0 ? 'B' : '.';
+						char c = act == 1 ? 'P' : act == 0 ? 'S' : SkeletalCreature::bodyOrLeg(p) ? 'B' : '.';
 						if (c == z)
 							sx += wx, sy += wy, cnt++;
 					}
@@ -886,16 +919,27 @@ void Engine::update() {
 					float vx0 = sk->x;
 					auto* hand = dynamic_cast<PointerAgent*>(world.hand());
 					hand->moveTo(sx - (hand->pointerX() - hand->x), sy - (hand->pointerY() - hand->y));
-					BackendEvent e{};
-					e.type = eventmousebuttondown;
-					e.button = buttonleft;
-					hand->handleEvent(e);
-					e.type = eventmousebuttonup;
-					hand->handleEvent(e);
-					auto* hp = dynamic_cast<SpritePart*>(hand->part(0));
-					unsigned int hpose = hp ? hp->getPose() : 0;
-					fmt::print("* ZONE CLICK {} at {:.0f},{:.0f} ({} px of it): handleClick {} part {}{}\n", z, sx, sy, cnt, sk->handleClick(sx, sy), sk->partUnder(sx, sy),
-						push ? fmt::format(", push hand: {} (hand pose {})", hpose == 8 || hpose == 10 ? "shoved" : "not shoved", hpose) : std::string());
+					// ",hover": the creature kept in the middle of the view
+					// and the hand over the zone, no click (for snapshots of
+					// what the hand shows there)
+					if (strstr(k, "hover")) { // (every tick from N on: the view and hand follow the creature)
+						camera->moveTo((int)(sx - camera->getWidth() / 2), (int)(sy - camera->getHeight() / 2), jump);
+						hand->moveTo(sx - (hand->pointerX() - hand->x), sy - (hand->pointerY() - hand->y));
+						CompoundPart* under = world.partAt(sx, sy);
+						fmt::print("* ZONE HOVER {} at {:.0f},{:.0f} (zoom {:.2f}): overlay {}, part under hand {}\n", z, sx, sy, zoom,
+							hand->overlayPart() ? "shown" : "none", under ? under->getParent()->identify() : std::string("nothing"));
+					} else {
+						BackendEvent e{};
+						e.type = eventmousebuttondown;
+						e.button = buttonleft;
+						hand->handleEvent(e);
+						e.type = eventmousebuttonup;
+						hand->handleEvent(e);
+						auto* hp = dynamic_cast<SpritePart*>(hand->part(0));
+						unsigned int hpose = hp ? hp->getPose() : 0;
+						fmt::print("* ZONE CLICK {} at {:.0f},{:.0f} ({} px of it): handleClick {} part {}{}\n", z, sx, sy, cnt, sk->handleClick(sx, sy), sk->partUnder(sx, sy),
+							push ? fmt::format(", push hand: {} (hand pose {})", hpose == 8 || hpose == 10 ? "shoved" : "not shoved", hpose) : std::string());
+					}
 					(void)vx0;
 				} else
 					fmt::print("* ZONE CLICK {}: none on this creature\n", z);

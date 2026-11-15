@@ -648,6 +648,27 @@ CompoundPart* World::partAt(unsigned int x, unsigned int y, bool obey_all_transp
 		int ax = (int)(x - p->getParent()->x);
 		int ay = (int)(y - p->getParent()->y);
 
+		// C1/C2 creatures by their drawn pictures, not their box (owner,
+		// 2026-11-15: the hand's pet sign came and went): the box is the
+		// creature's 50 px physics width, and a head facing out past it was
+		// missed, the hand finding whatever was behind; its see-through
+		// corners caught the hand where no creature is drawn
+		if (engine.version <= 2)
+			if (auto* sk = dynamic_cast<SkeletalCreature*>(p->getParent())) {
+				float wx = (float)x;
+				if (m && m->wraparound() && std::fabs(wx - sk->x) > m->width() / 2.0f)
+					wx += wx < sk->x ? (float)m->width() : -(float)m->width();
+				if (sk->partUnder(wx, (float)y) < 0)
+					continue;
+				if (needs_mouseable && !(p->getParent()->mouseable()))
+					continue;
+				if (needs_clickable && !(p->canClick()))
+					continue;
+				if (!obey_all_transparency && p->getParent() != transagent)
+					continue;
+				return p;
+			}
+
 		// we check the wrap too..
 		if (!m || !m->wraparound() || p->x > ax + (int)m->width() || p->x + (int)p->getWidth() < ax + (int)m->width()) {
 			if (p->x > ax)

@@ -41,6 +41,7 @@ class PointerAgent : public SimpleAgent {
 
   public:
 	void playShove(int dir); // dir 1 east, -1 west
+	DullPart* overlayPart() const { return overlay; } // the angel, devil or push arrows shown with the hand, or null
 
   private:
 

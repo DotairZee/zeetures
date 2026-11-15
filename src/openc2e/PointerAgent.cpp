@@ -209,9 +209,9 @@ void PointerAgent::tick() {
 		}
 		if (pushing) {
 			int want = 0;
-			// (on the body's picture only: owner, 2026-11-15)
+			// (on the body and legs only: owner, 2026-11-15)
 			auto* sk = dynamic_cast<SkeletalCreature*>(parent);
-			if (a && parent && dynamic_cast<CreatureAgent*>(parent) && !parent->carriedby && !parent->invehicle && (!sk || sk->partUnder(x, y) == 0))
+			if (a && parent && dynamic_cast<CreatureAgent*>(parent) && !parent->carriedby && !parent->invehicle && (!sk || SkeletalCreature::bodyOrLeg(sk->partUnder(x, y))))
 				want = x < parent->x + parent->getWidth() / 2.0f ? -4 : -3;
 			// (the arrows are drawn mirrored with the hand during a mirrored
 			// shove, so they take the other arrow then)
@@ -234,6 +234,8 @@ void PointerAgent::tick() {
 		if (a && parent && dynamic_cast<SkeletalCreature*>(parent)) {
 			// the part under the cursor belongs to a SkeletalCreature
 			int scriptid = a->handleClick(x - a->x - parent->x, y - a->y - parent->y);
+			if (getenv("OPENC2E_WATCH_HAND_SIGN"))
+				fmt::print("* HAND SIGN t{} at {},{}: script {} timer {}\n", world.tickcount, x, y, scriptid, overlayTimer);
 			if (scriptid == 0) {
 				// devil
 				if (engine.version == 2) {
@@ -281,6 +283,8 @@ void PointerAgent::tick() {
 				}
 			}
 		} else {
+			if (getenv("OPENC2E_WATCH_HAND_SIGN"))
+				fmt::print("* HAND SIGN t{} at {},{}: not over a creature (part {})\n", world.tickcount, x, y, a ? a->getParent()->identify() : std::string("none"));
 			if (engine.version == 2) {
 				if (overlayTimer > 0) {
 					overlayTimer--;
@@ -412,8 +416,8 @@ void PointerAgent::handleEvent(BackendEvent& event) {
 						// creature shoves it away from where the hand pressed, a
 						// short hop sideways, instead of tickling or slapping it
 						if (engine.version < 3 && world.handPush && dynamic_cast<CreatureAgent*>(parent) && !parent->carriedby && !parent->invehicle) {
-							// on the body's picture only (owner, 2026-11-15)
-							if (auto* sk = dynamic_cast<SkeletalCreature*>(parent); sk && sk->partUnder(x, y) != 0)
+							// on the body and legs only (owner, 2026-11-15)
+							if (auto* sk = dynamic_cast<SkeletalCreature*>(parent); sk && !SkeletalCreature::bodyOrLeg(sk->partUnder(x, y)))
 								return;
 							int dir = x < parent->x + parent->getWidth() / 2.0f ? 1 : -1;
 							shoveCreature(parent, dir);

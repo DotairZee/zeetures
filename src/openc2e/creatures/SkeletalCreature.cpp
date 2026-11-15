@@ -1842,28 +1842,31 @@ int SkeletalCreature::partUnder(float wx, float wy) {
 	return -1;
 }
 
+// the body or a leg (thigh, shin, foot): where the hand spanks and pushes
+bool SkeletalCreature::bodyOrLeg(int p) {
+	return p == 0 || p == 2 || p == 3 || p == 7 || p == 8 || p == 11 || p == 12;
+}
+
 // What a click of the hand does, by where it is on the creature (owner,
 // 2026-11-15): over the head's picture (and ears and hair) it pets
-// (tickle, the angel); within a few pixels of where a thigh joins the body
-// (the body's hip joints) it spanks (slap, the devil); elsewhere nothing
+// (tickle, the angel); on the body or a leg near the hips (the bottom
+// half) it spanks (slap, the devil); elsewhere nothing
 // (the click still selects the creature). Was: the top half of the
 // creature's box tickled and the bottom half slapped. Pick up (right click)
-// works anywhere on the creature; the push hand pushes on the body only.
+// works anywhere on the creature; the push hand pushes on the body and legs.
 int SkeletalCreature::handleClick(float clickx, float clicky) {
 	if (engine.version <= 2 && images[0]) {
 		int p = partUnder(clickx, clicky);
 		if (p == 1 || p == 14 || p == 15 || p == 16)
 			return 1; // pet
-		// a few pixels round the hips, on the creature itself (the body, a
-		// thigh or the tail's root): 6 px, 4-8 with the creature's size
-		float r = std::clamp(6.0f * partk[0], 4.0f, 8.0f);
-		bool onHips = p == 0 || p == 2 || p == 3 || p == 6;
-		for (unsigned int hip : {1u, 2u}) {
-			if (!onHips)
-				break;
-			if (att[0].nolines <= pose[0] || att[0].noattachments[pose[0]] < (hip + 1) * 2)
-				continue;
-			float hx = x + attachmentX(0, hip), hy = y + attachmentY(0, hip);
+		// spank: on the body or a leg, within a circle round the hips (the
+		// middle of the two hip joints) half the body picture's height
+		// across, so the bottom half (owner, 2026-11-15: first a few pixels
+		// round the hips, then the whole body and legs, then this)
+		if (bodyOrLeg(p) && att[0].nolines > pose[0] && att[0].noattachments[pose[0]] >= 6) {
+			float hx = x + (attachmentX(0, 1) + attachmentX(0, 2)) / 2.0f, hy = y + (attachmentY(0, 1) + attachmentY(0, 2)) / 2.0f;
+			unsigned int bf = pose[0] + pregnancy * (engine.version < 3 ? 10 : 16);
+			float r = (bf < images[0]->numframes() ? images[0]->height(bf) : 30) / 2.0f;
 			if ((clickx - hx) * (clickx - hx) + (clicky - hy) * (clicky - hy) <= r * r)
 				return 0; // spank
 		}
