@@ -2,6 +2,8 @@
 
 # openc2e
 
+> **This is a fan fork, focused on Creatures 2.** It adds an original creature mind (`--mind homeostat`), a C2-style interface with the kits, world saving, scents and many fixes; see the `creature-mind` branch. Nightly builds are under [Releases](../../releases/tag/nightly) (they contain no game data: you need your own copy of Creatures 2). A noncommercial project, not affiliated with Gameware Europe or the openc2e developers. Everything below is upstream openc2e's README.
+
 openc2e is a free and open-source game engine for the [_Creatures_](https://creatures.wiki) artificial life games.
 
 The goal is to allow you to play games such as Creatures, Creatures 2, Creatures 3, Docking Station and more, on many different platforms.

@@ -1,0 +1,132 @@
+name: nightly
+
+# A nightly build of this fork (owner, 2026-11-15): each night, if anything
+# has been committed since the last nightly, build it and replace the
+# "nightly" pre-release with the new build. Run by hand (Actions > nightly >
+# Run workflow) to build now, changed or not.
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # 09:00 UTC, the small hours in Montana
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  MAKEFLAGS: -j3
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+      previous: ${{ steps.decide.outputs.previous }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - id: decide
+      run: |
+        prev=$(git rev-parse -q --verify "refs/tags/nightly^{commit}" || true)
+        echo "previous=$prev" >> "$GITHUB_OUTPUT"
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$prev" != "$GITHUB_SHA" ]; then
+          echo "build=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "build=false" >> "$GITHUB_OUTPUT"
+          echo "Nothing new since the last nightly ($prev)."
+        fi
+
+  linux:
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        # SDL3 is built from externals (OPENC2E_BUNDLED_SDL), so the build
+        # runs on systems without an SDL3 package; these are its headers
+        sudo apt-get install -y build-essential cmake python3 zlib1g-dev libpng-dev \
+          libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev libxtst-dev libxfixes-dev \
+          libwayland-dev libxkbcommon-dev libegl1-mesa-dev libgl1-mesa-dev libdecor-0-dev wayland-protocols \
+          libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev
+    - name: Build
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DOPENC2E_BUNDLED_SDL=ON
+        cmake --build build
+    - name: Package
+      run: |
+        out=openc2e-nightly-linux-x86_64
+        cmake --install build --prefix "$out"
+        cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
+        tar czf "$out.tar.gz" "$out"
+    - uses: actions/upload-artifact@v4
+      with:
+        name: linux
+        path: openc2e-nightly-linux-x86_64.tar.gz
+
+  windows:
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: windows-latest
+    # (the fork has not been built on Windows before: a failed build here
+    # leaves the Linux download as the night's release)
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: |
+        cmake -S . -B build -DOPENC2E_ASAN=OFF
+        cmake --build build --config RelWithDebInfo
+    - name: Package
+      shell: bash
+      run: |
+        out=openc2e-nightly-windows-x64
+        cmake --install build --config RelWithDebInfo --prefix "$out"
+        cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
+        7z a "$out.zip" "$out"
+    - uses: actions/upload-artifact@v4
+      with:
+        name: windows
+        path: openc2e-nightly-windows-x64.zip
+
+  release:
+    needs: [check, linux, windows]
+    if: always() && needs.check.outputs.build == 'true' && needs.linux.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - uses: actions/download-artifact@v4
+      with:
+        path: dist
+    - name: Release notes
+      run: |
+        prev="${{ needs.check.outputs.previous }}"
+        {
+          echo "Nightly build of the creature-mind branch at ${GITHUB_SHA:0:8}, $(date -u +%Y-%m-%d)."
+          echo
+          echo "You need your own copy of Creatures 2 (Steam's \"Creatures: The Albian Years\", or GOG). See README-NIGHTLY.txt in the download."
+          echo
+          if [ -n "$prev" ] && [ "$prev" != "$GITHUB_SHA" ]; then
+            echo "Changes since the last nightly:"
+            echo
+            git log --format='- %s' "$prev..$GITHUB_SHA"
+          else
+            echo "Latest changes:"
+            echo
+            git log --format='- %s' -n 30 "$GITHUB_SHA"
+          fi
+        } > notes.md
+    - name: Replace the nightly release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release delete nightly --cleanup-tag --yes || true
+        git push origin ":refs/tags/nightly" || true
+        files=$(find dist -type f \( -name '*.tar.gz' -o -name '*.zip' \))
+        gh release create nightly $files --prerelease --target "$GITHUB_SHA" \
+          --title "Nightly $(date -u +%Y-%m-%d) (${GITHUB_SHA:0:8})" --notes-file notes.md
