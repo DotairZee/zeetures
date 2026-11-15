@@ -314,7 +314,11 @@ static std::string dateText(long long secs) {
 		return "unknown";
 	std::time_t t = (std::time_t)secs;
 	std::tm tm{};
+#ifdef _WIN32
+	localtime_s(&tm, &t);
+#else
 	localtime_r(&t, &tm);
+#endif
 	static const char* const months[] = {"January", "February", "March", "April", "May", "June", "July", "August", "September",
 		"October", "November", "December"};
 	return fmt::format("{} {} {}", tm.tm_mday, months[tm.tm_mon], 1900 + tm.tm_year);

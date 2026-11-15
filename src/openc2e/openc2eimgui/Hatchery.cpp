@@ -59,7 +59,12 @@
 #include <imgui_internal.h>
 #include <chrono>
 #include <map>
+#ifdef _WIN32
+#include <process.h> // _getpid
+#define getpid _getpid
+#else
 #include <unistd.h>
+#endif
 #include <set>
 #include <cmath>
 #include <cfloat>

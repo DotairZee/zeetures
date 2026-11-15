@@ -70,7 +70,16 @@ else()
 	find_package(ZLIB REQUIRED)
 endif()
 
+# The SDL3 in externals is built on Windows and macOS; elsewhere the system's
+# is used unless OPENC2E_BUNDLED_SDL is on (for example a 32-bit Linux build
+# on a 64-bit system, which may have no 32-bit SDL3 package)
 if(WIN32 OR APPLE)
+	set(OPENC2E_BUNDLED_SDL_DEFAULT ON)
+else()
+	set(OPENC2E_BUNDLED_SDL_DEFAULT OFF)
+endif()
+option(OPENC2E_BUNDLED_SDL "Build the SDL3 in externals instead of using the system's" ${OPENC2E_BUNDLED_SDL_DEFAULT})
+if(OPENC2E_BUNDLED_SDL)
 	add_subdirectory(externals/SDL3 EXCLUDE_FROM_ALL)
 else()
 	find_package(SDL3 REQUIRED)
