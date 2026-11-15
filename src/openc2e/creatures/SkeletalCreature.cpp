@@ -574,6 +574,26 @@ void SkeletalCreature::skeletonInit() {
 		float grey, lift;
 		if (creature->getStage() == 6 && senileTint(grey, lift))
 			images[i] = world.gallery->muted(images[i], grey, lift);
+		// An old creature of a breed with no old-age pictures (the C1 norns
+		// Brown Mouse, White Haired Pixie, Horse; Kai) shows its younger
+		// pictures, scaled: they get a lighter version of the senile grey,
+		// so age still shows (owner, 2026-11-15: scaling and colouring for
+		// the C1 norns, as long as sprites added later do not clash). Decided
+		// by the body's pictures (part 0), for the whole creature: once a
+		// breed has its own old-age set, the body is found at that age and
+		// this is off.
+		// OPENC2E_OLD_TINT=g,l sets the grey share and lift; 0 turns it off.
+		if (i == 0)
+			oldWithoutArt = creature->getStage() == 5 && foundstage >= 0 && foundstage < 5;
+		static const std::array<float, 2> oldTint = [] {
+			std::array<float, 2> t{0.25f, 0.04f};
+			if (const char* e = getenv("OPENC2E_OLD_TINT"))
+				if (sscanf(e, "%f,%f", &t[0], &t[1]) < 1)
+					t = {0.0f, 0.0f};
+			return t;
+		}();
+		if (oldWithoutArt && oldTint[0] > 0.0f)
+			images[i] = world.gallery->muted(images[i], oldTint[0], oldTint[1]);
 		// Babies are drawn more vivid (owner, 2026-11-14: babies "more
 		// vibrant"; chose +100% of the options shown, "subtlety is not
 		// needed"): their pictures' colours are pushed away from grey by

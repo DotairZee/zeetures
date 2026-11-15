@@ -68,6 +68,7 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 
 	std::shared_ptr<creaturesImage> images[17];
 	float partk[17] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; // each part's growth scale (stage growth)
+	bool oldWithoutArt = false; // old, and its breed has no old-age pictures (a lighter grey; skeletonInit)
 	attFile att[17];
 
 	int width, height, adjustx, adjusty;
