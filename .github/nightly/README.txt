@@ -32,7 +32,15 @@ Linux:
 Windows:
     openc2e.exe -d "C:\path\to\Creatures 2" --mind homeostat
 
-  (Windows builds are new and untested.)
+macOS:
+    ./openc2e -d "/path/to/Creatures 2" --mind homeostat
+
+  The Steam release is for Windows: copy the Creatures 2 folder over from
+  a Windows or Linux install. The download is not signed by Apple: the
+  first time, right-click openc2e and choose Open, or run
+  xattr -dr com.apple.quarantine .  in its folder.
+
+  (The Windows and macOS builds are new and less tried than Linux.)
 
 Without --mind homeostat the creatures use openc2e's unfinished copy of
 the original brain, and do very little.

@@ -2,7 +2,7 @@ name: nightly
 
 # A nightly build of Zeetures, this fork (owner, 2026-11-15): each night, if anything
 # has been committed since the last nightly, build it and replace the
-# "nightly" pre-release with the new build. Run by hand (Actions > nightly >
+# "nightly" pre-release with the new build (Linux, Windows, macOS). Run by hand (Actions > nightly >
 # Run workflow) to build now, changed or not.
 
 on:
@@ -94,8 +94,32 @@ jobs:
         name: windows
         path: zeetures-nightly-windows-x64.zip
 
+  macos:
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: macos-latest # (Apple Silicon)
+    # (new: as with Windows, a failed build leaves the others as the release)
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF
+        cmake --build build -j3
+    - name: Package
+      run: |
+        out=zeetures-nightly-macos-arm64
+        cmake --install build --prefix "$out"
+        strip "$out"/openc2e "$out"/cobdumper "$out"/mngdumper "$out"/mngplayer2 "$out"/praybuilder "$out"/praydumper "$out"/spritedumper || true
+        cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
+        ditto -c -k --keepParent "$out" "$out.zip"
+    - uses: actions/upload-artifact@v4
+      with:
+        name: macos
+        path: zeetures-nightly-macos-arm64.zip
+
   release:
-    needs: [check, linux, windows]
+    needs: [check, linux, windows, macos]
     if: always() && needs.check.outputs.build == 'true' && needs.linux.result == 'success'
     runs-on: ubuntu-latest
     steps:

@@ -1,8 +1,78 @@
 ![openc2e logo](https://raw.githubusercontent.com/ligfx/openc2e/master/Openc2e-logo2008.png)
 
-# openc2e
+# Zeetures
 
-> **Zeetures: a fan fork of openc2e, focused on Creatures 2** (forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2), 7 October 2026). It adds an original creature mind (`--mind homeostat`), a C2-style interface with the kits, world saving, scents and many fixes; see the `creature-mind` branch. Nightly builds are under [Releases](../../releases/tag/nightly) (they contain no game data: you need your own copy of Creatures 2). A noncommercial project, not affiliated with Gameware Europe or the openc2e developers. Everything below is upstream openc2e's README.
+> **Zeetures: a fan fork of openc2e, focused on Creatures 2** (forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2), 7 October 2026). It adds an original creature mind (`--mind homeostat`), a C2-style interface with the kits, world saving, scents and many fixes; see the `creature-mind` branch. Nightly builds are under [Releases](../../releases/tag/nightly) (they contain no game data: you need your own copy of Creatures 2). A noncommercial project, not affiliated with Gameware Europe or the openc2e developers. Everything after the Zeetures section is upstream openc2e's README.
+
+## What you need
+
+* **Your own copy of Creatures 2.** Zeetures contains no part of the game: no sprites, sounds, genomes, scripts or worlds. It reads them from your installed copy. Creatures 2 comes with *Creatures: The Albian Years* on Steam, and is also sold on GOG. Creatures, Norns, Grendels, Ettins and Albia belong to Gameware Europe.
+* A 64-bit Linux, Windows or macOS computer.
+
+## Download and play
+
+Ready-to-run builds for each system are made automatically every night there are changes: see the [nightly release](../../releases/tag/nightly).
+
+| System | Download |
+| --- | --- |
+| Linux (x86-64) | `zeetures-nightly-linux-x86_64.tar.gz` |
+| Windows (64-bit) | `zeetures-nightly-windows-x64.zip` |
+| macOS (Apple Silicon) | `zeetures-nightly-macos-arm64.zip` |
+
+Unpack it and start the program (still called `openc2e`) with the path to your Creatures 2 folder, the one that holds its `Images`, `Sounds` and `Bootstrap` folders:
+
+* **Linux:** `./openc2e -d "$HOME/.local/share/Steam/steamapps/common/Creatures The Albian Years/Creatures 2" --mind homeostat`
+* **Windows:** `openc2e.exe -d "C:\Program Files (x86)\Steam\steamapps\common\Creatures The Albian Years\Creatures 2" --mind homeostat`
+* **macOS:** `./openc2e -d "/path/to/Creatures 2" --mind homeostat`. The Steam release is for Windows, so copy the `Creatures 2` folder over from a Windows or Linux install. The download is not signed by Apple: the first time, right-click `openc2e` and choose Open, or run `xattr -dr com.apple.quarantine .` in its folder.
+
+`--mind homeostat` gives the creatures Zeetures's own mind; without it they use openc2e's unfinished copy of the original brain and do very little. Your worlds, saves and settings are kept in openc2e's user folder (`~/.openc2e` on Linux), never in the game's folder.
+
+Linux is where Zeetures is played and tested every day; the Windows and macOS builds are new and less tried.
+
+## Building it yourself
+
+You need CMake (3.16 or newer), Python 3, Git and a C++20 compiler. SDL3, SDL3_mixer, zlib (on Windows), fmt, imgui and the rest come with the source, in `externals`.
+
+```bash
+git clone https://github.com/DotairZee/zeetures.git
+cd zeetures
+```
+
+### Linux (Debian, Ubuntu and relatives)
+
+```bash
+sudo apt-get install build-essential cmake python3 git zlib1g-dev libpng-dev \
+  libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev libxtst-dev libxfixes-dev \
+  libwayland-dev libxkbcommon-dev libegl1-mesa-dev libgl1-mesa-dev libdecor-0-dev wayland-protocols \
+  libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev
+cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DOPENC2E_BUNDLED_SDL=ON
+cmake --build build -j"$(nproc)"
+./build/openc2e -d "/path/to/Creatures 2" --mind homeostat
+```
+
+`OPENC2E_BUNDLED_SDL=ON` builds the SDL3 in `externals` (the packages above are its headers). If your system has SDL3 development packages (`libsdl3-dev`), you can leave it off. `OPENC2E_ASAN=OFF` turns off AddressSanitizer, which is on by default and makes the game several times slower.
+
+### Windows
+
+Install [Visual Studio 2022](https://visualstudio.microsoft.com/) with the "Desktop development with C++" workload (it includes CMake), and [Python 3](https://www.python.org/). In a Developer PowerShell or Command Prompt:
+
+```bat
+cmake -S . -B build -DOPENC2E_ASAN=OFF
+cmake --build build --config RelWithDebInfo
+build\RelWithDebInfo\openc2e.exe -d "C:\path\to\Creatures 2" --mind homeostat
+```
+
+### macOS
+
+Install the Xcode command line tools (`xcode-select --install`) and CMake and Python 3 (for example with [Homebrew](https://brew.sh/): `brew install cmake python`). Then:
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF
+cmake --build build -j"$(sysctl -n hw.ncpu)"
+./build/openc2e -d "/path/to/Creatures 2" --mind homeostat
+```
+
+# openc2e
 
 openc2e is a free and open-source game engine for the [_Creatures_](https://creatures.wiki) artificial life games.
 
