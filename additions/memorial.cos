@@ -8,8 +8,18 @@
 * dark brick niche of the stone arcade west of the incubator (x 4996-5042,
 * its plinth on the floor at y 1172), where few creatures pass (a sample of
 * Home: 4 creature sightings in that part of the arcade in 3 minutes, against
-* hundreds by the incubator). It is behind creatures (plane 900) and hidden
-* from them (ATTR 16 + 4: only the hand presses it).
+* hundreds by the incubator). It is behind creatures (plane 900).
+*
+* Only creatures press it (owner, 2026-11-15: "when a creature activates
+* the Easter egg, I want them to have a positive feeling--decrease in
+* loneliness" and "the hand cannot activate it--only creatures can"): ATTR
+* 0, seen by creatures, not activateable by the hand (Agent::handleClick
+* needs ATTR 4; a creature's activation does not). A creature that presses
+* it is given 80 of Loneliness Decrease (chemical 42), so the mind learns
+* the stone as a comfort when lonely, and the window opens for the player
+* to read. Any other press is ignored, except the status bar's "Together"
+* notice, which marks its press with OV09 1 to open the window. (At first
+* ATTR was 16 + 4: hidden from creatures, pressed by the hand.)
 *
 * Pressing it opens a window above it (2 1 159, sprite zmtb: a sandstone
 * tablet) with announcement 40 (announcements.txt), and, once four or more
@@ -22,12 +32,28 @@ enum 2 1 159 kill targ next
 inst
 new: simp zmem 1 0 900 0
 setv cls2 2 3 254
-setv attr 20
+setv attr 0
 mvto 4996 1118
 slow
 
 scrp 2 3 254 1
   inst
+* only a creature's press counts: comfort for it, then the window; or the
+* status bar's "Together" notice, which sets OV09 1 first (OwnersKit.cpp)
+  setv var9 0
+  doif ov09 eq 1
+    setv ov09 0
+    setv var9 1
+  endi
+  targ from
+  doif fmly eq 4
+    stim writ targ 30 255 0 0 42 80 0 0 0 0 0 0
+    setv var9 1
+  endi
+  targ ownr
+  doif var9 eq 0
+    stop
+  endi
   enum 2 1 159 kill targ next
   setv var0 posx
   subv var0 170

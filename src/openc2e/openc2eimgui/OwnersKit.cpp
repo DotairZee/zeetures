@@ -14,6 +14,7 @@
 #include "World.h"
 #include "common/backend/Backend.h"
 #include "creatures/CreatureAgent.h"
+#include "caosValue.h"
 #include "creatures/oldCreature.h"
 #include "fileformats/ImageUtils.h"
 #include "historyManager.h"
@@ -443,10 +444,13 @@ static std::shared_ptr<Agent> memorialStone() {
 }
 
 static void followEntry(const lifeLogEntry& e) {
-	// grew old together: the memorial stone, its words open (as if pressed)
+	// grew old together: the memorial stone, its words open. Only creatures
+	// press the stone (owner, 2026-11-15), so the notice marks the press as
+	// its own (OV09 1; memorial.cos) for the stone to open its window.
 	if (e.kind == lifeLogEntry::together) {
 		if (auto stone = memorialStone()) {
 			KitLookAt(stone);
+			stone->var[9] = caosValue(1);
 			stone->queueScript(1, world.hand());
 		} else
 			OpenC2KitAt("chronicles", "History");
@@ -587,6 +591,38 @@ void DrawLifeNotices(float room) {
 		}
 		fmt::print("* TEST TOGETHER: {} died together\n", four.size());
 	}
+	// OPENC2E_TEST_STONE=1: the first living creature presses the memorial
+	// stone (as its own activation would), with its Loneliness Decrease
+	// (chemical 42) and loneliness drive printed before and after
+	static bool testStone = getenv("OPENC2E_TEST_STONE") != nullptr;
+	static int testStoneAt = -1;
+	static AgentRef testStoneBy;
+	if (testStone && world.tickcount > 40) {
+		testStone = false;
+		auto stone = memorialStone();
+		for (auto& a : world.agents)
+			if (auto* ca = dynamic_cast<CreatureAgent*>(a.get()))
+				if (stone && !a->isDying() && ca->getCreature()->isAlive()) {
+					auto* c = dynamic_cast<oldCreature*>(ca->getCreature());
+					if (!c)
+						continue;
+					fmt::print("* TEST STONE: before chem42 {} loneliness {}\n", (int)c->getChemical(42), (int)c->getDrive(7));
+					stone->queueScript(1, a.get());
+					testStoneBy = a.get();
+					testStoneAt = (int)world.tickcount;
+					break;
+				}
+		if (!stone)
+			fmt::print("* TEST STONE: no stone\n");
+	}
+	if (testStoneAt >= 0 && (int)world.tickcount == testStoneAt + 5 && testStoneBy)
+		if (auto* ca = dynamic_cast<CreatureAgent*>(testStoneBy.get()))
+			if (auto* c = dynamic_cast<oldCreature*>(ca->getCreature()))
+				fmt::print("* TEST STONE: after chem42 {} loneliness {}\n", (int)c->getChemical(42), (int)c->getDrive(7));
+	if (testStoneAt >= 0 && (int)world.tickcount == testStoneAt + 100 && testStoneBy)
+		if (auto* ca = dynamic_cast<CreatureAgent*>(testStoneBy.get()))
+			if (auto* c = dynamic_cast<oldCreature*>(ca->getCreature()))
+				fmt::print("* TEST STONE: later chem42 {} loneliness {}\n", (int)c->getChemical(42), (int)c->getDrive(7));
 	if (s_notices.empty())
 		return;
 
