@@ -1817,16 +1817,60 @@ unsigned int SkeletalCreature::getFaceSpriteFrame() {
 	return 9 + (eyesclosed ? 16 : 0) + (facialexpression * 32);
 }
 
-int SkeletalCreature::handleClick(float clickx, float clicky) {
-	// TODO: muh, horror
-	(void)clickx;
-
-	clicky -= y;
-	if (clicky >= getSkelHeight() / 2.0) {
-		return 0; // slap
-	} else {
-		return 1; // tickle
+// the body part whose picture is drawn at a world point (the frontmost, as
+// drawn), or -1 where the creature is see-through
+int SkeletalCreature::partUnder(float wx, float wy) {
+	for (int j = 16; j >= 0; j--) {
+		int i = cee_zorder[posedirection][j];
+		if (i >= SkeletalPartCount() || !images[i])
+			continue;
+		if (engine.version == 1 && (i == 6 || i == 13))
+			continue;
+		unsigned int frame = pose[i];
+		if (cee_bodyparts[i].parent == -1)
+			frame += pregnancy * (engine.version < 3 ? 10 : 16);
+		else if (i == 1)
+			frame += ((eyesclosed || blinkticks > 0) ? (engine.version < 3 ? 10 : 16) : 0) + facialexpression * (engine.version < 3 ? 20 : 32);
+		if (frame >= images[i]->numframes())
+			continue;
+		int px = (int)std::floor(wx - (x + partx[i] + adjustx)), py = (int)std::floor(wy - (y + party[i] + adjusty));
+		if (px < 0 || py < 0 || px >= (int)images[i]->width(frame) || py >= (int)images[i]->height(frame))
+			continue;
+		if (!images[i]->transparentAt(frame, px, py))
+			return i;
 	}
+	return -1;
+}
+
+// What a click of the hand does, by where it is on the creature (owner,
+// 2026-11-15): over the head's picture (and ears and hair) it pets
+// (tickle, the angel); within a few pixels of where a thigh joins the body
+// (the body's hip joints) it spanks (slap, the devil); elsewhere nothing
+// (the click still selects the creature). Was: the top half of the
+// creature's box tickled and the bottom half slapped. Pick up (right click)
+// works anywhere on the creature; the push hand pushes on the body only.
+int SkeletalCreature::handleClick(float clickx, float clicky) {
+	if (engine.version <= 2 && images[0]) {
+		int p = partUnder(clickx, clicky);
+		if (p == 1 || p == 14 || p == 15 || p == 16)
+			return 1; // pet
+		// a few pixels round the hips, on the creature itself (the body, a
+		// thigh or the tail's root): 6 px, 4-8 with the creature's size
+		float r = std::clamp(6.0f * partk[0], 4.0f, 8.0f);
+		bool onHips = p == 0 || p == 2 || p == 3 || p == 6;
+		for (unsigned int hip : {1u, 2u}) {
+			if (!onHips)
+				break;
+			if (att[0].nolines <= pose[0] || att[0].noattachments[pose[0]] < (hip + 1) * 2)
+				continue;
+			float hx = x + attachmentX(0, hip), hy = y + attachmentY(0, hip);
+			if ((clickx - hx) * (clickx - hx) + (clicky - hy) * (clicky - hy) <= r * r)
+				return 0; // spank
+		}
+		return -1;
+	}
+	// (no pictures yet: the old rule)
+	return clicky - y >= getSkelHeight() / 2.0 ? 0 : 1;
 }
 
 // C2: a creature carries in the hand on the viewer's side, drawn in front

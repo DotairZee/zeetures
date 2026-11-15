@@ -209,7 +209,9 @@ void PointerAgent::tick() {
 		}
 		if (pushing) {
 			int want = 0;
-			if (a && parent && dynamic_cast<CreatureAgent*>(parent) && !parent->carriedby && !parent->invehicle)
+			// (on the body's picture only: owner, 2026-11-15)
+			auto* sk = dynamic_cast<SkeletalCreature*>(parent);
+			if (a && parent && dynamic_cast<CreatureAgent*>(parent) && !parent->carriedby && !parent->invehicle && (!sk || sk->partUnder(x, y) == 0))
 				want = x < parent->x + parent->getWidth() / 2.0f ? -4 : -3;
 			// (the arrows are drawn mirrored with the hand during a mirrored
 			// shove, so they take the other arrow then)
@@ -410,6 +412,9 @@ void PointerAgent::handleEvent(BackendEvent& event) {
 						// creature shoves it away from where the hand pressed, a
 						// short hop sideways, instead of tickling or slapping it
 						if (engine.version < 3 && world.handPush && dynamic_cast<CreatureAgent*>(parent) && !parent->carriedby && !parent->invehicle) {
+							// on the body's picture only (owner, 2026-11-15)
+							if (auto* sk = dynamic_cast<SkeletalCreature*>(parent); sk && sk->partUnder(x, y) != 0)
+								return;
 							int dir = x < parent->x + parent->getWidth() / 2.0f ? 1 : -1;
 							shoveCreature(parent, dir);
 							playShove(dir);

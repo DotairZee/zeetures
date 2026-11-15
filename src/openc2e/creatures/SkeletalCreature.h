@@ -104,6 +104,7 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 
 	void render(RenderTarget* renderer, int xoffset, int yoffset);
 	virtual int handleClick(float, float);
+	int partUnder(float wx, float wy); // the body part drawn at a world point, or -1
 
 	void skeletonInit();
 	void recalculateSkeleton();

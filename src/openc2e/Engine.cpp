@@ -844,6 +844,63 @@ void Engine::update() {
 			fmt::print("* TEST WHEEL PAN tick {}: hand {},{} camera {},{}\n", t, world.hand()->pointerX(), world.hand()->pointerY(), camera->getX(), camera->getY());
 		}
 	}
+	// developer aid: OPENC2E_TEST_CREATURE_ZONES=N prints, at tick N, the
+	// selected creature as the hand finds it, every 2 px: P pet, S spank,
+	// B body (push), a letter for any other part, '.' see-through
+	if (static const char* k = getenv("OPENC2E_TEST_CREATURE_ZONES"); k && world.tickcount == (unsigned int)atoi(k)) {
+		if (auto* sk = dynamic_cast<SkeletalCreature*>(world.selectedcreature.get())) {
+			fmt::print("* ZONES creature at {:.0f},{:.0f} {}x{}\n", sk->x, sk->y, sk->getWidth(), sk->getHeight());
+			for (int yy = -4; yy < (int)sk->getHeight() + 4; yy += 2) {
+				std::string row;
+				for (int xx = -4; xx < (int)sk->getWidth() + 4; xx += 2) {
+					float wx = sk->x + xx, wy = sk->y + yy;
+					int act = sk->handleClick(wx, wy), p = sk->partUnder(wx, wy);
+					row += act == 1 ? 'P' : act == 0 ? 'S' : p == 0 ? 'B' : p < 0 ? '.' : (char)('a' + p);
+				}
+				fmt::print("*   {}\n", row);
+			}
+		}
+	}
+	// developer aid: OPENC2E_TEST_ZONE_CLICK="N,Z[,push]": at tick N, clicks
+	// the selected creature with the hand at the middle of its zone Z (P pet,
+	// S spank, B body; ",push" with the push hand on), printing what happened
+	if (static const char* k = getenv("OPENC2E_TEST_ZONE_CLICK"); k && world.hand()) {
+		int n = 0;
+		char z = 0;
+		if (sscanf(k, "%d,%c", &n, &z) == 2 && world.tickcount == (unsigned int)n)
+			if (auto* sk = dynamic_cast<SkeletalCreature*>(world.selectedcreature.get())) {
+				float sx = 0, sy = 0;
+				int cnt = 0;
+				for (int yy = 0; yy < (int)sk->getHeight(); yy++)
+					for (int xx = 0; xx < (int)sk->getWidth(); xx++) {
+						float wx = sk->x + xx + 0.5f, wy = sk->y + yy + 0.5f;
+						int act = sk->handleClick(wx, wy), p = sk->partUnder(wx, wy);
+						char c = act == 1 ? 'P' : act == 0 ? 'S' : p == 0 ? 'B' : '.';
+						if (c == z)
+							sx += wx, sy += wy, cnt++;
+					}
+				if (cnt) {
+					sx /= cnt, sy /= cnt;
+					bool push = strstr(k, "push") != nullptr;
+					world.handPush = push;
+					float vx0 = sk->x;
+					auto* hand = dynamic_cast<PointerAgent*>(world.hand());
+					hand->moveTo(sx - (hand->pointerX() - hand->x), sy - (hand->pointerY() - hand->y));
+					BackendEvent e{};
+					e.type = eventmousebuttondown;
+					e.button = buttonleft;
+					hand->handleEvent(e);
+					e.type = eventmousebuttonup;
+					hand->handleEvent(e);
+					auto* hp = dynamic_cast<SpritePart*>(hand->part(0));
+					unsigned int hpose = hp ? hp->getPose() : 0;
+					fmt::print("* ZONE CLICK {} at {:.0f},{:.0f} ({} px of it): handleClick {} part {}{}\n", z, sx, sy, cnt, sk->handleClick(sx, sy), sk->partUnder(sx, sy),
+						push ? fmt::format(", push hand: {} (hand pose {})", hpose == 8 || hpose == 10 ? "shoved" : "not shoved", hpose) : std::string());
+					(void)vx0;
+				} else
+					fmt::print("* ZONE CLICK {}: none on this creature\n", z);
+			}
+	}
 	// developer aid: OPENC2E_TEST_PINCH="N,scale,count": from tick N, one SDL
 	// pinch update of that scale each tick, count of them, printing the zoom
 	if (static const char* k = getenv("OPENC2E_TEST_PINCH"); k) {
