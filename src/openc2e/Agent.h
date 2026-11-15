@@ -228,6 +228,12 @@ class Agent : public std::enable_shared_from_this<Agent> {
 	// from, or that made the agent which made this one: such objects are
 	// saved with the world (WorldSave). Empty for everything else.
 	std::string injectedFrom;
+	// C1/C2 whole-world saving (WorldSave): an object made from the world
+	// file has its place in that file's object list (stable from load to
+	// load), and one made by the Additions scripts while the world loads is
+	// marked (those are made anew at each load, so are not saved)
+	int sfcIndex = -1;
+	bool fromAddition = false;
 
 	// drawing
 	bool draw_mirrored = false;

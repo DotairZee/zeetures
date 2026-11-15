@@ -111,6 +111,7 @@ class Engine {
 	std::string mindname; // --mind: pluggable C1/C2 creature mind (empty = original brain)
 	std::string currentworld; // C1/C2: name of the world folder in use, if any
 	std::filesystem::path currentworlddir;
+	bool creatingAdditions = false; // the Additions scripts are running at world load
 	bool worldready = false; // C1/C2: the world (and any saved state) has finished loading
 	bool autosave = true; // C1/C2: save the world on quit and when switching worlds (--no-autosave)
 	const std::vector<std::string>& getCommandLineArgs() const { return cmdline_args; }

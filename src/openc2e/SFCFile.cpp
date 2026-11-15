@@ -804,9 +804,13 @@ void SFCFile::copyToWorld() {
 		script.install();
 	}
 
-	// create normal objects
+	// create normal objects (numbered in file order, for whole-world saving)
+	int sfcIndex = 0;
 	for (auto& object : objects) {
 		object->copyToWorld();
+		if (Agent* a = object->copiedAgent())
+			a->sfcIndex = sfcIndex;
+		sfcIndex++;
 	}
 
 	// create scenery

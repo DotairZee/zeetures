@@ -37,6 +37,8 @@
 #include "SpritePart.h"
 #include "World.h"
 #include "caosValue.h"
+#include "caosVM.h"
+#include "caosScript.h"
 #include "common/creaturesImage.h"
 #include "common/io/FileReader.h"
 #include "common/io/FileWriter.h"
@@ -118,6 +120,28 @@ static bool isInjected(Agent* a) {
 	return t == typeid(SimpleAgent) || t == typeid(CompoundAgent) || t == typeid(Vehicle);
 }
 
+// Every other object (stage 3, owner 2026-11-14: "the objects to stay as-is
+// between relaunches"): plain and compound objects from the world file or
+// made during play (fallen fruit, critters, seeds), not scenery (family 1),
+// creatures, eggs, kept or injected objects, nor objects the Additions make
+// at each load. Lifts, boats and other vehicles, call buttons, bubbles and
+// the hand are other types and still start as in the world file.
+static bool isWorldObject(Agent* a) {
+	if (engine.version != 2 || a->family == 1 || a->fromAddition || !a->injectedFrom.empty())
+		return false;
+	if (oldCreatureOf(a) || isEgg(a) || isKept(a))
+		return false;
+	const std::type_info& t = typeid(*a);
+	return t == typeid(SimpleAgent) || t == typeid(CompoundAgent);
+}
+
+// in the middle of a script other than its timer when saved: its pictures
+// and ACTV are left as the world file has them (the script will not run on
+// after a load, so a machine would stay half way through)
+static bool isBusy(Agent* a) {
+	return a->vm && a->vm->currentscript && a->vm->currentscript->scrp != 9;
+}
+
 static void savePart(std::ostream& out, CompoundPart* cp) {
 	SpritePart* p = dynamic_cast<SpritePart*>(cp);
 	if (!p || !p->getSprite())
@@ -129,29 +153,10 @@ static void savePart(std::ostream& out, CompoundPart* cp) {
 	out << "\n";
 }
 
-static void saveInjected(std::ostream& out, int& count) {
-	for (auto& name : world.injectedCobs) {
-		out << "injected " << escapeLine(name) << "\n";
-		// and its scripts, so it works without its COB file
-		if (auto sc = world.injectedScripts.find(name); sc != world.injectedScripts.end())
-			for (auto& script : sc->second)
-				out << "injscript " << escapeLine(name) << "\t" << escapeLine(script) << "\n";
-	}
-	std::map<Agent*, int> ids;
-	for (auto& a : world.agents)
-		if (a && !a->isDying() && isInjected(a.get())) {
-			int n = (int)ids.size();
-			ids[a.get()] = n;
-		}
-	for (auto& a : world.agents) {
-		if (!a || a->isDying() || !ids.count(a.get()))
-			continue;
-		Agent* ag = a.get();
-		CompoundAgent* comp = dynamic_cast<CompoundAgent*>(ag);
-		Vehicle* vhcl = dynamic_cast<Vehicle*>(ag);
-		out << "iobject\n";
-		out << "id " << ids[ag] << "\n";
-		out << "from " << escapeLine(ag->injectedFrom) << "\n";
+// an object's kind, place, state, variables and pictures (iobject/wobject)
+static void writeObjectBody(std::ostream& out, Agent* ag, std::map<Agent*, int>& ids) {
+	CompoundAgent* comp = dynamic_cast<CompoundAgent*>(ag);
+	Vehicle* vhcl = dynamic_cast<Vehicle*>(ag);
 		out << "kind " << (vhcl ? "vhcl" : comp ? "comp" : "simp") << "\n";
 		out << "classifier " << (int)ag->family << " " << (int)ag->genus << " " << ag->species << "\n";
 		out << "plane " << (int)ag->zorder << "\n";
@@ -207,6 +212,55 @@ static void saveInjected(std::ostream& out, int& count) {
 		if (vhcl)
 			out << "cabin " << vhcl->cabinleft << " " << vhcl->cabintop << " " << vhcl->cabinright << " " << vhcl->cabinbottom << " " << vhcl->cabinplane << " "
 				<< vhcl->getCapacity() << " " << vhcl->getBump() << " " << vhcl->xvec << " " << vhcl->yvec << "\n";
+}
+
+static void saveInjected(std::ostream& out, int& count) {
+	for (auto& name : world.injectedCobs) {
+		out << "injected " << escapeLine(name) << "\n";
+		// and its scripts, so it works without its COB file
+		if (auto sc = world.injectedScripts.find(name); sc != world.injectedScripts.end())
+			for (auto& script : sc->second)
+				out << "injscript " << escapeLine(name) << "\t" << escapeLine(script) << "\n";
+	}
+	std::map<Agent*, int> ids;
+	for (auto& a : world.agents)
+		if (a && !a->isDying() && isInjected(a.get())) {
+			int n = (int)ids.size();
+			ids[a.get()] = n;
+		}
+	for (auto& a : world.agents) {
+		if (!a || a->isDying() || !ids.count(a.get()))
+			continue;
+		Agent* ag = a.get();
+		out << "iobject\n";
+		out << "id " << ids[ag] << "\n";
+		out << "from " << escapeLine(ag->injectedFrom) << "\n";
+		writeObjectBody(out, ag, ids);
+		out << "end\n";
+		count++;
+	}
+}
+
+
+static void saveWorldObjects(std::ostream& out, int& count) {
+	out << "world-objects 1\n"; // (a save without this line has none: nothing is removed at load)
+	std::map<Agent*, int> ids;
+	for (auto& a : world.agents)
+		if (a && !a->isDying() && isWorldObject(a.get())) {
+			int n = (int)ids.size();
+			ids[a.get()] = n;
+		}
+	for (auto& a : world.agents) {
+		if (!a || a->isDying() || !ids.count(a.get()))
+			continue;
+		Agent* ag = a.get();
+		out << "wobject\n";
+		out << "id " << ids[ag] << "\n";
+		if (ag->sfcIndex >= 0)
+			out << "sfc " << ag->sfcIndex << "\n";
+		if (isBusy(ag))
+			out << "busy 1\n";
+		writeObjectBody(out, ag, ids);
 		out << "end\n";
 		count++;
 	}
@@ -246,11 +300,17 @@ struct SavedInjected {
 	int cabin[5] = {0, 0, 0, 0, 1};
 	unsigned int capacity = 0, bump = 0;
 	int xvec = 0, yvec = 0;
+	int sfc = -1; // a world object's place in the world file's list
+	bool busy = false;
 };
 
 static void readInjectedLine(SavedInjected& o, const std::string& key, std::istringstream& l, const std::function<std::string()>& rest) {
 	if (key == "id")
 		l >> o.id;
+	else if (key == "sfc")
+		l >> o.sfc;
+	else if (key == "busy")
+		l >> o.busy;
 	else if (key == "from")
 		o.from = rest();
 	else if (key == "kind")
@@ -324,8 +384,119 @@ static void applyPart(SpritePart* p, const SavedPart& s) {
 		p->setFrameNo(s.frameno);
 }
 
-static void restoreInjected(std::vector<SavedInjected>& objects) {
+static void applyVars(Agent* ag, const SavedInjected& o, const std::map<int, Agent*>& made);
+static void restoreInjected(std::vector<SavedInjected>& objects, std::map<int, Agent*>* shared = nullptr);
+
+// an object's saved variables: numbers, text, and other objects (one saved
+// with it, by id, or one from the world file or a creature: the nearest of
+// its kind to where it was)
+static void applyVars(Agent* ag, const SavedInjected& o, const std::map<int, Agent*>& made) {
+	for (auto& v : o.vars) {
+		caosValue& dest = ag->var[v.n];
+		if (v.type == "i")
+			dest.setInt(std::atoi(v.value.c_str()));
+		else if (v.type == "f")
+			dest.setFloat((float)std::atof(v.value.c_str()));
+		else if (v.type == "s")
+			dest.setString(v.value);
+		else if (v.type == "a") {
+			auto it = made.find(std::atoi(v.value.c_str()));
+			if (it != made.end())
+				dest.setAgent(it->second);
+		} else if (v.type == "near") {
+			Agent* best = nullptr;
+			float bestd = 300.0f * 300.0f;
+			for (auto& a : world.agents) {
+				if (!a || a->isDying() || a->family != v.family || a->genus != v.genus || a->species != v.species)
+					continue;
+				float d = (a->x - v.x) * (a->x - v.x) + (a->y - v.y) * (a->y - v.y);
+				if (d <= bestd) {
+					bestd = d;
+					best = a.get();
+				}
+			}
+			if (best)
+				dest.setAgent(best);
+		}
+	}
+}
+
+// stage 3: the world file's objects take back their saved state; those not
+// in the save (eaten, gone) are removed; objects made during play are made
+// again (as restoreInjected does)
+static void restoreWorldObjects(std::vector<SavedInjected>& objects, int& matched, int& removed, int& made_n) {
+	std::map<int, Agent*> bySfc;
+	for (auto& a : world.agents)
+		if (a && !a->isDying() && a->sfcIndex >= 0 && isWorldObject(a.get()))
+			bySfc[a->sfcIndex] = a.get();
 	std::map<int, Agent*> made;
+	std::set<Agent*> kept;
+	std::vector<std::pair<Agent*, SavedInjected*>> fromFile;
+	std::vector<SavedInjected> fresh;
+	for (auto& o : objects) {
+		if (o.sfc < 0) {
+			if (o.kind != "vhcl")
+				fresh.push_back(o);
+			continue;
+		}
+		auto it = bySfc.find(o.sfc);
+		if (it == bySfc.end())
+			continue;
+		Agent* ag = it->second;
+		if (ag->family != o.family || ag->genus != o.genus || ag->species != o.species)
+			continue; // another world file: leave it
+		kept.insert(ag);
+		made[o.id] = ag;
+		fromFile.push_back({ag, &o});
+		ag->moveTo(o.x, o.y);
+		ag->setAttributes(o.attr);
+		ag->clik = o.clik;
+		for (int i = 0; i < 3; i++)
+			ag->clac[i] = o.clac[i];
+		ag->timerrate = o.timer;
+		ag->setTimerPhase(o.since);
+		ag->velx = o.velx;
+		ag->vely = o.vely;
+		ag->accg = o.accg;
+		ag->aero = o.aero;
+		ag->rest = o.rest;
+		ag->size = o.size;
+		ag->thrt = o.thrt;
+		ag->range = o.range;
+		ag->falling = o.falling;
+		ag->paused = o.paused;
+		ag->visible = o.visible;
+		if (!o.busy) {
+			ag->actv = o.actv;
+			for (auto& sp : o.parts)
+				if (auto* p = dynamic_cast<SpritePart*>(ag->part(sp.id)))
+					applyPart(p, sp);
+		}
+		matched++;
+	}
+	// gone during play: removed
+	for (auto& [idx, ag] : bySfc)
+		if (!kept.count(ag)) {
+			ag->kill();
+			removed++;
+		}
+	// made during play: made again
+	restoreInjected(fresh, &made);
+	made_n = (int)fresh.size();
+	// a variable at 0 is not written to the save, so a world file object's
+	// variables are cleared first: else one the save has at 0 kept the world
+	// file's value (the fish then laid eggs again and again after a load)
+	for (auto& [ag, o] : fromFile) {
+		for (int i = 0; i < 100; i++)
+			ag->var[i].setInt(0);
+		applyVars(ag, *o, made);
+	}
+}
+
+
+static void restoreInjected(std::vector<SavedInjected>& objects, std::map<int, Agent*>* shared) {
+	std::map<int, Agent*> ownMade;
+	std::map<int, Agent*>& made = shared ? *shared : ownMade;
 	std::vector<std::pair<Agent*, SavedInjected*>> all;
 	for (auto& o : objects) {
 		try {
@@ -405,37 +576,8 @@ static void restoreInjected(std::vector<SavedInjected>& objects) {
 		}
 	}
 	// object variables last, once every object they may point to exists
-	for (auto& [ag, o] : all) {
-		for (auto& v : o->vars) {
-			caosValue& dest = ag->var[v.n];
-			if (v.type == "i")
-				dest.setInt(std::atoi(v.value.c_str()));
-			else if (v.type == "f")
-				dest.setFloat((float)std::atof(v.value.c_str()));
-			else if (v.type == "s")
-				dest.setString(v.value);
-			else if (v.type == "a") {
-				auto it = made.find(std::atoi(v.value.c_str()));
-				if (it != made.end())
-					dest.setAgent(it->second);
-			} else if (v.type == "near") {
-				// an object from the world file: the nearest of its kind
-				Agent* best = nullptr;
-				float bestd = 300.0f * 300.0f;
-				for (auto& a : world.agents) {
-					if (!a || a->isDying() || a->family != v.family || a->genus != v.genus || a->species != v.species)
-						continue;
-					float d = (a->x - v.x) * (a->x - v.x) + (a->y - v.y) * (a->y - v.y);
-					if (d <= bestd) {
-						bestd = d;
-						best = a.get();
-					}
-				}
-				if (best)
-					dest.setAgent(best);
-			}
-		}
-	}
+	for (auto& [ag, o] : all)
+		applyVars(ag, *o, made);
 	// as for objects from the world file: "enter scope"
 	for (auto& [ag, o] : all)
 		ag->queueScript(7);
@@ -586,6 +728,8 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	}
 	int ninjected = 0;
 	saveInjected(out, ninjected);
+	int nworld = 0;
+	saveWorldObjects(out, nworld);
 	// the records of the dead (Owner's Kit family tree, life log): no body,
 	// just who they were
 	int nrecords = 0;
@@ -632,7 +776,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 		return false;
 	}
 	fs::remove_all(old, ec);
-	fmt::print("* Saved world: {} creatures, {} eggs, {} injected objects, {} records of the dead\n", ncreatures, neggs, ninjected, nrecords);
+	fmt::print("* Saved world: {} creatures, {} eggs, {} injected objects, {} other objects, {} records of the dead\n", ncreatures, neggs, ninjected, nworld, nrecords);
 	return true;
 }
 
@@ -890,6 +1034,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 	SavedCreature* c = nullptr;
 	SavedEgg* e = nullptr;
 	std::vector<SavedInjected> injected;
+	std::vector<SavedInjected> worldObjects;
+	bool hasWorldObjects = false;
 	std::vector<std::string> injectedCobs;
 	SavedInjected* io = nullptr;
 	while (std::getline(in, line)) {
@@ -959,6 +1105,13 @@ bool LoadWorldState(const fs::path& worlddir) {
 			e->kept = key == "object";
 			c = nullptr;
 			io = nullptr;
+		} else if (key == "world-objects") {
+			hasWorldObjects = true;
+		} else if (key == "wobject") {
+			worldObjects.emplace_back();
+			io = &worldObjects.back();
+			c = nullptr;
+			e = nullptr;
 		} else if (key == "iobject") {
 			injected.emplace_back();
 			io = &injected.back();
@@ -1138,11 +1291,19 @@ bool LoadWorldState(const fs::path& worlddir) {
 	}
 	injected.erase(std::remove_if(injected.begin(), injected.end(), [&](const SavedInjected& o) { return missing.count(o.from) > 0; }), injected.end());
 	restoreInjected(injected);
+	int wmatched = 0, wremoved = 0, wmade = 0;
+	// (developer aid: OPENC2E_NO_WORLD_OBJECTS loads as before stage 3)
+	if (getenv("OPENC2E_NO_WORLD_OBJECTS"))
+		hasWorldObjects = false;
+	if (hasWorldObjects)
+		restoreWorldObjects(worldObjects, wmatched, wremoved, wmade);
 	s_view = {camx >= 0 && camy >= 0, camx, camy, camzoom};
 	ApplySavedView(); // and again once the world has finished starting
 	int nkept = (int)std::count_if(eggs.begin(), eggs.end(), [](const SavedEgg& e) { return e.kept; });
 	fmt::print("* Restored saved world: {} creatures, {} eggs, {} kept objects, {} injected objects ({} add-ons)\n", creatures.size(), (int)eggs.size() - nkept, nkept,
 		injected.size(), world.injectedCobs.size());
+	if (hasWorldObjects)
+		fmt::print("* Restored world objects: {} from the world file as saved, {} gone during play removed, {} made during play made again\n", wmatched, wremoved, wmade);
 	return true;
 }
 

@@ -2011,7 +2011,9 @@ bool Engine::initialSetup() {
 			std::sort(files.begin(), files.end());
 			for (auto& f : files) {
 				fmt::print("* Running world addition {}\n", f.filename().string());
+				creatingAdditions = true;
 				world.executeInitScript(f);
+				creatingAdditions = false;
 			}
 		}
 	}

@@ -139,6 +139,9 @@ Agent::Agent(unsigned char family_, unsigned char genus_, unsigned short species
 }
 
 void Agent::finishInit() {
+	// made by the Additions scripts while the world loads (Engine)
+	if (engine.creatingAdditions)
+		fromAddition = true;
 	// lc2e, at least, seems to position agents centered on (-9876,-9876) to begin with
 	// TODO: where should we place agents in other games? is this code right at all anyway?
 	// (bear in mind that there are no parts present for some C1/C2 agents when finishInit is called, atm)
