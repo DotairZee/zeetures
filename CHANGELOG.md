@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 367 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 368 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 3 commits, 15 November 2026
+- [Unreleased](#unreleased): 4 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,27 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Memorial stone: only creatures press it, and it eases their loneliness
+
+[`702795bb`](https://github.com/DotairZee/zeetures/commit/702795bb9c7166b5b539a8f5fb523244dd8d0e1f)
+
+Owner, 2026-11-15: "when a creature activates the Easter egg, I want
+them to have a positive feeling--decrease in loneliness" and "the hand
+cannot activate it--only creatures can".
+
+- memorial.cos: the stone is ATTR 0 (was 16 + 4): creatures see it, and
+  the hand cannot activate it (Agent::handleClick needs ATTR 4; a
+  creature's activation does not). Its activate script acts only for a
+  creature (FROM's family 4): STIM WRIT with 80 of Loneliness Decrease
+  (chemical 42), then the memorial window as before (60 s at normal
+  speed, or until clicked). Any other press is ignored, except the
+  status bar's "Together" notice, which sets the stone's OV09 to 1
+  before queueing its press, so the window still opens from the notice.
+- OPENC2E_TEST_STONE=1: the first living creature presses the stone,
+  with chemical 42 and its loneliness drive printed before, 5 ticks
+  after and 100 ticks after. In a Home copy: chemical 42 0 -&gt; 51,
+  loneliness 14 -&gt; 2 (still 2 later); the window opened.
 
 #### Memorial stone: darker, weathered, modeled like a rendered sprite
 
