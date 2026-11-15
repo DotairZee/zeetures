@@ -654,8 +654,18 @@ bool Agent::validInRoomSystem() {
 		return validInRoomSystem(Point(x, y), getWidth(), getHeight(), perm);
 }
 
+// Set while a place is only being tested (validInRoomSystem at a point), so
+// the C2 nudge for objects partly outside the room map (findCollisionInDirection)
+// moves nothing then.
+static bool s_nudging = false;
+
 bool Agent::validInRoomSystem(Point p, float w, float h, int testperm) {
 	// Return true if this agent is inside the world room system at the specified point, or false if it isn't.
+	struct TestOnly {
+		bool was = s_nudging;
+		TestOnly() { s_nudging = true; }
+		~TestOnly() { s_nudging = was; }
+	} testOnly;
 	MetaRoom* m = world.map->metaRoomAt(p.x, p.y);
 	if (!m)
 		return false;
@@ -804,6 +814,11 @@ void Agent::physicsTick() {
 					if (!tryingmove && tryMoveToPlaceAround(x, y)) {
 						//fmt::print("{} was out of room system due to a physics bug but we hopefully moved it back in..\n", identity());
 						tryingmove = true;
+						// (C2: and it falls from there; with no speed it was
+						// left at rest in mid-air, a toy gun hanging in the
+						// rock east of the gene lab; owner, 2026-11-14)
+						if (engine.version == 2)
+							falling = true;
 						physicsTick();
 						return;
 					}
@@ -989,6 +1004,20 @@ void Agent::findCollisionInDirection(unsigned int i, class MetaRoom* m, Point sr
 	}
 
 	if (!room) { // out of room system
+		// C2: an object partly outside the room map, such as an egg laid
+		// against a wall (the gene lab's east wall, moved in to its drawn
+		// floor; 2026-11-14), is set back at the nearest place it fits, once
+		// (not while already looking for a place: tryMoveToPlaceAround tests
+		// each place through this same code)
+		if (engine.version == 2 && family == 2 && !s_nudging && !outofroomsystem && !carriedby && !invehicle) {
+			s_nudging = true;
+			bool placed = tryMoveToPlaceAround(x, y);
+			s_nudging = false;
+			if (placed) {
+				falling = true;
+				return;
+			}
+		}
 		if (!outofroomsystem)
 			unhandledException(fmt::format("{} out of room system at ({}, {})", identify(), src.x, src.y), false);
 		falling = false;
@@ -1797,15 +1826,41 @@ bool Agent::tryMoveToPlaceAround(float x, float y) {
 	unsigned int tryheight = getHeight() * 2;
 	if (tryheight < 100)
 		tryheight = 100;
-	for (unsigned int xadjust = 0; xadjust < trywidth; xadjust++) {
-		for (unsigned int yadjust = 0; yadjust < tryheight; yadjust++) {
-			if (validInRoomSystem(Point(x - xadjust, y - yadjust), getWidth(), getHeight(), perm))
-				moveTo(x - xadjust, y - yadjust);
-			else if ((xadjust != 0) && validInRoomSystem(Point(x + xadjust, y - yadjust), getWidth(), getHeight(), perm))
-				moveTo(x + xadjust, y - yadjust);
-			else
-				continue;
+
+	// C2: first only places in the room the object is in now (the room under
+	// its bottom middle, or a bottom corner's), so it is not set down through
+	// a wall: a toy gun pushed partly past the gene lab's east wall (x 6895,
+	// with no room behind it up to 6930) was put on the far side, in the
+	// volcano chamber behind the rock (owner, 2026-11-14). Then anywhere, as
+	// before.
+	std::shared_ptr<Room> home;
+	if (engine.version == 2 && world.map) {
+		float bx = x + getWidth() / 2.0f, by = y + getHeight() - 1;
+		home = world.map->roomAt(bx, by);
+		if (!home)
+			home = world.map->roomAt(x + 1, by);
+		if (!home)
+			home = world.map->roomAt(x + getWidth() - 2, by);
+	}
+	auto fits = [&](float px, float py, bool sameRoom) {
+		if (!validInRoomSystem(Point(px, py), getWidth(), getHeight(), perm))
+			return false;
+		if (!sameRoom)
 			return true;
+		return world.map->roomAt(px + getWidth() / 2.0f, py + getHeight() - 1) == home;
+	};
+	for (int pass = home ? 0 : 1; pass < 2; pass++) {
+		bool sameRoom = pass == 0;
+		for (unsigned int xadjust = 0; xadjust < trywidth; xadjust++) {
+			for (unsigned int yadjust = 0; yadjust < tryheight; yadjust++) {
+				if (fits(x - xadjust, y - yadjust, sameRoom))
+					moveTo(x - xadjust, y - yadjust);
+				else if ((xadjust != 0) && fits(x + xadjust, y - yadjust, sameRoom))
+					moveTo(x + xadjust, y - yadjust);
+				else
+					continue;
+				return true;
+			}
 		}
 	}
 

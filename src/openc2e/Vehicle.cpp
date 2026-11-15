@@ -187,7 +187,12 @@ void Vehicle::drop(AgentRef passenger) {
 		float fx = passenger->x + passenger->getWidth() / 2.0f;
 		float fy = passenger->y + passenger->getHeight();
 		std::shared_ptr<Room> here = world.map->roomAt(fx, fy);
-		if (here && here->type == 2) {
+		// (and from a boat, wherever its feet are: the east boat moored at the
+		// dock's end let riders out at its floor, in room 31, the dry pocket
+		// under the dock's end, and the sealed-pocket rescue then lifted them
+		// onto the dock, a few times each crossing; 2026-11-14)
+		bool boat = family == 3 && genus == 6;
+		if (here && (here->type == 2 || boat)) {
 			for (float y = fy - 1; y >= fy - 80; y--) {
 				std::shared_ptr<Room> above = world.map->roomAt(fx, y);
 				if (above && above != here && above->type != 2) {
@@ -222,6 +227,16 @@ void Vehicle::drop(AgentRef passenger) {
 				break;
 			}
 		}
+	}
+
+	// developer aid: OPENC2E_WATCH_VEHICLE_DROPS logs where vehicles let creatures out
+	static const bool watchDrops = getenv("OPENC2E_WATCH_VEHICLE_DROPS") != nullptr;
+	if (watchDrops && passenger->family == 4 && world.map) {
+		float fx = passenger->x + passenger->getWidth() / 2.0f;
+		float fy = passenger->y + passenger->getHeight();
+		std::shared_ptr<Room> r = world.map->roomAt(fx, fy - 2);
+		fmt::print("[drop] {} {} {} at {:.0f},{:.0f} let out unid {} feet {:.0f},{:.0f} room {}\n", family, genus, species, x, y,
+			passenger->getUNID(), fx, fy, r ? (int)r->id : -1);
 	}
 
 	if (engine.version >= 3)
