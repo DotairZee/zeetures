@@ -984,6 +984,27 @@ void oldCreature::keepInRoomSystem() {
 							bottom = std::min(bottom, r->floorYatX(cx));
 					}
 					a->moveTo(nx - shift, bottom - a->getHeight() - 1);
+					// and its foot on that floor too: the foot is not in the box's
+					// middle (a creature facing east has it about 60 px from the
+					// box's left), so one set back at the east end of the dock
+					// (room 13, to x 6565) had its foot past the end, over the
+					// sea (room 140), fell again and was lifted again, over and
+					// over (2026-11-15: 30 to 87 rescues a test run)
+					if (auto* sc = dynamic_cast<SkeletalCreature*>(a)) {
+						float fx = sc->footX(); // (already in the map's terms)
+						float dx = 0;
+						if (fx > (float)r->x_right - 4)
+							dx = (float)r->x_right - 4 - fx;
+						else if (fx < (float)r->x_left + 4)
+							dx = (float)r->x_left + 4 - fx;
+						if (dx != 0) {
+							cx += dx;
+							float fl = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
+							if (r->floorpoints.size())
+								fl = std::min(fl, r->floorYatX(cx));
+							a->moveTo(a->x + dx, fl - a->getHeight() - 1);
+						}
+					}
 					a->velx = 0;
 					a->vely = 0;
 					if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
