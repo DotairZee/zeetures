@@ -665,13 +665,15 @@ void tick() {
 	}
 	if (watching() && counter % (STEP_TICKS * 200) == 0) {
 		for (size_t c = 0; c < n; c++) {
-			int some = 0;
+			int some = 0, full = 0, half = 0;
 			float top = 0;
 			for (auto& r : rooms) {
 				some += r->scent[c] > 0.05f;
+				half += r->scent[c] >= 0.5f;
+				full += r->scent[c] >= 0.98f;
 				top = std::max(top, r->scent[c]);
 			}
-			fmt::print("* WATCH SCENT {}: {} rooms, strongest {:.2f}\n", channels[c].name, some, top);
+			fmt::print("* WATCH SCENT {}: {} rooms, strongest {:.2f} ({} at half or more, {} at the cap)\n", channels[c].name, some, top, half, full);
 		}
 	}
 }

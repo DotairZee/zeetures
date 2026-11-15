@@ -899,6 +899,11 @@ bool Engine::tick() {
 		rooms_dumped = true;
 		if (getenv("OPENC2E_SHOW_ROOMS"))
 			world.showrooms = true;
+		// OPENC2E_SHOW_SCENT=name starts with View > Scents on that scent
+		if (const char* sc = getenv("OPENC2E_SHOW_SCENT"))
+			for (int ch = 0; ch < Pheromones::channelCount(); ch++)
+				if (Pheromones::channelName(ch) == sc)
+					world.showScent = ch;
 		if (getenv("OPENC2E_FAST"))
 			fastticks = true; // run the world as fast as possible (headless tests)
 		// developer aid: OPENC2E_SPEED=n starts at that game speed

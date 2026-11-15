@@ -88,6 +88,7 @@ class World {
 	std::set<unsigned int> sealedAtStart;
 	unsigned int timeofday, dayofseason, season, year;
 	bool showrooms, autokill, autostop;
+	int showScent = -1; // View > Scents: rooms tinted by this scent channel (pheromones.txt), -1 off
 
 	std::vector<unsigned int> groundlevels;
 

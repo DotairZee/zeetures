@@ -874,6 +874,51 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 		}
 	}
 
+	// View > Scents (openc2e addition, owner's idea in pheromones-design.md,
+	// 2026-11-15): each room in view tinted by how much of the chosen scent
+	// it holds, faint to strong, so trails can be watched forming. Filled
+	// with vertical lines (the renderer draws lines only); a scent runs 0-1.
+	if (showScent >= 0 && showScent < Pheromones::channelCount()) {
+		static const Color palette[6] = {{255, 80, 200, 0}, {80, 200, 255, 0}, {255, 180, 40, 0}, {120, 255, 120, 0}, {200, 120, 255, 0}, {255, 90, 90, 0}};
+		Color base = palette[showScent % 6];
+		float vx0 = cam->getX(), vx1 = vx0 + cam->getWidth(), vy0 = cam->getY(), vy1 = vy0 + cam->getHeight();
+		// scaled to the strongest room in view, so the way toward a source
+		// shows wherever the scent has spread (a scent everywhere tinted
+		// everything alike); rooms under a tenth of that are left clear
+		MetaRoom* mr = cam->getMetaRoom();
+		float peak = 0.0f;
+		for (const auto& r : mr->rooms)
+			if ((size_t)showScent < r->scent.size() && r->x_right >= vx0 - mr->width() && r->x_left <= vx1 + mr->width() &&
+				std::max(r->y_left_floor, r->y_right_floor) >= vy0 && std::min(r->y_left_ceiling, r->y_right_ceiling) <= vy1)
+				peak = std::max(peak, r->scent[showScent]);
+		auto fill = [&](const std::shared_ptr<Room>& r, float shift) {
+			float level = (size_t)showScent < r->scent.size() ? r->scent[showScent] : 0.0f;
+			if (peak < 0.005f || level < 0.1f * peak)
+				return;
+			float l = std::clamp(level / peak, 0.0f, 1.0f);
+			Color c = base;
+			c.a = (uint8_t)(30 + 140 * std::sqrt(l));
+			float x0 = std::max((float)r->x_left + shift, vx0), x1 = std::min((float)r->x_right + shift, vx1);
+			if (x1 <= x0 || std::min(r->y_left_ceiling, r->y_right_ceiling) > vy1 || std::max(r->y_left_floor, r->y_right_floor) < vy0)
+				return;
+			float w = std::max(1.0f, (float)r->x_right - (float)r->x_left);
+			for (float x = std::floor(x0); x <= x1; x += 1) {
+				float t = (x - shift - r->x_left) / w;
+				float top = r->y_left_ceiling + (r->y_right_ceiling - (float)r->y_left_ceiling) * t;
+				float bottom = r->y_left_floor + (r->y_right_floor - (float)r->y_left_floor) * t;
+				surface->renderLine(x - adjustx, top - adjusty, x - adjustx, bottom - adjusty, c);
+			}
+		};
+		MetaRoom* m = cam->getMetaRoom();
+		for (const auto& r : m->rooms) {
+			fill(r, 0);
+			if (m->wraparound()) {
+				fill(r, -(float)m->width());
+				fill(r, (float)m->width());
+			}
+		}
+	}
+
 	if (hand()->holdingWire) {
 		if (!hand()->wireOriginAgent) {
 			hand()->holdingWire = 0;

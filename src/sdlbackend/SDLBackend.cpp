@@ -365,6 +365,9 @@ SDLRenderTarget::~SDLRenderTarget() {
 void SDLRenderTarget::renderLine(float x1, float y1, float x2, float y2, Color color) {
 	SDL_SetRenderTarget(parent->renderer, texture);
 	SDL_SetRenderDrawColor(parent->renderer, color.r, color.g, color.b, color.a);
+	// (blended when see-through: SDL draws lines without blending unless
+	// asked, so a colour's alpha was ignored and every line was solid)
+	SDL_SetRenderDrawBlendMode(parent->renderer, color.a < 255 ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE);
 	SDL_RenderLine(parent->renderer, x1, y1 + viewport_offset_top, x2, y2 + viewport_offset_top);
 }
 
