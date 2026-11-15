@@ -1317,9 +1317,19 @@ class HomeostatMind : public CreatureMind {
 		// and bit it for ever on its food trips; owner, 2026-11-10)
 		if ((choice.category == prm.boatCategory || std::find(prm.escapeDevices.begin(), prm.escapeDevices.end(), choice.category) != prm.escapeDevices.end()) &&
 			choice.decision >= 1 && choice.decision <= 3) {
-			pendingLink = {p.x, p.y, 0, 0, choice.category, choice.decision, 0};
-			pendingLinkTick = p.tick;
-			pendingRode = false;
+			// working the same device again from the same spot while the last
+			// try is still being judged: that try goes on being judged (a
+			// creature pressing the west lab's fish-egg machine every few
+			// ticks as a route step restarted the judging each time, so its
+			// wrong link was never forgotten: 55 presses in a row, 5 eggs
+			// each; 2026-11-14)
+			bool again = pendingLink.category == choice.category && pendingLink.decision == choice.decision &&
+				std::fabs(dxTo(p, pendingLink.fromX)) < 200.0f && std::fabs(p.y - pendingLink.fromY) < prm.sameLevel;
+			if (!again) {
+				pendingLink = {p.x, p.y, 0, 0, choice.category, choice.decision, 0};
+				pendingLinkTick = p.tick;
+				pendingRode = false;
+			}
 		}
 		if (choice.boatCall) {
 			callPressX = p.x;
