@@ -1,10 +1,10 @@
 #include "Additions.h"
 
 #include "Engine.h"
-#include "common/io/FileReader.h"
 #include "PathResolver.h"
 
 #include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <map>
 #include <sstream>
@@ -37,6 +37,29 @@ static bool readFile(const fs::path& p, std::string& out) {
 	return true;
 }
 
+// the first of our sprites (four letters starting with z, outside comment
+// lines) that a script uses and no image file is installed for, or empty
+static std::string missingArtIn(const std::string& script) {
+	std::istringstream in(script);
+	std::string line;
+	while (std::getline(in, line)) {
+		size_t start = line.find_first_not_of(" \t");
+		if (start == std::string::npos || line[start] == '*')
+			continue;
+		std::istringstream words(line);
+		std::string w;
+		while (words >> w) {
+			if (w.size() != 4 || w[0] != 'z')
+				continue;
+			if (!std::all_of(w.begin(), w.end(), [](char c) { return std::islower((unsigned char)c) || std::isdigit((unsigned char)c); }))
+				continue;
+			if (findImageFile(w + ".s16").empty() && findImageFile(w + ".c16").empty() && findImageFile(w + ".png").empty())
+				return w;
+		}
+	}
+	return {};
+}
+
 static std::string builtin(const std::string& name) {
 	auto d = EmbeddedAddition(name);
 	return std::string(reinterpret_cast<const char*>(d.data()), d.size());
@@ -59,7 +82,7 @@ std::vector<Script> scripts() {
 	if (builtinsApply())
 		for (auto& n : EmbeddedAdditionNames())
 			if (fs::path(n).extension() == ".cos")
-				byName[n] = Script{n, builtin(n), false};
+				byName[n] = Script{n, builtin(n), false, {}};
 	std::error_code ec;
 	fs::path dir = getUserDataDir() / "Additions";
 	if (fs::is_directory(dir, ec))
@@ -70,8 +93,11 @@ std::vector<Script> scripts() {
 					byName[s.name] = s;
 			}
 	std::vector<Script> out;
-	for (auto& [n, s] : byName)
+	for (auto& [n, s] : byName) {
+		if (!s.fromPlayer)
+			s.missingArt = missingArtIn(s.text);
 		out.push_back(s);
+	}
 	return out;
 }
 

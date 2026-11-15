@@ -2207,6 +2207,10 @@ bool Engine::initialSetup() {
 		for (auto& s : Additions::scripts()) {
 			if (s.text.find_first_not_of(" \t\r\n") == std::string::npos)
 				continue;
+			if (!s.missingArt.empty()) {
+				fmt::print("* World addition {} (built in) skipped: its art ({}) is not installed\n", s.name, s.missingArt);
+				continue;
+			}
 			fmt::print("* Running world addition {}{}\n", s.name, s.fromPlayer ? "" : " (built in)");
 			creatingAdditions = true;
 			world.executeInitScriptText(s.name, s.text);

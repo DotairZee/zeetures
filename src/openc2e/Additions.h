@@ -42,6 +42,10 @@ struct Script {
 	std::string name;
 	std::string text;
 	bool fromPlayer = false;
+	// a built-in script whose art is not installed (the first such sprite,
+	// e.g. "zbw1"): it is skipped whole rather than half run, since it may
+	// change rooms before making the object that goes with them
+	std::string missingArt;
 };
 std::vector<Script> scripts();
 
