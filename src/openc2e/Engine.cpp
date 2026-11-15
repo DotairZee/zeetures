@@ -86,6 +86,7 @@
 #include <fstream>
 #define CXXOPTS_VECTOR_DELIMITER '\0'
 #include <cxxopts.hpp>
+#include <cstring>
 #include <fmt/core.h>
 #include <memory>
 #include <cstdio>
@@ -406,7 +407,7 @@ void Engine::drawWorld() {
 			unsigned int until = get_ticks_msec() + 1000u * (unsigned int)atoi(th);
 			volatile unsigned long spin = 0;
 			while (get_ticks_msec() < until)
-				spin++;
+				spin = spin + 1;
 		}
 	}
 	camera->stepPan(); // smooth scrolling, frame by frame
@@ -975,6 +976,14 @@ bool Engine::tick() {
 			fmt::print("* Test save failed: {}\n", err);
 		test_save_after = -1;
 		done = true;
+	}
+	// developer aid: OPENC2E_TEST_SWITCH_WORLD="N,NAME" switches to world
+	// NAME after N ticks, as File > Switch World does (with
+	// OPENC2E_TEST_SPAWN_RELAUNCH, by the Windows and macOS way)
+	if (const char* sw = getenv("OPENC2E_TEST_SWITCH_WORLD")) {
+		const char* comma = strchr(sw, ',');
+		if (comma && currentworld != comma + 1 && world.tickcount >= (unsigned int)atoi(sw))
+			Openc2eImgui::RelaunchIntoWorld(comma + 1);
 	}
 
 	assert(get_backend());
@@ -2021,7 +2030,7 @@ bool Engine::initialSetup() {
 	applyScriptPatches(false);
 
 	if (const char* dumppath = getenv("OPENC2E_DUMP_SCRIPTS")) {
-		std::ofstream dump(dumppath);
+		std::ofstream dump(dumppath, std::ios::binary);
 		world.scriptorium->dumpScripts(dump);
 		fmt::print("* Dumped world scripts to {}\n", dumppath);
 	}

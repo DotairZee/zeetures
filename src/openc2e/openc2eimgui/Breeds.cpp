@@ -262,7 +262,7 @@ const BreedInfo* FindBreed(int species, int slot) {
 }
 
 void SaveBreedRegistry() {
-	std::ofstream out(registryPath());
+	std::ofstream out(registryPath(), std::ios::binary);
 	out << "# Breeds imported in openc2e (Breeder's Kit): species|slot|name|source|genome|files|the pack's own slot, if moved\n";
 	for (auto& b : KnownBreeds()) {
 		if (!b.imported)

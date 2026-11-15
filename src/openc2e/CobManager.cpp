@@ -72,7 +72,7 @@ bool CobManager::addToNameList(const fs::path& file, const std::string& name, co
 			}
 		}
 	}
-	std::ofstream out(file, std::ios::app);
+	std::ofstream out(file, std::ios::app | std::ios::binary);
 	if (needNewline)
 		out << "\n";
 	if (!comment.empty())
@@ -100,7 +100,7 @@ bool CobManager::removeFromNameList(const fs::path& file, const std::string& nam
 		}
 		kept.push_back(l);
 	}
-	std::ofstream out(file, std::ios::trunc);
+	std::ofstream out(file, std::ios::trunc | std::ios::binary);
 	for (auto& l : kept)
 		out << l << "\n";
 	return (bool)out;
@@ -224,7 +224,7 @@ long long CobManager::lastUsed(const std::string& name) {
 }
 
 void CobManager::noteUsed(const std::string& name) {
-	std::ofstream out(usedFile(), std::ios::app);
+	std::ofstream out(usedFile(), std::ios::app | std::ios::binary);
 	out << (long long)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "\t" << name << "\n";
 }
 

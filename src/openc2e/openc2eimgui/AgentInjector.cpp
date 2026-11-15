@@ -422,7 +422,7 @@ void DrawAgentInjector() {
 			// developer aid: OPENC2E_DUMP_COB_PICTURES=<folder> saves each
 			// listed object's thumbnail there (<index>.bmp, names in list.txt)
 			if (const char* dir = getenv("OPENC2E_DUMP_COB_PICTURES")) {
-				std::ofstream list(fs::path(dir) / "list.txt");
+				std::ofstream list(fs::path(dir) / "list.txt", std::ios::binary);
 				for (size_t i = 0; i < s_object_injector.objects.size(); i++) {
 					auto& obj = s_object_injector.objects[i];
 					Image img = s_object_injector.getPicture(obj);

@@ -158,7 +158,7 @@ void writeSetting(const std::string& key, const std::string& value) {
 		}
 	}
 	lines.push_back(key + " " + value);
-	std::ofstream out(settingsFile());
+	std::ofstream out(settingsFile(), std::ios::binary);
 	for (auto& l : lines)
 		out << l << "\n";
 }

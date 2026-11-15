@@ -599,7 +599,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 		return false;
 	}
 
-	std::ofstream out(tmp / "state.txt");
+	std::ofstream out(tmp / "state.txt", std::ios::binary); // (binary: the same \n line ends on every system)
 	out << MAGIC << "\n";
 	out << "saved " << timestamp() << "\n";
 	out << "chemical-relays 1\n"; // body chemistry relays were running when saved
@@ -642,7 +642,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			out << "genome " << genomename << "\n";
 			out << "female " << (c->isFemale() ? 1 : 0) << "\n";
 			out << "variant " << c->getVariant() << "\n";
-			out << "selected " << (world.selectedcreature == a.get() ? 1 : 0) << "\n";
+			out << "selected " << (world.selectedcreature.lock().get() == a.get() ? 1 : 0) << "\n";
 			out << "pos " << a->x << " " << a->y << "\n";
 			// where its feet were: a creature restored in another pose (it
 			// was saved lying down, asleep or fainted) stands there, not
@@ -1021,9 +1021,15 @@ bool LoadWorldState(const fs::path& worlddir) {
 	if (!HasSavedState(worlddir))
 		return false;
 	fs::path savedir = worlddir / "save";
-	std::ifstream in(stateFile(worlddir));
+	std::ifstream in(stateFile(worlddir), std::ios::binary);
 	std::string line;
 	std::getline(in, line);
+	// (a save copied from elsewhere, or edited, may have \r\n line ends)
+	auto dropCR = [](std::string& t) {
+		if (!t.empty() && t.back() == '\r')
+			t.pop_back();
+	};
+	dropCR(line);
 	if (line != MAGIC) {
 		fmt::print("* Save file has an unknown format; starting from the world file\n");
 		return false;
@@ -1047,6 +1053,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 	std::vector<std::string> injectedCobs;
 	SavedInjected* io = nullptr;
 	while (std::getline(in, line)) {
+		dropCR(line);
 		std::istringstream l(line);
 		std::string key;
 		l >> key;
@@ -1228,8 +1235,12 @@ bool LoadWorldState(const fs::path& worlddir) {
 			} else if (key == "mind")
 				l >> c->mind;
 			else if (key == "mindstate") {
-				while (std::getline(in, line) && line != "endmindstate")
+				while (std::getline(in, line)) {
+					dropCR(line);
+					if (line == "endmindstate")
+						break;
 					c->mindstate += line + "\n";
+				}
 			}
 		} else if (e) {
 			if (key == "classifier")

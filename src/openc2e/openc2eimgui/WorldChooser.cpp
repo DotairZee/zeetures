@@ -9,6 +9,10 @@
 #include <algorithm>
 #include <fmt/core.h>
 #include <imgui.h>
+#include <SDL3/SDL_filesystem.h>
+#include <SDL3/SDL_process.h>
+#include <cstdio>
+#include <cstdlib>
 #include <system_error>
 #ifdef __linux__
 #include <unistd.h>
@@ -86,6 +90,24 @@ static bool ValidWorldName(const std::string& name, std::string& error) {
 			return false;
 		}
 	}
+	// (on every system, so worlds can be copied between them: Windows drops
+	// spaces at the end of a folder's name, so "Home " would open Home's
+	// folder, and it keeps some names for devices)
+	if (name.front() == ' ' || name.back() == ' ') {
+		error = "Names can't start or end with a space.";
+		return false;
+	}
+	{
+		std::string stem = to_ascii_lowercase(name);
+		static const char* const reserved[] = {"con", "prn", "aux", "nul"};
+		bool bad = std::find(std::begin(reserved), std::end(reserved), stem) != std::end(reserved);
+		if (stem.size() == 4 && (stem.rfind("com", 0) == 0 || stem.rfind("lpt", 0) == 0) && stem[3] >= '0' && stem[3] <= '9')
+			bad = true;
+		if (bad) {
+			error = "That name is kept by Windows for devices; please choose another.";
+			return false;
+		}
+	}
 	if (FindWorld(name)) {
 		error = "There is already a world with that name.";
 		return false;
@@ -109,8 +131,9 @@ bool CreateWorld(const std::string& name, const fs::path& tmpl, std::string& err
 	return true;
 }
 
-void RelaunchIntoWorld(const std::string& name) {
-#ifdef __linux__
+// The command line to start this program again in the named world: the same
+// options, with --world NAME in place of any --world given before.
+static std::vector<std::string> RelaunchArgs(const std::string& name) {
 	std::vector<std::string> args;
 	const auto& orig = engine.getCommandLineArgs();
 	for (size_t i = 0; i < orig.size(); i++) {
@@ -124,18 +147,64 @@ void RelaunchIntoWorld(const std::string& name) {
 	}
 	args.push_back("--world");
 	args.push_back(name);
-	std::vector<char*> argv;
+	return args;
+}
+
+// Windows and macOS (and Linux with OPENC2E_TEST_SPAWN_RELAUNCH set, to test
+// this path): start a new copy of the program with SDL, after this one has
+// saved and shut down, then leave. The program's own path is argv[0] made
+// absolute (Windows and macOS give the full path when started from Explorer,
+// Finder or a shortcut), or the base folder plus its name when it was found
+// on the PATH.
+static bool SpawnRelaunch(std::vector<std::string> args) {
+	if (args.empty())
+		return false;
+	fs::path exe = args[0];
+	std::error_code ec;
+	if (!exe.has_parent_path()) {
+		if (const char* base = SDL_GetBasePath())
+			exe = fs::path(base) / exe;
+	}
+	exe = fs::absolute(exe, ec);
+	if (ec)
+		return false;
+	args[0] = exe.string();
+	std::vector<const char*> argv;
 	for (auto& a : args)
-		argv.push_back(a.data());
+		argv.push_back(a.c_str());
 	argv.push_back(nullptr);
+	SDL_Process* child = SDL_CreateProcess(argv.data(), false);
+	if (!child) {
+		fmt::print(stderr, "Couldn't start {}: {}\n", args[0], SDL_GetError());
+		return false;
+	}
+	SDL_DestroyProcess(child); // (leaves it running)
+	return true;
+}
+
+void RelaunchIntoWorld(const std::string& name) {
+	std::vector<std::string> args = RelaunchArgs(name);
 	fmt::print("* Switching to world '{}'\n", name);
 	engine.shutdown();
-	execv("/proc/self/exe", argv.data());
-	fmt::print(stderr, "Couldn't restart into world '{}'\n", name);
-	_exit(1);
-#else
-	fmt::print(stderr, "Switching worlds needs a restart: run again with --world \"{}\"\n", name);
+#ifdef __linux__
+	if (!getenv("OPENC2E_TEST_SPAWN_RELAUNCH")) {
+		std::vector<char*> argv;
+		for (auto& a : args)
+			argv.push_back(a.data());
+		argv.push_back(nullptr);
+		std::fflush(stdout); // (exec doesn't flush)
+		std::fflush(stderr);
+		execv("/proc/self/exe", argv.data());
+		fmt::print(stderr, "Couldn't restart into world '{}'\n", name);
+		_exit(1);
+	}
 #endif
+	bool ok = SpawnRelaunch(args);
+	if (!ok)
+		fmt::print(stderr, "Couldn't restart into world '{}': run again with --world \"{}\"\n", name, name);
+	std::fflush(stdout); // (_Exit doesn't flush)
+	std::fflush(stderr);
+	std::_Exit(ok ? 0 : 1);
 }
 
 // The new-world form, shared by the start-up chooser and the File menu.

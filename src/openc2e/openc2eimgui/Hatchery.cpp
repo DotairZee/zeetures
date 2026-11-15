@@ -158,7 +158,7 @@ static std::map<std::string, long long> ReadPlacedLog() {
 }
 
 static void NotePlaced(const std::string& label, long long when) {
-	std::ofstream out(getUserDataDir() / "hatchery-used.txt", std::ios::app);
+	std::ofstream out(getUserDataDir() / "hatchery-used.txt", std::ios::app | std::ios::binary);
 	out << when << "\t" << label << "\n";
 }
 
