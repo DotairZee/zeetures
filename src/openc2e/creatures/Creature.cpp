@@ -955,6 +955,47 @@ void oldCreature::keepInRoomSystem() {
 			if (std::shared_ptr<Room> fr = sc->footRoom(); fr && livable(fr.get()))
 				feetInWorld = true;
 		if (!feetInWorld && group.count(foot.get()) && group[foot.get()] != worldGroup) {
+			// up onto the floor it sank through: a floor of the world just
+			// above its feet (owner, 2026-11-14: creatures sinking at the gene
+			// lab's east end were moved beside the pocket, into the space
+			// behind the room's east wall, 130 px lower in the rock)
+			auto liftUp = [&](float maxUp) -> bool {
+				for (float yy = a->y + a->getHeight() - 12; yy > a->y + a->getHeight() - 12 - maxUp; yy -= 10) {
+					std::shared_ptr<Room> r = world.map->roomAt(cx, yy);
+					if (!r || r->type == 2 || !group.count(r.get()) || group[r.get()] != worldGroup)
+						continue;
+					float span = std::max(1.0f, (float)r->x_right - (float)r->x_left);
+					float bottom = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
+					if (r->floorpoints.size())
+						bottom = std::min(bottom, r->floorYatX(cx));
+					float oldx = a->x, oldy = a->y;
+					// wholly on that floor: lifted at the same x, a creature at the
+					// east end of the dock (room 13, which ends at x 6565) still
+					// overhung the open sea beyond, fell through again by its corner
+					// and was lifted again, 1,228 times in 20 minutes (3RPA,
+					// starving; 2026-11-12)
+					float nx = ax, w = a->getWidth();
+					if ((float)r->x_right - (float)r->x_left > w + 4)
+						nx = std::clamp(nx, (float)r->x_left + 2, (float)r->x_right - w - 2);
+					if (nx != ax) {
+						cx = nx + w / 2.0f;
+						bottom = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
+						if (r->floorpoints.size())
+							bottom = std::min(bottom, r->floorYatX(cx));
+					}
+					a->moveTo(nx - shift, bottom - a->getHeight() - 1);
+					a->velx = 0;
+					a->vely = 0;
+					if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
+						sc->scriptMoved(); // its feet find their room afresh, not the pocket's floor
+					fmt::print("* {} (unid {}) was in a sealed pocket (room {}) at {:.0f},{:.0f}; lifted to the floor of room {} at {:.0f},{:.0f}\n",
+						world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y);
+					return true;
+				}
+				return false;
+			};
+			if (liftUp(150.0f))
+				return;
 			// first the nearest room of the world beside it, at its feet's height
 			float fy = a->y + a->getHeight() - 2;
 			// (across the seam of a wrapping world too: the pocket at the far
@@ -982,38 +1023,8 @@ void oldCreature::keepInRoomSystem() {
 						world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y);
 					return;
 				}
-			for (float yy = a->y + a->getHeight() - 12; yy > a->y - 800; yy -= 10) {
-				std::shared_ptr<Room> r = world.map->roomAt(cx, yy);
-				if (!r || r->type == 2 || !group.count(r.get()) || group[r.get()] != worldGroup)
-					continue;
-				float span = std::max(1.0f, (float)r->x_right - (float)r->x_left);
-				float bottom = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
-				if (r->floorpoints.size())
-					bottom = std::min(bottom, r->floorYatX(cx));
-				float oldx = a->x, oldy = a->y;
-				// wholly on that floor: lifted at the same x, a creature at the
-				// east end of the dock (room 13, which ends at x 6565) still
-				// overhung the open sea beyond, fell through again by its corner
-				// and was lifted again, 1,228 times in 20 minutes (3RPA,
-				// starving; 2026-11-12)
-				float nx = ax, w = a->getWidth();
-				if ((float)r->x_right - (float)r->x_left > w + 4)
-					nx = std::clamp(nx, (float)r->x_left + 2, (float)r->x_right - w - 2);
-				if (nx != ax) {
-					cx = nx + w / 2.0f;
-					bottom = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
-					if (r->floorpoints.size())
-						bottom = std::min(bottom, r->floorYatX(cx));
-				}
-				a->moveTo(nx - shift, bottom - a->getHeight() - 1);
-				a->velx = 0;
-				a->vely = 0;
-				if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
-					sc->scriptMoved(); // its feet find their room afresh, not the pocket's floor
-				fmt::print("* {} (unid {}) was in a sealed pocket (room {}) at {:.0f},{:.0f}; lifted to the floor of room {} at {:.0f},{:.0f}\n",
-					world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y);
+			if (liftUp(800.0f))
 				return;
-			}
 		}
 	}
 
