@@ -35,6 +35,7 @@
 
 class Agent;
 class oldCreature;
+class Room;
 
 namespace Pheromones {
 
@@ -67,5 +68,11 @@ void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 
 
 // The behaviour rules that apply to this creature now, for the mind.
 std::vector<Urge> urgesFor(Agent* creature, oldCreature* c);
+
+// Signature scents (owner, 2026-11-14: "every creature needs to have its
+// own scent", so one longing for a particular creature can follow it): every
+// living creature lays its own scent, by moniker, which spreads and fades
+// like the others. Its level in a room (0 where there is none).
+float signatureIn(const ::Room& room, const std::string& moniker);
 
 } // namespace Pheromones

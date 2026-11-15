@@ -2654,10 +2654,27 @@ class HomeostatMind : public CreatureMind {
 		static const bool noWalk = getenv("OPENC2E_NO_STARVEWALK") != nullptr;
 		if (noWalk)
 			return;
-		auto tp = places.find(prm.teleporterCategory);
-		if (tp == places.end() || isVisible(p, prm.teleporterCategory))
-			return;
-		float dx = dxTo(p, tp->second.x), dy = tp->second.y - p.y;
+		// (one in view but not yet in reach counts too: from the gene lab's
+		// east wall the teleporter is in sight 700 px off, too far to be
+		// "reachable", so neither part acted on it; 2026-11-14 night)
+		float tx = 0, ty = 0;
+		bool known = false;
+		float nearest = 1e9f;
+		for (auto& sa : p.visible)
+			if (sa.category == prm.teleporterCategory && sa.distance < nearest) {
+				nearest = sa.distance;
+				tx = sa.x;
+				ty = sa.y;
+				known = true;
+			}
+		if (!known) {
+			auto tp = places.find(prm.teleporterCategory);
+			if (tp == places.end())
+				return;
+			tx = tp->second.x;
+			ty = tp->second.y;
+		}
+		float dx = dxTo(p, tx), dy = ty - p.y;
 		if (std::fabs(dy) > prm.seekMaxHeight || std::fabs(dx) < prm.seekArrived)
 			return;
 		int decision = dx < 0 ? 10 : 11;
@@ -3270,6 +3287,10 @@ class HomeostatMind : public CreatureMind {
 				if (m.room != p.room || !m.last || p.tick > m.last + prm.sightingGap)
 					r.met[s.who]++;
 					trimMet(r.met, s.who);
+				// found again after a while apart, while longing for it
+				if (m.last && p.tick > m.last + 200 && longingNow(m, p.tick) >= prm.longingSeek)
+					fmt::print("[homeostat] creature {} t{}: found {} again ({} ticks apart, longing {:.2f})\n", p.creatureId, p.tick, s.who,
+						p.tick - m.last, longingNow(m, p.tick));
 				m.room = p.room;
 				m.x = s.x;
 				m.y = s.y;
@@ -3394,13 +3415,16 @@ class HomeostatMind : public CreatureMind {
 		for (auto& [who, m] : metAt) {
 			if (m.genus != p.genus || m.female == p.female || !adult(m.stage))
 				continue;
-			if (m.checked && p.tick < m.checked + prm.mateCheckedTicks)
+			// gone from where they last met: only its own scent can lead on
+			bool scentOnly = m.checked && p.tick < m.checked + prm.mateCheckedTicks;
+			if (scentOnly && !smellsSignature(p, who))
 				continue;
-			if (auto r = rooms.find(m.room); r != rooms.end() && roomAvoided(r->second))
-				continue;
+			if (!scentOnly)
+				if (auto r = rooms.find(m.room); r != rooms.end() && roomAvoided(r->second))
+					continue;
 			float age = (float)(p.tick > m.last ? p.tick - m.last : 0);
 			float dist = std::fabs(dxTo(p, m.x)) + std::fabs(m.y - p.y);
-			if (dist < prm.seekArrived && std::fabs(m.y - p.y) < prm.seekMaxHeight) {
+			if (!scentOnly && dist < prm.seekArrived && std::fabs(m.y - p.y) < prm.seekMaxHeight) {
 				m.checked = p.tick; // here, and not here
 				m.longing = longingNow(m, p.tick) * 0.7f; // a little less hopeful
 				m.longingAt = p.tick;
@@ -3421,12 +3445,92 @@ class HomeostatMind : public CreatureMind {
 		if (!bestWho)
 			return;
 		const MetCreature& m = metAt[*bestWho];
+		bool bestScentOnly = m.checked && p.tick < m.checked + prm.mateCheckedTicks;
 		Expectation mating;
 		mating.delta[SEX] = -0.3f * d[SEX];
 		float L = longingNow(m, p.tick);
 		float want = d[SEX] >= prm.mateSex ? std::max(knownRelief(p, d, D, m.category), predictedRelief(d, D, mating)) * prm.mateSeekShare : 0.0f;
 		want = std::max(want, prm.longingWant * L);
+		// its own scent, if smelled: follow it toward where it is stronger
+		// (owner, 2026-11-14: "I want the seeking creature to be able to follow
+		// a signature scent ... of that specific creature"); else to where
+		// they last met
+		// (first to where they last met, by the planned route; its scent
+		// only once they were not found there: following the scent all the
+		// way found the one sought less often, 60-64% against 66-68%)
+		if (bestScentOnly) {
+			followSignature(p, *bestWho, want, canWest, canEast, out);
+			return;
+		}
 		addGoTo(p, want, m.x, m.y, "mate:" + *bestWho, canWest, canEast, out, std::max(d[SEX], L));
+	}
+
+	bool smellsSignature(const MindPerception& p, const std::string& who) const {
+		static const bool off = getenv("OPENC2E_NO_SIGNATURES") != nullptr;
+		if (off)
+			return false;
+		for (auto& ss : p.signatures)
+			if (ss.who == who)
+				return std::max({ss.here, ss.west, ss.east, ss.up, ss.down}) > 1e-6f;
+		return false;
+	}
+
+	// A step toward the side where this creature's own scent is stronger
+	// than here (Pheromones signature scents). False if it is not smelled, or
+	// is strongest here (it is near: the usual looking takes over).
+	bool followSignature(const MindPerception& p, const std::string& who, float want, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		static const bool off = getenv("OPENC2E_NO_SIGNATURES") != nullptr;
+		if (off)
+			return false;
+		for (auto& ss : p.signatures) {
+			if (ss.who != who)
+				continue;
+			struct Side {
+				float scent;
+				int kind; // 10 west, 11 east, -1 up, 1 down
+			};
+			Side sides[4] = {{ss.west, 10}, {ss.east, 11}, {ss.up, -1}, {ss.down, 1}};
+			std::sort(std::begin(sides), std::end(sides), [](const Side& a, const Side& b) { return a.scent > b.scent; });
+			for (auto& side : sides) {
+				if (side.scent <= ss.here * prm.scentStronger + 1e-6f)
+					break;
+				std::string label = "mate:" + who + ":scent";
+				if (side.kind == 10 || side.kind == 11) {
+					if (waterAhead(p, side.kind) || (side.kind == 10 && !canWest) || (side.kind == 11 && !canEast) || isBlocked(p, side.kind) || cliffAhead(p, side.kind))
+						continue;
+					Candidate c{-1, side.kind, 0, want, 0, want};
+					c.chain = true;
+					c.place = label;
+					out.push_back(c);
+					return true;
+				}
+				size_t before = out.size();
+				addFloorChange(p, want, p.y + side.kind * prm.scentFloorStep, -1, canWest, canEast, out);
+				if (out.size() > before) {
+					for (size_t i = before; i < out.size(); i++)
+						out[i].place = label;
+					return true;
+				}
+			}
+			return false;
+		}
+		return false;
+	}
+
+	// the creatures whose own scent it wants to smell: the ones it longs for
+	// most (CreatureMind::wantedSignatures)
+	std::vector<std::string> wantedSignatures() const override {
+		std::vector<std::pair<float, std::string>> list;
+		for (auto& [who, m] : metAt) {
+			float L = longingNow(m, lastTick);
+			if (L >= 0.05f)
+				list.push_back({L, who});
+		}
+		std::sort(list.begin(), list.end(), [](auto& a, auto& b) { return a.first > b.first; });
+		std::vector<std::string> out;
+		for (size_t i = 0; i < list.size() && i < 3; i++)
+			out.push_back(list[i].second);
+		return out;
 	}
 
 	// (3) Favourite places: a strong need, and a room known to ease it

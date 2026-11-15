@@ -153,6 +153,14 @@ struct MindPerception {
 		float here = 0, west = 0, east = 0, up = 0, down = 0;
 	};
 	std::vector<ScentUrge> scentUrges;
+	// signature scents (Pheromones::signatureIn) of the creatures the mind
+	// asked for (CreatureMind::wantedSignatures), by moniker: here and through
+	// the doorways each way
+	struct SignatureSense {
+		std::string who;
+		float here = 0, west = 0, east = 0, up = 0, down = 0;
+	};
+	std::vector<SignatureSense> signatures;
 	// inborn temperament (creatures/Temperament.h): a z-score for each of
 	// boldness, curiosity, energy, sociability, temper, reactivity,
 	// steadiness; 0 is average
@@ -315,6 +323,8 @@ class CreatureMind {
 	// World saving: the mind's learned state as text, and restoring it.
 	virtual std::string saveState() const { return {}; }
 	virtual void loadState(const std::string&) {}
+	// creatures (monikers) whose own scent it wants to smell next tick
+	virtual std::vector<std::string> wantedSignatures() const { return {}; }
 };
 
 // Returns nullptr for an empty or unknown name.

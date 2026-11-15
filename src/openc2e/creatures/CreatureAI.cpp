@@ -1039,6 +1039,30 @@ MindPerception oldCreature::buildPerception() {
 				}
 				p.scentUrges.push_back(su);
 			}
+			// the own scents of the creatures the mind longs for
+			if (CreatureMind* m = getMind())
+				for (auto& who : m->wantedSignatures()) {
+					MindPerception::SignatureSense ss;
+					ss.who = who;
+					ss.here = Pheromones::signatureIn(*here, who);
+					for (auto& [n, door] : here->getDoors()) {
+						if (door.perm < fit)
+							continue;
+						float* side;
+						if (westOf(*n))
+							side = &ss.west;
+						else if (eastOf(*n))
+							side = &ss.east;
+						else if (std::max(n->y_left_floor, n->y_right_floor) <= ceiling + 2)
+							side = &ss.up;
+						else if (std::min(n->y_left_ceiling, n->y_right_ceiling) + 2 >= floor)
+							side = &ss.down;
+						else
+							continue;
+						*side = std::max(*side, Pheromones::signatureIn(*n, who));
+					}
+					p.signatures.push_back(ss);
+				}
 			// water ahead on either side (to stay out of seas when walking)
 			for (auto& [n, door] : here->getDoors()) {
 				if (door.perm < fit || !n->deepWater())

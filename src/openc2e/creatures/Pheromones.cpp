@@ -28,6 +28,7 @@
 #include "common/Random.h"
 #include "creatures/CreatureAgent.h"
 #include "creatures/oldCreature.h"
+#include "historyManager.h"
 
 #include <algorithm>
 #include <cmath>
@@ -86,6 +87,16 @@ struct MarkOn {
 	float strength = 0;
 	unsigned int from = 0, until = 0; // world ticks
 };
+
+// signature scents: one per living creature, by moniker. Not clamped to 1
+// (as the named scents are) so that the gradient toward the creature holds
+// near it; spread and fade give a reach of about sqrt(spread/fade) rooms per
+// e-fold (pheromones.txt: "signature spread S fade F strength X", or
+// "signature off")
+struct Signature {
+	bool on = true;
+	float spread = 0.2f, fade = 0.01f, strength = 1.0f;
+} signature;
 
 std::vector<Channel> channels;
 std::vector<Rule> rules;
@@ -401,6 +412,7 @@ bool parseRule(int ln, const std::string& t, Rule& r) {
 void load() {
 	loaded = true;
 	channels.clear();
+	signature = Signature();
 	rules.clear();
 	marks.clear();
 	emittedLast.clear();
@@ -419,6 +431,25 @@ void load() {
 		std::string first;
 		if (!(l >> first))
 			continue;
+		if (first == "signature") {
+			std::string key;
+			float v;
+			while (l >> key) {
+				if (key == "off")
+					signature.on = false;
+				else if (key == "on")
+					signature.on = true;
+				else if (l >> v) {
+					if (key == "spread")
+						signature.spread = std::clamp(v, 0.0f, 0.24f);
+					else if (key == "fade")
+						signature.fade = std::clamp(v, 0.0f, 1.0f);
+					else if (key == "strength")
+						signature.strength = std::max(0.0f, v);
+				}
+			}
+			continue;
+		}
 		if (first == "scent") {
 			Channel ch;
 			if (!(l >> ch.name)) {
@@ -486,11 +517,60 @@ void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 
 	}
 }
 
+
+// the signature scents' step: fade, spread through open doorways, laid by
+// each living creature where it is; traces below a millionth are dropped
+void tickSignatures() {
+	const auto& rooms = world.map->getRooms();
+	if (!signature.on) {
+		for (auto& r : rooms)
+			r->sig.clear();
+		return;
+	}
+	for (auto& r : rooms) {
+		r->signext.clear();
+		for (auto& [who, v] : r->sig)
+			r->signext[who] = v * (1.0f - signature.fade);
+	}
+	for (auto& r : rooms)
+		for (auto& [nb, door] : r->getDoors()) {
+			if (door.perm <= 0 || !nb)
+				continue;
+			float k = signature.spread * (door.perm / 255.0f);
+			for (auto& [who, v] : nb->sig)
+				r->signext[who] += k * v;
+			for (auto& [who, v] : r->sig)
+				r->signext[who] -= k * v;
+		}
+	for (auto& a : world.agents) {
+		if (!a || a->isDying())
+			continue;
+		oldCreature* c = creatureOf(a.get());
+		if (!c || !c->isAlive())
+			continue;
+		std::shared_ptr<Room> room = roomOf(a.get());
+		if (!room)
+			continue;
+		std::string who = world.history->findMoniker(c->getGenome());
+		if (!who.empty())
+			room->signext[who] += signature.strength * DEPOSIT;
+	}
+	for (auto& r : rooms) {
+		r->sig.clear();
+		for (auto& [who, v] : r->signext)
+			if (v > 1e-6f)
+				r->sig[who] = std::min(v, 1000.0f);
+	}
+}
+
 void tick() {
 	static unsigned int counter = 0;
 	if (!loaded)
 		load();
-	if (channels.empty() || !world.map || ++counter % STEP_TICKS != 0)
+	if (!world.map || ++counter % STEP_TICKS != 0)
+		return;
+	tickSignatures();
+	if (channels.empty())
 		return;
 	const size_t n = channels.size();
 	const auto& rooms = world.map->getRooms();
@@ -601,6 +681,11 @@ std::vector<Urge> urgesFor(Agent* creature, oldCreature* c) {
 		out.push_back(u);
 	}
 	return out;
+}
+
+float signatureIn(const Room& room, const std::string& moniker) {
+	auto it = room.sig.find(moniker);
+	return it == room.sig.end() ? 0.0f : it->second;
 }
 
 } // namespace Pheromones
