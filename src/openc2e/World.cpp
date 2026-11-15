@@ -348,10 +348,18 @@ void World::tick() {
 		static unsigned int s_from = tickcount;
 		static AgentRef s_held;
 		int f, g, sp = -1;
-		if (sscanf(hp, "%d %d %d", &f, &g, &sp) >= 2 && hand()) {
-			if (!s_held && tickcount == s_from + 100)
+		// ("carried": the first object a creature is holding, to check that
+		// the creature lets go of it)
+		bool fromCreature = std::string(hp) == "carried";
+		static AgentRef s_holder;
+		if ((fromCreature || sscanf(hp, "%d %d %d", &f, &g, &sp) >= 2) && hand()) {
+			if (!s_held && tickcount >= s_from + 100 && (fromCreature || tickcount == s_from + 100))
 				for (auto& a : agents)
-					if (a && a->family == f && a->genus == g && (sp < 0 || a->species == sp) && !a->carriedby) {
+					if (a && (fromCreature ? (a->carriedby && dynamic_cast<CreatureAgent*>(a->carriedby.get())) : (a->family == f && a->genus == g && (sp < 0 || a->species == sp) && !a->carriedby))) {
+						if (fromCreature) {
+							s_holder = a->carriedby;
+							s_from = tickcount - 100;
+						}
 						hand()->moveTo(a->x, a->y - 40);
 						a->fireScript(4, hand(), {}, {});
 						s_held = a;
@@ -363,6 +371,9 @@ void World::tick() {
 					fmt::print("* TEST HAND PICKUP hand at {:.0f},{:.0f} (pointer {},{}) holds {} {} {} at {:.0f},{:.0f} size {}x{}\n", hand()->x, hand()->y,
 						hand()->pointerX(), hand()->pointerY(), (int)s_held->family, (int)s_held->genus, s_held->species, s_held->x, s_held->y,
 						s_held->getWidth(), s_held->getHeight());
+				if (s_holder && (tickcount - s_from) % 50 == 0)
+					fmt::print("* TEST HAND PICKUP the creature that held it still holds it: {}; carried by the hand: {}\n",
+						s_holder->carrying == s_held ? "yes" : "no", s_held->carriedby.get() == (Agent*)hand() ? "yes" : "no");
 			}
 		}
 	}

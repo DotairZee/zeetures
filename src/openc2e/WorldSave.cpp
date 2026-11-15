@@ -604,6 +604,8 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	out << "saved " << timestamp() << "\n";
 	out << "chemical-relays 1\n"; // body chemistry relays were running when saved
 	out << "camera " << engine.camera->getX() << " " << engine.camera->getY() << " " << engine.zoom << "\n"; // the view's top left and zoom
+	// the hand's mode: invisible, push (owner, 2026-11-14: start as it was)
+	out << "hand " << (world.handInvisible ? 1 : 0) << " " << (world.handPush ? 1 : 0) << "\n";
 	// the calendar: world ticks, part of the day, day of the season, season,
 	// year (without this every session began again in spring of year 0)
 	out << "calendar " << world.worldtickcount << " " << world.timeofday << " " << world.dayofseason << " " << world.season << " " << world.year << "\n";
@@ -1048,6 +1050,12 @@ bool LoadWorldState(const fs::path& worlddir) {
 			l >> camx >> camy;
 			if (!(l >> camzoom)) // saved before the zoom was
 				camzoom = 1.0f;
+		} else if (key == "hand") {
+			int inv = 0, push = 0;
+			if (l >> inv >> push) {
+				world.handInvisible = inv != 0;
+				world.handPush = push != 0;
+			}
 		} else if (key == "calendar") {
 			unsigned int wt, tod, dos, sea, yr;
 			if (l >> wt >> tod >> dos >> sea >> yr) {

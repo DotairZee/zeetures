@@ -1579,6 +1579,16 @@ void Agent::carry(AgentRef a) {
 	if (carrying)
 		dropCarried(carrying);
 
+	// taken from whoever held it: that one lets go (owner, 2026-11-14: the
+	// hand picked up a dog a creature was holding, and the creature, still
+	// "carrying" it, pulled it back to its hand under the ground each tick)
+	if (a->carriedby && a->carriedby.get() != this && a->carriedby->carrying == a) {
+		Agent* old = a->carriedby.get();
+		old->carrying = AgentRef(0);
+		if (engine.version >= 3)
+			old->queueScript(125, a); // 'Lost Carried Agent'
+	}
+
 	carrying = a;
 
 	a->carriedby = AgentRef(this);
