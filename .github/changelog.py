@@ -51,6 +51,10 @@ VERSIONS = [
      "The first version published as Zeetures, with nightly builds for Linux, Windows and macOS. "
      "Notices kept through restarts, the hand's hot spot at the fingertip, scent dose bands and habituation, "
      "a narrower notice list, 32-bit Windows and Linux builds, and the README brought up to date."),
+    ("0.7.0", "e97a386e",
+     "The memorial stone, an Easter egg for the four who grew old together, and the \"Together\" notice when "
+     "four or more that hatched together die of old age together; the world's additions and art recipes in the "
+     "repository; the waterwheel and seabed airlock rides a touch less smooth; this changelog."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
