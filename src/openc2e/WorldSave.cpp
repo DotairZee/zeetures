@@ -606,6 +606,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	out << "camera " << engine.camera->getX() << " " << engine.camera->getY() << " " << engine.zoom << "\n"; // the view's top left and zoom
 	// the hand's mode: invisible, push (owner, 2026-11-14: start as it was)
 	out << "hand " << (world.handInvisible ? 1 : 0) << " " << (world.handPush ? 1 : 0) << "\n";
+	out << "all-fertile " << (world.allFertile ? 1 : 0) << "\n"; // the Hatchery's setting
 	// the calendar: world ticks, part of the day, day of the season, season,
 	// year (without this every session began again in spring of year 0)
 	out << "calendar " << world.worldtickcount << " " << world.timeofday << " " << world.dayofseason << " " << world.season << " " << world.year << "\n";
@@ -658,6 +659,8 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			if (a->babymoniker != 0)
 				out << "baby " << genomeNameFromInt(a->babymoniker) << "\n";
 			out << "temperament " << Temperaments::toLine(c->temperament) << "\n";
+			if (c->fertilityOverride >= 0)
+				out << "fertility " << c->fertilityOverride << "\n"; // the owner's setting (Breeder's Kit)
 			// what it feels about the creatures it has met (Relationships.h)
 			for (auto& [other, b] : c->bonds)
 				out << "bond " << Relationships::toLine(other, b) << "\n";
@@ -790,6 +793,7 @@ struct SavedCreature {
 	std::vector<std::pair<int, int>> words; // word-list number, familiarity
 	std::vector<std::string> bonds; // bond lines (Relationships::fromLine)
 	std::string temperament; // Temperaments::toLine; empty: keep the one drawn at hatching
+	int fertility = -1; // the owner's setting: -1 the world's, 0 fertile, 1 infertile
 	float x = 0, y = 0;
 	float foot = -1; // where its feet were (y), or -1 (older saves)
 	unsigned int age = 0, ticks = 0;
@@ -906,6 +910,7 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 	}
 	if (!s.temperament.empty())
 		Temperaments::fromLine(s.temperament, c->temperament);
+	c->fertilityOverride = s.fertility;
 	for (auto& line : s.bonds) {
 		std::string other;
 		Bond b;
@@ -1010,6 +1015,7 @@ void ApplySavedView() {
 
 bool LoadWorldState(const fs::path& worlddir) {
 	s_view = SavedView();
+	world.allFertile = true; // (saves made before the setting have every creature fertile)
 	world.injectedCobs.clear();
 	world.injectedScripts.clear();
 	if (!HasSavedState(worlddir))
@@ -1050,6 +1056,10 @@ bool LoadWorldState(const fs::path& worlddir) {
 			l >> camx >> camy;
 			if (!(l >> camzoom)) // saved before the zoom was
 				camzoom = 1.0f;
+		} else if (key == "all-fertile") {
+			int v = 1;
+			if (l >> v)
+				world.allFertile = v != 0;
 		} else if (key == "hand") {
 			int inv = 0, push = 0;
 			if (l >> inv >> push) {
@@ -1158,6 +1168,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 				l >> c->baby;
 			else if (key == "temperament")
 				std::getline(l, c->temperament);
+			else if (key == "fertility")
+				l >> c->fertility;
 			else if (key == "bond") {
 				std::string rest;
 				std::getline(l, rest);

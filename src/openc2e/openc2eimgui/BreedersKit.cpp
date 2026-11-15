@@ -13,6 +13,7 @@
 #include "PathResolver.h"
 #include "common/case_insensitive_filesystem.h"
 #include "World.h"
+#include "creatures/Breeding.h"
 #include "common/Ascii.h"
 #include "common/Random.h"
 #include "creatures/BreedSlots.h"
@@ -96,6 +97,26 @@ static void ReproductivePage() {
 	if (female)
 		KitBar(c->getReceptive() / 255.0f, "Receptiveness", BW);
 	ImGui::EndGroup();
+
+	// the owner's fertility switch for this creature (owner, 2026-11-14):
+	// ticked, it cannot conceive or father; it overrides the Hatchery's
+	// "All creatures fertile" until set back to follow it
+	{
+		bool infertile = !fertileBySetting(c);
+		ImGui::Dummy(ImVec2(1, 4));
+		if (ImGui::Checkbox("Infertile", &infertile))
+			c->fertilityOverride = infertile ? 1 : 0;
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Ticked, this creature cannot conceive or father young.\nUntick it to let its fertility cycle carry on.");
+		ImGui::SameLine(0, 16);
+		if (c->fertilityOverride >= 0) {
+			ImGui::TextDisabled("(its own setting)");
+			ImGui::SameLine(0, 12);
+			if (ImGui::SmallButton("Follow the Hatchery's setting"))
+				c->fertilityOverride = -1;
+		} else
+			ImGui::TextDisabled(world.allFertile ? "(as the Hatchery: all creatures fertile)" : "(as the Hatchery: creatures infertile)");
+	}
 
 	// pregnancy: how far along
 	if (female) {

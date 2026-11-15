@@ -73,5 +73,9 @@ bool closeKin(const std::string& monikerA, const std::string& monikerB);
 // sex in sight (so they arouse no mating chemistry).
 bool kinBarred(CreatureAgent* a, CreatureAgent* b);
 
+// Whether the owner's settings let it breed: its own Breeder's Kit setting
+// if it has one, else the world's (the Hatchery's "All creatures fertile").
+bool fertileBySetting(const class oldCreature* c);
+
 // A life stage's share of full fertility (0 baby ... 6 senile).
 float stageFertility(int stage);

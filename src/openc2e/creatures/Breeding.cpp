@@ -335,6 +335,12 @@ bool kinBarred(CreatureAgent* a, CreatureAgent* b) {
 	return false; // no one else: kin may breed
 }
 
+bool fertileBySetting(const oldCreature* c) {
+	if (!c)
+		return false;
+	return c->fertilityOverride >= 0 ? c->fertilityOverride == 0 : world.allFertile;
+}
+
 bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	if (!a || !b || engine.version != 2 || a == b)
 		return false;
@@ -354,6 +360,10 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	const char* why = nullptr;
 	if (mumBody->babymoniker != 0 || mum->getPregnant() != 0)
 		why = "she is already pregnant";
+	else if (!fertileBySetting(mum))
+		why = "she is set infertile";
+	else if (!fertileBySetting(dad))
+		why = "he is set infertile";
 	else if (kinBarred(a, b))
 		why = "close kin, and an unrelated partner is alive";
 	else if (!test && Relationships::mateFactor(a, b) <= 0.0f)

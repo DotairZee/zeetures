@@ -133,6 +133,9 @@ class oldCreature : public Creature {
 	// what it feels about each creature it has met, by moniker
 	// (creatures/Relationships.h); saved with the world
 	std::map<std::string, Bond> bonds;
+	// the owner's fertility setting for it (Breeder's Kit, owner 2026-11-14):
+	// -1 the world's (Hatchery), 0 fertile, 1 infertile; saved
+	int fertilityOverride = -1;
 	// inborn temperament, drawn at hatching (creatures/Temperament.h); saved
 	Temperament temperament;
 	int lastNeedSaid = -2;

@@ -1320,6 +1320,11 @@ static void DrawNursery() {
 			}
 		}
 	}
+	// whether the world's creatures can breed at all (owner, 2026-11-14);
+	// each creature's own setting in the Breeder's Kit overrides this
+	ImGui::Checkbox("All creatures fertile", &world.allFertile);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("Unticked, no creature conceives or fathers young, except those set fertile in the Breeder's Kit.\nA creature's own setting there always wins.");
 }
 
 // developer aid: OPENC2E_TEST_LINEUP="Boney,female" (a breed as the

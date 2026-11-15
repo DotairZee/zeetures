@@ -95,6 +95,9 @@ class World {
 	// C1/C2 Pointer toolbar: creatures do not see the hand; a click on a
 	// creature shoves it instead of tickling or slapping it
 	bool handInvisible = false, handPush = false;
+	// the Hatchery's "All creatures fertile" (owner, 2026-11-14); each
+	// creature's own Breeder's Kit setting overrides it; saved with the world
+	bool allFertile = true;
 	// C2: Agent Injector objects added by hand to this world (COB agent
 	// names): their scripts are installed again when the world loads
 	std::vector<std::string> injectedCobs;
