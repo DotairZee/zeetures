@@ -268,6 +268,7 @@ void PointerAgent::tick() {
 				if (engine.version == 2) {
 					if (overlayTimer < 0 && overlay) {
 						delete overlay;
+						overlay = NULL; // (it was left pointing at the deleted part)
 						overlayTimer = 0;
 					}
 				} else if (engine.version == 3) {
