@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 366 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 367 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 2 commits, 15 November 2026
+- [Unreleased](#unreleased): 3 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,25 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Memorial stone: darker, weathered, modeled like a rendered sprite
+
+[`e5e7db4a`](https://github.com/DotairZee/zeetures/commit/e5e7db4adaa79c82e917babc84a0be6701aacc68)
+
+The owner asked for more texture and volume, chose the older, moss-grown
+look from four mock-ups (gray headstone, moss-grown, sandstone gabled,
+rough standing stone; all kept in LOOKS), then asked for it darker and
+more 3D-rendered. The stone is now drawn as a lit height field: a
+rounded 4.6 px bevel and a domed face, smooth large-scale bumps, pits,
+16 chips in the rim and a hairline crack. It is lit by the wall lamp
+from the upper left (Lambert plus a damp specular sheen, exponent 30), a
+cool fill light from the right and cavity shading in the crevices, the
+carving and the plinth joint. Albedo is a dark warm gray (88, 90, 84)
+with dirt streaks and lichen, and moss grows in shaded cushions over the
+plinth, up the stone's foot and on its shaded side. The plinth's top
+face catches the light. The lamp casts the stone's shadow onto the
+niche wall behind it, so the sprite is 52 px wide instead of 46 (left
+edge and placement unchanged).
 
 #### Build the world additions into the program; Home's settings as defaults
 
