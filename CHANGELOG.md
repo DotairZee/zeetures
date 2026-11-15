@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 369 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 370 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 5 commits, 15 November 2026
+- [Unreleased](#unreleased): 6 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,43 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Fetch and import the Boney Grendels and Frog Norns V3 packs
+
+[`a907fe1a`](https://github.com/DotairZee/zeetures/commit/a907fe1a2dfe2baa291a2c73982f5e17ca408aaa)
+
+Owner, 2026-11-15: "do whatever is needed to make it so Zeetures ... gets
+those two breeds", with their Eem Foo archive pages. Zeetures does not
+carry or host them; on the player's machine, the first time a C2 world
+runs without them, it fetches each from the archive that already hosts
+it and imports it as Home has it.
+
+- BreedPacks.cpp (BreedPacksTick, from DrawC2Kits once the world has run
+  20 ticks): for each pack whose genome (bone.gen, frog.gen) is not in the
+  user data folder's Genetics, the system's curl (curl.exe on Windows)
+  downloads it on a thread into the user data folder's Downloads, with the
+  pack's page as the referrer (the archive answers a bare request with the
+  page); a file that does not start as expected (MZ, PK) is dropped. Then
+  it is imported on the main thread and a line shows briefly above the
+  status bar. Off with "breed-packs off" in settings.txt or
+  OPENC2E_NO_BREED_PACKS; OPENC2E_BREED_PACK_DIR takes the files from a
+  folder instead.
+- BreedersKit: ImportBreedPackQuietly imports a pack without the review
+  (a plan the player has open is kept), naming its breeds; with
+  inPlaceOfGame, each breed goes in its own slot in the Overrides folder,
+  in place of the game's (ImportGroup::inPlaceOfGame): the Frog pack in
+  C2's frog norn slot l, as the owner set it up by hand on 2026-11-10.
+- Engine: built-in objects with no COB at load (missingBuiltinCobs) are
+  injected by injectMissingBuiltinCobs once their COB arrives: Bony
+  Grendel Update, from the Boney pack, in the same session.
+- READMEs say what is fetched, from where, and how to turn it off.
+
+Checked on an empty user data folder with the network: both downloaded
+and imported ("0|l|Frog|2538-FrogNornV3_1.zip|frog.gen",
+"1|c|Boney|Boney Grendels.exe|bone.gen", as in Home's breeds.txt), the
+Frog's 281 files and Boney's 62 identical in name and content to Home's,
+Bony Grendel Update injected. Home already has both, so nothing is
+fetched there.
 
 #### Skip a built-in addition whose art is not installed
 
