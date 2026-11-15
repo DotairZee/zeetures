@@ -4,9 +4,11 @@ seconds of each other and died of old age at the same moment).
 
 The stone stands in the dark brick niche of the stone arcade west of the
 incubator (x about 5010, floor 1172), so it is in that arcade's materials:
-the grey, slightly warm stone of its twisted pillars and arches, lit warm
+the gray, slightly warm stone of its twisted pillars and arches, lit warm
 from the wall lamp to its left. It is a small round-topped headstone on a
-plinth, with four small round marks carved side by side in a gentle arc
+plinth, drawn as a lit height field for volume (rounded, chipped edges,
+grain, pits, a hairline crack, dirt streaks and pale lichen, shade where it
+meets the plinth, the plinth's top face catching the light), with four small round marks carved side by side in a gentle arc
 (the four, together), moss on the plinth, and four small pale flowers growing
 at its foot. Pressing it opens the tablet: a weathered sandstone panel
 with a carved border and the same four marks, on which
@@ -24,7 +26,7 @@ import os
 import sys
 import numpy as np
 from PIL import Image, ImageFilter
-from lift import write_png
+from lift import write_png, blur
 
 SS = 4  # supersampling
 
@@ -92,52 +94,221 @@ def carve(rgb, d, depth_dark=0.55, lit=1.25, x=None, y=None):
     return out
 
 
-def stone():
-    W, H = 46, 56
+def fbm(w, h, seed, scales):
+    """Several octaves of value noise, -1 to 1."""
+    out = np.zeros((h * SS, w * SS), np.float32)
+    total = 0
+    for k, (sc, amp) in enumerate(scales):
+        out += (noise(w, h, seed * 31 + k, sc) * 2 - 1) * amp
+        total += amp
+    return out / total
+
+
+def shade(hgt, L=(-0.62, -0.55, 0.56), relief=1.0, shine=18):
+    """Lambert light on a height field (px units): light from the upper
+    left and in front (the arcade's wall lamp)."""
+    gy, gx = np.gradient(hgt * relief, 1 / SS)
+    n = np.dstack([-gx, -gy, np.ones_like(hgt)])
+    n /= np.linalg.norm(n, axis=2, keepdims=True)
+    L = np.asarray(L, np.float32)
+    L = L / np.linalg.norm(L)
+    diff = np.clip((n * L).sum(2), 0, 1)
+    # a little shine where the surface turns to the light
+    h = L + np.array((0, 0, 1), np.float32)
+    h = h / np.linalg.norm(h)
+    spec = np.clip((n * h).sum(2), 0, 1) ** shine
+    return diff, spec, n
+
+
+# looks tried for the stone (owner, 2026-11-15: mock-ups of a few versions)
+LOOKS = {
+    'gray': dict(base=(146, 140, 128), shape='round', chips=9, moss=1.0, lichen=1.0, crack=True, plinth=True),
+    'old': dict(base=(112, 112, 102), shape='round', chips=16, moss=3.0, lichen=2.6, crack=True, plinth=True),
+    'sand': dict(base=(176, 152, 118), shape='gable', chips=12, moss=0.7, lichen=0.8, crack=False, plinth=True),
+    'standing': dict(base=(132, 128, 118), shape='rough', chips=6, moss=1.6, lichen=1.6, crack=True, plinth=False),
+    # chosen (owner, 2026-11-15): "number 2, but make it darker and give it
+    # more of a 3D-rendered feel"
+    'final': dict(base=(88, 90, 84), shape='round', chips=16, moss=3.0, lichen=2.0, crack=True, plinth=True, rendered=True),
+}
+
+
+def stone(look='final'):
+    o = LOOKS[look]
+    R = o.get('rendered', False)
+    W, H = (52 if R else 46), 56  # (rendered: room on the right for its shadow on the wall)
     x, y = grid(W, H)
     rgb = np.zeros(x.shape + (3,), np.float32)
     a = np.zeros(x.shape, np.float32)
-    base = np.array((132, 127, 118), np.float32)       # the arcade's pillar grey, warm, in the niche's shade
-    tex = noise(W, H, 7, 2.5) * 0.6 + noise(W, H, 8, 7) * 0.4
-    warm = np.array((255, 214, 160), np.float32) / 255  # the lamp's light, from the left
-    # the plinth
-    pd = sdf_box(x, y, 23, 50.5, 19, 4.5, 1.2)
-    # the headstone: a slab with a round top
-    cx, top, bot, hw = 23, 8, 47, 13
+    warm = np.array((1.0, 0.86, 0.66), np.float32)   # the lamp's light
+    cool = np.array((0.62, 0.66, 0.74), np.float32)  # the niche's shade
+    base = np.array(o['base'], np.float32)            # the arcade's pillar gray, warm
+    grain = fbm(W, H, 3, ((1.3, 0.5), (2.6, 0.8), (5, 0.6), (10, 0.4)))
+    big = fbm(W, H, 4, ((6, 0.6), (16, 1.0)))
+
+    # a soft shadow on the floor and the plinth's foot, so it sits down
+    sh = np.hypot((x - 24) / 21, (y - 54.5) / 2.6) - 1
+    rgb, a = over(rgb, a, (12, 10, 8), np.clip(-sh * 1.3, 0, 1) * 0.6)
+
+    # -- the plinth: a worn block whose top face shows (seen a little from above)
+    px0, px1, ptop, pfront, pbot = 4.5, 41.5, 43.5, 47.5, 54.0
+    edge_rag = fbm(W, H, 5, ((1.2, 0.6), (3, 0.4))) * 0.7
+    pbox = sdf_box(x, y, (px0 + px1) / 2, (ptop + pbot) / 2, (px1 - px0) / 2, (pbot - ptop) / 2, 1.6) + edge_rag
+    pc = cover(pbox) * (1.0 if o['plinth'] else 0.0)
+    topface = np.clip((pfront - y) / 1.2, 0, 1)            # 1 on the top face
+    ph = np.clip(-pbox / 1.8, 0, 1) ** 0.7 * 2.2 + grain * 0.35 + big * 0.25
+    if R:
+        ph = blur(np.clip(-pbox / 2.4, 0, 1) ** 0.7 * 2.8 + grain * 0.12 + big * 0.35, 0.3)
+    diff, spec, _ = shade(ph, relief=1.4 if R else 1.0, shine=30 if R else 18)
+    lit = (0.12 + 1.0 * diff) if R else (0.30 + 0.85 * diff)
+    lit = lit * (1 + 0.42 * topface)                        # the top face catches more light
+    lit = lit * (1 - 0.22 * np.clip((y - pfront) / (pbot - pfront), 0, 1))  # the front darker lower down
+    alb = base * (0.9 + 0.18 * grain[..., None] + 0.1 * big[..., None])
+    col = alb * (lit[..., None] * warm * 0.85 + (1 - lit[..., None]) * cool * 0.35) + spec[..., None] * (50 if R else 30)
+    # the top face's front edge: a thin worn highlight, then the front in shade
+    lip = np.clip(1 - np.abs(y - pfront) / 0.7, 0, 1) * pc
+    col = col * (1 + 0.25 * lip[..., None])
+    if o['plinth']:
+        rgb, a = over(rgb, a, col, pc)
+
+    # -- the headstone: a slab with a round top, chipped and weathered
+    cx, top, bot, hw = 23, 6.5, 46.5, 13.5
+    if not o['plinth']:
+        top, bot = 3.5, 52.5  # straight on the floor, taller
     body = np.maximum(np.abs(x - cx) - hw, y - bot)
-    roundtop = np.hypot(x - cx, y - (top + hw)) - hw
-    sd = np.where(y < top + hw, roundtop, body)
-    for d, shade in ((pd, 0.9), (sd, 1.0)):
-        c = cover(d)
-        light = np.clip(0.75 + (cx - x) / 40 + (30 - y) / 160, 0.45, 1.15)
-        col = base[None, None, :] * shade * (0.82 + 0.3 * tex[..., None]) * light[..., None]
-        col = col * (0.7 + 0.3 * warm)
-        # a soft rounded edge: darker toward the rim on the shadow side
-        rim = np.clip(1 + d / 2.2, 0, 1)
-        col = col * (1 - 0.25 * rim[..., None] * np.clip((x - cx) / hw, 0, 1)[..., None])
-        rgb, a = over(rgb, a, col, c)
-    # the carving: four small round marks side by side
-    rgb = carve(rgb, four_mark(x, y, cx, 20, 7.0))
-    # weathering: a few darker stains running down from the top
-    stain = noise(W, H, 11, 4)
-    rgb = rgb * (1 - 0.12 * np.clip((stain - 0.55) * 3, 0, 1)[..., None] * cover(sd)[..., None])
-    # moss on the plinth and at the stone's foot
-    moss = noise(W, H, 12, 2) * np.clip(1 - np.abs(y - 46.5) / 3.5, 0, 1)
-    mc = np.clip((moss - 0.25) * 3, 0, 1) * np.clip(cover(np.minimum(pd, sd)) * 1.0, 0, 1)
-    rgb, a = over(rgb, a, np.array((92, 112, 58), np.float32) * (0.8 + 0.4 * tex[..., None]), mc * 0.85)
-    # four small pale flowers at the foot, two each side
-    for fx, fy, h in ((5.5, 46.5, 6), (9.5, 48, 4.5), (37.5, 48, 4.5), (41, 46.5, 6)):
+    if o['shape'] == 'round':
+        roundtop = np.hypot(x - cx, y - (top + hw)) - hw
+        sd = np.where(y < top + hw, roundtop, body)
+    elif o['shape'] == 'gable':  # square shoulders and a low pointed top
+        shoulder = top + 9
+        gable = (y - top) - np.abs(x - cx) * (shoulder - top) / hw
+        sd = np.maximum(np.maximum(np.abs(x - cx) - hw, y - bot), -gable * 0.8)
+    else:  # 'rough': a standing stone, narrower at the top, its outline uneven
+        t = np.clip((y - top) / (bot - top), 0, 1)
+        lean = (1 - t) * 3.0                     # its top leans a little east
+        taper = hw * (0.55 + 0.5 * t)            # narrow at the top, broad at the foot
+        bump = fbm(W, H, 9, ((2.5, 0.6), (6, 1.0))) * 2.6
+        side = np.abs(x - cx - lean) - taper + bump
+        cap = np.hypot((x - cx - lean - 1.5) / (hw * 0.62), (y - top - 8) / 8.5) * 8.5 - 8.5 + bump * 0.6
+        sd = np.where(y < top + 8, np.maximum(side, cap), np.maximum(side, y - bot))
+    rag = fbm(W, H, 6, ((0.9, 0.5), (2.2, 0.7), (5, 0.5)))
+    # chips: a few bites out of the rim, deeper toward the top
+    rng = np.random.default_rng(17)
+    chips = np.zeros_like(sd)
+    for _ in range(o['chips']):
+        ang = rng.uniform(-np.pi * 0.95, -np.pi * 0.05) if rng.random() < 0.7 else rng.uniform(-0.2, 0.2) + rng.choice([0, np.pi])
+        r = hw - 0.2
+        if ang > -0.25 or ang < -np.pi + 0.25:  # on the straight sides
+            ccx = cx + np.sign(np.cos(ang)) * hw
+            ccy = rng.uniform(top + hw, bot - 4)
+        else:
+            ccx = cx + r * np.cos(ang)
+            ccy = top + hw + r * np.sin(ang)
+        rad = rng.uniform(0.8, 1.9)
+        chips = np.maximum(chips, np.clip(rad - np.hypot(x - ccx, y - ccy), 0, None))
+    sd = sd + rag * 0.55 + chips
+    c = cover(sd)
+    # height: rounded edges (a bevel about 3 px deep), the face gently
+    # domed, grain and pitting, the carving cut in
+    bevel = np.clip(-sd / (4.6 if R else 3.2), 0, 1)
+    hgt = (1 - (1 - bevel) ** 2) * (4.2 if R else 3.0)
+    hgt += np.clip(1 - ((x - cx) / (hw + 1)) ** 2, 0, 1) * (3.0 if R else 2.2)
+    hgt += (grain * 0.16 + big * 0.5) if R else (grain * 0.3 + big * 0.35)
+    pits = np.zeros_like(hgt)
+    for _ in range(46):
+        px_, py_ = rng.uniform(cx - hw, cx + hw), rng.uniform(top + 2, bot - 1)
+        rr = rng.uniform(0.3, 0.75)
+        pits = np.maximum(pits, np.clip(1 - np.hypot(x - px_, y - py_) / rr, 0, 1))
+    hgt -= pits * 0.9
+    mark = four_mark(x, y, cx, 19.5, 7.0)
+    cut = np.clip(-mark / 0.9, 0, 1)
+    hgt -= cut * 2.2
+    # a hairline crack running down from the rim on the shadow side
+    t = (y - 12) / 22
+    crackx = cx + 7.5 + np.sin(t * 5.1) * 1.4 + t * 2.5
+    crack = np.clip(1 - np.abs(x - crackx) / 0.35, 0, 1) * ((t > 0) & (t < 1))
+    if o['crack']:
+        hgt -= crack * 0.8
+    else:
+        crack = crack * 0
+    if R:
+        hgt = blur(hgt, 0.35)  # a smooth, modeled surface rather than noise
+    diff, spec, n = shade(hgt, relief=1.6 if R else 1.3, shine=30 if R else 18)
+    if R:
+        # a cool fill light from the right, and the crevices' own shade
+        fill, _, _ = shade(hgt, L=(0.75, -0.15, 0.5), relief=1.6)
+        cavity = np.clip((blur(hgt, 1.2) - hgt) * 1.4, 0, 1)
+    # ambient occlusion: darker in the carving, the pits, the crack and at
+    # the foot where the stone meets the plinth
+    ao = 1 - 0.6 * cut - 0.35 * pits - 0.5 * crack
+    ao *= 1 - 0.35 * np.clip(1 - (bot - y) / 5, 0, 1)
+    # albedo: the gray, lighter and darker patches, streaks of dirt run down
+    # from the top, pale lichen
+    alb = base * ((0.94 + 0.08 * grain[..., None] + 0.12 * big[..., None]) if R else (0.88 + 0.2 * grain[..., None] + 0.12 * big[..., None]))
+    streak = noise(W, H, 41, 3)  # stretched down the stone
+    streak = np.asarray(Image.fromarray((streak * 255).astype(np.uint8)).resize((W * SS // 3, H * SS)).resize((W * SS, H * SS)), np.float32) / 255
+    alb = alb * (1 - 0.16 * np.clip((streak - 0.5) * 3, 0, 1)[..., None] * np.clip((y - top) / 30, 0.3, 1)[..., None])
+    lichen = np.clip((noise(W, H, 43, 1.6) - 0.8 + 0.08 * o['lichen']) * 6, 0, 1) * np.clip((y - top - 4) / 10, 0, 1) * np.clip((x - cx + 4) / 10, 0, 1)
+    alb = alb * (1 - lichen[..., None] * 0.35) + lichen[..., None] * np.array((168, 170, 120), np.float32) * 0.35
+    if R:
+        ao = ao * (1 - 0.7 * cavity) + 0.18 * cut  # (the carving dark, not black)
+        lit = (0.08 + 1.15 * diff ** 1.2) * ao
+        col = alb * (lit[..., None] * warm * 1.0 + 0.22 * fill[..., None] * cool * ao[..., None] + 0.08 * cool) + spec[..., None] * 62 * ao[..., None] * warm
+    else:
+        lit = (0.2 + 0.95 * diff) * ao
+        col = alb * (lit[..., None] * warm * 0.88 + (1 - lit[..., None]) * cool * 0.3) + spec[..., None] * 34 * ao[..., None]
+    # the rim on the lamp's side catches warm light
+    rim = np.clip(1 + sd / 1.4, 0, 1) * np.clip((cx - x) / hw, 0, 1)
+    col = col + rim[..., None] * np.array((40, 28, 12), np.float32)
+    rgb, a = over(rgb, a, col, c)
+
+    # -- moss: clumps on the plinth's top and up the stone's foot, bumpy
+    mn = noise(W, H, 12, 1.4) * 0.6 + noise(W, H, 13, 3.5) * 0.4
+    band = (np.clip(1 - np.abs(y - 45.8) / 2.6, 0, 1) + 0.6 * np.clip(1 - np.abs(y - 42) / 3, 0, 1) * np.clip((x - cx) / -6, 0, 1)) * o['moss'] ** 0.5
+    band = band + (o['moss'] > 1.5) * 0.55 * np.clip(1 - np.abs(y - 36) / 8, 0, 1) * np.clip((cx + 2 - x) / 8, 0, 1)
+    if o['moss'] > 2:
+        creep = np.clip(1 - (bot - y) / 30, 0, 1) * 0.9 + np.clip((x - cx) / hw, 0, 1) * 0.4 + np.clip((top + 7 - y) / 6, 0, 1) * 0.7
+        band = np.maximum(band, creep * (0.7 + 0.5 * noise(W, H, 14, 2.5)))
+    mc = np.clip((mn * band - 0.32) * 4.5, 0, 1) * np.clip(np.maximum(c, pc), 0, 1)
+    if R:
+        # cushions: height from the coverage itself, so each clump bulges
+        mh = blur(mc, 0.5) * 2.2 + mn * 0.8
+        mdiff, mspec, _ = shade(mh, relief=1.5, shine=12)
+        under = np.clip(np.roll(np.roll(blur(mc, 0.6), int(0.8 * SS), 0), int(0.6 * SS), 1) - mc, 0, 1)
+        rgb = rgb * (1 - 0.45 * under[..., None])
+        mcol = np.array((92, 126, 50), np.float32) * (0.42 + 0.95 * mdiff[..., None]) * warm + mspec[..., None] * 22
+        rgb, a = over(rgb, a, mcol, np.clip(blur(mc, 0.25) * 1.35, 0, 1))
+    else:
+        mh = mn * 2.5
+        mdiff, _, _ = shade(mh, relief=1.0)
+        mcol = np.array((88, 116, 54), np.float32) * (0.45 + 0.75 * mdiff[..., None]) + np.array((30, 30, 0), np.float32) * (mn[..., None] > 0.6)
+        rgb, a = over(rgb, a, mcol, mc * 0.95)
+
+    if R:
+        # the lamp throws the stone's shadow onto the wall behind it, to the
+        # right and a little up (drawn under the stone and plinth)
+        sil = np.clip(c + pc, 0, 1)
+        cast = np.roll(np.roll(sil, int(-1.5 * SS), 0), int(4.5 * SS), 1)
+        cast[:, :int(4.5 * SS)] = 0
+        cast = blur(cast, 1.6) * 0.5
+        A = a + cast * (1 - a)
+        rgb = (rgb * a[..., None] + np.array((8, 6, 5), np.float32) * (cast * (1 - a))[..., None]) / np.maximum(A, 1e-4)[..., None]
+        a = A
+
+    # -- four small pale flowers at the foot, two each side
+    fl = ((6.5, 46.5, 6), (10, 48, 4.5), (36.5, 48, 4.5), (40, 46.5, 6)) if o['plinth'] else ((5, 52, 6), (8.5, 53, 4.5), (38, 53, 4.5), (41.5, 52, 6))
+    for fx, fy, h in fl:
         stem = np.abs(x - fx) - 0.45
-        stem = np.maximum(stem, np.maximum(y - 50, (fy - h) - y))
-        rgb, a = over(rgb, a, (70, 104, 50), cover(stem))
+        stem = np.maximum(stem, np.maximum(y - (50 if o['plinth'] else 54.5), (fy - h) - y))
+        rgb, a = over(rgb, a, (64, 98, 46), cover(stem))
         for k, (lx, ly) in enumerate(((-1.6, -1.2), (1.6, -2.2))):
             leaf = np.hypot((x - fx - lx) / 1.4, (y - (fy - h * 0.35) - ly * 0.4) / 0.7) - 1
-            rgb, a = over(rgb, a, (84, 122, 58), cover(leaf * 1.2))
+            rgb, a = over(rgb, a, (80, 120, 56), cover(leaf * 1.2))
         hy = fy - h
         for p in range(5):
             ang = p * 2 * np.pi / 5 - np.pi / 2
             pd2 = np.hypot(x - fx - 1.2 * np.cos(ang), y - hy - 1.2 * np.sin(ang)) - 0.95
-            rgb, a = over(rgb, a, (236, 230, 246), cover(pd2))
+            lightp = 1.0 if np.cos(ang) < 0.3 else 0.82  # petals on the lamp's side brighter
+            rgb, a = over(rgb, a, np.array((236, 230, 246), np.float32) * lightp, cover(pd2))
         rgb, a = over(rgb, a, (238, 196, 92), cover(np.hypot(x - fx, y - hy) - 0.6))
     return finish(rgb, a, W, H)
 
