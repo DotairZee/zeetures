@@ -564,6 +564,16 @@ int Agent::handleClick(float clickx, float clicky) {
 		// look up the relevant action for our ACTV state from the clac table
 		if ((unsigned int)actv < 3)
 			action = clac[(unsigned int)actv];
+		// An object left "in use" with no script running: its activate script
+		// was cut short (a pickup during it, or a save) before it set ACTV
+		// back, and a state with no click action left it dead to the hand for
+		// good: the language computer by the submarine (2 9 28, clac 0 -1 -1)
+		// was saved at ACTV 1 (owner, 2026-11-15). Back to its idle state.
+		if (action == -1 && actv != 0 && clac[0] != -1 && !(vm && vm->currentscript)) {
+			fmt::print("* {} {} {} was left in use (ACTV {}) with nothing running; back to idle\n", (int)family, (int)genus, species, (int)actv);
+			actv = 0;
+			action = clac[0];
+		}
 
 		if (action != -1) {
 			return calculateScriptId(action);

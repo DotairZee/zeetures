@@ -626,6 +626,38 @@ void Engine::update() {
 	// button at world position X,Y at world tick N, through the hand's own
 	// event handling (a mouse move there, then the button down and up);
 	// "N,X,Y,right" clicks the right button (pick up or drop)
+	// developer aid: OPENC2E_TEST_HITGRID="N,x0,y0,x1,y1,step" at tick N
+	// prints what a click (C) and a pickup (P) would land on at each point:
+	// the first letter of its genus's place in the alphabet of agents seen,
+	// listed after the grid ('.' nothing)
+	if (static const char* k = getenv("OPENC2E_TEST_HITGRID"); k) {
+		int n = 0, x0, y0, x1, y1, st = 4;
+		if (sscanf(k, "%d,%d,%d,%d,%d,%d", &n, &x0, &y0, &x1, &y1, &st) >= 5 && world.tickcount == (unsigned int)n) {
+			std::vector<Agent*> seen;
+			auto key = [&](CompoundPart* p) {
+				if (!p)
+					return '.';
+				Agent* a = p->getParent();
+				auto it = std::find(seen.begin(), seen.end(), a);
+				if (it == seen.end()) {
+					seen.push_back(a);
+					it = seen.end() - 1;
+				}
+				return (char)('a' + (it - seen.begin()) % 26);
+			};
+			for (const char* what : {"click", "pickup"}) {
+				fmt::print("* HITGRID {} ({},{} to {},{} every {}):\n", what, x0, y0, x1, y1, st);
+				for (int y = y0; y <= y1; y += st) {
+					std::string row;
+					for (int x = x0; x <= x1; x += st)
+						row += key(std::string(what) == "click" ? world.partAt(x, y, true, false, true) : world.partAt(x, y, true, true, false));
+					fmt::print("*   {:5} {}\n", y, row);
+				}
+			}
+			for (size_t i = 0; i < seen.size(); i++)
+				fmt::print("* HITGRID {} = {} {} {} attr {} at {:.0f},{:.0f} {}x{}\n", (char)('a' + i % 26), (int)seen[i]->family, (int)seen[i]->genus, seen[i]->species, (int)seen[i]->attr, seen[i]->x, seen[i]->y, seen[i]->getWidth(), seen[i]->getHeight());
+		}
+	}
 	if (static const char* k = getenv("OPENC2E_TEST_CLICK"); k && world.hand()) {
 		int n = 0, cx = 0, cy = 0;
 		if (sscanf(k, "%d,%d,%d", &n, &cx, &cy) == 3 && world.tickcount == (unsigned int)n) {
