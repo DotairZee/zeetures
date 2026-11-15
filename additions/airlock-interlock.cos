@@ -1,0 +1,29 @@
+* The airlock's door interlock (openc2e Creatures 2 project, our own script).
+* Run by openc2e after the world loads (Additions folder); safe to repeat.
+*
+* The interlock (owner, 2026-11-11: the two doors must never be open
+* together). Each door's own script, opening, shuts the other door and
+* drains or floods the chamber, waiting between steps, and marks itself open
+* (OV00 0) only at the end; a press of the other door in that window found
+* this one still "shut" and opened too, leaving both open. A guard (2 1 153,
+* invisible) looks twice a second: with both doors open, it shuts the one
+* that does not fit the water (the land door when the chamber is flooded,
+* drain machine OV00 0; the sea door when it is drained, OV00 1), using
+* that door's own script.
+enum 2 1 153 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 153 setv attr 16 mvto 5000 1320 tick 5 slow
+scrp 2 1 153 9
+  setv var0 1 setv var1 1 setv var2 0
+  enum 2 9 7 setv var0 ov00 next
+  enum 2 9 8 setv var1 ov00 next
+  enum 2 3 4 setv var2 ov00 next
+  doif var0 eq 0
+    doif var1 eq 0
+      doif var2 eq 0
+        enum 2 9 8 mesg writ targ 0 next
+      else
+        enum 2 9 7 mesg writ targ 0 next
+      endi
+    endi
+  endi
+endm

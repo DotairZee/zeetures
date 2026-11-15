@@ -1,0 +1,25 @@
+# Objects built into every Creatures 2 world (openc2e project; owner,
+# 2026-11-09: good ideas from the Agent Injector go into worlds from the
+# start and leave the injector). openc2e injects each named agent from the
+# player's own COB files (their game's Objects folder) at every world load,
+# before the Additions scripts run; they are not offered in the Agent
+# Injector. Names are the agents' names inside the COBs. See
+# injector-review.md for why each is here.
+
+# Gameware's own fixes (Update Pack1)
+Toy Car
+Toy Dog
+Bees Update
+Fishing Rod Update
+Death Update
+# mushrooms count as fruit (Home already has this)
+Fungi Update
+# more food
+Cheese
+Aubergine Plant
+# Bony grendels mate like norns (Boney Grendels pack; owner, 2026-11-10:
+# Bony grendels are part of every world, see grendels.cos)
+Bony Grendel Update
+# the Stone of Knowledge: kissed by a norn, teaches it every word (Instant
+# Vocabulary, SYS: CMND 32777; owner, 2026-11-11: in every world by default)
+Stone of Ancient Knowledge

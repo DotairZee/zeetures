@@ -1,0 +1,318 @@
+* The hidden water channel under the bottom-left caves (openc2e Creatures 2
+* project, our own script; owner, 2026-11-11: a norn kept falling into it and
+* could not get out). Run by openc2e after the world loads (Additions
+* folder); safe to repeat.
+*
+* East of the cave with the gold vase (room 100, x 1450-2206) the picture is
+* solid rock, but the room map goes on: rooms 94 and 96 (x 2206-2800, floor
+* y 2320) lie inside the rock over a water channel (room 95, water, y
+* 2320-2399), and their floor is the water's surface, so a creature that
+* walked east out of the cave walked into the wall and dropped into the
+* water. The channel's doors out were closed to creatures (room 206 behind
+* the waterwheel, size 100; the cave, 0), so it stayed.
+* - The way down into the channel from the cave (100 to 95) is closed.
+*   (Opening the channel onto the cave with a ramp let creatures out, but
+*   also let cave walkers slide in.)
+* - Room 94 (x 2206-2308) is not rock: it is the bottom of lift 3 2 3's
+*   shaft, whose lowest stop (call button at 2143,2221) is at the cave's
+*   floor, and the cave's only way out but for the far west end of the
+*   bottom tunnel, which is closed. Closing 100 to 94 here (2026-11-11)
+*   sealed the cave and the whole tunnel (rooms 100, 101, 104, 105), and
+*   a grendel starved there (7YZS, 2026-11-12). So the cave opens onto the
+*   lift's stop again (100 to 94). The stop's side into the rock room over
+*   the channel (94 to 96, the way creatures fell in) was closed until
+*   2026-11-14, when it became the ramp into the stream (below). The stop's
+*   own floor holds: its doorway down into the water (94 to 95, size 100)
+*   is too small for creatures.
+* - Creatures in the channel, the rock room over it or the pit behind the
+*   waterwheel are carried off by the stream (below).
+setv door 0 100 94 255
+setv door 0 100 95 0
+*
+* The ramp (owner, 2026-11-14: "rather than a dock ... a ramp down into
+* that water where creatures can wade ... they'll continue forward until
+* the waterwheel sucks them out and spits them into a broader area"). The
+* dock stays flat under the lift's bottom stop (x 2220-2324), so riders
+* still step out dry; past its east end planks run down into the stream at
+* about 17 degrees and into the earth of its bed (sprite zcrp: the dock's own
+* boards and log laid along the slope by
+* tools/sprites/cave_ramp.py from the player's own dock and stream). Room
+* 96, the air over the channel, now reaches down to the bed (y 2399) with
+* its floor along the planks: 2320 to where they start (x 2332), 2384 at
+* x 2545, then along the bed to x 2800. The water room (95) keeps only the
+* part under the dock (x 2206-2308), out of reach. The way from the lift's
+* stop onto the ramp (94 to 96) is open, so a creature walking east does
+* not stop at the dock's end; past x 2330 the stream (below) takes it down
+* the planks, along the bed beneath the wheel and up onto the ledge at its top.
+* The cave and its tunnel (rooms 100-105) had only the lift as a way out.
+room 95 2206 2320 2308 2399 room 95 4 room 95 5 room 95 6 room 95 7 room 95 8 room 95 9 room 95 12 room 95 13 room 95 14 room 95 15 room 95 16 room 95 17 room 95 19
+room 96 2308 2180 2800 2399 room 96 4 room 96 5 room 96 6 room 96 7 room 96 8 room 96 9 room 96 12 room 96 13 room 96 14 room 96 15 room 96 16 room 96 17 room 96 19
+* (the floor keeps the dock's height to x 2332, where the planks start, then
+* follows them: creatures stand as far above them as on the dock's boards;
+* owner, 2026-11-14, "a few pixels lower than where it looks like they
+* should be")
+ssfc 96 4 0 79 24 79 237 15 492 15
+setv door 0 94 96 255
+setv door 0 95 96 0
+enum 2 3 252 doif posl eq 2300 kill targ endi next
+enum 2 3 222 kill targ next
+inst new: simp zcrp 1 0 -5 0 setv cls2 2 3 222 setv attr 0 mvto 2300 2290 slow
+* The stream bed's earth in front of creatures, down past the foot of the
+* world's picture (sprite zsbd, by tools/sprites/stream_bed.py from the
+* player's own earth; owner, 2026-11-14: creatures carried along the bed
+* poked out below the ground). Class 2 3 221 (until 2026-11-14 night
+* 2 3 251, which the volcano passage's picture uses: this file then removed
+* it; the plank ramp likewise moved from 2 3 252 to 2 3 222). Plane 8002, in front of creatures and the
+* wheel's foot, x 2200-3080 from just under the water.
+enum 2 3 251 doif posl eq 2200 kill targ endi next
+enum 2 3 221 kill targ next
+inst new: simp zsbd 1 0 8002 0 setv cls2 2 3 221 setv attr 0 mvto 2200 2340 slow
+*
+* The stream (owner, 2026-11-13: a norn stuck in the little cave with a pool
+* by the waterwheel, part of room 96; "if a norn is on the west side of the
+* waterwheel, it should get swept beneath it and out toward the east").
+* Creatures still get in: the lift's cabin (x 2220-2324) is wider than its
+* shaft's room (94, to x 2308), so a rider in its east side came down over
+* room 96, whose floor is the water's surface, and dropped into the channel;
+* and the pit behind the waterwheel (room 206, x 2800-3060, every doorway 100
+* or 0) is as closed. A watcher (2 1 156, invisible, every 2 s) finds a
+* creature there (in the water, or wholly east of the lift's shaft, so riders
+* are left alone) and carries it east along the channel's bed beneath the
+* wheel (which is drawn in front of creatures), round its rim, and sets it
+* down on the rock ledge at the wheel's top where the walkway over the mist
+* starts (room 97, x about 2895, floor y 2150; until 2026-11-14 it was
+* thrown on over the bridge to the garden's floor, x 3380). Each creature caught gets a
+* carrier of its own (2 1 158), so several are carried at once. Moved by script all the way, so the landing
+* does not count as a fall the creature should learn from.
+*
+* Objects too (owner, 2026-11-13: about 25 hungry creatures crowded the
+* lift's shaft). Food and toys dropped by riders fell into the channel and
+* piled up just past the shaft's east wall (x 2309, on the channel's bed);
+* creatures at the foot of the shaft saw food 40 px away and walked into
+* that wall for it again and again. Carryable objects (attr 1) in the
+* channel, the rock room over it or the pit are set down on the cave's
+* floor west of the shaft (room 100, floor y 2320), where they can be
+* reached.
+enum 2 1 156 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 156 setv attr 16 mvto 5000 1330 tick 20 slow
+scrp 2 1 156 9
+* (all in one tick: without INST a C2 script runs 5 steps a tick, and this
+* pass over every object took tens of seconds, so creatures waited in the
+* pit for it; owner, 2026-11-14, "creatures get stuck here")
+  inst
+  enum 2 0 0
+    setv var0 attr
+    andv var0 1
+    doif var0 eq 1 and posl gt 2308 and posx lt 3060 and posb gt 2300 and posb lt 2420
+      setv var1 posb
+      subv var1 post
+      setv var2 2320
+      subv var2 var1
+      subv var2 1
+      rndv var3 1900 2150
+      mvto var3 var2
+      setv velx 0
+      setv vely 0
+    endi
+  next
+  enum 4 0 0
+    setv var0 0
+    doif posx gt 2206 and posx lt 2800 and posb gt 2350 and posb lt 2420
+      setv var0 1
+    endi
+    doif posl gt 2330 and posx lt 2800 and posb gt 2190 and posb lt 2420
+      setv var0 1
+    endi
+    doif posx ge 2800 and posx lt 3060 and posb gt 2190 and posb lt 2420
+      setv var0 1
+    endi
+    doif var0 eq 1 and ov90 eq 0
+*     a carrier of its own (2 1 158), so creatures arriving together are
+*     carried at once rather than waiting their turn on the ramp; OV90 = 1
+*     marks one being carried
+      setv ov90 1
+      setv var8 targ
+      new: simp blnk 1 0 0 0 setv cls2 2 1 158 setv attr 16 setv ov00 var8 mvto 5000 1330 tick 1
+      targ var8
+    endi
+  next
+endm
+* The carrier: takes its creature (OV00) along, then is removed.
+scrp 2 1 158 9
+* The ride is not perfectly smooth (owner, 2026-11-15: "the slightest of
+* jerkiness ... not perfectly smooth, which comes off as unnatural"): the
+* straight runs vary their speed a little each tick (planks 4-8 px, bed
+* 11-17, back west 8-12), and about one step in eight (all four parts,
+* the rim too) holds an extra tick, a small hitch. VAR9 is the dice.
+  tick 0
+* (each step INST: WAIT ends INST, and at 5 steps a tick each move took
+* about 5 ticks, which made the carrying jerky)
+  inst
+  targ ov00
+*     var1 the middle's x, var2 half the width, var3 the height
+  setv var1 posx
+  setv var2 posr
+  subv var2 posl
+  divv var2 2
+  setv var3 post
+  negv var3
+  addv var3 posb
+*     on the planks: down them first, 6 px a tick, its feet on their slope
+*     (y 2320 to x 2332, then 0.3 px down per px east), to the bed
+  setv var5 posb
+  doif var5 lt 2372 and var1 lt 2545
+    loop
+      rndv var9 4 8
+      addv var1 var9
+      setv var4 var1
+      subv var4 var2
+      setv var5 var1
+      subv var5 2332
+      mulv var5 30
+      divv var5 100
+      addv var5 2320
+      doif var5 lt 2320
+        setv var5 2320
+      endi
+      setv var7 var5
+      subv var7 var3
+      mvto var4 var7
+      wait 1
+      inst
+      rndv var9 0 7
+      doif var9 eq 0
+        setv vely 0
+        wait 1
+        inst
+      endi
+    untl var5 ge 2378
+  endi
+*     along the bed, 14 px a tick, to below the wheel's hub (x 2947; the
+*     pit's floor rises from x 2900, so the feet do too); the rock's own
+*     foreground picture (x 2594-2987) and then the wheel hide it. One caught
+*     east of the hub (on the pit's rising floor) slides back west to it.
+*     VELY is zeroed each step so gravity does not build up while carried.
+  doif var1 lt 2947
+    loop
+      rndv var9 11 17
+      addv var1 var9
+      doif var1 gt 2947 setv var1 2947 endi
+      setv var4 var1
+      subv var4 var2
+      setv var5 2380
+      doif var1 gt 2900
+        setv var7 var1
+        subv var7 2900
+        mulv var7 2
+        divv var7 3
+        subv var5 var7
+      endi
+      subv var5 var3
+      mvto var4 var5
+      setv vely 0
+      wait 1
+      inst
+      rndv var9 0 7
+      doif var9 eq 0
+        setv vely 0
+        wait 1
+        inst
+      endi
+    untl var1 ge 2947
+  else
+    loop
+      rndv var9 8 12
+      subv var1 var9
+      doif var1 lt 2947 setv var1 2947 endi
+      setv var4 var1
+      subv var4 var2
+      setv var7 var1
+      subv var7 2900
+      mulv var7 2
+      divv var7 3
+      setv var5 2380
+      subv var5 var7
+      subv var5 var3
+      mvto var4 var5
+      setv vely 0
+      wait 1
+      inst
+      rndv var9 0 7
+      doif var9 eq 0
+        setv vely 0
+        wait 1
+        inst
+      endi
+    untl var1 le 2947
+  endi
+*     round the wheel's rim as it turns (owner, 2026-11-14: "follow the
+*     contour of the waterwheel ... a circular movement"): the wheel is drawn
+*     as a tall ellipse (x 2873-3021, y 2100-2392) turning with the stream,
+*     its foot moving east, its east side rising, its top moving west. The
+*     creature's feet ride an ellipse about (2947, 2249), 64 wide and 100
+*     high each way, from its foot (2349, the bed there) up the east side to
+*     its top (2149, the walkway's height), half a turn in 30 ticks. Cosine
+*     and sine (times 10000, var6 and var7) step 6 degrees a tick by a
+*     rotation that keeps their size (C2's CAOS has no trigonometry).
+  setv var6 0
+  setv var7 10000
+  reps 30
+    setv var0 var7
+    mulv var0 1047
+    divv var0 10000
+    addv var6 var0
+    setv var0 var6
+    mulv var0 1047
+    divv var0 10000
+    subv var7 var0
+    setv var1 var6
+    mulv var1 64
+    divv var1 10000
+    addv var1 2947
+    setv var4 var1
+    subv var4 var2
+    setv var5 var7
+    mulv var5 100
+    divv var5 10000
+    addv var5 2249
+    subv var5 var3
+    mvto var4 var5
+    setv vely 0
+    wait 1
+    inst
+    rndv var9 0 7
+    doif var9 eq 0
+      setv vely 0
+      wait 1
+      inst
+    endi
+  repe
+*     and set down on the ledge, a short step west from the wheel's top,
+*     its feet just above the floor; from there it goes where it likes
+*     (owner, 2026-11-14: "deliver them to the cliff where the bridge
+*     starts ... at the top of the waterwheel")
+  setv var4 2947
+  subv var4 var2
+  setv var5 2148
+  subv var5 var3
+  reps 6
+    subv var4 9
+    mvto var4 var5
+    setv vely 0
+    wait 1
+    inst
+    rndv var9 0 7
+    doif var9 eq 0
+      setv vely 0
+      wait 1
+      inst
+    endi
+  repe
+  setv vely 1
+  setv ov90 0
+  targ ownr
+  kill ownr
+endm
+* (after a load, no carriers are left and no creature counts as being carried)
+enum 2 1 158 kill targ next
+enum 4 0 0 setv ov90 0 next

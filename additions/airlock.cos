@@ -1,0 +1,47 @@
+* The self-cycling airlock (openc2e Creatures 2 project, our own script).
+* Run by openc2e after the world loads (Additions folder); safe to repeat.
+*
+* The east sea's seabed (rooms 150-153) ends at x 6391 in a drop into the
+* deep column (room 123, x 6060-6391, y 914-1470). From the bottom of that
+* column the only way on is the round sea door (2 9 7, rooms 123/154) into
+* the airlock chamber (room 154, x 6391-6722, y 1175-1470); the land door
+* (2 9 8, rooms 154/155) opens only when the airlock runs its cycle (shut
+* the sea door, drain with 2 3 4, open the land door). Creatures that went
+* in drowned there (owner, 2026-11-10: option 1, "self-cycling airlock").
+*
+* A watcher (2 1 148, invisible) looks every 2 s, using the airlock's own
+* door scripts, as a creature pressing the door would:
+* - a live creature in the chamber, land door shut: activate the land door
+*   (shuts the sea door, drains, opens the land door);
+* - otherwise, a live creature at the bottom of the column, sea door shut:
+*   activate the sea door (shuts the land door, floods, opens the sea door),
+*   so it can come in and be let out on the land side.
+* The chamber has priority: nothing is flooded while a creature is in it.
+* After acting, the watcher waits 8 s (the cycle takes about 3 s).
+enum 2 1 148 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 148 setv attr 16 mvto 5000 1320 tick 20 slow
+scrp 2 1 148 9
+  doif ov00 gt 0 subv ov00 1 stop endi
+  setv var0 0 setv var1 0 setv var2 0
+  enum 4 0 0
+    doif dead eq 0
+      doif posx gt 6391 doif posx lt 6722 doif posb gt 1175 doif posb lt 1480 setv var0 1 endi endi endi endi
+      doif posx gt 6060 doif posx le 6391 doif posb gt 1300 doif posb lt 1480 setv var1 1 endi endi endi endi
+    endi
+  next
+  doif var0 eq 1
+    enum 2 9 8 doif ov00 eq 1 mesg writ targ 0 setv var2 1 endi next
+  else
+    doif var1 eq 1
+      enum 2 9 7 doif ov00 eq 1 mesg writ targ 0 setv var2 1 endi next
+    endi
+  endi
+  targ ownr
+  doif var2 eq 1 setv ov00 4 endi
+endm
+
+* The doors (2 9 7, 2 9 8) stay at their own plane, 1000, behind creatures:
+* briefly set in front of them (3000) on 2026-11-13, then the owner asked
+* for them behind creatures again.
+enum 2 9 7 plne 1000 next
+enum 2 9 8 plne 1000 next

@@ -1,0 +1,97 @@
+* The passage between the volcano's east end and the potion room (openc2e
+* Creatures 2 project, our own script; owner, 2026-11-13). Run by openc2e
+* after the world loads (Additions folder); safe to repeat.
+*
+* The volcano's east ledge (room 167, walking line y 2189) and the potion
+* room across the world's east-west seam (room 105, floor y 2329) were parted
+* by a sealed rock pillar (room 213, x 8240-8352, every door shut). The short
+* way round the world they are a step apart, so food trips, smells and the
+* sociable pulled creatures into that wall from both sides for long spells
+* (owner's screencast). Now a way leads through:
+* - the pillar's room is the passage: its floor slopes from the ledge's
+*   height down to the potion room's (the line of the ramp picture), and the
+*   ledge's end and the potion room's first 80 px slope with it;
+* - the passage opens into the potion room for good, and onto the ledge
+*   through a door: the volcano's own hatch door (the southwest one, 2 9 10),
+*   mirrored, its post on the wall line (x 8240); like that one it is pressed
+*   to open or shut, and starts open;
+* - pictures made on the player's machine from their own game by
+*   tools/sprites/volcano_passage.py: the seam between the two rooms hidden
+*   (zvps), the passage carved out of the rock by light (zvpc), the ramp
+*   (zvpr) and the mirrored door (zvdr). They lie behind creatures and
+*   objects, the door in front of them.
+
+* the room map
+* (the ramp starts where the ledge's lava slab stops, x 8205, and ends just
+* short of the potion room's bookshelf arch, x 80: about 33 degrees at its
+* steepest; at 40 degrees creatures could not walk up it)
+ssfc 167 5 0 235 50 210 165 210 180 202 200 190
+ssfc 213 8 0 190 16 181 32 170 48 160 64 150 80 139 96 128 112 118
+ssfc 105 6 0 118 20 105 40 93 60 81 80 70 802 70
+setv door 0 213 105 255
+
+* the pictures (classifiers 2 3 250-252), the door (2 9 211)
+enum 2 3 250 kill targ next
+enum 2 3 251 kill targ next
+enum 2 3 252 kill targ next
+enum 2 9 211 kill targ next
+inst new: simp zvps 1 0 2 0 setv cls2 2 3 250 setv attr 0 mvto 8272 1700 slow
+inst new: simp zvpc 1 0 3 0 setv cls2 2 3 251 setv attr 0 mvto 8215 2010 slow
+inst new: simp zvpr 1 0 4 0 setv cls2 2 3 252 setv attr 0 mvto 8205 2188 slow
+inst new: simp zvdr 5 0 6 0 setv cls2 2 9 211 setv attr 4 setv ov00 0 pose 4 mvto 8055 2028 slow
+setv door 0 167 213 255
+
+* the door: frame 0 shut (seen edge-on), 4 open; as the southwest door's own
+* script, with the passage's rooms. Creatures pull it as often as they push
+* it (activate 2), and the game's doors answer only a push, so a pull did
+* nothing (owner, 2026-11-13: "seems like no one can open this door"; a
+* norn pulled it over and over). Both doors now open or shut to a pull too:
+* this one (2 9 211) and the southwest door (2 9 10, its own push script
+* copied: it opens between rooms 212 and 163).
+* (owner, 2026-11-14: a crowd at this exit, "creatures going against each
+* other in attempting to push and pull the door"). With a press opening or
+* shutting it, in a crowd each press undid the last: 6.4% of all the
+* world's choices were made here, by 109 creatures at mean Hunger 205,
+* about 1,400 of them pushes, pulls and "deactivates" of the door, most as
+* steps on a route through it. Now a push or pull only opens a door, and
+* "deactivate" does nothing; the doors start open. The same for the
+* volcano's southwest hatch door (2 9 10), the other door creatures worked
+* over and over. (A first version also shut each door by itself when nobody
+* was within 120 px: in three matched copies against three with the old
+* scripts, the crowd at the passage halved, 3.0-4.8% of all choices to
+* 1.9-2.1%, but the southwest door grew busier, 0.9-1.9% to 1.5-2.8%, as
+* each arrival found it shut and opened it again; so neither shuts now.)
+scrp 2 9 211 1
+  doif ov00 eq 1
+    anim [01234] over snde dor1 setv ov00 0 setv door 0 167 213 255
+  endi
+  setv actv 0
+endm
+scrp 2 9 211 2
+  doif ov00 eq 1
+    anim [01234] over snde dor1 setv ov00 0 setv door 0 167 213 255
+  endi
+  setv actv 0
+endm
+scrp 2 9 211 0
+  setv actv 0
+endm
+scrp 2 9 10 1
+  doif ov00 eq 1
+    anim [01234] over snde dor1 setv ov00 0 setv door 1 212 163 255
+  endi
+  setv actv 0
+endm
+scrp 2 9 10 2
+  doif ov00 eq 1
+    anim [01234] over snde dor1 setv ov00 0 setv door 1 212 163 255
+  endi
+  setv actv 0
+endm
+scrp 2 9 10 0
+  setv actv 0
+endm
+* both doors open at load (the southwest one is kept with the world, and
+* may have been saved shut), with no timer
+enum 2 9 211 setv rnge 120 tick 0 next
+enum 2 9 10 setv rnge 120 tick 0 doif ov00 eq 1 pose 4 setv ov00 0 setv door 1 212 163 255 endi next

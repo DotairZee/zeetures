@@ -1,0 +1,20 @@
+* The walkway in the sea cave, under the stalactites (openc2e Creatures 2
+* project, our own script; owner, 2026-11-12: "the creature is able to walk
+* into an area that is not part of the room and is partly obscured").
+* Run by openc2e after the world loads (Additions folder); safe to repeat.
+*
+* Room 14 (x 5870-6355, the walkway, floor y 914) ran under the great grey
+* boulder, which the game draws in front of creatures (overlay 1 0 0,
+* sprite wosc, x 6346-6594, plane 8000; its left edge at creature height
+* is x 6346-6363). A creature stops with its middle at the wall, so at the
+* rock it stood half inside it. The wall is now at x 6320, half a
+* creature's width short of the rock, and the closed water pocket behind
+* the rock (room 31, doorways all shut) reaches over to meet it, so there is
+* no gap between the rooms. Room 14's floor line is kept, ending at the new
+* wall.
+* ROOM takes all of a room's data, so each room's own values are passed back.
+doif room 14 2 eq 6355
+  room 14 5870 669 6320 914 room 14 4 room 14 5 room 14 6 room 14 7 room 14 8 room 14 9 room 14 12 room 14 13 room 14 14 room 14 15 room 14 16 room 14 17 room 14 19
+  ssfc 14 4 0 39 20 33 75 22 450 22
+  room 31 6320 669 6565 914 room 31 4 room 31 5 room 31 6 room 31 7 room 31 8 room 31 9 room 31 12 room 31 13 room 31 14 room 31 15 room 31 16 room 31 17 room 31 19
+endi

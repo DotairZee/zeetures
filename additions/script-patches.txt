@@ -1,0 +1,152 @@
+* Patches to the world's own scripts (openc2e Creatures 2 project). The
+* engine applies each at load to the player's own copy of the scripts; no
+* game script text beyond the short phrase to find is kept here.
+*
+* Eggs hatch wherever they lie (owner, 2026-11-11). The norn egg's drop
+* script stopped its hatching timer whenever the hand put it down anywhere but
+* the incubator, so a moved egg never hatched. Now a dropped egg keeps
+* counting down (the script's own next test, "not the incubator", ends it).
+* The incubator still hatches eggs put into it at once.
+scrp 2 5 2 5
+find doif carr eq 0 tick 0 endi targ carr
+replace doif carr ne 0 targ carr endi
+
+* The Anteater (C2's own Anteater.cob, 2 20 22) never moved in Home
+* (2026-11-13): its timer looks for the nearest ant starting from a squared
+* distance of 9,999,999, so it sees ants only within about 3,160 px, and
+* Home's ants nest about 3,450 px from where it starts. With no ant found
+* its target is empty and the timer stops every tick. The starting distance
+* is raised so the nearest ant anywhere is found (owner, 2026-11-13).
+scrp 2 20 22 9
+find setv va99 9999999
+replace setv va99 2000000000
+
+* The gene lab's console (2 2 21, the dome with the lamp; owner's
+* screencast, 2026-11-13: the pipe room's machinery kept flickering). Once
+* the lab is powered, a press runs the splicer: it starts the pumps (3 10 2,
+* 3 10 3, 3 10 4) and the arms, makes an egg if the two pods hold creatures,
+* then stops everything again. With the pods empty no egg is made, and its
+* "targ var9 setv grav 1" (dropping the new egg) failed on an empty target:
+* the script died there, before stopping the pumps, which then ran for good
+* (two such errors in Home's log; hungry creatures press and try to eat the
+* console). Now the egg step is skipped when there is no egg.
+scrp 2 2 21 1
+find wait 10 targ var9 setv grav 1
+replace wait 10 doif var9 ne 0 targ var9 setv grav 1 endi
+
+* Fish eggs hatch only in water (owner, 2026-11-14: a row of fish lying on
+* the floor among the lab machines). The two egg launchers in the west labs
+* (2 9 24 sea fish, 2 9 25 goldfish; press to fire five eggs) stand on dry
+* floors and throw their eggs onto them, and both kinds of egg hatched
+* wherever they lay: a fish hatched on a floor flops for a while and dies.
+* Now an egg that is not in water (room type 2) when its time comes is gone
+* instead of hatching. This covers eggs from the launchers and eggs laid by
+* fish that have flopped out of the water.
+* The sea fish egg (2 20 7) hatches at a set time in spring:
+scrp 2 20 7 9
+find doif seav eq 10 setv var0 0
+replace doif seav eq 10 doif rtyp ne 2 kill ownr stop endi setv var0 0
+
+* The goldfish egg (2 20 11) hatches 10-20 seconds after it is fired (the
+* replacement must not hold the text found: patches are applied more than once):
+scrp 2 20 11 9
+find subv var0 9 subv var1 10
+replace subv var1 10 subv var0 9 doif rtyp ne 2 kill ownr stop endi
+
+* Butterfly eggs where caterpillars cannot live are removed (owner,
+* 2026-11-14: "make the butterfly eggs disappear if eggs are laid where
+* caterpillars can't live"; they piled up in rows, 276 in a session, on the
+* volcano floor and elsewhere). C2's two butterflies' eggs (2 18 3, hatching
+* in spring; 2 18 8, in summer) wait for their season wherever they land.
+* Caterpillars climb, feed on and pupate on the flowering plants (2 24 x)
+* and die in water. When an egg has come to rest, its timer now looks once
+* for a flowering plant within 300 px across and 200 px up or down; with
+* none, or in water (room type 2), the egg is gone. OV05 = 1 marks an egg
+* checked and kept. (Home, 2026-11-14: 19 of 31 eggs lay within 200 px of a
+* plant, the other 12 over 1,000 px from any.) Each replacement keeps an
+* extra SETV between "doif sean eq N" and "tick 0", so it does not contain
+* the text found (patches are applied more than once).
+scrp 2 18 3 9
+find doif sean eq 0 tick 0
+replace doif ov05 eq 0 doif vely eq 0 inst setv var5 posx setv var6 posb setv var4 0 enum 2 24 0 setv var7 posx subv var7 var5 doif var7 lt 0 negv var7 endi setv var8 posb subv var8 var6 doif var8 lt 0 negv var8 endi doif var7 lt 300 doif var8 lt 200 setv var4 1 endi endi next targ ownr doif rtyp eq 2 setv var4 0 endi doif var4 eq 0 kill ownr stop endi setv ov05 1 slow endi endi doif sean eq 0 setv var4 0 tick 0
+
+scrp 2 18 8 9
+find doif sean eq 1 tick 0
+replace doif ov05 eq 0 doif vely eq 0 inst setv var5 posx setv var6 posb setv var4 0 enum 2 24 0 setv var7 posx subv var7 var5 doif var7 lt 0 negv var7 endi setv var8 posb subv var8 var6 doif var8 lt 0 negv var8 endi doif var7 lt 300 doif var8 lt 200 setv var4 1 endi endi next targ ownr doif rtyp eq 2 setv var4 0 endi doif var4 eq 0 kill ownr stop endi setv ov05 1 slow endi endi doif sean eq 1 setv var4 0 tick 0
+
+* Sea fish eggs out of water go once they come to rest (2026-11-14 night).
+* The patch above removed them only at their hatching time in spring, so
+* eggs thrown onto the west lab's dry floor by the egg machine lay there
+* for most of a year; now that objects are kept between sessions (stage 3)
+* they built up from one session to the next. The egg's timer (every 5 s)
+* now removes it at rest out of water (room type 2) first.
+scrp 2 20 7 9
+find doif sean eq 2 doif seav eq 10 doif rtyp ne 2
+replace doif vely eq 0 doif rtyp ne 2 kill ownr stop endi endi doif sean eq 2 doif seav eq 10 setv var0 var0 doif rtyp ne 2
+
+* The gene lab's pods: a frozen swirl (owner's screenshot, 2026-11-14: the
+* left pod's purple swirl stuck on one picture after the green button
+* was pressed with the splicer on). A pod's button (activate 1) closes it
+* and plays its swirl's start-up ("anim [0123456789] over") and then its
+* loop ("pose 10 anim [56789R]"); a message cutting that script off (the
+* splicer's "process" message to the pods, activate 2) left the swirl at
+* the end of the start-up, frame 9, for good (reproduced on a copy). Now
+* the button's script cannot be cut off (LOCK; it ends with the script),
+* and the splicer's pod script restarts the loop when it ends, if closed.
+* (Each replacement leaves out part of the text found, so a second pass
+* does not apply it again.)
+scrp 3 10 5 1
+find eq 0 gpas
+replace eq 0 lock gpas
+
+scrp 3 10 5 1
+find else part 2 pose 0 part 3
+replace else lock part 2 pose 0 part 3
+
+scrp 3 10 6 1
+find eq 0 gpas
+replace eq 0 lock gpas
+
+scrp 3 10 6 1
+find else setv thrt 100 part 2
+replace else lock setv thrt 100 part 2
+
+scrp 3 10 5 2
+find doif ov00 eq 1 sndl trap endi
+replace doif ov00 eq 1 sndl trap part 3 pose 5 anim [56789R] part 0 endi
+
+scrp 3 10 6 2
+find doif ov00 eq 1 sndl trap endi
+replace doif ov00 eq 1 sndl trap part 3 pose 5 anim [56789R] part 0 endi
+
+* Butterfly eggs that cannot hatch fade after 5 minutes (owner,
+* 2026-11-14: eggs near plants, kept by the patch above, still spread along
+* the floor south of the dome and did not go; first "a one-day lifetime",
+* then "I want them gone after 5 minutes if they are not in an area where
+* they can hatch"). An egg adds its timer's interval (TICK, 50-150) to OV06
+* at each run; past 3,000 ticks (5 minutes at 10 a second) without hatching,
+* it is gone. Eggs in their own season hatch at once, and eggs far from
+* plants or in water go as soon as they land, so this is the eggs waiting
+* out of season.
+scrp 2 18 3 9
+find doif sean eq 0 setv var4 0 tick 0
+replace addv ov06 tick doif ov06 gt 3000 kill ownr stop endi doif sean eq 0 setv var4 0 setv var4 0 tick 0
+
+scrp 2 18 8 9
+find doif sean eq 1 setv var4 0 tick 0
+replace addv ov06 tick doif ov06 gt 3000 kill ownr stop endi doif sean eq 1 setv var4 0 setv var4 0 tick 0
+
+* Teleporters move everyone on the pad, whoever presses it (owner,
+* 2026-11-15: "make it so that all creatures in the teleportation zone are
+* moved, regardless of who hits the button"). The six small pads (3 8 2;
+* script 1 sends to the big pad, script 2 to another small pad) moved every
+* creature touching the pad when the hand pressed them, but only the
+* creature that pressed when one did. Now that creature goes first, then
+* everyone else still touching the pad, as with the hand.
+scrp 3 8 2 1
+find targ from wait 10 mcrt var8 var9 slim setv grav 1 targ ownr
+replace targ from wait 10 mcrt var8 var9 slim setv grav 1 etch 4 0 0 mcrt var8 var9 slim setv grav 1 next targ ownr
+
+scrp 3 8 2 2
+find targ from mcrt var8 var9 slim setv grav 1 targ ownr
+replace targ from mcrt var8 var9 slim setv grav 1 etch 4 0 0 mcrt var8 var9 slim setv grav 1 next targ ownr

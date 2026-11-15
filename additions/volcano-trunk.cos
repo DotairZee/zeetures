@@ -1,0 +1,17 @@
+* The rock trunk at the top of the volcano's west side (openc2e Creatures 2
+* project, our own script; owner, 2026-11-13: "I want creatures to not be seen
+* as they pass through the left side of the top of the volcano--they should
+* be obscured by that"). Run by openc2e after the world loads (Additions
+* folder); safe to repeat.
+*
+* The walk over the volcano's top (rooms 142, 233, 143, floor y 693) passes
+* behind the grey rock trunk that rises from the volcano's shoulder toward
+* the palm. The game draws the volcano again in front of creatures (overlay
+* 1 0 0, plane 8000) only from y 593 down, so a creature passing there showed
+* its head and ears above that piece, and its toes below its straight top
+* edge. Sprite zvtk, cut from the player's own background by
+* tools/sprites/volcano_trunk.py (x 7300-7530, y 500-712, along the trunk's
+* outline), draws the trunk in front of creatures, just above the game's own
+* overlay.
+enum 2 3 253 kill targ next
+inst new: simp zvtk 1 0 8001 0 setv cls2 2 3 253 setv attr 0 mvto 7300 500 slow

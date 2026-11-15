@@ -1,0 +1,212 @@
+* The lab lift (openc2e Creatures 2 project, our own script and our own art
+* from tools/sprites/lift.py; owner, 2026-11-08, redrawn 2026-11-09 as a
+* modern glass pod). The pod (vehicle 3 2 141, sprite zlft, a PNG with real
+* transparency) runs centred in the copper shaft of the domed lab (inside
+* x 4247-4339; the pod is 90 wide at x 4248) between three stops, each
+* level with a floor beside it:
+*   stop 0  the lab floor          y 1544  (room 32)
+*   stop 1  the right platform     y 1739  (rooms 35/36)
+*   stop 2  the left platform      y 1858  (room 33)
+* The pod's floor is 102 px below its top, so its top sits at 1442, 1637 and
+* 1756. Like the game's lifts, activate 1 takes it down a stop and activate
+* 2 up a stop, gathering the creatures inside on the way and setting them
+* down on arrival. A caller (2 2 216-218, sprite zlbt) at each stop brings it
+* there. OV00 the stop it is at (or left), OV01 the stop it is going to, OV02
+* 1 while moving.
+* The pod is four parts on one sprite: 1 the far glass (plane 1399) and 0
+* the floor (1400), behind creatures; riders are drawn at 1401 (CABP, which
+* openc2e allows in C2 for this; a C2 vehicle's riders are otherwise drawn
+* at plane 1, behind nearly everything) and creatures standing in it at
+* 1500; then 2 the near glass (1600, a faint tint and soft reflections) and
+* 3 the top housing and base with their light lines (1601; picture 0 dim,
+* 1 bright while moving). Parts 2 and 3 are click-through
+* (TRAN, which openc2e allows in C2 for this), so a creature inside can
+* still be clicked. Run by openc2e after the world loads (Additions folder);
+* made anew each load.
+
+enum 3 2 141 kill targ next
+* The callers are 25 x 75 (25% bigger than first drawn, owner 2026-11-09:
+* they read small beside similar devices), each kept centred where it was.
+enum 2 2 216 kill targ next
+enum 2 2 217 kill targ next
+enum 2 2 218 kill targ next
+enum 2 1 144 kill targ next
+enum 2 1 145 kill targ next
+enum 2 1 146 kill targ next
+
+* The sprite's pictures: 0 the floor, 1 the far glass, 2-7 the near glass
+* with its sliding doors from closed (2) to open (7), 8 and 9 the housing and
+* base with lights dim and bright.
+inst
+new: vhcl zlft 10 0
+setv cls2 3 2 141
+new: part 0 0 0 0 1400
+new: part 1 0 0 1 1399
+new: part 2 0 0 2 1600
+new: part 3 0 0 8 1601
+tran 1 2
+tran 1 3
+part 2 pose 5
+part 0
+cabp 1401
+cabn 6 16 84 102
+setv attr 4
+bhvr 0 0
+setv ov00 1 setv ov01 1 setv ov02 0 setv ov03 0 setv ov04 5 setv ov05 0
+mvto 4248 1637
+tick 1
+slow
+
+* OV02 the state: 0 waiting with its doors open, 1 closing its doors, 2
+* moving, 3 opening its doors. OV04 the doors' picture, 0 closed to 5 open.
+* A trip: the doors slide shut (5 ticks), the creatures inside are gathered
+* (gpas), the pod rides, the doors slide open and the riders are set down
+* (dpas).
+
+* down a stop
+scrp 3 2 141 1
+  doif ov02 eq 0
+    doif ov00 lt 2
+      setv ov01 ov00 addv ov01 1
+      setv ov02 1 snde ding
+    endi
+  endi
+  setv actv 0
+endm
+* up a stop
+scrp 3 2 141 2
+  doif ov02 eq 0
+    doif ov00 gt 0
+      setv ov01 ov00 subv ov01 1
+      setv ov02 1 snde ding
+    endi
+  endi
+  setv actv 0
+endm
+scrp 3 2 141 0
+  setv actv 0
+endm
+
+* every tick (all at once: INST, since a C2 script otherwise runs only a few
+* steps a tick). Moving: speeds up by 4 px a tick to 30 and brakes as evenly
+* into the stop (the speed from which braking by 4 a tick stops in the
+* distance left: the whole-number square root of 8 x distance, at least 2).
+* OV03 the current speed. (openc2e draws vehicles and riders gliding
+* between ticks, so the steps don't show.)
+scrp 3 2 141 9
+  inst
+  * the iris at the top of the shaft opens while the pod is in it or above
+  * it (its top above y 1578), or is setting off for the lab floor, and
+  * shuts once the pod has gone down past it: OV05 its picture, 0 shut to
+  * 6 open, a step a tick
+  setv var8 0
+  doif post lt 1578 setv var8 1 endi
+  doif ov02 gt 0 doif ov02 lt 3 doif ov01 eq 0 setv var8 1 endi endi endi
+  doif var8 eq 1
+    doif ov05 lt 6 addv ov05 1 endi
+  else
+    doif ov05 gt 0 subv ov05 1 endi
+  endi
+  setv var9 ov05
+  enum 2 1 145 part 0 pose var9 next
+  doif ov02 eq 3
+    addv ov04 1
+    doif ov04 ge 5
+      setv ov04 5
+      dpas
+      setv ov02 0 part 3 pose 0
+    endi
+    part 2 pose ov04
+    stop
+  endi
+  doif ov02 eq 1
+    subv ov04 1
+    doif ov04 le 0
+      setv ov04 0
+      gpas
+      setv ov02 2 part 3 pose 1
+    endi
+    part 2 pose ov04
+    stop
+  endi
+  doif ov02 eq 2
+    setv var0 1442
+    doif ov01 eq 1 setv var0 1637 endi
+    doif ov01 eq 2 setv var0 1756 endi
+    setv var1 var0 subv var1 post
+    setv var2 var1
+    doif var2 lt 0 negv var2 endi
+    addv ov03 4
+    doif ov03 gt 30 setv ov03 30 endi
+    setv var7 var2 mulv var7 8
+    setv var3 0
+    reps 31
+      setv var6 var3 addv var6 1 mulv var6 var6
+      doif var6 le var7 addv var3 1 endi
+    repe
+    doif var3 lt 2 setv var3 2 endi
+    doif ov03 gt var3 setv ov03 var3 endi
+    doif var2 gt ov03
+      setv var4 ov03
+      doif var1 lt 0 negv var4 endi
+      mvby 0 var4
+    else
+      mvto 4248 var0
+      setv ov00 ov01 setv ov02 3 setv ov03 0
+    endi
+  endi
+endm
+
+* the callers: each brings the lift to its own stop
+scrp 2 2 216 1
+  pose 1 snde ding
+  enum 3 2 141 doif ov02 eq 0 doif ov00 ne 0 setv ov01 0 setv ov02 1 endi endi next
+  part 0 wait 30 pose 0 setv actv 0
+endm
+scrp 2 2 216 2
+  pose 1 snde ding
+  enum 3 2 141 doif ov02 eq 0 doif ov00 ne 0 setv ov01 0 setv ov02 1 endi endi next
+  part 0 wait 30 pose 0 setv actv 0
+endm
+scrp 2 2 217 1
+  pose 1 snde ding
+  enum 3 2 141 doif ov02 eq 0 doif ov00 ne 1 setv ov01 1 setv ov02 1 endi endi next
+  part 0 wait 30 pose 0 setv actv 0
+endm
+scrp 2 2 217 2
+  pose 1 snde ding
+  enum 3 2 141 doif ov02 eq 0 doif ov00 ne 1 setv ov01 1 setv ov02 1 endi endi next
+  part 0 wait 30 pose 0 setv actv 0
+endm
+scrp 2 2 218 1
+  pose 1 snde ding
+  enum 3 2 141 doif ov02 eq 0 doif ov00 ne 2 setv ov01 2 setv ov02 1 endi endi next
+  part 0 wait 30 pose 0 setv actv 0
+endm
+scrp 2 2 218 2
+  pose 1 snde ding
+  enum 3 2 141 doif ov02 eq 0 doif ov00 ne 2 setv ov01 2 setv ov02 1 endi endi next
+  part 0 wait 30 pose 0 setv actv 0
+endm
+
+* The iris at the top of the shaft (tools/sprites/iris.py, sprite zlir):
+* a machined collar of worn brushed steel and bronze, seen about 4 degrees
+* from above, over the stone lintel (x 4249-4338, y 1543-1571) whose
+* top is a ring of eight blades. Its back (2 1 145, pictures 0-6, shut to
+* open, plane 1390) is behind the pod; its front (2 1 146, picture 7, the
+* ring's near half and the collar's face, plane 1610) is in front of it, so
+* the pod passes through the ring. Both click-through. The lab floor over
+* the shaft is solid in the map (door 32-35, permeability 100), as the
+* shut iris shows; the pod, a vehicle, goes through it.
+inst new: simp zlir 7 0 1390 0 setv cls2 2 1 145 setv attr 0 tran 1 0 pose 0 mvto 4245 1538 slow
+inst new: simp zlir 1 7 1610 0 setv cls2 2 1 146 setv attr 0 tran 1 0 pose 0 mvto 4245 1538 slow
+
+* the callers: modern call pillars, on the lab floor right of the shaft,
+* and on the two platforms standing behind the railings (behind creatures,
+* plane 1300), with the bits of railing that pass in front of them (2 1 144,
+* sprite zlrl, plane 1310, click-through)
+inst new: simp zlbt 2 0 1300 0 setv cls2 2 2 216 setv attr 4 bhvr 2 0 pose 0 mvto 4353 1469 slow
+inst new: simp zlbt 2 0 1300 0 setv cls2 2 2 217 setv attr 4 bhvr 2 0 pose 0 mvto 4445 1664 slow
+inst new: simp zlbt 2 0 1300 0 setv cls2 2 2 218 setv attr 4 bhvr 2 0 pose 0 mvto 4145 1783 slow
+inst new: simp zlrl 2 0 1310 0 setv cls2 2 1 144 setv attr 0 tran 1 0 pose 0 mvto 4445 1664 slow
+inst new: simp zlrl 2 0 1310 0 setv cls2 2 1 144 setv attr 0 tran 1 0 pose 1 mvto 4145 1783 slow

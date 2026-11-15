@@ -1,0 +1,59 @@
+* Dead grendels and ettins float away (openc2e Creatures 2 project, our own
+* scripts). Run by openc2e after the world loads (Additions folder); safe to
+* repeat.
+*
+* A dead norn lies still for 30 s, then floats up through everything above it
+* and out of the top of the world, where it is removed (C2's own creature
+* death script, which openc2e runs as written). The Death Update, built in
+* through builtin-cobs.txt, gives grendels and ettins death scripts of their
+* own: they lie for 60 s and then vanish. The owner asked (2026-11-10) for
+* every creature to float away when it dies, so these replace those two:
+* the same rise as a norn's, each with its own death sound. A body held by
+* the hand when its time comes is let go and removed at once.
+*
+* The rise ignores walls and floors (attr 0). C2's script kept collisions on
+* (attr 64): size 0 passes every doorway, but where solid rock has no room
+* beyond (above the airlock chamber), the body hit it, bounced and lost
+* speed, then sank through every floor to the bottom of the map. A dead
+* ettin in the airlock did this (owner, 2026-11-10). So norns get our own
+* version too: their death record (EVNT) and sound as before.
+scrp 4 1 0 72
+  lock
+  dde: died
+  pose 77 addv ontr 50 snde dead evnt ownr
+  wait 300
+  doif movs eq 1
+    mesg writ pntr 5 kill ownr
+  else
+    setv movs 0 setv size 0 setv attr 0 setv velx 0 setv vely -2
+    loop wait 1 untl posb le 0
+    kill ownr
+  endi
+  unlk
+endm
+scrp 4 2 0 72
+  lock
+  pose 77 addv ontr 50 snde gdie
+  wait 300
+  doif movs eq 1
+    mesg writ pntr 5 kill ownr
+  else
+    setv movs 0 setv size 0 setv attr 0 setv velx 0 setv vely -2
+    loop wait 1 untl posb le 0
+    kill ownr
+  endi
+  unlk
+endm
+scrp 4 3 0 72
+  lock
+  pose 77 addv ontr 50 snde edie
+  wait 300
+  doif movs eq 1
+    mesg writ pntr 5 kill ownr
+  else
+    setv movs 0 setv size 0 setv attr 0 setv velx 0 setv vely -2
+    loop wait 1 untl posb le 0
+    kill ownr
+  endi
+  unlk
+endm

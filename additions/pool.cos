@@ -1,0 +1,39 @@
+* A way to walk out of the boardwalk pool in the far west (openc2e Creatures
+* 2 project, our own script). Run by openc2e after the world loads
+* (Additions folder); safe to repeat. ROOM takes all of a room's data, so
+* each room's own values are passed back.
+*
+* The pool (room 110, water, x 669-1091) lies under the boardwalk (room 109,
+* deck line y 1319). Its walls were solid, the boardwalk's west end opened
+* straight down into it (room 111, the air over the pool's west end), and
+* creatures cannot climb up, so a creature that fell in stayed (owner,
+* 2026-11-10: a trapped norn). The picture already has the way out: at the
+* pool's east end an earth bank rises out of the water (from about y 1400 at
+* x 1080 to 1333 at x 1223) and the boardwalk's east part rests on it. The
+* rooms now follow it:
+* - the pool reaches x 1170, its floor along the painted bed and up the bank
+*   to the water's surface (y 1352) at x 1170;
+* - the boardwalk's east part (x 1170-1342) becomes its own room (113, until
+*   now the sealed pipe chamber under the bank): its floor line starts at
+*   the water's surface where the bank leaves the pool (x 1170, y 1352),
+*   follows the painted bank up to 1333 at x 1223, meets the deck at 1319
+*   by x 1250, and goes on east to room 108 as before. (It first met the
+*   bank as a 33 px step, which creatures cannot climb: a frog norn starved
+*   at its foot, owner 2026-11-11.)
+* - the pipe chamber (with its small lift, 3 2 4) is all of room 112 now,
+*   x 1091-1473 below y 1440;
+* - the boardwalk's west end is a wall: nothing walks off it into the pool
+*   (room 111 stays as the air over the water, where the fish leap).
+room 110 669 1352 1170 1440 room 110 4 room 110 5 room 110 6 room 110 7 room 110 8 room 110 9 room 110 12 room 110 13 room 110 14 room 110 15 room 110 16 room 110 17 room 110 19
+ssfc 110 7 0 68 40 28 100 8 270 8 411 40 471 74 501 88
+room 109 853 1140 1170 1352 room 109 4 room 109 5 room 109 6 room 109 7 room 109 8 room 109 9 room 109 12 room 109 13 room 109 14 room 109 15 room 109 16 room 109 17 room 109 19
+ssfc 109 2 0 33 317 33
+room 113 1170 1140 1342 1440 room 113 4 room 113 5 room 113 6 room 113 7 room 113 8 room 113 9 room 113 12 room 113 13 room 113 14 room 113 15 room 113 16 room 113 17 room 113 19
+ssfc 113 4 0 88 53 107 80 121 172 140
+room 112 1091 1440 1473 1596 room 112 4 room 112 5 room 112 6 room 112 7 room 112 8 room 112 9 room 112 12 room 112 13 room 112 14 room 112 15 room 112 16 room 112 17 room 112 19
+setv door 0 110 113 255
+setv door 0 109 113 255
+setv door 0 113 108 255
+setv door 0 113 112 0
+setv door 0 110 112 0
+setv door 0 109 111 0

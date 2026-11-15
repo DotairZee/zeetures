@@ -1,0 +1,168 @@
+* The path behind the pond's waterfall to the bamboo-cage lift (openc2e
+* Creatures 2 project, our own script; owner's idea, 2026-11-09). Run by
+* openc2e after the world loads (Additions folder, after bridges.cos, which
+* sets the pond's rooms); safe to repeat. ROOM takes all of a room's data,
+* so each room's own values are passed back.
+*
+* The way is along the pond's bed (owner, 2026-11-10: "not from above, but
+* literally just along the pool bed ... going up from the bottom to the left
+* into the cave"). The pond (room 19, water, 53 px deep) is shallow enough
+* to wade: openc2e lets creatures walk into water no deeper than 55 px, and
+* an adult's head stays above it (Room::deepWater). Beyond the pond's west
+* end a rock column (room 20, x 4300-4358) stands between the cave and the
+* lift shaft (room 21), whose middle stop is at y 840. The rooms:
+* - the pond's bed rises at its west end in a ramp (941 to the surface, 888,
+*   over 112 px; it was a near-vertical wall) to the foot of the cave's
+*   entrance, the hollow behind the waterfall;
+* - the rock column (20) is a tunnel behind the rock picture (the world's
+*   own foreground cut-out covers it), its floor almost level (888 at the
+*   pond, 879 at the shaft), then a 39 px step up into the shaft (steps up
+*   to 40 px are walked);
+* - the air over the pond (18) has no floor line (an earlier version had a
+*   walkway along the cave's back shelf; cleared), and no doorway to the bank
+*   or the tunnel; the water opens to the tunnel; the shaft below and the
+*   space under the pond stay closed off from the tunnel.
+* The waterfall (2 3 1) is drawn in front of creatures (plane 2000, was 1),
+* so the path really goes behind it; its mist was already in front.
+room 18 4358 810 4630 888 room 18 4 room 18 5 room 18 6 room 18 7 room 18 8 room 18 9 room 18 12 room 18 13 room 18 14 room 18 15 room 18 16 room 18 17 room 18 19
+ssfc 18 0
+ssfc 19 8 0 53 30 40 70 18 112 0 162 0 222 22 262 45 272 53
+room 20 4300 632 4358 941 room 20 4 room 20 5 room 20 6 room 20 7 room 20 8 room 20 9 room 20 12 room 20 13 room 20 14 room 20 15 room 20 16 room 20 17 room 20 19
+ssfc 20 2 0 62 58 53
+setv door 0 18 17 0
+setv door 0 18 20 0
+setv door 0 20 19 255
+setv door 0 20 21 255
+setv door 0 20 219 0
+setv door 0 20 9 0
+setv door 0 20 23 0
+setv door 0 20 26 0
+enum 2 3 1 plne 2000 next
+*
+* The tunnel's two ends (owner, 2026-11-10). Its entrance: a tall narrow
+* hollow in the cave's west wall behind the waterfall, in the space the
+* owner outlined, with depth inside: zcvm frame 0 behind creatures, so a
+* creature walking west is seen in it until the rock hides it, and frame 1,
+* its part over the dark earth, in front of the rock picture (plane 9001;
+* original art by tools/sprites/cavemouth.py); the waterfall's frames are
+* used water-only,
+* tools/sprites/cavepath.py, so the creature shows around the water). Its
+* exit: the old stone arch west of the lift, its bricked-up back opened into
+* a dark passage with a faint glimmer far inside (zcva frame 1, plane -30),
+* and the arch's right jamb and the log wall beside it drawn again in front
+* of creatures along the opening's edge (zajb, plane 3000, made by
+* cavepath.py from the player's own background), so a creature coming out
+* walks past the jamb's edge into the arch.
+enum 2 3 241 kill targ next
+enum 2 3 242 kill targ next
+enum 2 3 245 kill targ next
+inst new: simp zcvm 1 0 -30 0 setv cls2 2 3 241 setv attr 0 mvto 4338 748 slow
+inst new: simp zcvm 1 1 9001 0 setv cls2 2 3 241 setv attr 0 mvto 4338 748 slow
+inst new: simp zcva 1 1 -30 0 setv cls2 2 3 242 setv attr 0 mvto 4040 712 slow
+inst new: simp zajb 1 0 3000 0 setv cls2 2 3 245 setv attr 0 mvto 4078 700 slow
+*
+* The hidden doorway: rooms cannot run a tunnel behind the lift shaft (the
+* lift needs the shaft's rooms), so a watcher (2 1 150, invisible) carries a
+* creature that walks west through the tunnel, while hidden behind the rock
+* at its west end (centre x 4300-4332, feet at the tunnel's floor, facing
+* left), to the arch: standing on the arch's floor (840) with its right
+* side at x 4180, hidden behind the jamb drawn in front (a creature wider
+* than the jamb's 64 px already shows inside the opening), still walking
+* west, out past the jamb's edge. Going east, a creature crosses the lift's shaft into the
+* rock as before: a script can't tell one bound for the cave from one bound
+* for the lift.
+enum 2 1 150 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 150 setv attr 16 mvto 4320 640 tick 1 slow
+scrp 2 1 150 9
+* inst: in one tick (without it two of every three ticks were skipped while
+* the last look was still running; measured 2026-11-12)
+  inst
+  enum 4 0 0
+    doif movs eq 0
+      setv var0 posl addv var0 posr divv var0 2
+      doif var0 ge 4300
+        doif var0 le 4332
+          doif posb ge 866
+            doif posb le 896
+              doif dirn eq 3
+                setv var1 4180 subv var1 posr addv var1 posl
+                setv var2 839 subv var2 posb addv var2 post
+                mvto var1 var2
+              endi
+            endi
+          endi
+        endi
+      endi
+    endi
+  next
+endm
+*
+* The falls drawn see-through while a creature is behind them (owner,
+* 2026-11-10: checkered with transparent pixels, like the hand). The falls
+* are in front of creatures (plane 2000); a watcher (2 1 151, invisible,
+* every 2 ticks) stipples them (STPL, openc2e's: every other pixel left out
+* in a checkerboard) while any creature overlaps the water (x 4374-4432,
+* y 734-887; the water-only falls' pixels), and draws them whole otherwise.
+* (Its OV00 is 1 while they are stippled.)
+enum 2 1 151 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 151 setv attr 16 mvto 4320 640 tick 2 slow
+scrp 2 1 151 9
+  inst
+  setv var0 0
+  enum 4 0 0
+    doif posr gt 4376
+      doif posl lt 4430
+        doif posb gt 736
+          doif post lt 885
+            setv var0 1
+          endi
+        endi
+      endi
+    endi
+  next
+  setv ov00 var0
+  enum 2 3 1 stpl var0 0 next
+endm
+*
+* The pond's fish kept in the water (owner, 2026-11-10: fish seemed to go
+* above the water and get stuck). The pond (room 19) is open at its sides,
+* to the bank (room 17) and to the hidden tunnel (room 20), so creatures can
+* wade in and out; a doorway can't let creatures through and stop fish, so
+* the pond's fish (2 20 9, which flop about out of water and die after
+* about 30 s) swam out at its edges and were stranded. A watcher (2 1 152,
+* invisible, every 5 ticks) puts any fish found out of water around the
+* pond (x 4300-4900, y 780-1000) back into it, near the edge it left by.
+enum 2 1 152 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 152 setv attr 16 mvto 4320 640 tick 5 slow
+scrp 2 1 152 9
+  inst
+  enum 2 20 0
+    doif spcs eq 9
+      doif rtyp ne 2
+        doif posx gt 4300
+          doif posx lt 4900
+            doif posy gt 780
+              doif posy lt 1000
+                setv var0 4590
+                doif posx lt 4495 setv var0 4385 endi
+                setv velx 0 setv vely 0
+                mvto var0 905
+              endi
+            endi
+          endi
+        endi
+      endi
+    endi
+  next
+endm
+
+* The bamboo-cage lift (3 2 2, cabin x 4172-4275) stands in front of the
+* path: the tunnel from the waterfall crosses its shaft at the middle stop
+* (y 840) and goes on west behind the tower. The lift was at plane 0, behind
+* creatures (1500), so a creature walking through while the lift waited at
+* that stop showed over the cage, as if riding it, though it was hidden by
+* the tower's stone when the lift was elsewhere (owner, 2026-11-13). At
+* plane 1600 the cage is in front of creatures walking past; its riders,
+* drawn at the lift's plane + 1, still show inside it, and the tower's stone
+* pillars (8999) still cover both.
+enum 3 2 2 doif posx gt 4100 and posx lt 4300 plne 1600 endi next

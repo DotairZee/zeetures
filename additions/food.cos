@@ -1,0 +1,942 @@
+* Food for the hungry corners (openc2e Creatures 2 project, our own script
+* and our own art). Ideas from JayD's "Plato Project" (Creatures 2 COB):
+* a bush whose fruit follows the season (his Cornucopia Bush) and hidden
+* patches that keep regrowing the game's berries; none of his files are
+* used. Sprites zfbs (the bush, one picture per season) and zfrt (four
+* fruits, each bud, half-grown, ripe, overripe, then ripe and overripe
+* lying on the ground) are drawn by tools/sprites/fruitbush.py (the bush in four looks: zfbs, zfbm,
+* zfbv, zfbw), and its sea look (zfbk, a kelp clump) and sea fruits
+* (zfrk) by tools/sprites/seaplant.py.
+* Run by openc2e after the world loads (Additions folder); everything here
+* is made anew each load, so the script is safe to repeat.
+
+* The seasonal fruit bush (2 4 141). It is kept between sessions (OV99 =
+* 7461 asks openc2e's world save to keep it). OV00 is its stage (0 seedling,
+* 1 young, 2 full) and OV01 its age in 25-second steps: young after about
+* 25 minutes, full after about an hour. Its picture is stage * 4 + season.
+* Young bushes carry up to two fruits, full ones four; a fruit grows on the
+* bush from a green bud and drops when ripe. OV02 is the bush's look, made
+* to suit where it grows (0 mossy green, sprite zfbs; 1 machine-cave teal
+* and rust, zfbm; 2 volcanic ember-red, zfbv; 3 warm-rock bronze, zfbw; 4 desert sage,
+* zfbd; 5 the sea, a kelp clump, zfbk, whose fruit are sea fruit, zfrk:
+* sea grapes, kelp pod, sea plum, frost pearl);
+* its fruit carries it, so a seedling takes its parent's look, except in
+* the volcano (x 6400 on, below y 1780), where it is always volcanic, and
+* under water, where it is always kelp (owner, 2026-11-11: a bush had
+* seeded on the sea floor); a sea fruit that comes ashore grows a mossy
+* bush.
+* OV03 = 2 marks this version (full-grown 156 x 108).
+scrp 2 4 141 9
+  addv ov01 1
+  doif ov00 eq 0
+    doif ov01 ge 60 setv ov00 1 endi
+  endi
+  doif ov00 eq 1
+    doif ov01 ge 150 setv ov00 2 endi
+  endi
+  setv var8 ov00 mulv var8 4 addv var8 sean pose var8
+  setv var9 ov00 mulv var9 2
+  setv var0 0
+  esee 2 25 141 addv var0 1 next
+  esee 2 25 142 addv var0 1 next
+  esee 2 25 143 addv var0 1 next
+  esee 2 25 144 addv var0 1 next
+  doif var0 lt var9
+    rndv var1 0 1
+    doif var1 eq 0
+      * somewhere in the crown, over the leaves (measured on the pictures
+      * of all four looks in every season: the crown is a dome, so the
+      * height range depends on how far across; young bushes are smaller
+      * and lower)
+      doif ov00 eq 2
+        rndv var3 20 116
+        doif var3 lt 40 rndv var5 47 55 endi
+        doif var3 ge 40
+          doif var3 lt 52 rndv var5 36 54 endi
+        endi
+        doif var3 ge 52
+          doif var3 lt 88 rndv var5 29 56 endi
+        endi
+        doif var3 ge 88
+          doif var3 lt 104 rndv var5 43 59 endi
+        endi
+        doif var3 ge 104 rndv var5 47 65 endi
+      else
+        rndv var3 68 76 rndv var5 52 72
+      endi
+      setv var2 posl addv var2 var3
+      setv var4 post addv var4 var5
+      setv var6 sean mulv var6 6
+      setv var7 sean addv var7 141
+      setv var9 ov02
+      * fruit draw just in front of their bush (OV04 is the bush's plane;
+      * 1400 for a bush from before planes were kept)
+      setv var8 1400
+      doif ov04 ne 0 setv var8 ov04 addv var8 1 endi
+      inst
+      doif var9 eq 5
+        new: simp zfrk 6 var6 var8 0
+      else
+        new: simp zfrt 6 var6 var8 0
+      endi
+      setv cls2 2 25 var7
+      setv attr 0
+      bhvr 0 0
+      setv ov02 var9
+      mvto var2 var4
+      tick 600
+      slow
+    endi
+  endi
+endm
+
+* A fruit's life (pictures: 0 bud, 1 half-grown, 2 ripe, 3 overripe; 4
+* and 5 are ripe and overripe lying on the ground, see event 6 below):
+* it swells on the bush, drops when ripe, goes overripe on the ground, and
+* rots away; now and then a rotting fruit sprouts a seedling bush where it
+* lay, if no bush stands within 200 px and there are fewer than 16.
+scrp 2 25 141 9
+  doif pose eq 0
+    pose 1 tick 600
+  else
+    doif pose eq 1
+      * ripe: it drops, and creatures may eat it
+      pose 2 setv attr 195 bhvr 0 64 setv accg 3 setv rest 30 setv grav 1 tick 6000
+    else
+      * overripe, lying as it was (2 ripe -> 3; 4 ripe on the ground -> 5)
+      setv var9 0
+      doif pose eq 2 pose 3 tick 3000 setv var9 1 endi
+      doif pose eq 4 pose 5 tick 3000 setv var9 1 endi
+      doif var9 eq 0
+        rndv var0 0 4
+        doif var0 eq 0
+          setv var1 0 enum 2 4 141 addv var1 1 next
+          setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
+          doif var1 lt 16
+            * (nor in the dead-end pocket at the east end of the lava
+            * corridor, room 167: a bush there drew hungry creatures into a
+            * corner with one way out; owner, 2026-11-12)
+            doif posl gt 8030
+              doif posb gt 2100
+                doif posb lt 2260 setv var2 1 endi
+              endi
+            endi
+            * (never on a built platform: decks and ledges get potted bushes only)
+            doif posl gt 7100
+              doif posl lt 7700
+                doif posb gt 850
+                  doif posb lt 915 setv var2 1 endi
+                endi
+              endi
+            endi
+            * (nor in the grendel egg chamber, nor on the long platform by
+            * the upper-east lift; owner, 2026-11-09)
+            doif posl gt 6900
+              doif posl lt 7230
+                doif posb gt 1150
+                  doif posb lt 1360 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif posl gt 7220
+              doif posl lt 7940
+                doif posb gt 1290
+                  doif posb lt 1365 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif posl gt 4800
+              doif posl lt 5700
+                doif posb gt 2230
+                  doif posb lt 2310 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif posl gt 7950
+              doif posl lt 8400
+                doif posb gt 1250
+                  doif posb lt 1310 setv var2 1 endi
+                endi
+                doif posb gt 1790
+                  doif posb lt 1850 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif var2 eq 0
+              setv var3 posl subv var3 70 setv var4 posb subv var4 107
+              setv var5 ov02
+              doif posl gt 6400
+                doif posb gt 1780 setv var5 2 endi
+              endi
+              * (in the desert above the incubator: the desert look)
+              doif posl gt 4300
+                doif posl lt 5735
+                  doif posb lt 650 setv var5 4 endi
+                endi
+              endi
+              * (under water: kelp; a sea fruit ashore: mossy)
+              doif rtyp eq 2
+                setv var5 5
+              else
+                doif var5 eq 5 setv var5 0 endi
+              endi
+              inst
+              doif var5 eq 0 new: simp zfbs 12 0 -10 0 endi
+              doif var5 eq 1 new: simp zfbm 12 0 -10 0 endi
+              doif var5 eq 2 new: simp zfbv 12 0 -10 0 endi
+              doif var5 eq 3 new: simp zfbw 12 0 -10 0 endi
+              doif var5 eq 4 new: simp zfbd 12 0 -10 0 endi
+              doif var5 eq 5 new: simp zfbk 12 0 -10 0 endi
+              setv cls2 2 4 141 setv attr 0 setv rnge 150
+              setv ov00 0 setv ov01 0 setv ov02 var5 setv ov03 2 setv ov04 -10 setv ov99 7461
+              mvto var3 var4 pose sean tick 250
+              slow
+            endi
+          endi
+        endi
+        kill ownr
+      endi
+    endi
+  endi
+endm
+scrp 2 25 142 9
+  doif pose eq 0
+    pose 1 tick 600
+  else
+    doif pose eq 1
+      * ripe: it drops, and creatures may eat it
+      pose 2 setv attr 195 bhvr 0 64 setv accg 3 setv rest 30 setv grav 1 tick 6000
+    else
+      * overripe, lying as it was (2 ripe -> 3; 4 ripe on the ground -> 5)
+      setv var9 0
+      doif pose eq 2 pose 3 tick 3000 setv var9 1 endi
+      doif pose eq 4 pose 5 tick 3000 setv var9 1 endi
+      doif var9 eq 0
+        rndv var0 0 4
+        doif var0 eq 0
+          setv var1 0 enum 2 4 141 addv var1 1 next
+          setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
+          doif var1 lt 16
+            * (nor in the dead-end pocket at the east end of the lava
+            * corridor, room 167: a bush there drew hungry creatures into a
+            * corner with one way out; owner, 2026-11-12)
+            doif posl gt 8030
+              doif posb gt 2100
+                doif posb lt 2260 setv var2 1 endi
+              endi
+            endi
+            * (never on a built platform: decks and ledges get potted bushes only)
+            doif posl gt 7100
+              doif posl lt 7700
+                doif posb gt 850
+                  doif posb lt 915 setv var2 1 endi
+                endi
+              endi
+            endi
+            * (nor in the grendel egg chamber, nor on the long platform by
+            * the upper-east lift; owner, 2026-11-09)
+            doif posl gt 6900
+              doif posl lt 7230
+                doif posb gt 1150
+                  doif posb lt 1360 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif posl gt 7220
+              doif posl lt 7940
+                doif posb gt 1290
+                  doif posb lt 1365 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif posl gt 4800
+              doif posl lt 5700
+                doif posb gt 2230
+                  doif posb lt 2310 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif posl gt 7950
+              doif posl lt 8400
+                doif posb gt 1250
+                  doif posb lt 1310 setv var2 1 endi
+                endi
+                doif posb gt 1790
+                  doif posb lt 1850 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif var2 eq 0
+              setv var3 posl subv var3 70 setv var4 posb subv var4 107
+              setv var5 ov02
+              doif posl gt 6400
+                doif posb gt 1780 setv var5 2 endi
+              endi
+              * (in the desert above the incubator: the desert look)
+              doif posl gt 4300
+                doif posl lt 5735
+                  doif posb lt 650 setv var5 4 endi
+                endi
+              endi
+              * (under water: kelp; a sea fruit ashore: mossy)
+              doif rtyp eq 2
+                setv var5 5
+              else
+                doif var5 eq 5 setv var5 0 endi
+              endi
+              inst
+              doif var5 eq 0 new: simp zfbs 12 0 -10 0 endi
+              doif var5 eq 1 new: simp zfbm 12 0 -10 0 endi
+              doif var5 eq 2 new: simp zfbv 12 0 -10 0 endi
+              doif var5 eq 3 new: simp zfbw 12 0 -10 0 endi
+              doif var5 eq 4 new: simp zfbd 12 0 -10 0 endi
+              doif var5 eq 5 new: simp zfbk 12 0 -10 0 endi
+              setv cls2 2 4 141 setv attr 0 setv rnge 150
+              setv ov00 0 setv ov01 0 setv ov02 var5 setv ov03 2 setv ov04 -10 setv ov99 7461
+              mvto var3 var4 pose sean tick 250
+              slow
+            endi
+          endi
+        endi
+        kill ownr
+      endi
+    endi
+  endi
+endm
+scrp 2 25 143 9
+  doif pose eq 0
+    pose 1 tick 600
+  else
+    doif pose eq 1
+      * ripe: it drops, and creatures may eat it
+      pose 2 setv attr 195 bhvr 0 64 setv accg 3 setv rest 30 setv grav 1 tick 6000
+    else
+      * overripe, lying as it was (2 ripe -> 3; 4 ripe on the ground -> 5)
+      setv var9 0
+      doif pose eq 2 pose 3 tick 3000 setv var9 1 endi
+      doif pose eq 4 pose 5 tick 3000 setv var9 1 endi
+      doif var9 eq 0
+        rndv var0 0 4
+        doif var0 eq 0
+          setv var1 0 enum 2 4 141 addv var1 1 next
+          setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
+          doif var1 lt 16
+            * (nor in the dead-end pocket at the east end of the lava
+            * corridor, room 167: a bush there drew hungry creatures into a
+            * corner with one way out; owner, 2026-11-12)
+            doif posl gt 8030
+              doif posb gt 2100
+                doif posb lt 2260 setv var2 1 endi
+              endi
+            endi
+            * (never on a built platform: decks and ledges get potted bushes only)
+            doif posl gt 7100
+              doif posl lt 7700
+                doif posb gt 850
+                  doif posb lt 915 setv var2 1 endi
+                endi
+              endi
+            endi
+            * (nor in the grendel egg chamber, nor on the long platform by
+            * the upper-east lift; owner, 2026-11-09)
+            doif posl gt 6900
+              doif posl lt 7230
+                doif posb gt 1150
+                  doif posb lt 1360 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif posl gt 7220
+              doif posl lt 7940
+                doif posb gt 1290
+                  doif posb lt 1365 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif posl gt 4800
+              doif posl lt 5700
+                doif posb gt 2230
+                  doif posb lt 2310 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif posl gt 7950
+              doif posl lt 8400
+                doif posb gt 1250
+                  doif posb lt 1310 setv var2 1 endi
+                endi
+                doif posb gt 1790
+                  doif posb lt 1850 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif var2 eq 0
+              setv var3 posl subv var3 70 setv var4 posb subv var4 107
+              setv var5 ov02
+              doif posl gt 6400
+                doif posb gt 1780 setv var5 2 endi
+              endi
+              * (in the desert above the incubator: the desert look)
+              doif posl gt 4300
+                doif posl lt 5735
+                  doif posb lt 650 setv var5 4 endi
+                endi
+              endi
+              * (under water: kelp; a sea fruit ashore: mossy)
+              doif rtyp eq 2
+                setv var5 5
+              else
+                doif var5 eq 5 setv var5 0 endi
+              endi
+              inst
+              doif var5 eq 0 new: simp zfbs 12 0 -10 0 endi
+              doif var5 eq 1 new: simp zfbm 12 0 -10 0 endi
+              doif var5 eq 2 new: simp zfbv 12 0 -10 0 endi
+              doif var5 eq 3 new: simp zfbw 12 0 -10 0 endi
+              doif var5 eq 4 new: simp zfbd 12 0 -10 0 endi
+              doif var5 eq 5 new: simp zfbk 12 0 -10 0 endi
+              setv cls2 2 4 141 setv attr 0 setv rnge 150
+              setv ov00 0 setv ov01 0 setv ov02 var5 setv ov03 2 setv ov04 -10 setv ov99 7461
+              mvto var3 var4 pose sean tick 250
+              slow
+            endi
+          endi
+        endi
+        kill ownr
+      endi
+    endi
+  endi
+endm
+scrp 2 25 144 9
+  doif pose eq 0
+    pose 1 tick 600
+  else
+    doif pose eq 1
+      * ripe: it drops, and creatures may eat it
+      pose 2 setv attr 195 bhvr 0 64 setv accg 3 setv rest 30 setv grav 1 tick 6000
+    else
+      * overripe, lying as it was (2 ripe -> 3; 4 ripe on the ground -> 5)
+      setv var9 0
+      doif pose eq 2 pose 3 tick 3000 setv var9 1 endi
+      doif pose eq 4 pose 5 tick 3000 setv var9 1 endi
+      doif var9 eq 0
+        rndv var0 0 4
+        doif var0 eq 0
+          setv var1 0 enum 2 4 141 addv var1 1 next
+          setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
+          doif var1 lt 16
+            * (nor in the dead-end pocket at the east end of the lava
+            * corridor, room 167: a bush there drew hungry creatures into a
+            * corner with one way out; owner, 2026-11-12)
+            doif posl gt 8030
+              doif posb gt 2100
+                doif posb lt 2260 setv var2 1 endi
+              endi
+            endi
+            * (never on a built platform: decks and ledges get potted bushes only)
+            doif posl gt 7100
+              doif posl lt 7700
+                doif posb gt 850
+                  doif posb lt 915 setv var2 1 endi
+                endi
+              endi
+            endi
+            * (nor in the grendel egg chamber, nor on the long platform by
+            * the upper-east lift; owner, 2026-11-09)
+            doif posl gt 6900
+              doif posl lt 7230
+                doif posb gt 1150
+                  doif posb lt 1360 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif posl gt 7220
+              doif posl lt 7940
+                doif posb gt 1290
+                  doif posb lt 1365 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif posl gt 4800
+              doif posl lt 5700
+                doif posb gt 2230
+                  doif posb lt 2310 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif posl gt 7950
+              doif posl lt 8400
+                doif posb gt 1250
+                  doif posb lt 1310 setv var2 1 endi
+                endi
+                doif posb gt 1790
+                  doif posb lt 1850 setv var2 1 endi
+                endi
+              endi
+            endi
+            doif var2 eq 0
+              setv var3 posl subv var3 70 setv var4 posb subv var4 107
+              setv var5 ov02
+              doif posl gt 6400
+                doif posb gt 1780 setv var5 2 endi
+              endi
+              * (in the desert above the incubator: the desert look)
+              doif posl gt 4300
+                doif posl lt 5735
+                  doif posb lt 650 setv var5 4 endi
+                endi
+              endi
+              * (under water: kelp; a sea fruit ashore: mossy)
+              doif rtyp eq 2
+                setv var5 5
+              else
+                doif var5 eq 5 setv var5 0 endi
+              endi
+              inst
+              doif var5 eq 0 new: simp zfbs 12 0 -10 0 endi
+              doif var5 eq 1 new: simp zfbm 12 0 -10 0 endi
+              doif var5 eq 2 new: simp zfbv 12 0 -10 0 endi
+              doif var5 eq 3 new: simp zfbw 12 0 -10 0 endi
+              doif var5 eq 4 new: simp zfbd 12 0 -10 0 endi
+              doif var5 eq 5 new: simp zfbk 12 0 -10 0 endi
+              setv cls2 2 4 141 setv attr 0 setv rnge 150
+              setv ov00 0 setv ov01 0 setv ov02 var5 setv ov03 2 setv ov04 -10 setv ov99 7461
+              mvto var3 var4 pose sean tick 250
+              slow
+            endi
+          endi
+        endi
+        kill ownr
+      endi
+    endi
+  endi
+endm
+
+* When a falling fruit hits the floor (event 6, collision) it lies on its
+* side: pictures 4 and 5. The round sunplum's are the same as upright.
+scrp 2 25 141 6
+  doif pose eq 2 pose 4 endi
+  doif pose eq 3 pose 5 endi
+endm
+scrp 2 25 142 6
+  doif pose eq 2 pose 4 endi
+  doif pose eq 3 pose 5 endi
+endm
+scrp 2 25 143 6
+  doif pose eq 2 pose 4 endi
+  doif pose eq 3 pose 5 endi
+endm
+scrp 2 25 144 6
+  doif pose eq 2 pose 4 endi
+  doif pose eq 3 pose 5 endi
+endm
+
+* The fruits. Eating one gives its own mix (chemicals: 36 pleasure-need
+* decrease, 37 hunger decrease, 70 glucose, 73 starch, 74 fat, 79 protein,
+* 97 water, 150 vitamin E, 151 vitamin C); an overripe one gives about
+* half. After a while a fruit goes overripe, and later rots away.
+* Spring: dewberries, light and juicy.
+scrp 2 25 141 12
+  snde chwp
+  * ripe (pictures 2 and 4) gives the full mix
+  setv var0 pose doif var0 gt 3 subv var0 2 endi
+  doif var0 le 2
+    stim writ from 30 255 0 0 37 60 70 60 97 60 151 50
+  else
+    stim writ from 30 255 0 0 37 30 70 30 97 30 151 20
+  endi
+  kill ownr
+endm
+* Summer: sunplums, sweet.
+scrp 2 25 142 12
+  snde chwp
+  * ripe (pictures 2 and 4) gives the full mix
+  setv var0 pose doif var0 gt 3 subv var0 2 endi
+  doif var0 le 2
+    stim writ from 30 255 0 0 37 80 70 90 97 40 36 40
+  else
+    stim writ from 30 255 0 0 37 40 70 45 97 20 36 20
+  endi
+  kill ownr
+endm
+* Autumn: emberpears, starchy.
+scrp 2 25 143 12
+  snde chwp
+  * ripe (pictures 2 and 4) gives the full mix
+  setv var0 pose doif var0 gt 3 subv var0 2 endi
+  doif var0 le 2
+    stim writ from 30 255 0 0 37 90 73 110 74 30 150 30
+  else
+    stim writ from 30 255 0 0 37 45 73 55 74 15 150 15
+  endi
+  kill ownr
+endm
+* Winter: frostnuts, rich and long-lasting.
+scrp 2 25 144 12
+  snde chwp
+  * ripe (pictures 2 and 4) gives the full mix
+  setv var0 pose doif var0 gt 3 subv var0 2 endi
+  doif var0 le 2
+    stim writ from 30 255 0 0 37 80 74 90 79 90 73 40
+  else
+    stim writ from 30 255 0 0 37 40 74 45 79 45 73 20
+  endi
+  kill ownr
+endm
+
+* Berry shrubs (2 4 142; owner, 2026-11-09). The red berries (the game's
+* own, 2 25 11) used to come from hidden patches (after JayD's), with
+* nothing to show where, and with no timer of their own they never rotted:
+* carried off, they lay about for good, and some landed inside the rock by
+* the glass dome. Now each place has a shrub of our own (berrybush.py: zbrd
+* in the dome's garden, zbrp potted on the bamboo walkway in the east caves; one
+* picture per season). Every 60 seconds it takes the season's picture and,
+* if fewer than five berries are near, hangs one more in its crown. The
+* berries carry the game's own timer script (tick 300): they hang, fall
+* (at once in spring and summer, after a few minutes in autumn and
+* winter) and rot about ten minutes later unless a creature is carrying
+* one.
+scrp 2 4 142 9
+  pose sean
+  setv var0 0
+  esee 2 25 11 addv var0 1 next
+  doif var0 lt 5
+    setv var2 posl rndv var3 18 66 addv var2 var3
+    setv var4 post rndv var3 6 26 addv var4 var3
+    inst
+    new: simp bery 1 4 0 0
+    setv cls2 2 25 11
+    setv attr 195
+    bhvr 0 64
+    setv accg 3
+    setv rest 30
+    mvto var2 var4
+    setv grav 0
+    tick 300
+    slow
+  endi
+  * berries that ended up inside the rock between the far-east deck and
+  * the dome (x 7934-8143, above the deck) go
+  enum 2 25 11
+    doif posl gt 7930 doif posr lt 8147 doif post gt 690 doif posb lt 1168 kill targ endi endi endi endi
+  next
+endm
+
+* clear what an earlier load made (the bushes are kept by the world save,
+* so they stay; fruit on them regrows)
+enum 2 1 141 kill targ next
+enum 2 25 141 kill targ next
+enum 2 25 142 kill targ next
+enum 2 25 143 kill targ next
+enum 2 25 144 kill targ next
+
+* Sea plants (owner, 2026-11-11). A bush standing in water is made again
+* as kelp (the sea look), in place, its stage, age and picture kept; one
+* that seeded on the sea floor by the submarine's dock arm, which hid part
+* of it, grows instead on the open sea floor to the west, where the three
+* clams lay (owner's choice; picture's top-left at 6592, 1004, its holdfast
+* on the floor at y 1111); the clams make room, below.
+reps 20
+  setv var0 0
+  enum 2 4 141
+    doif rtyp eq 2
+      doif ov02 ne 5
+        setv var0 1 setv var1 posl setv var2 post setv var3 ov00 setv var4 ov01 setv var6 pose
+      endi
+    endi
+  next
+  doif var0 eq 1
+    enum 2 4 141
+      doif posl eq var1
+        doif post eq var2 kill targ endi
+      endi
+    next
+    doif var1 gt 6950
+      doif var1 lt 7200
+        doif var2 gt 850
+          doif var2 lt 1050
+            setv var1 6592 setv var2 1004
+          endi
+        endi
+      endi
+    endi
+    inst
+    new: simp zfbk 12 0 -10 0
+    setv cls2 2 4 141 setv attr 0 setv rnge 150
+    setv ov00 var3 setv ov01 var4 setv ov02 5 setv ov03 2 setv ov04 -10 setv ov99 7461
+    mvto var1 var2 pose var6 tick 250
+    slow
+  endi
+repe
+
+* The world's three clams (2 19 3) on the open sea floor west of the
+* planter (x 6618-6746) make room for the kelp: each load (the world file
+* puts them back) they are set a little to the west, in the same
+* overlapping row (x 6420-6552), on the sandy slope by the mooring rope,
+* clear of the purple shell.
+setv var0 6420
+enum 2 19 3
+  doif posl gt 6580
+    doif posl lt 6780
+      doif posb gt 1080
+        doif posb lt 1140
+          mvto var0 1000
+          setv vely 1
+          addv var0 34
+        endi
+      endi
+    endi
+  endi
+next
+
+* the bushes, standing on the floor at each hungry spot, in the look that
+* suits the place (x, floor y, look): 5900/2255 east caves, mossy; 6400/2240 east caves, machine cave; 6900/2198 by the volcano; 7500/2151 in the volcano; 7300/906 upper east, warm rock; 7600/906 upper east, warm rock; 8150/1304 far east platform, amber lamp; 8100/1845 far east, beside the volcano.
+* A bush picture's base is 107 px below its top, 78 px in. Planted
+* full-grown, once: after that the world save keeps them, with any that
+* have sprouted since. Bushes from before this version (no OV03 = 2,
+* smaller pictures) are replaced.
+enum 2 4 141 doif ov03 ne 2 kill targ endi next
+* Bushes are drawn behind everything else (plane -10, kept in OV04), so
+* machines that share their spot (the submarine's dock, lifts, the
+* genetics machine), all at plane 0 plus their parts' offsets, stand in
+* front of them. A bush from before that is made again in place, its
+* look, stage, age and picture kept.
+reps 40
+  setv var0 0
+  enum 2 4 141
+    doif ov04 ne -10
+      setv var0 1 setv var1 posl setv var2 post setv var3 ov00 setv var4 ov01
+      setv var5 ov02 setv var6 pose
+    endi
+  next
+  doif var0 eq 1
+    enum 2 4 141
+      doif ov04 ne -10
+        doif posl eq var1
+          doif post eq var2 kill targ endi
+        endi
+      endi
+    next
+    inst
+    doif var5 eq 0 new: simp zfbs 12 0 -10 0 endi
+    doif var5 eq 1 new: simp zfbm 12 0 -10 0 endi
+    doif var5 eq 2 new: simp zfbv 12 0 -10 0 endi
+    doif var5 eq 3 new: simp zfbw 12 0 -10 0 endi
+    doif var5 eq 4 new: simp zfbd 12 0 -10 0 endi
+    doif var5 eq 5 new: simp zfbk 12 0 -10 0 endi
+    setv cls2 2 4 141 setv attr 0 setv rnge 150
+    setv ov00 var3 setv ov01 var4 setv ov02 var5 setv ov03 2 setv ov04 -10 setv ov99 7461
+    mvto var1 var2 pose var6 tick 250
+    slow
+  endi
+repe
+* Bushes on built platforms (the submarine dock and upper-east ledge, the
+* amber-lamp deck, the volcano lift platform) stand in a copper planter
+* (sprites zfpw/zfpv, 128 px tall: same crown, 20 px higher; OV05 = 1).
+* One planted before that is made again in its pot.
+setv var0 0
+enum 2 4 141
+  doif posl eq 7222
+    doif post eq 799
+      doif ov05 ne 1 setv var0 1 setv var3 ov00 setv var4 ov01 setv var6 pose kill targ endi
+    endi
+  endi
+next
+doif var0 eq 1
+  inst new: simp zfpw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 setv ov00 var3 setv ov01 var4 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov05 1 setv ov99 7461 mvto 7222 779 pose var6 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 7522
+    doif post eq 799
+      doif ov05 ne 1 setv var0 1 setv var3 ov00 setv var4 ov01 setv var6 pose kill targ endi
+    endi
+  endi
+next
+doif var0 eq 1
+  inst new: simp zfpw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 setv ov00 var3 setv ov01 var4 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov05 1 setv ov99 7461 mvto 7522 779 pose var6 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 8072
+    doif post eq 1197
+      doif ov05 ne 1 setv var0 1 setv var3 ov00 setv var4 ov01 setv var6 pose kill targ endi
+    endi
+  endi
+next
+doif var0 eq 1
+  inst new: simp zfpw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 setv ov00 var3 setv ov01 var4 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov05 1 setv ov99 7461 mvto 8072 1177 pose var6 tick 250 slow
+endi
+* (it was first put at 5520/2135, on the old floor line that rose above
+* the planks; one put there moves down onto the planks)
+enum 2 4 141 doif posl eq 5520 doif post eq 2135 mvto 5520 2157 endi endi next
+* The east caves' bush (5822/2148) stood behind the doghouse (owner,
+* 2026-11-09): it goes onto the boardwalk over the pool to the left, in a
+* copper planter (zfps, mossy look), its right edge short of the bamboo lift
+* (5520/2157 on the planks, room 44's floor now flat at 2285 there). No sprouting on the
+* boardwalk or in the pool below it.
+setv var0 0
+enum 2 4 141
+  doif posl eq 5822
+    doif post eq 2148 setv var0 1 setv var3 ov00 setv var4 ov01 setv var6 pose kill targ endi
+  endi
+next
+doif var0 eq 1
+  inst new: simp zfps 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 setv ov00 var3 setv ov01 var4 setv ov02 0 setv ov03 2 setv ov04 -10 setv ov05 1 setv ov99 7461 mvto 5520 2157 pose var6 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 8022
+    doif post eq 1738
+      doif ov05 ne 1 setv var0 1 setv var3 ov00 setv var4 ov01 setv var6 pose kill targ endi
+    endi
+  endi
+next
+doif var0 eq 1
+  inst new: simp zfpv 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 setv ov00 var3 setv ov01 var4 setv ov02 2 setv ov03 2 setv ov04 -10 setv ov05 1 setv ov99 7461 mvto 8022 1718 pose var6 tick 250 slow
+endi
+* Moved out from behind things (owner, 2026-11-09): six bushes were hidden
+* or out of place. The submarine dock's (7222/779, behind the docked sub)
+* goes to the right end of the upper-east deck, past the lift cables (7582/779, 8 px left of first placed: it hung over the deck's edge, owner; left of the caller a foreground rock pillar hides it); the deck's own
+* (7522/779, behind the lift's cables) to the long platform right of that
+* lift (7640/1198, room 156, floor 1326); the amber-lamp deck's (8072/1177,
+* behind its caller and the lift) to the left of the caller (7912/1177); the
+* volcano's (7422/2044, behind the lift's cables and a crucible) along the
+* black rocks to 7640/2051 (floor about 2158 there). The volcano lift
+* platform's potted one (8022/1718, behind the lift cage; the platform has
+* no other room) comes down to the volcano floor at 7860/2054 out of its pot
+* (zfbv, volcanic look). A bush that sprouted in the grendel egg chamber
+* (x 6900-7230, y 1150-1360: among the eggs, and in the volcanic look) is
+* removed; none sprout there now. Stage, age and picture are kept.
+enum 2 4 141
+  doif posl eq 7222 doif post eq 779 mvto 7582 779 endi endi
+  doif posl eq 7590 doif post eq 779 mvto 7582 779 endi endi
+  doif posl eq 7522 doif post eq 779 mvto 7640 1198 endi endi
+  doif posl eq 8072 doif post eq 1177 mvto 7912 1177 endi endi
+  doif posl eq 7422 doif post eq 2044 mvto 7640 2051 endi endi
+  doif posl gt 6900 doif posl lt 7230 doif posb gt 1150 doif posb lt 1360 kill targ endi endi endi endi
+* (an unpotted bush on the deck by the upper-east lift, x 7220-7940: one
+* sprouted from a fallen fruit between its two potted ones and settled with
+* its feet at 1343, below the deck's floor (1326), past the sprouting check,
+* which then stopped at 1335; owner, 2026-11-14, "awkward")
+  doif ov05 ne 1 doif posl gt 7220 doif posl lt 7940 doif posb gt 1290 doif posb lt 1365 kill targ endi endi endi endi endi
+next
+setv var0 0
+enum 2 4 141
+  doif posl eq 8022
+    doif post eq 1718 setv var0 1 setv var3 ov00 setv var4 ov01 setv var6 pose kill targ endi
+  endi
+next
+doif var0 eq 1
+  inst new: simp zfbv 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 setv ov00 var3 setv ov01 var4 setv ov02 2 setv ov03 2 setv ov04 -10 setv ov05 0 setv ov99 7461 mvto 7860 2054 pose var6 tick 250 slow
+endi
+setv var0 0 enum 2 4 141 addv var0 1 next
+doif var0 eq 0
+  inst new: simp zfps 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 5520 2157 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+  inst new: simp zfbm 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 6322 2133 setv ov00 2 setv ov01 150 setv ov02 1 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+  inst new: simp zfbv 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 6822 2091 setv ov00 2 setv ov01 150 setv ov02 2 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+  inst new: simp zfbv 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 7640 2051 setv ov00 2 setv ov01 150 setv ov02 2 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+  inst new: simp zfpw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 7582 779 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+  inst new: simp zfpw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 7640 1198 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+  inst new: simp zfpw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 7912 1177 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+  inst new: simp zfbv 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 7860 2054 setv ov00 2 setv ov01 150 setv ov02 2 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+
+* Two bushes in the desert above the incubator (owner, 2026-11-08), where the
+* removed cacti stood, in the desert look (zfbd, OV02 = 4): centred at x 5000
+* and 5370 on the sand (y 584 and 578). Planted full-grown wherever one is
+* missing, so worlds that already have bushes get them too.
+setv var0 0
+enum 2 4 141
+  doif posl eq 4922
+    doif post eq 477 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfbd 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 4922 477 setv ov00 2 setv ov01 150 setv ov02 4 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 5292
+    doif post eq 471 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfbd 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 5292 471 setv ov00 2 setv ov01 150 setv ov02 4 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+
+* Two bushes at the cave lift's stops (owner chose both from the mock-ups,
+* 2026-11-14: food-bushes-cave-lift-mockups.png). 20-30 hungry creatures
+* crowded the cave lift (3 2 3), riding between its two stops, neither with
+* any food: the glass greenhouse above (room 93, floor 2149) gets a mossy
+* bush between its two creeping plants (2 4 5 at x 1902-1990 and
+* 2247-2335), clear of the lift (x 2220); the treasure cave below (room
+* 100, floor 2321) a warm-rock one in front of the big gold pot, clear of
+* the lift's call button (2 2 2 at x 2143-2175). Planted full-grown wherever
+* one is missing.
+setv var0 0
+enum 2 4 141
+  doif posl eq 1993
+    doif post eq 2042 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfbs 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 1993 2042 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 1972
+    doif post eq 2214 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfbw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 1972 2214 setv ov00 2 setv ov01 150 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+
+* the berry shrubs, standing on the floor (made again each load; the old
+* hidden patches 2 1 141 are cleared above): the dome's garden at the far
+* east top (8222/969, floor 1029, clear of the lamp machine) and the bamboo walkway
+* in the east caves (5566/1780, floor 1858), in a terracotta pot (zbrp:
+* on a built walkway a bush stands in a pot, owner). Right of the rope lift the
+* bamboo scaffold is drawn in front (an overlay at plane 9000), so the
+* shrub stands at the walkway's open left end, and the lift's call button
+* there (2 2 2, at 5644/1759) moves 40 px right, nearer its lift, to make
+* room. Every berry gets the game's timer, so ones lying about from before
+* rot too.
+enum 2 4 142 kill targ next
+inst new: simp zbrd 4 0 -10 0 setv cls2 2 4 142 setv attr 0 setv rnge 200 mvto 8222 969 pose sean tick 600 slow
+inst new: simp zbrp 4 0 -10 0 setv cls2 2 4 142 setv attr 0 setv rnge 200 mvto 5566 1780 pose sean tick 600 slow
+enum 2 2 2 doif posl eq 5644 doif post eq 1759 mvto 5684 1759 endi endi next
+enum 2 25 11 tick 300 next
+enum 2 25 11
+  doif posl gt 7930 doif posr lt 8147 doif post gt 690 doif posb lt 1168 kill targ endi endi endi endi
+next
+
+* The bush that seeded itself in the dead-end pocket at the east end of the
+* lava corridor (room 167, x 8040-8240; its east side is solid and the only
+* way out is west) drew hungry creatures into the corner, where they stayed
+* (owner, 2026-11-12: "move it"). It moves west along the corridor to the
+* lava-rock floor at x 6995-7151 (floor y ~2176), beside the bush by the
+* volcano's mouth (6822-6978) and clear of the big pot east of it (from
+* x ~7158, which hid its corner at 7100); the two on the machine ledge
+* (7640, 7860) are further east;
+* the fruit still on it goes with it. Only a bush found in the pocket moves,
+* so this is safe to repeat; no new one sprouts there (above).
+enum 2 4 141
+  doif posl gt 8030
+    doif post gt 1950
+      doif post lt 2200
+        setv var0 posl setv var1 post setv var2 posr setv var3 posb
+        mvto 6995 2069
+        setv var4 posl subv var4 var0 setv var5 post subv var5 var1
+        enum 2 25 0
+          doif attr eq 0
+            doif posx gt var0 doif posx lt var2 doif posy gt var1 doif posy lt var3
+              setv var6 posl addv var6 var4 setv var7 post addv var7 var5 mvto var6 var7
+            endi endi endi endi
+          endi
+        next
+      endi
+    endi
+  endi
+next

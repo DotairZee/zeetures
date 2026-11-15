@@ -1,0 +1,31 @@
+* The cactus seed launchers (openc2e Creatures 2 project, our own script).
+* The game's two launchers, 2 9 1 (sprite clau, fires cactus seeds 2 21 2)
+* and 2 9 23 (slau, fires 2 21 6), start in and above the desert (x 5238 on
+* the sand, x 5749 on a shelf). The owner wants creatures to bring them to
+* the desert only with real effort (2026-11-09), so a world starts with both
+* hidden at the west end of the glass tube under the Gelsemium pit (room
+* 189, floor about y 1085 there), some 4000 px from the desert; the way out
+* is the sand ramp up to the pit walkway. Creatures can carry them (attr 199).
+* They are kept objects (OV99 = 7461; openc2e saves them with the world), so
+* wherever creatures take them, they stay. At each load: if a kept launcher
+* of that kind is already in the world, the world file's own copy is
+* removed; if not (a new world), the world file's copy is moved to the tube
+* and marked kept. Run by openc2e after the world loads (Additions folder);
+* safe to repeat.
+setv var0 0
+enum 2 9 1 doif ov99 eq 7461 setv var0 1 endi next
+doif var0 eq 1
+  enum 2 9 1 doif ov99 ne 7461 kill targ endi next
+else
+  enum 2 9 1 mvto 850 1030 setv ov99 7461 next
+endi
+enum 2 9 1 setv grav 1 next
+
+setv var0 0
+enum 2 9 23 doif ov99 eq 7461 setv var0 1 endi next
+doif var0 eq 1
+  enum 2 9 23 doif ov99 ne 7461 kill targ endi next
+else
+  enum 2 9 23 mvto 948 1030 setv ov99 7461 next
+endi
+enum 2 9 23 setv grav 1 next

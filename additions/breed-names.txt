@@ -1,0 +1,17 @@
+# Names for the breeds that come with Creatures 2 (openc2e, Breeder's Kit):
+# species|slot|name, species 0 norn, 1 grendel, 2 ettin. Names as the
+# community knows them (creatures.wiki, "Creatures 2 breed slot list").
+# Imported breeds keep their own names (breeds.txt).
+0|a|Brown Mouse
+0|b|White Haired Pixie
+0|c|Horse
+0|d|Santa
+0|e|Purple Mountain
+0|f|Forest
+0|g|Ron
+0|h|Hebe
+0|i|Emerald
+0|j|Pixie
+0|k|Golden Desert
+1|a|Bulbous
+2|a|Worker

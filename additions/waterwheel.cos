@@ -1,0 +1,8 @@
+* The waterwheel by the cave lift turns the other way (owner, 2026-11-14).
+* Run by openc2e after the world loads (Additions folder); safe to repeat.
+*
+* The wheel (2 3 11, x 2873-3021) and the smaller wheel behind it
+* (x 2715-2815) have no scripts: the world file gives each a looping
+* animation of frames 0 to 4. Played 4 to 0 instead, they turn the other
+* way, with the stream that now carries creatures east beneath them.
+enum 2 3 11 anim [43210R] next

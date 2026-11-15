@@ -1,0 +1,109 @@
+* Bridges (openc2e Creatures 2 project, our own script and our own art).
+* Run by openc2e after the world loads (Additions folder); the bridge
+* objects are made anew each load and the room edits are safe to repeat.
+*
+* Upper east, airlock side: a catwalk across the gap between the platform
+* west of it (room 156, floor y 1326) and the one east of it (room 182,
+* floor y 1304). The gap is room 227, x 7720-7934, whose floor was an
+* open door into room 177 below, so creatures walking east fell through.
+* Sprite zcwk is drawn by tools/sprites/catwalk.py (no railings; deck
+* joins measured against both platforms), placed at x 7720, y 1240.
+
+* the walkway: a floor line rising from the west platform's floor (room
+* bottom, 0 up) to the east platform's (22 px up at the right wall), and
+* the floor door below made as solid as the platforms' own floors
+ssfc 227 2 0 0 214 22
+setv door 0 227 177 100
+
+* the catwalk picture, behind creatures (plane 1500) and objects
+enum 2 3 220 kill targ next
+inst new: simp zcwk 1 0 600 0 setv cls2 2 3 220 setv attr 0 mvto 7720 1240 slow
+
+* West, the Gelsemium pit: a sand ramp down into the glass observation
+* tube under the walkway, whose west end looks out into the sea. The pit
+* (room 202, x 1211-1334) used to drop creatures 145 px into the tube
+* (room 189, x 840-1473), which had no other way in or out. Creatures only
+* change rooms by walking out of a room's side, so the ramp gets a room of
+* its own: 202 grows into one tall room, x 1211-1440, y 819-1140, whose
+* floor follows the owner's sketched line: along the top of the tube's
+* dune (y 1085 at the sea end to 1062 at x 1211), leaving it gently and
+* steepening to the east walkway (y 964 at x 1440). The east walkway
+* (201) now starts at x 1440, and the tube (189) keeps x 840-1211 with the
+* sea end. The mushroom alcove (200) to the west is left as a ledge: a
+* creature there can drop onto the ramp but cannot climb back.
+* ROOM takes all the room's data, so each room's own values are passed back.
+room 202 1211 819 1440 1140 room 202 4 0 room 202 6 room 202 7 room 202 8 room 202 9 room 202 12 room 202 13 room 202 14 room 202 15 room 202 16 room 202 17 room 202 19
+ssfc 202 7 0 78 47 82 79 86 117 99 159 125 201 153 229 176
+room 201 1440 819 1553 990 room 201 4 room 201 5 room 201 6 room 201 7 room 201 8 room 201 9 room 201 12 room 201 13 room 201 14 room 201 15 room 201 16 room 201 17 room 201 19
+ssfc 201 2 0 26 113 22
+room 189 840 990 1211 1140 room 189 4 room 189 5 room 189 6 room 189 7 room 189 8 room 189 9 room 189 12 room 189 13 room 189 14 room 189 15 room 189 16 room 189 17 room 189 19
+ssfc 189 4 0 55 138 62 327 73 371 78
+setv door 0 202 201 255
+setv door 0 202 189 255
+
+* the spring toy (2 13 1) that stood at the foot of the ramp goes: it
+* bounced creatures up out of the tube and onto the alcove ledge. Only a
+* spring in the ramp and tube area is removed, so others elsewhere stay.
+enum 2 13 1 doif posl lt 1500 doif posr gt 1150 doif post lt 1125 doif posb gt 980 kill targ endi endi endi endi next
+
+* the foreground overlay piece over the tube's east half (family 1, sprite
+* fore, plane 8999, at x 1155, y 952, 384x224) draws the pit stones, the
+* brass band and a dithered glass sheen in front of everything, so it
+* covered the ramp (the sheen showed as a mesh on the sand). The
+* background has the same stones and band, so only that piece goes.
+enum 1 0 0 doif posl eq 1155 doif post eq 952 kill targ endi endi next
+
+* the column east of the ramp: removing the overlay piece above also
+* removed the front copy of the column's foot and base slab, so creatures
+* walking behind the column showed their feet. Sprite zpln (our own, from
+* tools/sprites/plinth.py) puts a plinth back in front, at the overlay's
+* plane.
+enum 2 3 226 kill targ next
+inst new: simp zpln 1 0 8999 0 setv cls2 2 3 226 setv attr 0 mvto 1448 953 slow
+
+* the ramp's picture: sprite zsrp, drawn by tools/sprites/sandramp.py (the
+* tube's dune built up into a sand ramp, the opening above it, and the
+* glass reflection west of it painted out so the tube's glass ends at the
+* middle brass band), placed at x 1205, y 950, behind creatures
+enum 2 3 225 kill targ next
+inst new: simp zsrp 1 0 600 0 setv cls2 2 3 225 setv attr 0 mvto 1205 950 slow
+
+* The pond by the incubator (owner, 2026-11-09): a creature that fell or was
+* dropped in could not get out (the doorways from the water, room 19, to
+* the bank, room 17, and to the lift's side were solid). Its right bank now
+* slopes up out of the water along the background's own bank, which meets
+* the water at about x 4630 and rises to the water pump's mound (y ~855 at
+* x 4715). The pond's rooms (18 air, 19 water) end at x 4630 instead of
+* 4680 and the bank (17) starts there. Room 19's floor runs flat at y 941 to
+* x 4520, then rises to the water's surface (888) at 4630; the bank's floor
+* goes on up from 888 to the mound and back down to its old level (866).
+* Room 19 is only as tall as the water, so at its right end it narrows to
+* nothing and the fish stay in. At its left end the floor rises steeply
+* (941 to 888 over 22 px), too steep to walk: a norn walking west in the
+* water used to reach the wall at x 4358, where its foot counted as in the
+* rock column beyond (room 20, its doorway to the water solid), and it could
+* not walk back out (regression batch reg4). Doorways: water to bank open; air over the
+* pond to the bank stays solid (no walking out onto the water), the rest
+* as they were.
+room 18 4358 810 4630 888 room 18 4 room 18 5 room 18 6 room 18 7 room 18 8 room 18 9 room 18 12 room 18 13 room 18 14 room 18 15 room 18 16 room 18 17 room 18 19
+room 19 4358 888 4630 941 room 19 4 room 19 5 room 19 6 room 19 7 room 19 8 room 19 9 room 19 12 room 19 13 room 19 14 room 19 15 room 19 16 room 19 17 room 19 19
+room 17 4630 632 4894 941 room 17 4 room 17 5 room 17 6 room 17 7 room 17 8 room 17 9 room 17 12 room 17 13 room 17 14 room 17 15 room 17 16 room 17 17 room 17 19
+ssfc 19 6 0 53 22 0 162 0 222 22 262 45 272 53
+ssfc 17 6 0 53 40 72 85 84 110 80 130 75 264 75
+setv door 0 19 17 255
+setv door 0 18 17 0
+setv door 0 18 19 255
+setv door 0 17 16 255
+setv door 0 17 26 0
+setv door 0 17 9 0
+setv door 0 19 26 0
+setv door 0 19 20 0
+setv door 0 18 20 0
+
+* The boardwalk over the pool in the east caves (room 44, x 4800-5700;
+* owner, 2026-11-09): its floor line bowed up toward both ends, about 28 px
+* above the level planks there, so creatures and the potted bush near the
+* ends stood in the air over them. It now runs flat along the planks (y
+* 2285) from x 4880 to 5620, rising only at the ends to meet the banks at
+* their old heights (2255).
+ssfc 44 4 0 40 80 10 820 10 900 40

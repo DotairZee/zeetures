@@ -1,0 +1,243 @@
+* Walkways (openc2e Creatures 2 project, our own script and our own art).
+* Where they go was inspired by JayD's "Plato Project" (Creatures 2 COB)
+* and Helen and NORNGod's "Walls and Bridges Pack"; none of their files are
+* used. Sprites zbw1-zbw4 are drawn by tools/sprites/bamboo.py. Run by
+* openc2e after the world loads (Additions folder); safe to repeat.
+* ROOM takes all of a room's data, so each room's own values are passed back.
+
+* Across the waterfall, upper: from the scaffold's top deck (room 68, y 1322)
+* to the treehouse's upper deck (room 61, y 1285). Room 66 (x 2593-2904)
+* reaches down to y 1322 and gets a floor rising from 1322 to 1285.
+room 66 2593 990 2904 1322 room 66 4 room 66 5 room 66 6 room 66 7 room 66 8 room 66 9 room 66 12 room 66 13 room 66 14 room 66 15 room 66 16 room 66 17 room 66 19
+ssfc 66 2 0 0 311 37
+setv door 0 68 66 255
+
+* Across the waterfall, lower: from the scaffold's lower deck (room 67,
+* y 1453) down to the treehouse's lower deck (room 60, y 1544). Room 65
+* (x 2593-3006) now starts below room 66, at y 1322, with a floor falling
+* from 1453 to 1544.
+room 65 2593 1322 3006 1544 room 65 4 room 65 5 room 65 6 room 65 7 room 65 8 room 65 9 room 65 12 room 65 13 room 65 14 room 65 15 room 65 16 room 65 17 room 65 19
+ssfc 65 2 0 91 413 0
+setv door 0 67 65 255
+
+* Under the falls, by the waterwheel: from the planted rock ledge (room 97,
+* y 2150) across the mist (room 192, falling to y 2180) and down to the
+* ground by the great tree (room 58, y 2261 from x 3310).
+ssfc 192 2 0 30 145 0
+ssfc 58 3 0 219 250 138 455 138
+* (and its floor value 0, not 10: the line is then solid for everything, and
+* an object found under it, such as a berry rolled in from the pocket under
+* the bridge, whose floor is ~100 px lower where they meet, is lifted back
+* onto it; berries lay in the dirt under the ground there, owner 2026-11-10)
+room 58 3060 1996 3515 2399 room 58 4 0 room 58 6 room 58 7 room 58 8 room 58 9 room 58 12 room 58 13 room 58 14 room 58 15 room 58 16 room 58 17 room 58 19
+setv door 0 97 192 255
+* The walkway's deck now runs over the game's water pump (2 7 2, drinks,
+* x 3030-3115, standing on the old ground at y 2261), whose top is level with
+* creatures' feet up there, so they could not reach it: stand it on the
+* ground just past the walkway's end instead (x 3290-3375, among the potted
+* plants, drawn in front of them as before).
+enum 2 7 2
+  doif posl eq 3030
+    doif post eq 2195 mvto 3290 2195 endi
+  endi
+next
+* and a pipe from the old standpipe (x 3041, its cap at y 2260) along the
+* ground to the pump (sprite zpip from tools/sprites/pipe.py;
+* plane 590: behind the walkway's posts, the plants and the pump)
+enum 2 3 234 kill targ next
+inst new: simp zpip 1 0 590 0 setv cls2 2 3 234 setv attr 0 mvto 3030 2244 slow
+* its inlet fitting on the pump's side, in front of the pump (covers the
+* pump picture's own hose into the ground)
+enum 2 3 235 kill targ next
+inst new: simp zpin 1 0 8001 0 setv cls2 2 3 235 setv attr 0 mvto 3290 2242 slow
+* Under the deck is a pocket (room 206, x 2800-3060, sloping down to the
+* pool) with no way out; creatures cannot get in now, but fruit could still
+* drop through 192's floor and roll down out of reach, and the world starts
+* with berries lying there. Close that floor to fruit too (permeability 100,
+* below objects' size 127) and set the berries on the deck.
+setv door 0 192 206 100
+setv var0 0
+enum 2 25 11
+  doif posl ge 2800
+    doif posl lt 3060
+      doif post gt 2185
+        setv var1 var0 mulv var1 14 addv var1 2925
+        setv var2 var1 subv var2 2915 mulv var2 30 divv var2 145 addv var2 2130
+        mvto var1 var2
+        addv var0 1
+      endi
+    endi
+  endi
+next
+
+* Nothing grows on the waterwheel walkway (owner): the game's plants on the
+* old ground beneath its deck (pear and gourd plants 2 24, carrots 2 11,
+* mushrooms 2 15) stuck up through the bridge, and creatures can no longer
+* reach that ground. Plants, seeds, leaves and roots (genus 4, 11, 15, 21-24)
+* whose middle is between x 2900 and 3290 with their foot from y 2100 to
+* 2290 (carrots grow below ground) are removed now, and a watcher (2 1 142, invisible) removes any that
+* turn up there later. Food lying on the deck is left alone.
+enum 2 4 0
+  setv var1 posl addv var1 posr divv var1 2
+  doif var1 ge 2900
+    doif var1 le 3290
+      doif posb ge 2100
+        doif posb le 2290 kill targ endi
+      endi
+    endi
+  endi
+next
+enum 2 11 0
+  setv var1 posl addv var1 posr divv var1 2
+  doif var1 ge 2900
+    doif var1 le 3290
+      doif posb ge 2100
+        doif posb le 2290 kill targ endi
+      endi
+    endi
+  endi
+next
+enum 2 15 0
+  setv var1 posl addv var1 posr divv var1 2
+  doif var1 ge 2900
+    doif var1 le 3290
+      doif posb ge 2100
+        doif posb le 2290 kill targ endi
+      endi
+    endi
+  endi
+next
+enum 2 21 0
+  setv var1 posl addv var1 posr divv var1 2
+  doif var1 ge 2900
+    doif var1 le 3290
+      doif posb ge 2100
+        doif posb le 2290 kill targ endi
+      endi
+    endi
+  endi
+next
+enum 2 22 0
+  setv var1 posl addv var1 posr divv var1 2
+  doif var1 ge 2900
+    doif var1 le 3290
+      doif posb ge 2100
+        doif posb le 2290 kill targ endi
+      endi
+    endi
+  endi
+next
+enum 2 23 0
+  setv var1 posl addv var1 posr divv var1 2
+  doif var1 ge 2900
+    doif var1 le 3290
+      doif posb ge 2100
+        doif posb le 2290 kill targ endi
+      endi
+    endi
+  endi
+next
+enum 2 24 0
+  setv var1 posl addv var1 posr divv var1 2
+  doif var1 ge 2900
+    doif var1 le 3290
+      doif posb ge 2100
+        doif posb le 2290 kill targ endi
+      endi
+    endi
+  endi
+next
+enum 2 1 142 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 142 setv attr 16 mvto 3000 2000 tick 200 slow
+scrp 2 1 142 9
+  enum 2 4 0
+    setv var1 posl addv var1 posr divv var1 2
+    doif var1 ge 2900
+      doif var1 le 3290
+        doif posb ge 2100
+          doif posb le 2290 kill targ endi
+        endi
+      endi
+    endi
+  next
+  enum 2 11 0
+    setv var1 posl addv var1 posr divv var1 2
+    doif var1 ge 2900
+      doif var1 le 3290
+        doif posb ge 2100
+          doif posb le 2290 kill targ endi
+        endi
+      endi
+    endi
+  next
+  enum 2 15 0
+    setv var1 posl addv var1 posr divv var1 2
+    doif var1 ge 2900
+      doif var1 le 3290
+        doif posb ge 2100
+          doif posb le 2290 kill targ endi
+        endi
+      endi
+    endi
+  next
+  enum 2 21 0
+    setv var1 posl addv var1 posr divv var1 2
+    doif var1 ge 2900
+      doif var1 le 3290
+        doif posb ge 2100
+          doif posb le 2290 kill targ endi
+        endi
+      endi
+    endi
+  next
+  enum 2 22 0
+    setv var1 posl addv var1 posr divv var1 2
+    doif var1 ge 2900
+      doif var1 le 3290
+        doif posb ge 2100
+          doif posb le 2290 kill targ endi
+        endi
+      endi
+    endi
+  next
+  enum 2 23 0
+    setv var1 posl addv var1 posr divv var1 2
+    doif var1 ge 2900
+      doif var1 le 3290
+        doif posb ge 2100
+          doif posb le 2290 kill targ endi
+        endi
+      endi
+    endi
+  next
+  enum 2 24 0
+    setv var1 posl addv var1 posr divv var1 2
+    doif var1 ge 2900
+      doif var1 le 3290
+        doif posb ge 2100
+          doif posb le 2290 kill targ endi
+        endi
+      endi
+    endi
+  next
+endm
+
+* the pictures, behind creatures (plane 1500)
+enum 2 3 230 kill targ next
+inst new: simp zbw1 1 0 600 0 setv cls2 2 3 230 setv attr 0 mvto 2584 1239 slow
+enum 2 3 231 kill targ next
+inst new: simp zbw2 1 0 600 0 setv cls2 2 3 231 setv attr 0 mvto 2570 1419 slow
+enum 2 3 232 kill targ next
+inst new: simp zbw3 1 0 600 0 setv cls2 2 3 232 setv attr 0 mvto 2903 2116 slow
+enum 2 3 233 kill targ next
+inst new: simp zbw4 1 0 600 0 setv cls2 2 3 233 setv attr 0 mvto 3053 2146 slow
+
+* The east sea's east dock to the land beyond (after JayD's Plato Project,
+* which opened this): room 233 (x 7380-7530) lies between the dock (room
+* 142, y 650) and the land east of it (room 143, y 693), where the great
+* tree's root slopes down; its doors were too small for creatures, so the
+* dock and its boat were cut off from the east. Its floor now follows the
+* root from 649 down to 693, and the dock and land doors are open.
+ssfc 233 2 0 44 150 0
+setv door 0 142 233 255
+setv door 0 233 143 255

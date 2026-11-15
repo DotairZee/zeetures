@@ -1,0 +1,12 @@
+* Eggs hatch wherever they lie (openc2e Creatures 2 project, our own script;
+* owner, 2026-11-11). script-patches.txt keeps a dropped egg's timer
+* running; this starts again the timers of norn eggs dropped before that
+* (their timers were stopped). Every norn egg that has not hatched gets its
+* timer set again at every load (a running timer only loses part of one
+* step; CARR cannot be asked here, as it reads the script's owner). Eggs in
+* water still wait for dry land, as in C2.
+enum 2 5 2
+  doif pose lt 7
+    tick 600
+  endi
+next

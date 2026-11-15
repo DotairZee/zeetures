@@ -1,0 +1,54 @@
+* The volcano's hidden pit (openc2e Creatures 2 project, our own script).
+* Run by openc2e after the world loads (Additions folder); safe to repeat.
+*
+* Under the volcano's lava sheet, rooms 164, 165 and 166 (x 6930-8040,
+* y 2234-2399) are solid rock in the picture, but their tops were open
+* doors (permeability 255) from the volcano rooms above (168, 169, 170),
+* and they have no floor line of their own. A creature or object that got
+* below the lava line (walking line about y 2150-2195) fell to the bottom
+* of the rock, out of reach (owner, 2026-11-10). The volcano's east ledge
+* (room 167) reaches down past them too, with an open door into 166.
+*
+* 1. Those floors are made as solid as the platforms' own floors.
+setv door 0 168 164 100
+setv door 0 169 165 100
+setv door 0 170 166 100
+setv door 0 167 166 100
+*
+* 2. Anything that still ends up deep in the rock (dropped there by the
+* hand, say) is lifted back onto the lava line above it: a watcher
+* (2 1 147, invisible) looks every 2 s for creatures and objects whose
+* bottom is more than 50 px below the pit's top. The volcano's own lava
+* bubbles reach only 20 px into it and are left alone. A lifted creature
+* is set falling (grav 1): a walking creature keeps to the room its foot
+* was in, and would at once be put back on the pit's bottom; a falling one
+* lands on the floor under it, as when dropped by the hand.
+enum 2 1 147 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 147 setv attr 16 mvto 5000 1310 tick 20 slow
+scrp 2 1 147 9
+* inst: the whole look in one tick (without it the engine ran it 5
+* instructions a tick, the timer skipped while it was still going, and it
+* looked every ~17 s instead of every 2 s; measured 2026-11-12)
+  inst
+  enum 4 0 0
+    doif posl lt 8040 doif posr gt 6930 doif posb gt 2284
+      setv var0 posb subv var0 post
+      setv var1 2140 subv var1 var0
+      mvto posl var1
+      setv grav 1
+    endi endi endi
+  next
+  enum 2 0 0
+    doif posl lt 8040 doif posr gt 6930 doif posb gt 2284
+      setv var0 posb subv var0 post
+      setv var1 2140 subv var1 var0
+      mvto posl var1
+    endi endi endi
+  next
+endm
+
+* The lava flame (2 3 14, the tall flame that flares up from the floor by
+* the cone machines) was at plane 0 and drew over our fruit shrubs (2 4 141,
+* plane -10, food.cos) beside it when it flared (owner's screencast,
+* 2026-11-13 23:47). It goes just behind them.
+enum 2 3 14 plne -11 next

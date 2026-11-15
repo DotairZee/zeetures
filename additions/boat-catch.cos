@@ -1,0 +1,87 @@
+* Boats catch creatures stepping off the dock (openc2e Creatures 2 project,
+* our own script). Run by openc2e after the world loads (Additions folder);
+* safe to repeat.
+*
+* The east boat (3 6 1) moors right against the end of the dock (its left
+* edge at x 6560; the dock ends at 6565), the west boat (3 6 2) against its
+* docks the same way, so a creature stepping off the end fell straight
+* through the boat into the sea (owner, 2026-11-12: "the creature should land
+* safely in the boat if they walk off the dock and the boat is there").
+*
+* A hidden watcher (2 1 155) looks every 2 ticks: a creature whose middle is
+* over a boat at rest (not rowing: OV01 0, no speed) and whose feet have
+* dropped below the boat's top by more than 6 px (off the dock, falling)
+* but not past its bottom is taken aboard (GPAS, as boarding does), and the
+* boat is sent across at once, the way its own timer would send it (activate
+* 1 from the west mooring, activate 2 from the east). The timer alone runs
+* only every 1200 ticks (2 minutes), so a creature caught this way sat in
+* the moored boat that long, with nothing to do: a passenger's mind waits
+* for the ride to end (owner's screencast 2026-11-13 15:55, the west boat).
+* The transit pod (3 6 3) is not a boat and is left out.
+* A creature is caught up to 40 px short of the boat's near end too: one
+* stepping off the east dock's end (x 6565) has its middle about 20 px west
+* of the moored boat's edge (6560-6600), so it fell past the boat into the
+* gap, its middle landed in the sealed water under the dock (room 31), was
+* lifted back and stepped off again (30 of 36 room 31 rescues in a 5-minute
+* test run, 2026-11-15). (The search for the boat to board below still
+* matches it by its own left edge, var0.)
+*
+* The east dock's end (room 13 to 140, x 6565) is open to creatures only
+* while the east boat is moored against it (2026-11-14): otherwise a creature
+* stepping off it fell into the gap above the sea, its middle landed in the
+* sealed water under the dock (room 31), the engine lifted it back onto the
+* dock's end, and it stepped off again: 43 times in 16 minutes, one creature
+* 18 times (some norns' genes make "west" walk east, so its mind never saw
+* the drop ahead). At 150 the doorway is too small for a creature (224).
+
+enum 2 1 155 kill targ next
+inst
+new: simp blnk 1 0 0 0
+setv cls2 2 1 155
+setv attr 16
+mvto 5000 1320
+tick 2
+slow
+
+scrp 2 1 155 9
+  inst
+  setv var7 0
+  enum 3 6 1
+    doif ov01 eq 0 doif velx eq 0 doif posl gt 6540 doif posl lt 6600
+      setv var7 1
+    endi endi endi endi
+  next
+  doif var7 eq 1
+    setv door 0 13 140 255
+  else
+    setv door 0 13 140 150
+  endi
+  enum 3 6 0
+    doif spcs ne 3 doif ov01 eq 0 doif velx eq 0
+      setv var0 posl setv var1 posr setv var2 post setv var3 posb
+      setv var4 0
+      setv var8 var0 subv var8 40
+      enum 4 0 0
+        setv var5 posl addv var5 posr divv var5 2
+        doif var5 gt var8 doif var5 lt var1
+          setv var6 var2 addv var6 6
+          doif posb gt var6 doif posb lt var3
+            setv var4 1
+          endi endi
+        endi endi
+      next
+      doif var4 eq 1
+        enum 3 6 0 doif posl eq var0 doif post eq var2
+          gpas
+          doif spcs eq 2
+            doif posl le 340 mesg writ targ 0 endi
+            doif posr ge 1040 mesg writ targ 1 endi
+          endi
+          doif spcs eq 1
+            doif posl lt 6745 mesg writ targ 0 else mesg writ targ 1 endi
+          endi
+        endi endi next
+      endi
+    endi endi endi
+  next
+endm

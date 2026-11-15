@@ -1,0 +1,15 @@
+# Agent Injector objects not offered in Creatures 2 worlds (openc2e
+# project; owner, 2026-11-09), because they clash with the project's
+# changes. See injector-review.md.
+
+# replaces the creature's own sleep script, around which the mind's sleep
+# rules are built
+Sleep Update
+# the under-floor sweeper: removals.cos deletes it at every load (openc2e
+# lifts sunk objects onto their floor instead)
+Underground Critter
+# unlocks applets and features that are already on in openc2e
+Game State Controller
+# its ten pump and fountain scripts are already in this release's world,
+# word for word (checked 2026-11-12): injecting it changes nothing
+Drinking Update

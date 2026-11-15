@@ -1,0 +1,39 @@
+* Bats get home (openc2e Creatures 2 project, our own script). Run by
+* openc2e after the world loads (Additions folder); safe to repeat.
+*
+* At dawn C2's bat script (2 19 1) turns a bat for home: collisions off, it
+* flaps toward its roost (OV10/OV11, on the cave ceiling at about y 1300)
+* every 5 ticks, through the rock, and parks there. In openc2e gravity
+* between flaps outweighs what a flap gains, so a bat that was below its
+* roost at dawn sank into the ground instead, and hovered there flapping
+* (owner, 2026-11-10: a bat under the boardwalk at x ~5550, y ~2200).
+* A watcher (2 1 149, invisible, every 10 ticks) turns gravity off for a
+* homing bat (OV02 = 2) more than 40 px below its roost, so its flaps carry
+* it up, and back on otherwise. A parked bat (OV02 = 0, attr 0) is held
+* still: one in about four tests kept a speed of 1 px per tick after parking
+* and drifted down through the map; one found more than 60 px from its
+* roost is put back on it (the roost spot is its own OV10/OV11).
+enum 2 1 149 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 149 setv attr 16 mvto 5000 1330 tick 10 slow
+scrp 2 1 149 9
+  enum 2 19 1
+    setv var0 ov11 addv var0 40
+    doif ov02 eq 2
+      doif post gt var0
+        setv accg 0
+      else
+        setv accg 2
+      endi
+    else
+      doif accg eq 0 setv accg 2 endi
+    endi
+    doif ov02 eq 0
+      doif attr eq 0
+        setv velx 0 setv vely 0 setv grav 0
+        setv var1 posl subv var1 ov10 doif var1 lt 0 negv var1 endi
+        setv var2 post subv var2 ov11 doif var2 lt 0 negv var2 endi
+        doif var1 gt 60 mvto ov10 ov11 else doif var2 gt 60 mvto ov10 ov11 endi endi
+      endi
+    endi
+  next
+endm

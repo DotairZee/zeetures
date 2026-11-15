@@ -1,0 +1,55 @@
+* Buttons with no deactivate script of their own (openc2e Creatures 2
+* project, our own script). Run by openc2e after the world loads (Additions
+* folder); safe to repeat.
+*
+* An object with no script for an event runs the one its whole genus has:
+* for the buttons (2 2 x) that is scrp 2 2 0 0, "anim [01234R]", a looping
+* light meant for the game's own five-picture callers. The gene lab's
+* console (2 2 21, gene.s16 pictures 31-33) has no deactivate script, so a
+* creature's "deactivate" (or the hand's) set it looping through its three
+* pictures and on into the next two in the file, the glass pipe's (owner's
+* screencast 2026-11-15: "the object with the lever on it just keeps
+* switching sprites between it and the tubes"; caught with
+* OPENC2E_WATCH_ANIM="2 2 21"). The same goes for the pod's dock button
+* (2 2 22) and the callers our additions place (2 2 210-213, 216-219, 221,
+* 222). Deactivating them now does nothing, as for any other switch with
+* nothing to switch off; each is set back on its first picture.
+scrp 2 2 21 0
+setv var0 0
+endm
+scrp 2 2 22 0
+setv var0 0
+endm
+scrp 2 2 210 0
+setv var0 0
+endm
+scrp 2 2 211 0
+setv var0 0
+endm
+scrp 2 2 212 0
+setv var0 0
+endm
+scrp 2 2 213 0
+setv var0 0
+endm
+scrp 2 2 216 0
+setv var0 0
+endm
+scrp 2 2 217 0
+setv var0 0
+endm
+scrp 2 2 218 0
+setv var0 0
+endm
+scrp 2 2 219 0
+setv var0 0
+endm
+scrp 2 2 221 0
+setv var0 0
+endm
+scrp 2 2 222 0
+setv var0 0
+endm
+* (the console set back on its first picture, in case a saved world has it
+* looping)
+enum 2 2 21 pose 0 next

@@ -1,0 +1,12 @@
+* Texts for C2's announcement windows (openc2e Creatures 2 project, our own
+* words). The game's scripts open a window (NEW: CBUB) with a string number;
+* C2's own texts are not in any of its data files, so openc2e shows these.
+* "<number> <text>", "|" for a line break. Player-visible: British spelling.
+*
+* 0-4: the five pods 2 9 16-20 (not in the Home world; from add-on objects).
+*
+* 5: the gene splicer's console (2 2 21) pressed while the lab has no power.
+5 The gene splicer has no power.|Start the generator in the domed lab first.
+* 6: the generator (3 10 11, in the domed lab) started for the first time;
+* the camera swings to the splicer.
+6 Power is flowing to the gene splicer.|Put a creature in each pod, then press the console to splice them.

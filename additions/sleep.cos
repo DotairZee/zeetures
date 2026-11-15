@@ -1,0 +1,67 @@
+* Norns, grendels and ettins sleep when sleepy (openc2e Creatures 2 project, our
+* own scripts). Run by openc2e after the world loads (Additions folder);
+* safe to repeat.
+*
+* C2's sleep script (4 0 0 41) lets a creature sleep only while its
+* Tiredness (drive 5) is above 48, and rest when tired but not sleepy.
+* Sleepiness (drive 6) rises in the dark and falls only while asleep (the
+* sleep stimulus, 22). In C2's own grendel genome walking tires a grendel
+* only once it is old, so grendels, and the Home ettin, sat at Sleepiness
+* 255 and could never sleep. The owner asked (2026-11-10) to replace that
+* rule for grendels and ettins (norns keep C2's): a grendel or ettin with
+* Sleepiness above 96 sleeps, however rested, until Sleepiness is below 10;
+* one only tired lies down to rest until Tiredness is below 48.
+*
+* Norns too (owner, 2026-11-12): in Home's logs most norns sat at the mind's
+* sleepiness cap (about 70% of their decisions) and rarely slept, being
+* sleepy but not tired. C2's norn script also dreams after sleeping (DREA,
+* which works C2's own brain); our creatures run their own mind, so that
+* part is left out.
+scrp 4 2 0 41
+  doif driv 6 gt 96
+    impt 15 pose 58 aslp 1
+    loop
+      wait 15 stm# writ targ 22
+      impt 5 wait 40
+      impt 15 stm# writ targ 22
+    untl driv 6 lt 10
+    impt 1 wait 20
+    aslp 0
+  else
+    doif driv 5 gt 48
+      loop impt 5 pose 58 wait 20 stm# writ targ 21 untl driv 5 lt 48
+    endi
+  endi
+endm
+scrp 4 3 0 41
+  doif driv 6 gt 96
+    impt 15 pose 58 aslp 1
+    loop
+      wait 15 stm# writ targ 22
+      impt 5 wait 40
+      impt 15 stm# writ targ 22
+    untl driv 6 lt 10
+    impt 1 wait 20
+    aslp 0
+  else
+    doif driv 5 gt 48
+      loop impt 5 pose 58 wait 20 stm# writ targ 21 untl driv 5 lt 48
+    endi
+  endi
+endm
+scrp 4 1 0 41
+  doif driv 6 gt 96
+    impt 15 pose 58 aslp 1
+    loop
+      wait 15 stm# writ targ 22
+      impt 5 wait 40
+      impt 15 stm# writ targ 22
+    untl driv 6 lt 10
+    impt 1 wait 20
+    aslp 0
+  else
+    doif driv 5 gt 48
+      loop impt 5 pose 58 wait 20 stm# writ targ 21 untl driv 5 lt 48
+    endi
+  endi
+endm

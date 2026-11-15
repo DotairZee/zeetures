@@ -1,0 +1,150 @@
+* The west sea's seabed airlock (openc2e Creatures 2 project, our own
+* script; art from tools/sprites/westlock.py). Run by openc2e after the world
+* loads (Additions folder); safe to repeat.
+*
+* The west sea (rooms 121-137) has one way to land: up at the surface. A
+* creature that sank to the seabed found no way out on foot and drowned
+* there (owner, 2026-11-12: "should we create some sort of airlock thing
+* around here?"; chose the seabed airlock). The seabed slopes down to its
+* low point by the rock wall (x ~650, floor y ~1365), where stranded
+* creatures end up.
+*
+* A round sea door is set in the rock at the foot of the slope (x 600-656,
+* left of the game's own rock, which is drawn over everything from x ~650;
+* 2 3 247, sprite zwsd), and a
+* brass land door (2 3 248, zwld) in the rock face at the east end of the
+* floor by the cage lift (room 120, floor 1540). An invisible car (vehicle
+* 3 2 151, zwcr) waits at the sea door. When a creature is at the low point
+* the sea door opens and the car takes it in, pulls it down fast (as if
+* sucked in), shuts the door behind it, drains the chamber for a moment,
+* and shoots it out of the land door onto the floor; the door shuts again. While it
+* rides, the rock (2 3 249, zwrk, cut from the player's own background) is
+* drawn in front of it, with the two doorways left open.
+*
+* 1. The floor by the lift (room 120) was 68 px tall and its doorway to the
+*    lift's room (119) was too small for creatures (100; creatures are 224).
+*    Its ceiling rises to 1400 (the seabed room above, 121, ends there now;
+*    its floor line is kept) and the doorway opens. ROOM takes all of a
+*    room's data, so each room's own values are passed back.
+doif room 121 3 eq 1472
+  room 121 399 1220 669 1400 room 121 4 room 121 5 room 121 6 room 121 7 room 121 8 room 121 9 room 121 12 room 121 13 room 121 14 room 121 15 room 121 16 room 121 17 room 121 19
+  ssfc 121 4 0 163 60 93 150 83 270 28
+  room 120 399 1400 573 1540 room 120 4 room 120 5 room 120 6 room 120 7 room 120 8 room 120 9 room 120 12 room 120 13 room 120 14 room 120 15 room 120 16 room 120 17 room 120 19
+endi
+setv door 0 120 119 255
+*
+* 2. The doors (behind creatures, plane 1400) and the rock in front of a
+*    rider (plane 1550; riders are at 1501).
+enum 2 3 247 kill targ next
+inst new: simp zwsd 6 0 1400 0 setv cls2 2 3 247 setv attr 0 mvto 600 1302 slow
+enum 2 3 248 kill targ next
+inst new: simp zwld 5 0 1400 0 setv cls2 2 3 248 setv attr 0 mvto 538 1484 slow
+enum 2 3 249 kill targ next
+inst new: simp zwrk 1 0 1550 0 setv cls2 2 3 249 setv attr 0 mvto 573 1245 slow
+*
+* 3. The car: its box (48 x 110, bottom at the low point's floor) is where
+*    it picks up. OV00 its state (0 waiting, 1 sea door opening, 2 stepping
+*    in, 3 going down, 4 draining, 5 to the land door, 6 letting out), OV01 a
+*    count of ticks, OV02 set once the sea door has shut behind it.
+enum 3 2 151 kill targ next
+inst
+new: vhcl zwcr 1 0
+setv cls2 3 2 151
+new: part 0 0 0 0 1501
+cabn 0 0 48 110
+cabp 1501
+setv attr 16
+bhvr 0 0
+setv ov00 0 setv ov01 0 setv ov02 0
+mvto 604 1245
+tick 1
+slow
+
+* every tick, all at once (INST)
+scrp 3 2 151 9
+  inst
+  addv ov01 1
+  * waiting: every 10 ticks, look for a creature at the low point
+  doif ov00 eq 0
+    doif ov01 lt 10 stop endi
+    setv ov01 0
+    setv var0 0
+    enum 4 0 0
+      setv var1 posl addv var1 posr divv var1 2
+      doif var1 ge 585 doif var1 le 669 doif posb ge 1330 doif posb le 1400
+        setv var0 1
+      endi endi endi endi
+    next
+    doif var0 eq 1
+      enum 2 3 247 pose 1 next
+      setv ov00 1
+    endi
+    stop
+  endi
+  * the sea door opens; the creature is taken in
+  doif ov00 eq 1
+    doif ov01 eq 2 enum 2 3 247 snde dor1 anim [2345] next endi
+    doif ov01 lt 14 stop endi
+    gpas
+    setv ov00 2 setv ov01 0
+    stop
+  endi
+  * stepping in: into the middle of the doorway (the car is there already)
+  doif ov00 eq 2
+    setv ov00 3 setv ov01 0
+    stop
+  endi
+  * going down, fast, as if sucked in (owner, 2026-11-13: it moved at lift
+  * speed; 16 px a tick, was 4); the sea door shuts once the rider is below
+  doif ov00 eq 3
+    * not perfectly smooth (owner, 2026-11-15: "the slightest of
+    * jerkiness"): 12-20 px a tick, and about one tick in eight it holds
+    rndv var1 0 7
+    doif var1 eq 0 stop endi
+    rndv var1 12 20
+    setv var0 post addv var0 var1
+    doif var0 ge 1352
+      doif ov02 eq 0 setv ov02 1 enum 2 3 247 snde dor1 anim [54321] next endi
+    endi
+    doif var0 ge 1428 setv var0 1428 setv ov00 4 setv ov01 0 snde bubb endi
+    mvto posl var0
+    stop
+  endi
+  * draining (briefly), then the land door opens
+  doif ov00 eq 4
+    doif ov01 eq 4 enum 2 3 248 snde dor1 anim [1234] next endi
+    doif ov01 lt 12 stop endi
+    setv ov00 5 setv ov01 0
+    stop
+  endi
+  * to the land door: in one move, while the rider is hidden in the rock;
+  * set down wholly inside the floor room (west of x 573) and 2 px above its
+  * floor, or the physics finds a corner outside the rooms and pushes it up
+  * (moved little by little, a creature walking in its seat through rock that
+  * belongs to no room was pushed back by its own foot checks and let out
+  * under the sea door, outside every room)
+  doif ov00 eq 5
+    mvto 516 post
+    setv ov00 6 setv ov01 0
+    stop
+  endi
+  * letting out: shot out of the land door, west across the floor (owner,
+  * 2026-11-13: "it should shoot them out the exit"); the land door
+  * shutting, back to wait at the sea door
+  doif ov00 eq 6
+    doif ov01 eq 2
+      dpas
+      enum 4 0 0
+        setv var1 posl addv var1 posr divv var1 2
+        doif var1 ge 470 doif var1 le 600 doif posb ge 1480 doif posb le 1545
+          setv velx -26 setv vely -9
+        endi endi endi endi
+      next
+    endi
+    doif ov01 eq 30 enum 2 3 248 snde dor1 anim [3210] next endi
+    doif ov01 lt 40 stop endi
+    mvto 604 1245
+    enum 2 3 247 pose 0 next
+    setv ov00 0 setv ov01 0 setv ov02 0
+  endi
+endm

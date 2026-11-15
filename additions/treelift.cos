@@ -1,0 +1,58 @@
+* The middle caves' bamboo lift reaches the lower deck (openc2e Creatures 2
+* project, our own script and our own art). Run by openc2e after the world
+* loads (Additions folder); safe to repeat. ROOM takes all of a room's data,
+* so each room's own values are passed back.
+*
+* The bamboo lift at x 5126 (3 2 2) ran between the top walkway (caller at
+* 5262/1515) and the walkway at y 1858 (caller at 5284/1758). Below it, the
+* deck under the lower hut (room 45, y 2077) ended at x 5130, at the lift's
+* left edge. The owner asked (2026-11-10) for that deck to reach under the
+* lift, with a caller like the one above, and the lift to come down to it.
+*
+* 1. Room 45 reaches to x 5360 (was 5130); room 46, the open air over the
+*    pool east of it, starts there. Its floor over room 44 is solid (100).
+room 45 4543 1858 5360 2077 room 45 4 room 45 5 room 45 6 room 45 7 room 45 8 room 45 9 room 45 12 room 45 13 room 45 14 room 45 15 room 45 16 room 45 17 room 45 19
+room 46 5360 1858 5700 2077 room 46 4 room 46 5 room 46 6 room 46 7 room 46 8 room 46 9 room 46 12 room 46 13 room 46 14 room 46 15 room 46 16 room 46 17 room 46 19
+*
+* 2. The deck's extension (zldk frame 0, drawn by tools/sprites/lowerdeck.py:
+*    dappled planks on to x 5356, under the lift, an X-braced box at the
+*    new end), plane -20: behind the lift's cage, which stands on it. And
+*    the lift's two ropes carried on down from the pulley on the walkway to
+*    a new pulley on the deck (zldk frame 1, plane -21; owner: extend the
+*    pulley to the new deck).
+enum 2 3 238 kill targ next
+enum 2 3 239 kill targ next
+enum 2 3 240 kill targ next
+inst new: simp zldk 1 0 -20 0 setv cls2 2 3 238 setv attr 0 mvto 5120 2024 slow
+inst new: simp zldk 1 1 -21 0 setv cls2 2 3 239 setv attr 0 mvto 5146 1858 slow
+* (frame 2: a bamboo post under the deck's right end down to the plank
+* boardwalk over the pool, with a brace; owner: the deck seemed to float)
+inst new: simp zldk 1 2 -22 0 setv cls2 2 3 240 setv attr 0 mvto 5292 2080 slow
+*
+* 3. A third stop for the lift at the deck (its cage's bottom at y 2077),
+*    and its caller (the game's own pole caller picture, cbt2, from the
+*    player's installed copy; like the two above), just right of the cage.
+*    NEW: CALL is openc2e's: it adds the stop to the lift and links the
+*    button to it. BHVR 1 makes a click activate it (owner: it was not
+*    clickable; the world file's callers carry their click behavior).
+enum 2 2 2 doif posl eq 5254 doif post eq 1977 kill targ endi endi next
+enum 3 2 2
+  doif posl eq 5126
+    inst new: call targ 2077 cbt2 2 0 5000 setv cls2 2 2 2 setv attr 196 bhvr 1 0 pose 0 mvto 5254 1977 slow
+  endi
+next
+*
+* 4. At the top stop the cage was hidden behind two foreground cut-outs of
+*    the background (owner, 2026-11-10): the glass tube's (scenery 1 0 0 at
+*    4735/1410, plane 200, its mesh drawn over the cage) and the crane's
+*    (5042/1467, plane 9000: the crane arm, its lamp and the double pulley).
+*    The lift (plane 0) goes to plane 300, in front of the tube; the crane
+*    to 250, behind the lift and still in front of the tube. Creatures stay
+*    in front of both (1500). PLNE is openc2e's in C2.
+enum 3 2 2 doif posl eq 5126 plne 300 endi next
+enum 1 0 0 doif posl eq 5042 doif post eq 1467 plne 250 endi endi next
+*
+* 5. The lift 10 px to the left (owner, 2026-11-10: off-centre over the two
+*    lower decks' gaps; nearer its ropes, too). Last, since the lines above
+*    find it at x 5126, where the world file puts it at each load.
+enum 3 2 2 doif posl eq 5126 setv var0 posl subv var0 10 mvto var0 post endi next

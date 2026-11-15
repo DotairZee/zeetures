@@ -1,0 +1,121 @@
+* The transit pod in the tube by the lab (openc2e Creatures 2 project, our
+* own script). The pod (3 6 3) travels between its dock at the lab (left
+* edge x 4550) and its far dock (right edge x 6170), moving sideways 20 px a
+* tick and nudging itself 2 px up or down each tick to follow the tube; in
+* openc2e that climbs 1 in 10 while the tube falls only about 1 in 38 (its
+* top edge from y ~1432 at x 4760 to ~1478 at x 5950), so the pod left the
+* tube and stopped about 100 px too high at the lab (owner, 2026-11-08).
+* While it travels, this watcher (2 1 143, invisible) keeps it on a line
+* parallel to the tube (its top edge, scanned every 40 px on engine
+* snapshots: 1434 at x 4810 to 1490 at 5890, a steady 1 in 19, the bottom
+* edge parallel), from the far dock's travel height (y 1455 at left edge
+* 5914; it settles 20 px lower, at 1475, when it stops) to the lab dock (y
+* 1384 at 4550, level with the tube's mouth). Earlier lines (1 in 38, then 1
+* in 28 from two points) let the pod sag below the tube toward the lab
+* (owner, 2026-11-09). The line now runs 4 px lower (it poked out of the
+* tube's top; owner, 2026-11-09): y 1459 at left edge 5914, 1388 at the lab.
+* Run by openc2e after the world loads (Additions folder); safe to repeat.
+enum 2 2 214 kill targ next
+enum 2 2 215 kill targ next
+enum 2 1 143 kill targ next
+enum 2 2 219 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 143 setv attr 16 mvto 5000 1300 tick 1 slow
+scrp 2 1 143 9
+  inst
+  enum 3 6 3
+    doif velx ne 0
+      setv var0 posl
+      setv var1 posl subv var1 5914 mulv var1 520 divv var1 10000 addv var1 1459
+      mvto var0 var1
+    endi
+  next
+endm
+
+* The lab starts powered (owner, 2026-11-09). The lab's power switch (3 10
+* 11, left of the dock) starts the lab's machines (3 10 8-10), enables the
+* pod's dock button (2 2 22, OV00) and the lab console (2 2 21, OV01). The
+* first time, it also moves the camera to the lab and shows a message, unless
+* the console's OV02 is already 1; we set that first so the start is quiet,
+* then press the switch.
+enum 2 2 21 setv ov02 1 next
+enum 3 10 11 doif ov00 eq 0 mesg writ targ 0 endi next
+
+* The pod's trips, rewritten (owner, 2026-11-09): at the far dock it eased
+* down to rest when it arrived and rose before it left; now it does the same
+* at the lab (the domed room), settling 20 px into the dock there (rest y
+* 1408) and rising 20 px before it sets off. At the far dock it settles 16 px
+* (rest y 1475, as before). OV00 is where it is: 0 the lab, 1 the far dock.
+* On arrival it sets its riders down and nudges them out of the doorway.
+* Activate 1: from the lab to the far dock.
+scrp 3 6 3 1
+  doif ov00 eq 0
+    subv attr 4
+    part 1 anim [210] wait 10
+    gpas
+    part 1 anim [012]
+    reps 10 mvby 0 -2 wait 1 repe
+    part 1 anim [23456R]
+    setv velx 20 sndl shut
+    loop wait 1 untl posr ge 6170
+    fade setv velx 0
+    setv var0 5950 subv var0 posl mvby var0 0
+    part 1 pose 6
+    reps 8 mvby 0 2 wait 1 repe
+    part 1 anim [89]
+    dps2 0 wait 10
+    etch 4 0 0 setv velx 80 setv vely -20 next
+    targ ownr wait 5 part 1 anim [987]
+    addv attr 4 setv ov00 1
+  endi
+  setv actv 0
+endm
+
+* Activate 2: from the far dock to the lab.
+scrp 3 6 3 2
+  doif ov00 eq 1
+    subv attr 4
+    part 1 anim [89] wait 10
+    gpas
+    part 1 anim [986]
+    reps 8 mvby 0 -2 wait 1 repe
+    part 1 anim [65432R]
+    setv velx -20 sndl shut
+    loop wait 1 untl posl le 4550
+    fade setv velx 0
+    part 1 pose 2
+    reps 10 mvby 0 2 wait 1 repe
+    part 1 anim [10]
+    dps2 0 wait 10
+    etch 4 0 0 setv velx -80 setv vely -20 next
+    targ ownr wait 5 part 1 anim [017]
+    addv attr 4 setv ov00 0
+  endi
+  setv actv 0
+endm
+
+* A caller at the far dock (owner, 2026-11-09): the lab has one on its dock
+* (2 2 22); this one (2 2 219, the lab lift's caller picture zlbt) stands on
+* the machine room's floor (room 159, y 1798) just right of the tube's end,
+* and brings the pod over from the lab while the lab is powered (the lab's
+* dock button enabled, its OV00).
+scrp 2 2 219 1
+  pose 1 snde ding
+  setv var0 0
+  enum 2 2 22 setv var0 ov00 next
+  doif var0 ne 0
+    enum 3 6 3 doif ov00 eq 0 doif velx eq 0 mesg writ targ 0 endi endi next
+  endi
+  part 0 wait 30 pose 0 setv actv 0
+endm
+
+scrp 2 2 219 2
+  pose 1 snde ding
+  setv var0 0
+  enum 2 2 22 setv var0 ov00 next
+  doif var0 ne 0
+    enum 3 6 3 doif ov00 eq 0 doif velx eq 0 mesg writ targ 0 endi endi next
+  endi
+  part 0 wait 30 pose 0 setv actv 0
+endm
+
+inst new: simp zlbt 2 0 1300 0 setv cls2 2 2 219 setv attr 4 bhvr 2 0 pose 0 mvto 6123 1723 slow

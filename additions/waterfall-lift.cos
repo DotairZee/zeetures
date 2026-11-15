@@ -1,0 +1,32 @@
+* The bamboo-cage lift by the waterfall reaches the ground (openc2e Creatures
+* 2 project, our own script; owner, 2026-11-14: "go all the way down to the
+* ground level below (where the teleporter pad and the glass tube are) ...
+* move that teleporter pad a little west so a caller of the same kind can
+* stand" by the lift; mock-up bamboo-lift-mockup.png approved). Run by
+* openc2e after the world loads (Additions folder); safe to repeat.
+*
+* The lift (3 2 2, cage x 2334-2458) hangs in the bamboo scaffold just west
+* of the big waterfall and ran between the scaffold's two decks (callers at
+* 2318/1219 and 2322/1351). Below them the scaffold stands on the ground by
+* the teleporter and the end of the glass tube (rooms 81 and 249: their
+* floor slopes from y 1720 at x 2288 to 1682 at x 2451, about 1700 under
+* the cage), open to the teleporter's side and east to the waterfall's foot.
+* The scene's own foreground (the boulder and leaves, scenery 1 0 0 at
+* 2296/1548) stays in front of the cage at the bottom, as the owner asked.
+*
+* 1. The teleporter (3 8 2, x 2241-2325) 45 px west, to 2196, to leave room
+*    for the caller. Its scripts place arrivals relative to itself.
+enum 3 8 2 doif posl eq 2241 doif post eq 1648 mvto 2196 1648 endi endi next
+*
+* 2. A third stop for the lift on the ground (its cage's bottom at y 1700),
+*    and its caller: the game's own pole caller picture (cbt2, from the
+*    player's installed copy), like the two on the decks, standing on the
+*    ground between the teleporter and the cage (x 2296-2328, base 1714).
+*    NEW: CALL is openc2e's: it adds the stop to the lift and links the
+*    button to it. BHVR 1 makes a click activate it.
+enum 2 2 2 doif posl eq 2296 doif post eq 1614 kill targ endi endi next
+enum 3 2 2
+  doif posl eq 2334
+    inst new: call targ 1700 cbt2 2 0 5000 setv cls2 2 2 2 setv attr 196 bhvr 1 0 pose 0 mvto 2296 1614 slow
+  endi
+next

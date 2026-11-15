@@ -1,0 +1,100 @@
+* The lab's treat dispenser (openc2e Creatures 2 project, our own script and
+* our own art from tools/sprites/labtreat.py; owner, 2026-11-09: "maybe it
+* should have some sort of special treat for any creatures who make it
+* there"; then "more on theme" with the lift). A glass cylinder of gel drops
+* in worn steel and bronze, like the lift pod (2 3 236, sprite zltd),
+* stands on the lab floor (room 32, y 1544) just inside the left door, in front of the console (plane 1450, behind creatures). When a
+* creature comes within sight (RNGE 400) it pops a gel drop out of its chute
+* (2 25 145, sprite zltt, plane 1460), at most one every 30
+* seconds and while fewer than three lie about; a creature (or the hand)
+* can also push it. A drop is a sweet that also cheers: chemicals 37 hunger
+* decrease 40, 70 glucose 50, 36 pleasure-need decrease 90, 45 boredom
+* decrease 90. An uneaten drop melts away after about five minutes.
+* OV00 the cooldown (in 10-tick steps). Run by openc2e after the world loads
+* (Additions folder); made anew each load.
+
+enum 2 3 236 kill targ next
+enum 2 25 145 kill targ next
+
+inst
+new: simp zltd 2 0 1450 0
+setv cls2 2 3 236
+setv attr 4
+bhvr 1 0
+setv rnge 400
+pose 0
+mvto 4026 1494
+setv ov00 0
+tick 10
+slow
+
+* every 10 ticks: count down, and treat a creature in sight
+scrp 2 3 236 9
+  doif ov00 gt 0 subv ov00 1 endi
+  doif ov00 eq 0
+    setv var1 0
+    esee 4 0 0 setv var1 1 next
+    doif var1 eq 1 gsub give endi
+  endi
+  subr give
+  doif totl 2 25 145 lt 3
+    setv ov00 30
+    pose 1 snde pop2
+    setv var0 posl addv var0 12
+    setv var1 post addv var1 38
+    rndv var2 0 2
+    inst
+    new: simp zltt 1 var2 1460 0
+    setv cls2 2 25 145
+    setv attr 195
+    bhvr 0 64
+    setv accg 3 setv rest 30 setv aero 2
+    mvto var0 var1
+    setv grav 1
+    rndv var3 3 6 setv velx var3
+    setv vely -4
+    tick 3000
+    slow
+    targ ownr
+    wait 12 pose 0
+  endi
+  retn
+endm
+
+* pushed by a creature or the hand: the same, if it is ready
+scrp 2 3 236 1
+  doif ov00 eq 0
+    doif totl 2 25 145 lt 3
+      setv ov00 30
+      pose 1 snde pop2
+      setv var0 posl addv var0 12
+      setv var1 post addv var1 38
+      rndv var2 0 2
+      inst
+      new: simp zltt 1 var2 1460 0
+      setv cls2 2 25 145
+      setv attr 195
+      bhvr 0 64
+      setv accg 3 setv rest 30 setv aero 2
+      mvto var0 var1
+      setv grav 1
+      rndv var3 3 6 setv velx var3
+      setv vely -4
+      tick 3000
+      slow
+      targ ownr
+      wait 12 pose 0
+    endi
+  endi
+  setv actv 0
+endm
+
+* a gel drop: eaten, or melts away
+scrp 2 25 145 12
+  snde chwp
+  stim writ from 30 255 0 0 37 40 70 50 36 90 45 90
+  kill ownr
+endm
+scrp 2 25 145 9
+  kill ownr
+endm

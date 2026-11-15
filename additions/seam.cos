@@ -1,0 +1,15 @@
+* The floor at the world's seam (openc2e Creatures 2 project, our own
+* script). Run by openc2e after the world loads (Additions folder); safe to
+* repeat.
+*
+* Albia wraps: room 175 (x 8240-8352, the far east) opens onto room 116
+* (x 0-573, the far west) at walking height. 175's floor line ends 3 px
+* above its bottom (y 1842) while 116's floor is at 1841, so a creature
+* standing at the seam had the corners of its box past the edge a pixel or
+* two below 116's floor, inside room 105 under it, and when it fell (a hop)
+* the physics let it drop to 105's bottom (y 2399) until it was put back
+* (owner's session, 2026-11-12: "seam flicker"). 175's floor now ends 5 px
+* above its bottom (y 1840), a pixel above 116's floor.
+doif room 175 3 eq 1845
+  ssfc 175 2 0 0 112 5
+endi

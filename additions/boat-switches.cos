@@ -1,0 +1,62 @@
+* Boat call switches (openc2e Creatures 2 project, our own script; uses the
+* game's own pole call-button picture, cbt2, from the player's installed
+* copy). One switch on each shore of each boat, standing on the dock:
+* pressing it (a creature, or a click: BHVR 2 makes clicks activate it) calls the boat over if it is moored
+* on the far side. Boats: 3 6 2 west sea, 3 6 1 east sea. (3 6 3 is not a
+* boat but the transit pod in the tube by the lab, with its own buttons
+* 2 2 22 and 2 2 21; its callers 2 2 214/215 were removed 2026-11-08 and
+* any left over are cleared below.) Messages: 0 rows a boat east, 1 rows it west. Run by openc2e after
+* the world loads (Additions folder); not saved, so made anew each load.
+
+scrp 2 2 210 1
+  pose 1 snde ding
+  enum 3 6 2 doif posl gt 400 mesg writ targ 1 endi next
+  wait 20 pose 0 setv actv 0
+endm
+scrp 2 2 210 2
+  pose 1 snde ding
+  enum 3 6 2 doif posl gt 400 mesg writ targ 1 endi next
+  wait 20 pose 0 setv actv 0
+endm
+scrp 2 2 211 1
+  pose 1 snde ding
+  enum 3 6 2 doif posr lt 1000 mesg writ targ 0 endi next
+  wait 20 pose 0 setv actv 0
+endm
+scrp 2 2 211 2
+  pose 1 snde ding
+  enum 3 6 2 doif posr lt 1000 mesg writ targ 0 endi next
+  wait 20 pose 0 setv actv 0
+endm
+scrp 2 2 212 1
+  pose 1 snde ding
+  enum 3 6 1 doif posl gt 6600 mesg writ targ 1 endi next
+  wait 20 pose 0 setv actv 0
+endm
+scrp 2 2 212 2
+  pose 1 snde ding
+  enum 3 6 1 doif posl gt 6600 mesg writ targ 1 endi next
+  wait 20 pose 0 setv actv 0
+endm
+scrp 2 2 213 1
+  pose 1 snde ding
+  enum 3 6 1 doif posl lt 6900 mesg writ targ 0 endi next
+  wait 20 pose 0 setv actv 0
+endm
+scrp 2 2 213 2
+  pose 1 snde ding
+  enum 3 6 1 doif posl lt 6900 mesg writ targ 0 endi next
+  wait 20 pose 0 setv actv 0
+endm
+
+* the switches, base on the dock surface (no physics: they stay put)
+enum 2 2 210 kill targ next
+inst new: simp cbt2 2 0 3000 0 setv cls2 2 2 210 setv attr 4 bhvr 2 0 pose 0 mvto 250 530 slow
+enum 2 2 211 kill targ next
+inst new: simp cbt2 2 0 3000 0 setv cls2 2 2 211 setv attr 4 bhvr 2 0 pose 0 mvto 1100 530 slow
+enum 2 2 212 kill targ next
+inst new: simp cbt2 2 0 3000 0 setv cls2 2 2 212 setv attr 4 bhvr 2 0 pose 0 mvto 6380 554 slow
+enum 2 2 213 kill targ next
+inst new: simp cbt2 2 0 3000 0 setv cls2 2 2 213 setv attr 4 bhvr 2 0 pose 0 mvto 7300 550 slow
+enum 2 2 214 kill targ next
+enum 2 2 215 kill targ next

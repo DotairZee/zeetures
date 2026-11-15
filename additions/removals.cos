@@ -1,0 +1,28 @@
+* Objects taken out of the world (openc2e Creatures 2 project, our own
+* script). Run by openc2e after the world loads (Additions folder), every
+* load, and safe to repeat.
+
+* The five power-up medallions, classifiers 2 9 16-20 (the game's sprite
+* powp): spinning game-state switches for features openc2e already has
+* on, so they only get in the way. At x 4061 y 761, 8029/1230, 4317/1470,
+* 126/2222, 8298/967; the wall behind each is whole.
+enum 2 9 16 kill targ next
+enum 2 9 17 kill targ next
+enum 2 9 18 kill targ next
+enum 2 9 19 kill targ next
+enum 2 9 20 kill targ next
+
+* The under-floor sweeper, 2 20 14 (the game's sprite dos2): a critter that
+* walks inside the ground under the east-garden soil (rooms 15-17, floor
+* lines about 70 px above the rooms' bottoms) to clear away objects that
+* fall below the floors. openc2e now lifts a moving object that is under its
+* room's floor line back onto it, so nothing collects down there, and the
+* sweeper itself would be lifted into view.
+enum 2 20 14 kill targ next
+
+* The cacti the world starts with (owner): the game's cactus plants 2 15 1
+* (sprite cact) and 2 15 4 (cac2), and the cactus seeds 2 21 6 (cac2), in
+* the desert above the incubator and elsewhere.
+enum 2 15 1 kill targ next
+enum 2 15 4 kill targ next
+enum 2 21 6 kill targ next

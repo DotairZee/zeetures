@@ -1,0 +1,60 @@
+* The throne statue as a kind presence (openc2e Creatures 2 project, our own
+* script; owner, 2026-11-13: "I'd like the throne statue to emit good things,
+* not fear and whatnot"; option 5 of those offered, calm and healing). Run by
+* openc2e after the world loads (Additions folder); safe to repeat.
+*
+* The Shee statue on its throne in the west cave (its eyes 2 19 6 at about
+* 1242,2049; the glowing parts 2 19 7 below them) had a timer that shouted
+* Fear Increase (chemical 27) and Loneliness Increase (25) to every creature
+* within 700 px, twice as much with a norn in sight, with a gong, lit eyes and
+* its threat at 255. Its timer script is replaced:
+* - calm across the cave (500 px): Fear Decrease (44) 30 and Loneliness
+*   Decrease (42) 20, every 2 s;
+* - healing close by (within 250 px across of the statue, on the cave's
+*   floor): Pain Decrease (35) 25 and Injury Decrease (48) 10, every 2 s;
+* - while a creature is close the eyes and the glow are lit, with a soft
+*   chime (the triangle's sound, tri_) as they light; no threat at all.
+* OV00 is 1 while lit.
+
+scrp 2 19 6 9
+  setv thrt 0
+  setv rnge 500
+  stim shou 100 255 0 0 44 30 42 20 0 0 0 0
+  setv var0 0
+  enum 4 0 0
+    setv var1 posx
+    subv var1 1266
+    doif var1 lt 0
+      negv var1
+    endi
+    doif var1 lt 250 and posy gt 1900 and posy lt 2320
+      stim writ targ 100 255 0 0 35 25 48 10 0 0 0 0
+      setv var0 1
+    endi
+  next
+  targ ownr
+  doif var0 eq 1
+    doif ov00 eq 0
+      snde tri_
+      setv ov00 1
+      pose 1
+      enum 2 19 7 pose 1 next
+    endi
+  else
+    doif ov00 eq 1
+      setv ov00 0
+      targ ownr
+      pose 0
+      enum 2 19 7 pose 0 next
+    endi
+  endi
+  targ ownr
+endm
+
+enum 2 19 6
+  setv thrt 0
+  setv ov00 0
+  pose 0
+  tick 20
+next
+enum 2 19 7 pose 0 next

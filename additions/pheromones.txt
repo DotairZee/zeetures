@@ -1,0 +1,159 @@
+# Scents (pheromones) for openc2e's Creatures 2 worlds (our own design, owner
+# 2026-11-11). Installed as ~/.openc2e/Creatures 2/pheromones.txt; read again
+# at each world load. Remove the file and there are no scents at all.
+#
+# Each room holds every scent named below. Every 5 world ticks a scent fades
+# a little, flows through open doorways toward rooms with less of it, and is
+# topped up by whoever is giving it off there. Creatures smell the room they
+# are in and, for following, the rooms beyond its doorways. A creature does
+# not smell a scent it is giving off itself (it is used to its own odor).
+#
+# ---- Lines ---------------------------------------------------------------------
+#
+#   scent NAME [spread S] [fade F] [habituate T]
+#       S: share of the difference that flows through a fully open doorway
+#          each step (0-0.24, default 0.12); F: share lost each step (default
+#          0.02; 0.02 is about a minute to fade by half at normal speed).
+#       T: habituation: a creature in the scent gets used to it over about
+#          T ticks (10 a second), and everything it does for the scent
+#          (follow, avoid, chem) weakens by as much; away from it, it
+#          unlearns at the same pace. Default none.
+#
+#   WHO emit SCENT STRENGTH [when CONDITIONS]
+#       gives off the scent (1 = a typical creature's worth).
+#   object FAMILY GENUS SPECIES emit SCENT STRENGTH
+#       objects too (0 means any), e.g. eggs, a nest, a food bowl.
+#   WHO smell SCENT chem CHEMICAL AMOUNT [when CONDITIONS]
+#       "primer": smelling it adds the chemical, AMOUNT a step at full
+#       strength (C2 chemical numbers, as in the Science Kit).
+#   WHO smell SCENT follow [for DRIVE] [WEIGHT] [tend] [when CONDITIONS]
+#   WHO smell SCENT avoid [for DRIVE] [WEIGHT] [when CONDITIONS]
+#       "releaser": an urge to go where it is stronger, or away from it,
+#       weighed against the creature's other needs. "for DRIVE": worth as
+#       much as easing that drive (pain pleasure hunger cold hot tired sleepy
+#       lonely crowded fear bored anger sex injury suffocate thirst stress);
+#       without it, a fixed urge (WEIGHT 1 is a middling one); a tend urge
+#       without a drive fades as the creature's most pressing need (hunger,
+#       pain, cold, heat, tiredness, sleepiness, fear, injury, air, thirst)
+#       grows. "tend": with
+#       one of its own kind who needs care (a baby, a child, the senile) in
+#       sight, the creature goes to it, tickles it, and brings it food or a
+#       toy (picks one up nearby, carries it over, drops it beside them).
+#   WHO mark harm|help|felt:N,N SCENT STRENGTH TICKS [when CONDITIONS]
+#       when something harms (pain, injury, punishment) or helps (reward, a
+#       drive eased) this creature, that thing is marked: it gives off the
+#       scent wherever it goes, fading over TICKS (10 ticks a second).
+#
+#   WHO: any, norn, grendel or ettin; then :female or :male; then @ and a
+#        life stage or range: baby child adolescent youth adult old senile
+#        (or 0-6). Examples: norn, norn:female, any@baby, grendel:male@youth-old
+#   CONDITIONS: CHEM>N, CHEM<N (body chemicals; a drive's own chemical is
+#        its drive number plus one: 1 Pain ... 3 Hunger ... 8 Loneliness,
+#        10 Fear, 13 Sex Drive), carrying, dead, asleep, awake; joined with
+#        "and". For smell rules also here>X and here<X: the scent's strength
+#        where the creature is (0-1), for "dose bands": one scent, different
+#        responses at different strengths.
+#
+# Watch it: OPENC2E_WATCH_SCENTS=1 prints the spread of each scent and every
+# mark now and then.
+
+# ---- Mates find each other by scent (on) ----------------------------------------
+# Adolescents to old creatures give off their kind's and sex's scent. The
+# other sex smelling it gets the genome's own mating chemistry going (the
+# opposite-sex and species pheromones, 120 and 116, which react into the
+# mating pheromone 115 and, with arousal, sex drive 13), and, once sex drive
+# is up, follows the scent to its source.
+
+scent norn-female
+scent norn-male
+scent grendel-female
+scent grendel-male
+scent ettin-female
+scent ettin-male
+
+norn:female@adolescent-old emit norn-female 1
+norn:male@adolescent-old emit norn-male 1
+grendel:female@adolescent-old emit grendel-female 1
+grendel:male@adolescent-old emit grendel-male 1
+ettin:female@adolescent-old emit ettin-female 1
+ettin:male@adolescent-old emit ettin-male 1
+
+norn:male@adolescent-old smell norn-female chem 120 3
+norn:male@adolescent-old smell norn-female chem 116 2
+norn:male@adolescent-old smell norn-female follow for sex 3 when 13>48
+norn:female@adolescent-old smell norn-male chem 120 3
+norn:female@adolescent-old smell norn-male chem 116 2
+norn:female@adolescent-old smell norn-male follow for sex 3 when 13>48
+
+grendel:male@adolescent-old smell grendel-female chem 120 3
+grendel:male@adolescent-old smell grendel-female chem 116 2
+grendel:male@adolescent-old smell grendel-female follow for sex 3 when 13>48
+grendel:female@adolescent-old smell grendel-male chem 120 3
+grendel:female@adolescent-old smell grendel-male chem 116 2
+grendel:female@adolescent-old smell grendel-male follow for sex 3 when 13>48
+
+ettin:male@adolescent-old smell ettin-female chem 120 3
+ettin:male@adolescent-old smell ettin-female chem 116 2
+ettin:male@adolescent-old smell ettin-female follow for sex 3 when 13>48
+ettin:female@adolescent-old smell ettin-male chem 120 3
+ettin:female@adolescent-old smell ettin-male chem 116 2
+ettin:female@adolescent-old smell ettin-male follow for sex 3 when 13>48
+
+# ---- Care: the young and the senile are tended (on; owner, 2026-11-15) ---------
+# Babies, children and the senile give off their kind's "care" scent. Grown
+# creatures of the same kind follow it, a steady pull that fades as their own
+# most pressing need grows (owner's choice, 2026-11-15; weighed as loneliness
+# it never fired in a crowded world, where nobody is lonely), and on finding
+# one tickle it and bring it food or a toy. The same one is tickled
+# again only after about a minute and a half, brought something after three.
+
+scent norn-care fade 0.04
+scent grendel-care fade 0.04
+scent ettin-care fade 0.04
+
+norn@baby-child emit norn-care 1
+norn@senile emit norn-care 1
+grendel@baby-child emit grendel-care 1
+grendel@senile emit grendel-care 1
+ettin@baby-child emit ettin-care 1
+ettin@senile emit ettin-care 1
+
+norn@adolescent-old smell norn-care follow 1 tend
+grendel@adolescent-old smell grendel-care follow 1 tend
+ettin@adolescent-old smell ettin-care follow 1 tend
+
+# ---- Examples, off (remove the "# " to try one) --------------------------------
+#
+# Harm and help leave a scent on whoever did it. A grendel that hits a norn
+# carries "danger" for a minute and norns keep away; a norn that kisses or
+# tickles another carries "kindness" and lonely norns go to it.
+# scent danger fade 0.05
+# scent kindness fade 0.05
+# norn mark harm danger 1 600
+# norn smell danger avoid for fear
+# norn smell danger chem 10 2           # 10 = Fear
+# norn mark help kindness 0.6 600
+# norn smell kindness follow for lonely when 8>40   # 8 = Loneliness
+#
+# Dose bands: drawn to alarm when it is faint (curious), fleeing it when
+# strong; and getting used to it if it hangs about.
+# scent alarm fade 0.15 spread 0.2 habituate 600
+# norn emit alarm 1 when 1>120
+# norn smell alarm follow 0.5 when here<0.2
+# norn smell alarm avoid for fear 1.5 when here>0.2
+#
+# Alarm: a hurt norn gives off alarm where it is; others leave the area.
+# scent alarm fade 0.15 spread 0.2
+# norn emit alarm 1 when 1>120          # 1 = Pain
+# norn smell alarm avoid for fear 1.5
+#
+# Ant-like trails: a creature carrying something lays a trail; others with
+# empty hands follow it toward wherever the carrying started.
+# scent trail fade 0.01 spread 0.06
+# norn emit trail 1 when carrying
+# norn smell trail follow for hunger 0.5
+#
+# Necromone: the dead give off a scent the living avoid.
+# scent death fade 0.01
+# any emit death 2 when dead
+# any smell death avoid 1.2

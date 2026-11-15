@@ -1,0 +1,99 @@
+* The bog's bed (openc2e Creatures 2 project, our own script; owner,
+* 2026-11-11: things kept getting down below the bog). Run by openc2e after
+* the world loads (Additions folder); safe to repeat.
+*
+* The bog under the swamp walkway (room 43, water, x 4800-5700) is painted
+* about 45 px deep: its surface is the walkway's line (y 2295) and its bed
+* lies at about y 2337-2340, rising to the surface at both banks. The room
+* went down to y 2399 with no floor line, so whatever sank came to rest up to
+* 60 px inside the painted earth (an old norn, a beach ball). Its floor line
+* now follows the bed, traced from the picture every 10 px (heights above
+* the room's bottom, y 2399).
+* At both ends the walkway climbs onto dry banks (room 44's line rises to
+* y 2255 at x 4800 and 5700) and the painted water stops short (about x
+* 4895 and 5690). There the bed lies flush with the water's surface: a bed
+* traced under the banks (first version, the same day) lay a little below
+* the walkway's slope inside the painted earth, and a norn walking down the
+* west bank was set on it, half buried.
+ssfc 43 12 0 104 95 104 130 69 160 57 250 62 400 59 650 63 720 75 820 65 860 85 890 104 900 104
+* creatures caught under a bank: back onto the dry ground beside it
+enum 4 0 0
+  doif posb gt 2296 and posb lt 2420 and posx gt 4760 and posx lt 4900
+    mvto 4650 2150
+    setv vely 1
+  endi
+  doif posb gt 2296 and posb lt 2420 and posx gt 5680 and posx lt 5800
+    mvto 5760 2150
+    setv vely 1
+  endi
+next
+*
+* Creatures stuck in the water under the walkway (owner's screenshot,
+* 2026-11-14: one below the walkway, only its feet showing). The walkway
+* (room 44, floor line 2255 at the banks, 2285 in the middle) lies just over
+* the water (room 43, surface 2295), and the way between them was open, so a
+* creature could drop through into the water. There it walked along the bed
+* and up a bank to the surface, where it stood 20-40 px under the walkway's
+* floor at the bank, could not step up onto it, and could go no further (the
+* water's sides are closed): tested on a copy, a creature put in the water
+* ended pacing under the west bank (x 4787-4896, feet 2295) for good. The
+* check above runs only at load (and missed feet at exactly 2295).
+* - The way from the walkway down into the water is closed, so nothing
+*   drops in.
+* - A watcher (2 1 159, invisible, every 2 s, all in one tick) sets any
+*   creature in the water back on the walkway right above it, its feet on
+*   the walkway's floor line at its middle (moved by script, so not a fall).
+setv door 0 43 44 0
+enum 2 1 159 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 159 setv attr 16 mvto 5000 1330 tick 20 slow
+scrp 2 1 159 9
+  inst
+  enum 4 0 0
+    doif posx gt 4800 and posx lt 5700 and posb gt 2290 and posb lt 2420
+*     the walkway's floor at x (room 44's floor points, heights above 2295:
+*     40 at 4800, 20 at 5000, 10 at 5250, 20 at 5450, 40 at 5700)
+      setv var0 posx
+      subv var0 4800
+      doif var0 lt 200
+        setv var1 var0
+        mulv var1 20
+        divv var1 200
+        setv var2 40
+        subv var2 var1
+      else
+        doif var0 lt 450
+          setv var1 var0
+          subv var1 200
+          mulv var1 10
+          divv var1 250
+          setv var2 20
+          subv var2 var1
+        else
+          doif var0 lt 650
+            setv var1 var0
+            subv var1 450
+            mulv var1 10
+            divv var1 200
+            setv var2 10
+            addv var2 var1
+          else
+            setv var1 var0
+            subv var1 650
+            mulv var1 20
+            divv var1 250
+            setv var2 20
+            addv var2 var1
+          endi
+        endi
+      endi
+      setv var3 2295
+      subv var3 var2
+      setv var4 posb
+      subv var4 post
+      subv var3 var4
+      mvto posl var3
+      setv velx 0
+      setv vely 0
+    endi
+  next
+endm

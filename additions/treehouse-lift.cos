@@ -1,0 +1,53 @@
+* The treehouse cage lift goes up one more floor, to the upper hut's deck
+* (openc2e Creatures 2 project, our own script; owner, 2026-11-14, with a
+* marked screenshot; mock-ups treehouse-lift-mockup.png,
+* treehouse-lift-short-tube-mockup.png, treehouse-lift-cables.png approved).
+* Run by openc2e after the world loads (Additions folder); safe to repeat.
+* The pictures are made on the player's own machine from their installed
+* Creatures 2 by tools/sprites/treelift_top.py and tube_short.py.
+*
+* The bamboo cage lift below the treehouses (3 2 2, cage x 3526-3650) ran
+* between the lower deck (caller 3679/1916) and the middle deck (caller
+* 3684/1667). Above it, the upper hut's deck (room 60, floor 1544, which
+* runs on east as the walk through the glass tube) had the tube's west end
+* over the shaft, and the lift's pulley hung under that deck.
+*
+* 1. The glass tube starts 130 px further east, so the cage rises in the
+*    open beside it. The game's foreground piece (scenery 1 0 0 at
+*    3531,1390, hall frame 4) is replaced by zths (the same piece from x
+*    3661, its broken end moved with it; plane 8999, in front of creatures
+*    as the game's was), and ztbf (behind creatures) moves the background's
+*    own tube end, back glass included, east with it and fills where it was
+*    with the trunk and leaves from just above. The walk is unchanged.
+enum 1 0 0 doif posl eq 3531 doif post eq 1390 kill targ endi endi next
+enum 2 3 228 kill targ next
+enum 2 3 229 kill targ next
+inst new: simp ztbf 1 0 -50 0 setv cls2 2 3 228 setv attr 0 mvto 3524 1388 slow
+inst new: simp zths 1 0 8999 0 setv cls2 2 3 229 setv attr 0 mvto 3661 1390 slow
+*
+* 2. The upper deck carried on under the tube's new mouth to x 3796 (ztde:
+*    its own planks and both logs, then its ragged end), behind creatures.
+enum 2 3 227 kill targ next
+inst new: simp ztde 1 0 -48 0 setv cls2 2 3 227 setv attr 0 mvto 3586 1540 slow
+*
+* 3. The pulley moved up: the flying fox landing's cane beam carried on as
+*    an arm over the shaft, a cord stay to the landing's post, the painted
+*    pulley hung under it on an iron hook, and the lift's two cables from it
+*    down behind the deck to where the painted ones go on (ztla, behind the
+*    cage); the old pulley's place under the deck covered with the leaves
+*    beside it (ztlc).
+enum 2 3 223 kill targ next
+enum 2 3 224 kill targ next
+inst new: simp ztlc 1 0 -50 0 setv cls2 2 3 223 setv attr 0 mvto 3554 1562 slow
+inst new: simp ztla 1 0 -23 0 setv cls2 2 3 224 setv attr 0 mvto 3440 1120 slow
+*
+* 4. A third stop at the upper deck (the cage's bottom at 1544), and its
+*    caller: the game's capsule caller picture (lbtn, from the player's own
+*    copy), like the two below, on the deck by the hut. NEW: CALL is
+*    openc2e's: it adds the stop to the lift and links the button to it.
+enum 2 2 1 doif posl eq 3478 doif post eq 1464 kill targ endi endi next
+enum 3 2 2
+  doif posl eq 3526
+    inst new: call targ 1544 lbtn 6 0 5000 setv cls2 2 2 1 setv attr 196 bhvr 1 0 pose 0 mvto 3478 1464 slow
+  endi
+next

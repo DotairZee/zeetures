@@ -1,0 +1,32 @@
+* The upper-east ledge, made longer (openc2e Creatures 2 project, our own
+* script and our own art). Run by openc2e after the world loads (Additions
+* folder); safe to repeat. ROOM takes all of a room's data, so each room's
+* own values are passed back.
+*
+* Right of the deck's lift (cables at x 7575-7596) a tongue of red rock ends
+* in a thin point at about x 7677, where the deck's walking floor (room 145,
+* y 906) ended too. The potted bush there hung off that point, and moved left
+* it covered the cables (owner, 2026-11-10). The rock now goes on to x 7750
+* (sprite zldg, drawn by tools/sprites/ledge.py, plane -20: behind the bush
+* and everything else), the walking floor with it to x 7745, and the bush
+* stands 22 px further right (7604/779): its crown clear of the cables, its
+* planter wholly on rock.
+*
+* Room 145 (the deck, x 7306-7670) reaches to x 7745; room 179 (the open air
+* east of it, falling to the platform below) starts there instead of at 7670.
+room 145 7306 693 7745 906 room 145 4 room 145 5 room 145 6 room 145 7 room 145 8 room 145 9 room 145 12 room 145 13 room 145 14 room 145 15 room 145 16 room 145 17 room 145 19
+room 179 7745 693 7934 969 room 179 4 room 179 5 room 179 6 room 179 7 room 179 8 room 179 9 room 179 12 room 179 13 room 179 14 room 179 15 room 179 16 room 179 17 room 179 19
+* The open air under the rock's new tip (x 7670-7745, y 906-969) had been
+* part of room 179 and belonged to no room after the change: a creature
+* stepping off the ledge's end hung its left side over it and was "out of the
+* room system" (several times a session, 2026-11-13). It is a room of its own
+* again (300, with 179's values), open to the air east of it and below it,
+* walled from the deck above and the rock west of it.
+room 300 7670 906 7745 969 room 179 4 room 179 5 room 179 6 room 179 7 room 179 8 room 179 9 room 179 12 room 179 13 room 179 14 room 179 15 room 179 16 room 179 17 room 179 19
+setv door 0 300 145 0
+setv door 0 300 157 0
+setv door 0 300 179 255
+setv door 0 300 178 255
+enum 2 3 237 kill targ next
+inst new: simp zldg 1 0 -20 0 setv cls2 2 3 237 setv attr 0 mvto 7636 904 slow
+enum 2 4 141 doif posl eq 7582 doif post eq 779 mvto 7604 779 endi endi next

@@ -1,0 +1,43 @@
+* The west sea's monster stays in the sea (openc2e Creatures 2 project, our
+* own script). Run by openc2e after the world loads (Additions folder); safe
+* to repeat.
+*
+* The sea monster (2 19 5) rests at home (its OV05/OV06, about 308,882) and,
+* when there are more than five Zander fish (2 20 3), chases them with only
+* collisions on, then swims straight back home. Owner, 2026-11-11: it ended
+* up in the small pool under the rock ledge (room 110, x 669-1170, y
+* 1352-1440, below the lamp-lit cave), which no water doorway joins to the
+* sea (every door there has permeability 0): it went through a shut
+* doorway while chasing at speed, and could not swim back through the rock.
+* A keeper (2 1 154, invisible, every 5 ticks) puts it back home, at rest,
+* whenever its middle is outside the west sea's water rooms (136, 203, 135,
+* 134, 137, 204, 121, 126).
+enum 2 1 154 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 154 setv attr 16 mvto 5000 1340 tick 5 slow
+scrp 2 1 154 9
+  enum 2 19 5
+    setv var0 posl addv var0 posr divv var0 2
+    setv var1 post addv var1 posb divv var1 2
+    setv var2 0
+    * 136: x 300-840, y 720-897
+    doif var0 ge 300 doif var0 le 840 doif var1 ge 720 doif var1 le 897 setv var2 1 endi endi endi endi
+    * 203: x 300-500, y 897-1096
+    doif var0 ge 300 doif var0 le 500 doif var1 ge 897 doif var1 le 1096 setv var2 1 endi endi endi endi
+    * 135: x 500-669, y 897-1096
+    doif var0 ge 500 doif var0 le 669 doif var1 ge 897 doif var1 le 1096 setv var2 1 endi endi endi endi
+    * 134: x 669-840, y 897-1140
+    doif var0 ge 669 doif var0 le 840 doif var1 ge 897 doif var1 le 1140 setv var2 1 endi endi endi endi
+    * 137: x 840-975, y 720-990
+    doif var0 ge 840 doif var0 le 975 doif var1 ge 720 doif var1 le 990 setv var2 1 endi endi endi endi
+    * 204: x 399-669, y 1096-1220
+    doif var0 ge 399 doif var0 le 669 doif var1 ge 1096 doif var1 le 1220 setv var2 1 endi endi endi endi
+    * 121: x 399-669, y 1220-1472
+    doif var0 ge 399 doif var0 le 669 doif var1 ge 1220 doif var1 le 1472 setv var2 1 endi endi endi endi
+    * 126: x 164-399, y 1096-1240
+    doif var0 ge 164 doif var0 le 399 doif var1 ge 1096 doif var1 le 1240 setv var2 1 endi endi endi endi
+    doif var2 eq 0
+      setv velx 0 setv vely 0 setv attr 0 setv ov02 0
+      mvto ov05 ov06
+    endi
+  next
+endm

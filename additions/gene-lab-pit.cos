@@ -1,0 +1,42 @@
+* The gene lab's lower room (openc2e Creatures 2 project, our own script;
+* 2026-11-13). Run by openc2e after the world loads (Additions folder); safe
+* to repeat.
+*
+* Room 159 (x 6113-6930, under the airlock, where the gene splicer stands)
+* is reached by stepping down off the walkway along the big pipe (room 158).
+* For a few hours on 2026-11-13 this script closed that doorway and moved
+* creatures out; the owner wanted the room left as it is ("I don't want to
+* build stairs or other ways in or out. I just want it to work as intended"),
+* so the doorway is open again, as in the world file, and nothing is moved.
+* The room's east end ends where its floor is drawn (owner, 2026-11-14:
+* "make that east side of the room well sealed with its boundaries ... there
+* are holes of some kind that creatures are getting through"). The floor slab
+* in the picture ends at x 6895, but the room ran on to the rock wall at 6930,
+* so creatures stood on 35 px of bare rock slope, and the room's south-east
+* corner is where they sank through into the sealed rock under the floor
+* (room 161; seen 7 times in a day) and were then moved behind the east wall
+* (room 171, 130 px lower in the rock). Now the room ends at 6895, with its
+* floor points re-set for the new width (heights 0, 0, 30, 30 above 1798 at
+* 0, 200, 390 and its end, 782).
+room 159 6113 1470 6895 1798 room 159 4 room 159 5 room 159 6 room 159 7 room 159 8 room 159 9 room 159 12 room 159 13 room 159 14 room 159 15 room 159 16 room 159 17 room 159 19
+ssfc 159 4 0 0 200 0 390 30 782 30
+setv door 0 158 159 255
+enum 2 1 157 kill targ next
+*
+* The splicer's two curved glass pipes in front of its glass pods (owner,
+* 2026-11-14: "I want the tubes that are seemingly above and behind the glass
+* chamber to be in front of those glass chambers"). The pipes are the pumps
+* 3 10 3 (x 6658-6794) and 3 10 4 (x 6787-6923), at plane 0 in the world
+* file, behind the pods 3 10 5 and 3 10 6; now at 1100, in front of the pods
+* and still behind creatures (1500) and the room's foreground brackets
+* (scenery 1 0 0, 9000). PLNE is openc2e's in C2.
+enum 3 10 3 plne 1100 next
+enum 3 10 4 plne 1100 next
+*
+* The splicer's threaded rod (pump 3 10 2, gene frames 12-21, x 6464-6508)
+* turns inside the tall pillar's window (the pillar's frame is foreground
+* scenery 1 0 0 at 6435,1478, plane 9000). It was at plane 0, so a creature
+* walking past was drawn behind the frame but in front of the rod (owner,
+* 2026-11-14: "it should be behind both"); now at 8990, in front of creatures
+* and just behind the frame.
+enum 3 10 2 plne 8990 next
