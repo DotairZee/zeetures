@@ -1197,7 +1197,14 @@ void c2Creature::updateConsciousness() {
 				diedof = "starvation";
 			else
 				diedof = "organ failure";
-			fmt::print("* {} died of {} (an organ failed)\n", world.history->findMoniker(genome), diedof);
+			// where it died (its middle and room), to map where drownings
+			// and starvation happen (owner, 2026-11-14)
+			{
+				float cx = parentagent->x + parentagent->getWidth() / 2.0f;
+				float cy = parentagent->y + parentagent->getHeight() / 2.0f;
+				auto room = world.map ? world.map->roomAt(cx, cy) : nullptr;
+				fmt::print("* {} died of {} (an organ failed) at {:.0f},{:.0f} (room {})\n", world.history->findMoniker(genome), diedof, cx, cy, room ? (int)room->id : -1);
+			}
 			unconscious = false;
 			die();
 			return;
