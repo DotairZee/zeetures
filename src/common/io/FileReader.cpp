@@ -59,7 +59,7 @@ std::vector<uint8_t> FileReader::read_to_end() {
 	struct _stat64 sb;
 	int ret = _fstat64(_fileno(ptr_), &sb);
 #else
-	// TODO: define _FILE_OFFSET_BITS=64 on Linux?
+	// (_FILE_OFFSET_BITS=64 is defined for every non-Windows build, in CMakeLists.txt)
 	struct stat sb;
 	int ret = fstat(fileno(ptr_), &sb);
 #endif

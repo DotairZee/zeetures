@@ -119,6 +119,11 @@ set(CMAKE_CXX_FLAGS "${original_cxx_flags}")
 if(WIN32)
 	add_compile_definitions("NOMINMAX")
 endif()
+if(NOT WIN32)
+	# 64-bit file offsets (off_t, fseeko) on 32-bit systems too; a no-op on
+	# 64-bit ones
+	add_compile_definitions("_FILE_OFFSET_BITS=64")
+endif()
 if (CMAKE_CXX_COMPILER_ID MATCHES "(Clang|GNU)")
 	add_compile_options(-Wextra -Wall -Wno-conversion)
 endif()
