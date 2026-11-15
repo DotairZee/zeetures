@@ -224,7 +224,8 @@ static const char* GenusName(int genus) {
 // stalled meals, starving creatures leave, lift links, floating bodies,
 // the toolbar speed control, vivid babies (version log in the project's
 // NOTES.md).
-#define OPENC2E_FORK_VERSION "0.4.0"
+// 0.5.0 (2026-11-14, night): every object kept between launches (stage 3).
+#define OPENC2E_FORK_VERSION "0.5.0"
 // the openc2e this fork started from (an unreleased development build)
 #define OPENC2E_UPSTREAM_BASE "commit dfcd46f2, 6 October 2026 (825 commits after its v0.2 release)"
 #define OPENC2E_WEB "https://openc2e.github.io/"
