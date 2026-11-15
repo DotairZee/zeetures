@@ -183,8 +183,9 @@ int populationLimit() {
 		// (not saved), for tests that must not touch the player's settings
 		if (const char* e = getenv("OPENC2E_POPULATION_LIMIT"))
 			return s_population_limit = std::max(0, atoi(e));
+		// (Zeetures: 150 until the player sets one; 0 is no limit)
 		std::string v = readSetting("population-limit");
-		s_population_limit = v.empty() ? 0 : std::max(0, atoi(v.c_str()));
+		s_population_limit = v.empty() ? 150 : std::max(0, atoi(v.c_str()));
 	}
 	return s_population_limit;
 }

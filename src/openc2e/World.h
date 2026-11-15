@@ -136,6 +136,7 @@ class World {
 	void shutdown();
 
 	void executeInitScript(std::filesystem::path p);
+	void executeInitScriptText(const std::string& name, const std::string& text);
 	void executeBootstrap(std::filesystem::path p);
 	void executeBootstrap(bool switcher);
 

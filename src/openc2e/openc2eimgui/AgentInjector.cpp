@@ -148,7 +148,7 @@ static int setOf(const std::string& name) {
 }
 
 static void hideListed() {
-	auto hidden = CobManager::readNameList(getUserDataDir() / "Additions" / "hidden-cobs.txt");
+	auto hidden = CobManager::readNameList(getUserDataDir() / "Additions" / "hidden-cobs.txt"); // (or the built-in one: Additions.h)
 	auto& objs = s_object_injector.objects;
 	objs.erase(std::remove_if(objs.begin(), objs.end(), [&](auto& o) {
 		return std::find(hidden.begin(), hidden.end(), o.name) != hidden.end();

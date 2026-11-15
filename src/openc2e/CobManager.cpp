@@ -1,5 +1,7 @@
 #include "CobManager.h"
 
+#include "Additions.h"
+
 #include "Agent.h"
 #include "Engine.h"
 #include "PathResolver.h"
@@ -18,6 +20,7 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <set>
 #include <fmt/format.h>
 
@@ -25,7 +28,12 @@ namespace fs = std::filesystem;
 
 std::vector<std::string> CobManager::readNameList(const fs::path& file) {
 	std::vector<std::string> names;
-	std::ifstream in(file);
+	std::ifstream fin(file);
+	// a built-in addition's list the player has no copy of (Additions.h)
+	std::istringstream builtin;
+	if (!fin && file.parent_path() == getUserDataDir() / "Additions")
+		builtin.str(Additions::text(file.filename().string()));
+	std::istream& in = fin ? static_cast<std::istream&>(fin) : builtin;
 	std::string line;
 	while (std::getline(in, line)) {
 		auto hash = line.find('#');
@@ -55,6 +63,8 @@ static std::string trimmedName(std::string line) {
 }
 
 bool CobManager::addToNameList(const fs::path& file, const std::string& name, const std::string& comment) {
+	if (file.parent_path() == getUserDataDir() / "Additions")
+		Additions::ensureUserCopy(file.filename().string());
 	auto names = readNameList(file);
 	if (std::find(names.begin(), names.end(), name) != names.end())
 		return true;
@@ -82,6 +92,8 @@ bool CobManager::addToNameList(const fs::path& file, const std::string& name, co
 }
 
 bool CobManager::removeFromNameList(const fs::path& file, const std::string& name) {
+	if (file.parent_path() == getUserDataDir() / "Additions")
+		Additions::ensureUserCopy(file.filename().string());
 	std::ifstream in(file);
 	if (!in)
 		return true;

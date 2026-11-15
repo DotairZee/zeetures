@@ -206,8 +206,10 @@ creatureAppearanceGene* SkeletalCreature::appearanceGeneForPart(char x) {
 // or else the standard grendels (the owner's guideline). The age a one-set
 // breed was drawn at is the reference age nearest its size; with no
 // reference of its own species, it is taken as drawn adult.
+// (Zeetures: on unless OPENC2E_STAGE_SCALE=0; owner, 2026-11-15: Home's
+// settings are the defaults)
 static bool stageScaleOn() {
-	static const bool on = getenv("OPENC2E_STAGE_SCALE") != nullptr;
+	static const bool on = !getenv("OPENC2E_STAGE_SCALE") || std::string(getenv("OPENC2E_STAGE_SCALE")) != "0";
 	return on;
 }
 
@@ -363,8 +365,9 @@ static float stageScale(int species, bool female, int breed, int stage) {
 // that part grows between the two ages in its species' reference breed
 // (heads grow less than legs). Reference ages the reference breed lacks
 // (C2 draws no adolescent or adult) are interpolated between its drawn ages.
+// (Zeetures: on unless OPENC2E_STAGE_GROWTH=off)
 static bool partGrowthOn() {
-	static const bool on = getenv("OPENC2E_STAGE_GROWTH") && std::string(getenv("OPENC2E_STAGE_GROWTH")) == "parts";
+	static const bool on = !getenv("OPENC2E_STAGE_GROWTH") || std::string(getenv("OPENC2E_STAGE_GROWTH")) == "parts";
 	return on;
 }
 
@@ -455,9 +458,10 @@ static float partGrowth(char part, int species, bool female, int breed, int foun
 // OPENC2E_SENILE_TINT=1 (prototype): a senile creature's pictures muted toward
 // grey and lightened a little (owner, 2026-11-13); OPENC2E_SENILE_TINT=g,l
 // sets the grey share and the lift
+// (Zeetures: on unless OPENC2E_SENILE_TINT=0)
 static bool senileTint(float& grey, float& lift) {
-	static const char* v = getenv("OPENC2E_SENILE_TINT");
-	if (!v)
+	static const char* v = getenv("OPENC2E_SENILE_TINT") ? getenv("OPENC2E_SENILE_TINT") : "1";
+	if (std::string(v) == "0")
 		return false;
 	grey = 0.55f, lift = 0.08f;
 	sscanf(v, "%f,%f", &grey, &lift);

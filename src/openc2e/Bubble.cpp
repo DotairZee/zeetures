@@ -18,6 +18,8 @@
  */
 
 #include "Bubble.h"
+
+#include "Additions.h"
 #include "creatures/CreatureSpeech.h"
 
 #include "Camera.h"
@@ -34,6 +36,7 @@
 #include <cassert>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <map>
 
 namespace Openc2eImgui {
@@ -299,11 +302,16 @@ std::string AnnouncementBubble::announcementText(int stringid, int index) {
 	if (loadedFor != key) {
 		loadedFor = key;
 		texts.clear();
-		std::vector<std::filesystem::path> files{getUserDataDir() / "Additions" / "announcements.txt"};
-		if (!engine.currentworlddir.empty())
-			files.push_back(engine.currentworlddir / "Additions" / "announcements.txt");
-		for (auto& path : files) {
-			std::ifstream in(path);
+		// the player's own (or the built-in) one, then the world folder's
+		std::vector<std::string> files{Additions::text("announcements.txt")};
+		if (!engine.currentworlddir.empty()) {
+			std::ifstream w(engine.currentworlddir / "Additions" / "announcements.txt", std::ios::binary);
+			std::ostringstream ws;
+			ws << w.rdbuf();
+			files.push_back(ws.str());
+		}
+		for (auto& fileText : files) {
+			std::istringstream in(fileText);
 			std::string line;
 			while (std::getline(in, line)) {
 				if (!line.empty() && line.back() == '\r')

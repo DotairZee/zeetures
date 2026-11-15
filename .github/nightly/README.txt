@@ -24,17 +24,17 @@ Running it
 (The program is still called openc2e.)
 
 Linux:
-    ./openc2e -d "/path/to/Creatures 2" --mind homeostat
+    ./openc2e -d "/path/to/Creatures 2"
 
   The path is the folder that holds Creatures 2's Images, Sounds and
   Bootstrap folders. With Steam it is usually under
   ~/.local/share/Steam/steamapps/common/Creatures The Albian Years/Creatures 2
 
 Windows:
-    openc2e.exe -d "C:\path\to\Creatures 2" --mind homeostat
+    openc2e.exe -d "C:\path\to\Creatures 2"
 
 macOS:
-    ./openc2e -d "/path/to/Creatures 2" --mind homeostat
+    ./openc2e -d "/path/to/Creatures 2"
 
   The Steam release is for Windows: copy the Creatures 2 folder over from
   a Windows or Linux install. The download is not signed by Apple: the
@@ -43,8 +43,8 @@ macOS:
 
   (The Windows and macOS builds are new and less tried than Linux.)
 
-Without --mind homeostat the creatures use openc2e's unfinished copy of
-the original brain, and do very little.
+The creatures use Zeetures's own mind (--mind original gives them
+openc2e's unfinished copy of the original brain, which does very little).
 
 Your worlds, saves and settings are kept in openc2e's user folder
 (~/.openc2e on Linux), never in the game's own folder.

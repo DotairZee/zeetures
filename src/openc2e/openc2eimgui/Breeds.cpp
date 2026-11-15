@@ -1,3 +1,4 @@
+#include "Additions.h"
 #include "Breeds.h"
 
 #include "PathResolver.h"
@@ -226,7 +227,7 @@ std::vector<BreedInfo>& KnownBreeds(bool rescan) {
 	// breed-names.txt ("species|slot|name"; kept out of the engine: the
 	// names are the game's)
 	{
-		std::ifstream in(getUserDataDir() / "breed-names.txt");
+		std::istringstream in(Additions::text("breed-names.txt")); // (the player's own, or the built-in one)
 		std::string line;
 		while (std::getline(in, line)) {
 			if (line.empty() || line[0] == '#')

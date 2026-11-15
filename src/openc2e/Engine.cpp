@@ -22,6 +22,8 @@
 #include <chrono>
 #include "Engine.h"
 
+#include "Additions.h"
+
 #include <SDL3/SDL_events.h>
 
 #include "Blackboard.h"
@@ -1787,7 +1789,7 @@ bool Engine::parseCommandLine(int argc, char* argv[]) {
 	desc.add_options()("world", "C1/C2: open the named world from the Worlds folder (skips the world chooser)", cxxopts::value<std::string>(cmdline_world));
 	desc.add_options()("no-autosave", "C1/C2: don't save the world automatically on quit or when switching worlds");
 	desc.add_options()("no-world-chooser", "C1/C2: don't show the world chooser; load the game's Eden.sfc as before");
-	desc.add_options()("mind", "Use a pluggable creature mind for C1/C2 creatures (options: " + availableCreatureMinds() + "); default is the original brain code", cxxopts::value<std::string>(mindname));
+	desc.add_options()("mind", "The creature mind for C1/C2 creatures (options: " + availableCreatureMinds() + ", original); default homeostat, Zeetures's own; original is openc2e's unfinished copy of the original brain", cxxopts::value<std::string>(mindname));
 	for (int i = 0; i < argc; i++)
 		cmdline_args.push_back(argv[i]);
 	auto vm = desc.parse(argc, argv);
@@ -1814,7 +1816,13 @@ bool Engine::parseCommandLine(int argc, char* argv[]) {
 		world.autostop = true;
 	}
 
-	if (!mindname.empty()) {
+	// Zeetures: its own mind unless the player asks otherwise (owner,
+	// 2026-11-15: the same world as Home's on any machine)
+	if (mindname.empty())
+		mindname = "homeostat";
+	if (mindname == "original") {
+		fmt::print("* Creature mind: original brain code\n");
+	} else {
 		if (!createCreatureMind(mindname)) {
 			fmt::print(stderr, "Unknown creature mind '{}' (options: {})\n", mindname, availableCreatureMinds());
 			return false;
@@ -1921,13 +1929,18 @@ bool Engine::parseCommandLine(int argc, char* argv[]) {
 	// (already applied, or a different game version) is reported and skipped.
 void Engine::applyScriptPatches(bool quiet) {
 	if (version < 3) {
-		std::vector<fs::path> files{getUserDataDir() / "Additions" / "script-patches.txt"};
-		if (!currentworlddir.empty())
-			files.push_back(fs::path(currentworlddir) / "Additions" / "script-patches.txt");
-		for (auto& path : files) {
-			if (!fs::exists(path))
+		// the player's own (or the built-in) one, then the world folder's
+		std::vector<std::string> texts{Additions::text("script-patches.txt")};
+		if (!currentworlddir.empty()) {
+			std::ifstream w(fs::path(currentworlddir) / "Additions" / "script-patches.txt", std::ios::binary);
+			std::ostringstream ws;
+			ws << w.rdbuf();
+			texts.push_back(ws.str());
+		}
+		for (auto& patchText : texts) {
+			if (patchText.empty())
 				continue;
-			std::ifstream in(path);
+			std::istringstream in(patchText);
 			std::string line;
 			int f = -1, g = -1, sp = -1, ev = -1;
 			std::string find;
@@ -1961,12 +1974,12 @@ void Engine::applyScriptPatches(bool quiet) {
 					if (text.find("endm") == std::string::npos)
 						text += " endm";
 					try {
-						caosScript patched(engine.gametype, path.filename().string());
+						caosScript patched(engine.gametype, "script-patches.txt");
 						patched.parse(text);
 						caosVM vm(0);
 						patched.installScripts();
 						vm.runEntirely(patched.installer);
-						fmt::print("* Patched scrp {} {} {} {} ({})\n", f, g, sp, ev, path.filename().string());
+						fmt::print("* Patched scrp {} {} {} {} ({})\n", f, g, sp, ev, "script-patches.txt");
 					} catch (Exception& e) {
 						fmt::print(stderr, "* Script patch for scrp {} {} {} {} failed: {}\n", f, g, sp, ev, e.prettyPrint());
 					}
@@ -2157,7 +2170,7 @@ bool Engine::initialSetup() {
 	// the additions, which may then adjust them. A COB the player does not
 	// have is skipped.
 	if (version == 2) {
-		auto names = CobManager::readNameList(getUserDataDir() / "Additions" / "builtin-cobs.txt");
+		auto names = CobManager::readNameList(CobManager::builtinListFile());
 		if (!names.empty()) {
 			CobManager cobs;
 			cobs.update();
@@ -2185,11 +2198,21 @@ bool Engine::initialSetup() {
 	}
 
 	// C1/C2: additions to the world, run after it has loaded (for example the
-	// boats' call switches): every .cos file in the user data folder's
-	// "Additions" folder (all worlds), then in the world folder's own.
+	// boats' call switches): Zeetures's built-in additions (C2) and the .cos
+	// files in the user data folder's "Additions" folder (all worlds; one of
+	// the same name replaces the built-in one, an empty one switches it off;
+	// Additions.h), then the world folder's own.
 	// Objects they create are not saved, so they are made anew at each load.
 	if (version < 3) {
-		std::vector<fs::path> dirs{getUserDataDir() / "Additions"};
+		for (auto& s : Additions::scripts()) {
+			if (s.text.find_first_not_of(" \t\r\n") == std::string::npos)
+				continue;
+			fmt::print("* Running world addition {}{}\n", s.name, s.fromPlayer ? "" : " (built in)");
+			creatingAdditions = true;
+			world.executeInitScriptText(s.name, s.text);
+			creatingAdditions = false;
+		}
+		std::vector<fs::path> dirs;
 		if (!currentworlddir.empty())
 			dirs.push_back(fs::path(currentworlddir) / "Additions");
 		for (auto& dir : dirs) {

@@ -19,6 +19,8 @@
 
 #include "Pheromones.h"
 
+#include "Additions.h"
+
 #include "Agent.h"
 #include "Engine.h"
 #include "Map.h"
@@ -462,8 +464,15 @@ void load() {
 	emittedLast.clear();
 	// (OPENC2E_PHEROMONES=FILE reads another file: for comparing rule sets in test copies)
 	const char* other = getenv("OPENC2E_PHEROMONES");
-	std::ifstream in(other ? std::filesystem::path(other) : getUserDataDir() / "pheromones.txt");
-	if (!in)
+	// the player's own pheromones.txt, else Zeetures's built-in one (Additions.h)
+	std::ifstream fin;
+	std::istringstream builtin;
+	if (other)
+		fin.open(other);
+	else
+		builtin.str(Additions::text("pheromones.txt"));
+	std::istream& in = other ? static_cast<std::istream&>(fin) : builtin;
+	if (!in || (!other && builtin.str().empty()))
 		return;
 	std::string text;
 	int line = 0;

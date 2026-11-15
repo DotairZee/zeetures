@@ -982,6 +982,21 @@ void World::executeInitScript(fs::path x) {
 	fflush(stderr);
 }
 
+// a script held in memory (a built-in world addition; Additions.h)
+void World::executeInitScriptText(const std::string& name, const std::string& text) {
+	try {
+		caosScript script(engine.gametype, name);
+		script.parse(text);
+		caosVM vm(0);
+		script.installScripts();
+		vm.runEntirely(script.installer);
+	} catch (Exception& e) {
+		fmt::print(stderr, "exec of \"{}\" failed due to exception {}\n", name, e.prettyPrint());
+	}
+	fflush(stdout);
+	fflush(stderr);
+}
+
 void World::executeBootstrap(fs::path p) {
 	if (!fs::is_directory(p)) {
 		executeInitScript(p);

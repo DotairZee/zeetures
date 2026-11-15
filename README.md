@@ -1,6 +1,6 @@
 # Zeetures
 
-> **Zeetures: a fan fork of openc2e, focused on Creatures 2** (forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2), 7 October 2026). It adds an original creature mind (`--mind homeostat`), a C2-style interface with the kits, world saving, scents and many fixes; see the `creature-mind` branch. Nightly builds are under [Releases](../../releases/tag/nightly) (they contain no game data: you need your own copy of Creatures 2). A noncommercial labor of love by an old fan, not affiliated with Gameware Europe or the openc2e developers. Every change is in the [changelog](CHANGELOG.md). See [Built on openc2e](#built-on-openc2e) below.
+> **Zeetures: a fan fork of openc2e, focused on Creatures 2** (forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2), 7 October 2026). It adds an original creature mind (the "homeostat" mind), a C2-style interface with the kits, world saving, scents and many fixes; see the `creature-mind` branch. Nightly builds are under [Releases](../../releases/tag/nightly) (they contain no game data: you need your own copy of Creatures 2). A noncommercial labor of love by an old fan, not affiliated with Gameware Europe or the openc2e developers. Every change is in the [changelog](CHANGELOG.md). See [Built on openc2e](#built-on-openc2e) below.
 
 ## What you need
 
@@ -21,11 +21,11 @@ Ready-to-run builds for each system are made automatically every night there are
 
 Unpack it and start the program (still called `openc2e`) with the path to your Creatures 2 folder, the one that holds its `Images`, `Sounds` and `Bootstrap` folders:
 
-* **Linux:** `./openc2e -d "$HOME/.local/share/Steam/steamapps/common/Creatures The Albian Years/Creatures 2" --mind homeostat`
-* **Windows:** `openc2e.exe -d "C:\Program Files (x86)\Steam\steamapps\common\Creatures The Albian Years\Creatures 2" --mind homeostat`
-* **macOS:** `./openc2e -d "/path/to/Creatures 2" --mind homeostat`. The Steam release is for Windows, so copy the `Creatures 2` folder over from a Windows or Linux install. The download is not signed by Apple: the first time, right-click `openc2e` and choose Open, or run `xattr -dr com.apple.quarantine .` in its folder.
+* **Linux:** `./openc2e -d "$HOME/.local/share/Steam/steamapps/common/Creatures The Albian Years/Creatures 2"`
+* **Windows:** `openc2e.exe -d "C:\Program Files (x86)\Steam\steamapps\common\Creatures The Albian Years\Creatures 2"`
+* **macOS:** `./openc2e -d "/path/to/Creatures 2"`. The Steam release is for Windows, so copy the `Creatures 2` folder over from a Windows or Linux install. The download is not signed by Apple: the first time, right-click `openc2e` and choose Open, or run `xattr -dr com.apple.quarantine .` in its folder.
 
-`--mind homeostat` gives the creatures Zeetures's own mind; without it they use openc2e's unfinished copy of the original brain and do very little. Your worlds, saves and settings are kept in openc2e's user folder (`~/.openc2e` on Linux), never in the game's folder.
+The creatures use Zeetures's own mind (`--mind original` gives them openc2e's unfinished copy of the original brain, which does very little). Zeetures's world additions (new walkways, lifts, airlocks, plants and many map fixes) are built into the program and applied to every Creatures 2 world as it loads. Your worlds, saves and settings are kept in openc2e's user folder (`~/.openc2e` on Linux), never in the game's folder.
 
 Linux is where Zeetures is played and tested every day; the Windows and macOS builds are new and less tried, and the 32-bit builds are compiled every night but have not yet been tried on a 32-bit machine.
 
@@ -35,7 +35,7 @@ Zeetures is at version 0.7.0 (shown in Help > About). It is a work in progress, 
 
 ### What works
 
-* **A new creature mind.** In stock openc2e, C2 creatures hatch but do almost nothing, because the original brain was never finished. Zeetures adds a small "creature mind" interface to the engine and an entirely new mind behind it (`--mind homeostat`): an original design, not a recreation of the C2 brain. Creatures learn what each action does to their needs, remember where food is, follow smells, learn a map of the world (lifts, boats, teleporters), hold their breath underwater, avoid dangerous drops and show their thoughts in picture bubbles.
+* **A new creature mind.** In stock openc2e, C2 creatures hatch but do almost nothing, because the original brain was never finished. Zeetures adds a small "creature mind" interface to the engine and an entirely new mind behind it (the "homeostat" mind): an original design, not a recreation of the C2 brain. Creatures learn what each action does to their needs, remember where food is, follow smells, learn a map of the world (lifts, boats, teleporters), hold their breath underwater, avoid dangerous drops and show their thoughts in picture bubbles.
 * **Personality and language.** Seven inborn temperament traits; relationships with friends, enemies and mates; creatures born knowing no words, who learn them from the learning machines, the hand, each other and the Stone of Knowledge, and babble in "Nornish" until they do.
 * **The life cycle.** Courtship, genetic crossover with mutation, pregnancy, eggs and hatching; aging, deaths with real causes, and grown creatures who tend babies, children and the senile. Breed import from zips, COBs, old installers and .exp files.
 * **Saving.** Multiple worlds with a chooser and autosave. Creatures, their minds, eggs, family records and every object in the world are saved.
@@ -71,7 +71,7 @@ sudo apt-get install build-essential cmake python3 git zlib1g-dev libpng-dev \
   libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev
 cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DOPENC2E_BUNDLED_SDL=ON
 cmake --build build -j"$(nproc)"
-./build/openc2e -d "/path/to/Creatures 2" --mind homeostat
+./build/openc2e -d "/path/to/Creatures 2"
 ```
 
 `OPENC2E_BUNDLED_SDL=ON` builds the SDL3 in `externals` (the packages above are its headers). If your system has SDL3 development packages (`libsdl3-dev`), you can leave it off. `OPENC2E_ASAN=OFF` turns off AddressSanitizer, which is on by default and makes the game several times slower.
@@ -83,7 +83,7 @@ Install [Visual Studio 2022](https://visualstudio.microsoft.com/) with the "Desk
 ```bat
 cmake -S . -B build -DOPENC2E_ASAN=OFF
 cmake --build build --config RelWithDebInfo
-build\RelWithDebInfo\openc2e.exe -d "C:\path\to\Creatures 2" --mind homeostat
+build\RelWithDebInfo\openc2e.exe -d "C:\path\to\Creatures 2"
 ```
 
 ### macOS
@@ -93,7 +93,7 @@ Install the Xcode command line tools (`xcode-select --install`) and CMake and Py
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF
 cmake --build build -j"$(sysctl -n hw.ncpu)"
-./build/openc2e -d "/path/to/Creatures 2" --mind homeostat
+./build/openc2e -d "/path/to/Creatures 2"
 ```
 
 ### 32-bit builds
@@ -118,7 +118,7 @@ cmake --build build32 -j"$(nproc)"
 `openc2e --help` lists them all. The ones Zeetures adds or uses most:
 
 * `-d PATH`: the Creatures 2 folder (needed).
-* `--mind homeostat`: give the creatures Zeetures's mind.
+* `--mind original`: openc2e's unfinished copy of the original brain instead of Zeetures's mind.
 * `--world NAME`: open that world from the Worlds folder, skipping the world chooser.
 * `--no-autosave`: don't save the world on quit or when switching worlds.
 * `--no-world-chooser`: load the game's own starting world, as the original game does.

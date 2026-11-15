@@ -311,6 +311,8 @@ add_library(openc2e_core OBJECT
 	src/openc2e/Catalogue.cpp
 	${GEN}/cmddata.cpp
 	${GEN}/embedded_files.cpp
+	${GEN}/embedded_additions.cpp
+	src/openc2e/Additions.cpp
 	src/openc2e/CompoundAgent.cpp
 	src/openc2e/AnimatablePart.cpp
 	src/openc2e/ButtonPart.cpp
@@ -589,6 +591,16 @@ add_custom_command(
 	OUTPUT ${GEN}/embedded_files.cpp
 	COMMAND ${Python_EXECUTABLE} scripts/embed_files.py ${GEN}/embedded_files.cpp ${EMBEDDED_FILES}
 	DEPENDS scripts/embed_files.py ${EMBEDDED_FILES}
+	WORKING_DIRECTORY ${SRC})
+
+# Zeetures's world additions (additions/: the scripts run after a C2 world
+# loads, and the text files read with them), built into the program
+file(GLOB ADDITION_FILES CONFIGURE_DEPENDS ${SRC}/additions/*.cos ${SRC}/additions/*.txt)
+list(SORT ADDITION_FILES)
+add_custom_command(
+	OUTPUT ${GEN}/embedded_additions.cpp
+	COMMAND ${Python_EXECUTABLE} scripts/embed_files.py ${GEN}/embedded_additions.cpp --func EmbeddedAddition ${ADDITION_FILES}
+	DEPENDS scripts/embed_files.py ${ADDITION_FILES}
 	WORKING_DIRECTORY ${SRC})
 
 install(FILES
