@@ -604,6 +604,13 @@ add_custom_command(
 	DEPENDS scripts/embed_files.py ${ADDITION_FILES}
 	WORKING_DIRECTORY ${SRC})
 
+# Zeetures's own sprites for the world additions (art/sprites, drawn from
+# scratch), beside the program as "zeetures-art": copied next to the built
+# program, and installed into every download
+add_custom_command(TARGET openc2e POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC}/art/sprites $<TARGET_FILE_DIR:openc2e>/zeetures-art)
+install(DIRECTORY art/sprites/ DESTINATION "zeetures-art")
+
 install(FILES
 	AUTHORS
 	COPYING

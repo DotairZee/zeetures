@@ -16,6 +16,8 @@
 
 #include "PathResolver.h"
 
+#include <SDL3/SDL_filesystem.h>
+
 #include "Engine.h"
 #include "World.h"
 #include "caosValue.h"
@@ -200,8 +202,28 @@ fs::path findGeneticsFile(fs::path path) {
 	return findFile(DIRECTORY_GENETICS, path);
 }
 
+// Zeetures's own sprites for its world additions (the repository's
+// art/sprites, drawn from scratch; owner, 2026-11-15: the same world on any
+// machine) ship beside the program in "zeetures-art". They are looked for
+// after the player's and the game's own folders, so a picture of the same
+// name there wins.
+static fs::path zeeturesArtDirectory() {
+	static fs::path dir = [] {
+		const char* base = SDL_GetBasePath();
+		return base ? fs::path(base) / "zeetures-art" : fs::path();
+	}();
+	return dir;
+}
+
 fs::path findImageFile(fs::path path) {
-	return findFile(DIRECTORY_IMAGES, path);
+	fs::path found = findFile(DIRECTORY_IMAGES, path);
+	if (found.empty() && engine.version == 2 && !zeeturesArtDirectory().empty()) {
+		std::error_code ec;
+		fs::path ours = case_insensitive_filesystem::canonical(zeeturesArtDirectory() / path.filename(), ec);
+		if (!ec && fs::exists(ours, ec))
+			return ours;
+	}
+	return found;
 }
 
 fs::path findJournalFile(fs::path path) {
