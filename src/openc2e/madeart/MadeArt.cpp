@@ -1,0 +1,234 @@
+#include "MadeArt.h"
+
+#include "Engine.h"
+#include "PathResolver.h"
+#include "common/Image.h"
+#include "common/creaturesImage.h"
+
+#include <cstring>
+#include <fmt/format.h>
+#include <fstream>
+#include <iterator>
+#include <system_error>
+
+namespace fs = std::filesystem;
+
+namespace MadeArt {
+
+namespace {
+
+std::map<std::string, Maker>& recipes() {
+	static std::map<std::string, Maker> r;
+	return r;
+}
+
+std::map<std::string, bool>& replacing() {
+	static std::map<std::string, bool> r;
+	return r;
+}
+
+struct S16 {
+	uint32_t flags = 0;
+	std::vector<uint8_t> data;
+	struct Frame {
+		uint32_t off;
+		uint16_t w, h;
+	};
+	std::vector<Frame> frames;
+	bool ok() const { return !frames.empty(); }
+};
+
+uint16_t le16(const uint8_t* p) {
+	return uint16_t(p[0] | (p[1] << 8));
+}
+uint32_t le32(const uint8_t* p) {
+	return uint32_t(p[0] | (p[1] << 8) | (p[2] << 16) | (uint32_t(p[3]) << 24));
+}
+
+// an uncompressed .s16 (the game's sprites and background), as art/s16.py
+S16 readS16(const fs::path& path) {
+	S16 s;
+	if (path.empty())
+		return s;
+	std::ifstream in(path, std::ios::binary);
+	if (!in)
+		return s;
+	s.data.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+	if (s.data.size() < 6)
+		return s;
+	s.flags = le32(&s.data[0]);
+	unsigned n = le16(&s.data[4]);
+	if (s.data.size() < 6 + 8 * size_t(n))
+		return s;
+	for (unsigned i = 0; i < n; i++) {
+		const uint8_t* e = &s.data[6 + 8 * i];
+		S16::Frame f{le32(e), le16(e + 4), le16(e + 6)};
+		if (size_t(f.off) + size_t(f.w) * f.h * 2 > s.data.size())
+			return S16();
+		s.frames.push_back(f);
+	}
+	return s;
+}
+
+// one 16-bit pixel to R G B, as art/s16.py and art/background.py (no
+// rounding up: the low bits are zero)
+void rgbOf(uint32_t flags, uint16_t v, uint8_t* out) {
+	if (flags & 1) { // 565
+		out[0] = uint8_t(((v >> 11) & 31) << 3);
+		out[1] = uint8_t(((v >> 5) & 63) << 2);
+		out[2] = uint8_t((v & 31) << 3);
+	} else { // 555
+		out[0] = uint8_t(((v >> 10) & 31) << 3);
+		out[1] = uint8_t(((v >> 5) & 31) << 3);
+		out[2] = uint8_t((v & 31) << 3);
+	}
+}
+
+const S16& background() {
+	static S16 bg = [] {
+		S16 s = readS16(findGameImageFile("Back.s16"));
+		if (s.frames.size() != 58 * 16) {
+			if (s.ok())
+				fmt::print(stderr, "* Made art: the game's Back.s16 has {} tiles, not {}\n", s.frames.size(), 58 * 16);
+			return S16();
+		}
+		return s;
+	}();
+	return bg;
+}
+
+std::map<std::string, std::shared_ptr<creaturesImage>>& made() {
+	static std::map<std::string, std::shared_ptr<creaturesImage>> m;
+	return m;
+}
+
+} // namespace
+
+Rgba backgroundRegion(int x0, int y0, int x1, int y1) {
+	const int TW = 144, TH = 150, DOWN = 16;
+	const S16& bg = background();
+	if (!bg.ok() || x1 <= x0 || y1 <= y0)
+		return Rgba();
+	Rgba out(x1 - x0, y1 - y0);
+	for (int col = x0 / TW; col <= (x1 - 1) / TW; col++)
+		for (int row = y0 / TH; row <= (y1 - 1) / TH; row++) {
+			size_t index = size_t(col) * DOWN + row;
+			if (index >= bg.frames.size())
+				continue;
+			const auto& f = bg.frames[index];
+			int tx = col * TW, ty = row * TH;
+			int ax0 = std::max(x0, tx), ay0 = std::max(y0, ty);
+			int ax1 = std::min(x1, tx + TW), ay1 = std::min(y1, ty + TH);
+			for (int y = ay0; y < ay1; y++)
+				for (int x = ax0; x < ax1; x++) {
+					uint16_t v = le16(&bg.data[f.off + 2 * (size_t(y - ty) * f.w + (x - tx))]);
+					uint8_t* p = out.at(x - x0, y - y0);
+					rgbOf(bg.flags, v, p);
+					p[3] = 255;
+				}
+		}
+	return out;
+}
+
+std::vector<Rgba> gameSprite(const std::string& name) {
+	S16 s = readS16(findGameImageFile(name + ".s16"));
+	std::vector<Rgba> out;
+	for (auto& f : s.frames) {
+		Rgba im(f.w, f.h);
+		for (int y = 0; y < f.h; y++)
+			for (int x = 0; x < f.w; x++) {
+				uint16_t v = le16(&s.data[f.off + 2 * (size_t(y) * f.w + x)]);
+				uint8_t* p = im.at(x, y);
+				rgbOf(s.flags, v, p);
+				p[3] = v == 0 ? 0 : 255;
+			}
+		out.push_back(std::move(im));
+	}
+	return out;
+}
+
+Register::Register(const std::string& name, Maker maker, bool replaces) {
+	recipes()[name] = std::move(maker);
+	replacing()[name] = replaces;
+}
+
+bool replacesGame(const std::string& name) {
+	auto it = replacing().find(name);
+	if (it == replacing().end() || !it->second || !canMake(name))
+		return false;
+	std::error_code ec;
+	for (const char* ext : {".s16", ".c16", ".png"})
+		if (fs::exists(getUserDataDir() / "Overrides" / "Images" / (name + ext), ec))
+			return false;
+	return true;
+}
+
+bool canMake(const std::string& name) {
+	return engine.version == 2 && recipes().count(name) && background().ok();
+}
+
+std::vector<Rgba> frames(const std::string& name) {
+	auto it = recipes().find(name);
+	if (it == recipes().end() || !background().ok())
+		return {};
+	try {
+		return it->second();
+	} catch (std::exception& e) {
+		fmt::print(stderr, "* Made art: {} failed: {}\n", name, e.what());
+		return {};
+	}
+}
+
+std::shared_ptr<creaturesImage> make(const std::string& name) {
+	if (!canMake(name))
+		return nullptr;
+	auto& m = made();
+	auto found = m.find(name);
+	if (found != m.end())
+		return found->second;
+	auto fr = frames(name);
+	std::shared_ptr<creaturesImage> img;
+	if (!fr.empty()) {
+		img = std::make_shared<creaturesImage>(name);
+		for (auto& f : fr) {
+			Image im;
+			im.width = f.w;
+			im.height = f.h;
+			im.format = if_rgba32;
+			im.data = shared_array<uint8_t>(f.px.begin(), f.px.end());
+			img->images.push_back(im);
+		}
+		fmt::print("* Made art: {} ({} frame{}, {}x{}) from the game's own pictures\n", name, fr.size(), fr.size() == 1 ? "" : "s", fr[0].w, fr[0].h);
+	}
+	m[name] = img;
+	return img;
+}
+
+std::vector<std::string> names() {
+	std::vector<std::string> n;
+	for (auto& [k, v] : recipes())
+		n.push_back(k);
+	return n;
+}
+
+void dumpIfAsked() {
+	const char* dir = getenv("OPENC2E_DUMP_MADE_ART");
+	if (!dir)
+		return;
+	std::error_code ec;
+	fs::create_directories(dir, ec);
+	for (auto& n : names()) {
+		auto fr = frames(n);
+		if (fr.empty()) {
+			fmt::print("* Made art dump: {} not made\n", n);
+			continue;
+		}
+		std::ofstream out(fs::path(dir) / (n + ".rgba"), std::ios::binary);
+		out << fr[0].w << " " << fr[0].h << " " << fr.size() << "\n";
+		for (auto& f : fr)
+			out.write(reinterpret_cast<const char*>(f.px.data()), f.px.size());
+		fmt::print("* Made art dump: {}\n", n);
+	}
+}
+
+} // namespace MadeArt

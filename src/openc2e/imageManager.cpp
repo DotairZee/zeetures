@@ -18,6 +18,8 @@
  */
 
 #include "imageManager.h"
+
+#include "madeart/MadeArt.h"
 #include <cmath>
 #include <map>
 #include <tuple>
@@ -183,9 +185,18 @@ std::shared_ptr<creaturesImage> imageManager::getImage(const std::string& name) 
 	} else if (engine.version == 2) {
 		// openc2e: a PNG sprite (with real transparency) comes first, so an
 		// add-on's own art can use it; the game's sprites are all .s16
-		img = tryOpenImage(name + ".png");
+		// Zeetures: a game sprite remade from the game's own (madeart/:
+		// wfal, the waterfall without its rock) comes before the game's
+		if (MadeArt::replacesGame(name))
+			img = MadeArt::make(name);
+		if (!img)
+			img = tryOpenImage(name + ".png");
 		if (!img)
 			img = tryOpenImage(name + ".s16");
+		// Zeetures: a picture made from the game's own (madeart/), when the
+		// player has no file of that name
+		if (!img)
+			img = MadeArt::make(name);
 	} else if (engine.bmprenderer) {
 		img = tryOpenImage(name + ".bmp");
 		if (img) {

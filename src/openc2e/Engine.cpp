@@ -23,6 +23,7 @@
 #include "Engine.h"
 
 #include "Additions.h"
+#include "madeart/MadeArt.h"
 
 #include <SDL3/SDL_events.h>
 
@@ -2270,6 +2271,7 @@ bool Engine::initialSetup() {
 		world.scriptorium->dumpScripts(dump);
 		fmt::print("* Dumped world scripts to {}\n", dumppath);
 	}
+	MadeArt::dumpIfAsked();
 	fmt::print("* Done startup.\n");
 
 	if (cmdline_norun) {

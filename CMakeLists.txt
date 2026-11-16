@@ -313,6 +313,16 @@ add_library(openc2e_core OBJECT
 	${GEN}/embedded_files.cpp
 	${GEN}/embedded_additions.cpp
 	src/openc2e/Additions.cpp
+	src/openc2e/madeart/MadeArt.cpp
+	src/openc2e/madeart/pillarfoot.cpp
+	src/openc2e/madeart/cavepath.cpp
+	src/openc2e/madeart/cave_ramp.cpp
+	src/openc2e/madeart/stream_bed.cpp
+	src/openc2e/madeart/volcano_trunk.cpp
+	src/openc2e/madeart/westlock_rock.cpp
+	src/openc2e/madeart/treelift_top.cpp
+	src/openc2e/madeart/tube_short.cpp
+	src/openc2e/madeart/volcano_passage.cpp
 	src/openc2e/CompoundAgent.cpp
 	src/openc2e/AnimatablePart.cpp
 	src/openc2e/ButtonPart.cpp

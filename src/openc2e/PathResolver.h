@@ -57,6 +57,10 @@ std::filesystem::path findCatalogueFile(std::filesystem::path name);
 std::filesystem::path findCobFile(std::filesystem::path name);
 std::filesystem::path findGeneticsFile(std::filesystem::path name);
 std::filesystem::path findImageFile(std::filesystem::path name);
+// the game's own Images folder only (the first data directory: not the
+// Overrides, not the user data folder), for art made from the game's own
+// pictures (madeart/)
+std::filesystem::path findGameImageFile(std::filesystem::path name);
 std::filesystem::path findOverlayDataFile(std::filesystem::path name);
 std::filesystem::path findSoundFile(std::filesystem::path name);
 

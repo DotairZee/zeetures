@@ -2,6 +2,7 @@
 
 #include "Engine.h"
 #include "PathResolver.h"
+#include "madeart/MadeArt.h"
 
 #include <algorithm>
 #include <cctype>
@@ -53,7 +54,7 @@ static std::string missingArtIn(const std::string& script) {
 				continue;
 			if (!std::all_of(w.begin(), w.end(), [](char c) { return std::islower((unsigned char)c) || std::isdigit((unsigned char)c); }))
 				continue;
-			if (findImageFile(w + ".s16").empty() && findImageFile(w + ".c16").empty() && findImageFile(w + ".png").empty())
+			if (findImageFile(w + ".s16").empty() && findImageFile(w + ".c16").empty() && findImageFile(w + ".png").empty() && !MadeArt::canMake(w))
 				return w;
 		}
 	}

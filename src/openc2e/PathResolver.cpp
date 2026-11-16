@@ -215,6 +215,14 @@ static fs::path zeeturesArtDirectory() {
 	return dir;
 }
 
+fs::path findGameImageFile(fs::path path) {
+	if (data_directories.empty())
+		return {};
+	std::error_code err;
+	fs::path resolved = case_insensitive_filesystem::canonical(getDirectory(data_directories.front(), DIRECTORY_IMAGES) / path, err);
+	return err ? fs::path() : resolved;
+}
+
 fs::path findImageFile(fs::path path) {
 	fs::path found = findFile(DIRECTORY_IMAGES, path);
 	if (found.empty() && engine.version == 2 && !zeeturesArtDirectory().empty()) {
