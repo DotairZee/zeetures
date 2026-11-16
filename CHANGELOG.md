@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 405 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 406 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 41 commits, 15 November 2026 to 16 November 2026
+- [Unreleased](#unreleased): 42 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,43 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### West sea airlock lets creatures out into the pool east of it
+
+[`bebe039f`](https://github.com/DotairZee/zeetures/commit/bebe039f483817eb511cc85db6c8f114f08cc8f3)
+
+The airlock's land door was in the rock at the east end of room 120,
+the floor by the cage lift. That floor opens only into a corridor
+(rooms 120, 119, 118 and the seam alcove 180) with no way out on foot,
+only two cage lifts: over five test copies creatures spent a median 355
+decisions there (90% 860), and many starved.
+
+The land door (2 3 248, zwld) is now in the west wall of the shallow
+pool just east of the sea door (room 110, x 669-1170, water 1352-1440),
+at 662,1366, the place the owner chose from airlock-pool-exit-
+mockup2.png. It is drawn at plane 9000, in front of the game's own rock
+over the pool's west bank (scenery cvl2/cvlk, plane 8999), as in the
+mock-up; at 1400 it was hidden. The car now goes down only to the
+pool's level (top 1308, bottom 1418; the sea door shuts behind it from
+1290), moves in one step from the rock to x 716 (just east of the door,
+4 px over the pool's sloping bed), and shoots the rider east into the
+water (velx 14, vely -5; it was -26, -9 across a dry floor). From the
+pool a creature wades east and walks up the far bank to room 113, then
+108 and the rest of the world; a creature holds its breath far longer
+than the wade takes.
+
+The pool's west end meets the seabed's low point at about the same
+height (x 669, about 1372), so creatures wading back to the pool's west
+wall were taken in again. A creature let out is marked (OV94 1) and not
+taken in until it has left the pool's area (middle x 560-1200, feet
+1250-1470), when the mark is cleared.
+
+Tests (copies of Home): one creature placed at the low point was taken
+in, let out at x 729 and walked out to room 108 within about 30 s; two
+at once both reached x 1500+ within about 2 minutes, marked while in
+the pool and cleared after; no re-takes. Seen on the way: brief
+"out of room system" errors at x 1420-1450, y 1320-1340 (under room
+108's floor), also present in earlier runs; the engine sets those back.
 
 #### Mind gives up waiting on food it cannot reach
 
