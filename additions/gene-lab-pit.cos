@@ -20,6 +20,14 @@
 * 0, 200, 390 and its end, 782).
 room 159 6113 1470 6895 1798 room 159 4 room 159 5 room 159 6 room 159 7 room 159 8 room 159 9 room 159 12 room 159 13 room 159 14 room 159 15 room 159 16 room 159 17 room 159 19
 ssfc 159 4 0 0 200 0 390 30 782 30
+* The strip that shortening left (owner's log review, 2026-11-16): x
+* 6895-6930 over the room's height belonged to no room (room 171, behind the
+* east wall, starts at 6930), and a creature turning against the wall reached
+* into it with a corner of its box, which counts as leaving the room system
+* (4 times in a session, at about 6900-6914, 1711-1725). It is a room of its
+* own now (251, the same values as 159), with no doorway to any other, so the
+* wall stays a wall and a corner reaching past it is still in a room.
+room 251 6895 1470 6930 1798 room 159 4 room 159 5 room 159 6 room 159 7 room 159 8 room 159 9 room 159 12 room 159 13 room 159 14 room 159 15 room 159 16 room 159 17 room 159 19
 setv door 0 158 159 255
 enum 2 1 157 kill targ next
 *
