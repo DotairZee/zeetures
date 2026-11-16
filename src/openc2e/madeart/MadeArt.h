@@ -14,6 +14,7 @@
 // keeps theirs.
 
 #include <cstdint>
+#include <filesystem>
 #include <functional>
 #include <map>
 #include <memory>
@@ -71,6 +72,26 @@ struct Register {
 // (and the player has no Overrides/Images file for it)
 bool replacesGame(const std::string& name);
 
+// Body data made the same way (Body Data/<file>.att, text), taking the place
+// of the game's file of that name: the female ettin's head (a60a.att) and
+// the Golden Desert norns' head seating (a??k.att, b??k.att). The text
+// goes into the user data folder's "Zeetures made/Body Data" and the
+// engine reads it from there; a file of the same name in Overrides/Body
+// Data still wins.
+using TextMaker = std::function<std::string()>;
+struct RegisterBodyData {
+	RegisterBodyData(const std::string& file, TextMaker maker);
+};
+
+// the made file to read for this body-data file name ("a60a.att"), written
+// on first use; empty if there is no recipe, it can't be made, or the player
+// has their own in Overrides/Body Data
+std::filesystem::path bodyDataFile(const std::string& file);
+
+// a game file's bytes, from the game's own folder only ("Body Data",
+// "a20a.att"); empty if missing
+std::string gameFile(const std::string& folder, const std::string& file);
+
 // whether a picture of this name can be made here (C2, a recipe for it)
 bool canMake(const std::string& name);
 
@@ -85,7 +106,8 @@ std::vector<std::string> names();
 
 // developer aid: OPENC2E_DUMP_MADE_ART=DIR writes every made picture to DIR
 // as NAME.rgba (a header line "W H FRAMES", then the RGBA bytes, frames one
-// after another), for comparing with the Python recipes' output
+// after another), and every made body-data file as itself (a60a.att), for
+// comparing with the Python recipes' output
 void dumpIfAsked();
 
 } // namespace MadeArt

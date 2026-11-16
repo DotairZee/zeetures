@@ -19,6 +19,7 @@
 #include <SDL3/SDL_filesystem.h>
 
 #include "Engine.h"
+#include "madeart/MadeArt.h"
 #include "World.h"
 #include "caosValue.h"
 #include "common/Ascii.h"
@@ -130,6 +131,14 @@ static fs::path findFile(FileDirectory type, fs::path name) {
 		fs::path resolved = case_insensitive_filesystem::canonical(getDirectory(overrides, type) / name, err);
 		if (!err)
 			return resolved;
+	}
+	// Zeetures: body data made from the game's own (madeart/: the female
+	// ettin's head, the Golden Desert norns' head seating), in place of the
+	// game's file of the same name
+	if (type == DIRECTORY_BODY_DATA) {
+		fs::path made = MadeArt::bodyDataFile(name.filename().string());
+		if (!made.empty())
+			return made;
 	}
 	// (and the same files asked for from the main folder, "Images/<name>",
 	// as the kits do)

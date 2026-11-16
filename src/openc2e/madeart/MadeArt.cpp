@@ -4,6 +4,9 @@
 #include "PathResolver.h"
 #include "common/Image.h"
 #include "common/creaturesImage.h"
+#include "common/case_insensitive_filesystem.h"
+
+#include <cctype>
 
 #include <cstring>
 #include <fmt/format.h>
@@ -20,6 +23,17 @@ namespace {
 std::map<std::string, Maker>& recipes() {
 	static std::map<std::string, Maker> r;
 	return r;
+}
+
+std::map<std::string, TextMaker>& bodyRecipes() {
+	static std::map<std::string, TextMaker> r;
+	return r;
+}
+
+std::string lower(std::string s) {
+	for (auto& c : s)
+		c = char(std::tolower((unsigned char)c));
+	return s;
 }
 
 std::map<std::string, bool>& replacing() {
@@ -163,6 +177,57 @@ bool replacesGame(const std::string& name) {
 	return true;
 }
 
+RegisterBodyData::RegisterBodyData(const std::string& file, TextMaker maker) {
+	bodyRecipes()[lower(file)] = std::move(maker);
+}
+
+std::string gameFile(const std::string& folder, const std::string& file) {
+	if (data_directories.empty())
+		return {};
+	std::error_code ec;
+	fs::path p = case_insensitive_filesystem::canonical(data_directories.front().main / folder / file, ec);
+	if (ec)
+		return {};
+	std::ifstream in(p, std::ios::binary);
+	return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+}
+
+fs::path bodyDataFile(const std::string& file) {
+	if (engine.version != 2)
+		return {};
+	std::string key = lower(file);
+	auto it = bodyRecipes().find(key);
+	if (it == bodyRecipes().end())
+		return {};
+	std::error_code ec;
+	if (fs::exists(case_insensitive_filesystem::canonical(getUserDataDir() / "Overrides" / "Body Data" / file, ec)) && !ec)
+		return {};
+	static std::map<std::string, fs::path> written;
+	auto w = written.find(key);
+	if (w != written.end())
+		return w->second;
+	fs::path out;
+	std::string text;
+	try {
+		text = it->second();
+	} catch (std::exception& e) {
+		fmt::print(stderr, "* Made body data: {} failed: {}\n", file, e.what());
+	}
+	if (!text.empty()) {
+		fs::path dir = getUserDataDir() / "Zeetures made" / "Body Data";
+		fs::create_directories(dir, ec);
+		out = dir / key;
+		std::ofstream o(out, std::ios::binary);
+		o << text;
+		if (!o)
+			out.clear();
+		else
+			fmt::print("* Made body data: {} from the game's own\n", key);
+	}
+	written[key] = out;
+	return out;
+}
+
 bool canMake(const std::string& name) {
 	return engine.version == 2 && recipes().count(name) && background().ok();
 }
@@ -228,6 +293,22 @@ void dumpIfAsked() {
 		for (auto& f : fr)
 			out.write(reinterpret_cast<const char*>(f.px.data()), f.px.size());
 		fmt::print("* Made art dump: {}\n", n);
+	}
+	// body data: the made text as the file itself
+	for (auto& [file, maker] : bodyRecipes()) {
+		std::string text;
+		try {
+			text = maker();
+		} catch (std::exception& e) {
+			fmt::print("* Made art dump: {} failed: {}\n", file, e.what());
+		}
+		if (text.empty()) {
+			fmt::print("* Made art dump: {} not made\n", file);
+			continue;
+		}
+		std::ofstream out(fs::path(dir) / file, std::ios::binary);
+		out << text;
+		fmt::print("* Made art dump: {}\n", file);
 	}
 }
 
