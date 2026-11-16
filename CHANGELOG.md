@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 393 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 394 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 29 commits, 15 November 2026
+- [Unreleased](#unreleased): 30 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,21 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Gene lab: fill the strip by its east wall with a sealed room
+
+[`5103d917`](https://github.com/DotairZee/zeetures/commit/5103d9177b3fb0b6e8545bec58d0512cf6700f37)
+
+Home's log (2026-11-16) showed a norn "out of room system" four times in
+a session at about 6900-6914, 1711-1725. Shortening room 159 to end at
+its drawn floor (6895, on 2026-11-14) left x 6895-6930 belonging to no
+room (room 171, behind the east wall, starts at 6930); a creature turning
+against the wall reached into it with a corner of its box, which the C2
+physics treats as leaving the room system. gene-lab-pit.cos now makes
+room 251 over that strip (6895-6930, 1470-1798, 159's values), with no
+doorway to any room, so the wall stays a wall and the corner is still in
+a room. A copy with three creatures placed against the wall: one
+exception before, none after.
 
 #### Relationship map: zoom with the wheel or a pinch, drag to move about
 
