@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 386 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 387 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 22 commits, 15 November 2026
+- [Unreleased](#unreleased): 23 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,25 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Breeds: scan a genome's appearance genes only up to "gend"
+
+[`155d256b`](https://github.com/DotairZee/zeetures/commit/155d256b62ebfba410ad1dfe6a6b4b0de93f94ab)
+
+The owner's Mac install logged "Breeds: genome layout not as expected
+(6 vs 5 appearance genes); unchanged" five times around the breed-pack
+import. editGenome cross-checks a raw byte scan for appearance genes
+against the genome reader's, and scanned the whole 36001-byte block; C2
+genomes keep leftovers past "gend", and in the game's gren.gen, the
+Boney pack's bone.gen and five grendel genomes made from them those
+leftovers hold one old appearance gene. The counts never matched, so
+those genomes could not be changed: a grendel breed moved to another
+slot on import kept pointing at its old one, and an egg for a grendel
+breed with no genome of its own would hatch a standard grendel. (In the
+logged cases nothing needed changing: Boney sits in its own slot.) The
+scan now stops where the reader stopped (SpanReader::tell, just past
+"gend"). Fresh folder, both packs imported, Hatchery open: no warnings,
+and the per-gene byte check passes on every genome.
 
 #### Made art: dump every frame's size; compare frames of different sizes
 
