@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 398 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 401 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 34 commits, 15 November 2026
+- [Unreleased](#unreleased): 37 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -18,6 +18,73 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 ## Unreleased
 
 Changes since the last version.
+
+### 16 November 2026
+
+#### Breed packs on Windows: curl runs with no console window
+
+[`39940dd7`](https://github.com/DotairZee/zeetures/commit/39940dd738ebc286574412dabe4a1ac701d48608)
+
+std::system ran curl.exe through cmd.exe, whose console window flashed up
+over the game for each download. On Windows the download now starts
+curl.exe directly with CreateProcessW and CREATE_NO_WINDOW and waits for
+its exit code; the part file's path is passed as wide text, for user
+folders whose names are not plain ASCII. Other systems are unchanged
+(std::system with shell quoting).
+
+Not yet run on Windows; compiled by CI.
+
+#### Headless runs: -k null runs the world, -s opens no audio device
+
+[`606d6367`](https://github.com/DotairZee/zeetures/commit/606d63677632f5dbef5c665f1c15a041fe03615a)
+
+- NullBackend::run was empty, so -k null loaded the world and quit at
+  once. It now ticks until the engine is done, sleeping 16 ms between
+  ticks; SIGINT and SIGTERM end the loop (with no window, SDL's quit
+  event never came and a TERM was ignored).
+- Engine::drawWorld returns at once under the null backend (the world's
+  drawing asserted on the missing render surface, World.cpp:739).
+- -s (silent) now selects the null audio backend. It only muted sound
+  at the start, and the player's own sound choices in settings.txt,
+  loaded later, won: headless test copies run with -s played creature
+  voices and world sounds through the speakers.
+
+Tests: -k null on a copy of Home ran 40 s of world ticks and ended on
+TERM within a second; a -s test copy logged no sounds played (it logged
+many before).
+
+#### C2 physics: objects stranded outside the room map are set back in
+
+[`ad38fb77`](https://github.com/DotairZee/zeetures/commit/ad38fb772c2e9a507bb30c1d51b22ba630ffd0e1)
+
+Objects (2 5 2, 2 15 9, 2 18 3) hung in mid-air or half in the rock at the
+west sea airlock's land door, where the floor room 120 (x 399-573, y
+1400-1540) opens east into room 115 through a doorway only 68 px tall
+(from y 1472).
+
+- findCollisionInDirection: while only testing a place (validInRoomSystem,
+  s_nudging set), a box point outside every room now makes the place
+  unfit (collided). It went on as for a real move: the test passed the
+  place, logged "out of room system" and marked the object, so the C2
+  nudge set objects back with their top-middle still in the rock, again
+  and again.
+- tryMoveToPlaceAround (C2): a last pass tries places below as well (up
+  to the search height, any room), for an object whose top is caught in
+  the rock over a room.
+- Agent::healOutOfRoomSystem (C2, from physicsTickC2): an object physics
+  marked out of the room map (family 2, collides and falls, not carried
+  or riding) is tried back in after 10 ticks and every 10 after, then
+  falls from there with its speed cleared. Before, it stayed stopped for
+  good. Logged as "set back inside the room map".
+- westlock.cos: at load, physics objects resting in the land door's
+  doorway (middle x 560-680, bottom 1440-1545) are given vely 1, so ones
+  saved hanging there fall (saves do not keep the out-of-room flag).
+
+Tests (copies of Home): a 2 5 2 put in the doorway corner went back into
+room 120 with no error; 2.5 minutes fast: 0 "out of room system" errors
+(30 before, all 2 5 2 at that doorway). A census showed many physics
+objects resting in mid-air on purpose (fruit on bushes, clouds), so
+saved objects are not all made to fall.
 
 ### 15 November 2026
 
