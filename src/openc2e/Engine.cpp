@@ -2075,13 +2075,16 @@ bool Engine::initialSetup() {
 
 	// audio
 	musicmanager = std::make_unique<MusicManager>();
-	// start quiet: music, world sounds and creature speech all begin muted
-	// (the player turns them on from File > Sound); with sound disabled on
-	// the command line they stay off
-	soundmanager.setMuted(true);
-	soundmanager.setVoicesMutedByPlayer(true);
-	musicmanager->setMuted(true);
-	musicmanager->setMIDIMuted(true);
+	// Zeetures (owner, 2026-11-15: "new compiles start with all sounds
+	// on"): music, world sounds and creature speech all begin on, unless
+	// sound is disabled on the command line (-s); the player's own choices
+	// from File > Sound are kept in settings.txt and win (C2ToolBar's
+	// LoadViewSettings). Until now they all began muted (2a793d9b).
+	const bool quiet = !cmdline_enable_sound;
+	soundmanager.setMuted(quiet);
+	soundmanager.setVoicesMutedByPlayer(quiet);
+	musicmanager->setMuted(quiet);
+	musicmanager->setMIDIMuted(quiet);
 
 	// initial setup
 	if (engine.version == 3) {
