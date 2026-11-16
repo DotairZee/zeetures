@@ -150,3 +150,13 @@ replace targ from wait 10 mcrt var8 var9 slim setv grav 1 etch 4 0 0 mcrt var8 v
 scrp 3 8 2 2
 find targ from mcrt var8 var9 slim setv grav 1 targ ownr
 replace targ from mcrt var8 var9 slim setv grav 1 etch 4 0 0 mcrt var8 var9 slim setv grav 1 next targ ownr
+
+* The cliff-edge markers' activate scripts showed their arrows (pose 0 and
+* 1), which flashed whenever something activated one; they stay blank now
+* (edges.cos; owner, 2026-11-16).
+scrp 2 10 2 0
+find pose 0 setv ov00 0
+replace setv ov00 0
+scrp 2 10 2 1
+find pose 1 setv ov00 1
+replace setv ov00 1

@@ -1,0 +1,21 @@
+* The game's cliff-edge markers (openc2e Creatures 2 project, our own
+* script). Run by openc2e after the world loads (Additions folder); safe to
+* repeat.
+*
+* C2 marks the lip of 18 drops with a small object (2 10 2, sprite "edge",
+* 24 x 4: an arrow left, an arrow right, and a blank picture). Its timer
+* shows the blank one and makes a creature touching it teeter (anims
+* 162-166); its activate scripts show the arrows (a leftover of the
+* original world-building tools). Creatures could see it and, curious, did
+* things to it: in one evening's session 88 activations, each flashing an
+* arrow until the next timer tick (owner, 2026-11-16: "weird little arrow
+* graphics that flash in and out"), and 26 tries to eat it. Now it is
+* invisible to creatures (ATTR + 16; the teetering is by touch, and our
+* mind finds drops from the room map, not from these), and its activate
+* scripts no longer show the arrows (script-patches.txt), so it stays blank.
+enum 2 10 2
+  setv var0 attr
+  andv var0 16
+  doif var0 eq 0 addv attr 16 endi
+  pose 2
+next
