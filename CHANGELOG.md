@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 401 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 402 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 37 commits, 15 November 2026 to 16 November 2026
+- [Unreleased](#unreleased): 38 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,32 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### Mind: a bump behind a turning creature is not a wall ahead
+
+[`27be8d12`](https://github.com/DotairZee/zeetures/commit/27be8d122a37ca59a71866d9a04d4244b7578810)
+
+A creature standing against a wall swings its foot past the wall as it
+turns to walk away. The engine counts that as a wall bump on the side it
+is leaving (SkeletalCreature walledDir), two bumps ended the walk as
+"walled", and the mind marked both ways blocked at that spot: the side
+bumped, and the walk's own direction too (kept for creatures whose
+"west" walk really goes east). Creatures at the east wall of the ledge
+under the east dock (room 14, x 6320) were left with every walk
+filtered out there (674 of 724 hungry choices had both ways blocked),
+starving among each other.
+
+Now a travel walk's bumps on the side behind it, after less than
+turnBumpWay (10 px) of way toward that side since the walk began, do
+not count as walled. A creature whose walk really goes the other way
+makes way toward the wall first and is still caught as before.
+OPENC2E_NO_TURN_BUMP turns this off, for comparison.
+
+Tests, three matched pairs of fast Home copies (about 6 minutes each):
+meals that fed per 1,000 decisions 81/76/93 with, 72/77/85 without;
+creatures at the room 14 spot 5-7/5-6/9-11 with, 8-10/8-9/5-8 without
+(no consistent change there: the crowd is held mostly by acting on each
+other); no crashes, deaths 0/0/4 with, 0/1/4 without.
 
 #### Breed packs on Windows: curl runs with no console window
 
