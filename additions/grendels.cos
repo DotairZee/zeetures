@@ -29,6 +29,10 @@ scrp 2 5 4 9
     rndv var0 30 60 tick var0 stop
   endi
   tick 0
+* (the world's limit, which counts every creature: wait while it is full,
+* as the game's norn eggs do; EGGL is the limit less the grendels and ettins
+* alive, so this compares all creatures with it; owner, 2026-11-16)
+  doif totl 4 1 0 ge eggl tick 1200 stop endi
   rndv var0 0 1
   doif var0 eq 0
     new: gene tokn gren tokn gren var4
@@ -55,6 +59,8 @@ endm
 scrp 2 5 3 9
   tick 0
   doif pose eq 7 kill ownr stop endi
+* (the world's limit, as the grendel eggs above)
+  doif totl 4 1 0 ge eggl tick 1200 stop endi
   doif ov01 eq 1
     setv var0 0 enum 4 3 0 addv var0 1 next
     doif var0 gt 0

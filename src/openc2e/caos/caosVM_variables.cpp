@@ -1006,6 +1006,22 @@ void c_RNDV(caosVM* vm) {
 // larger than any population the world could hold
 static const int noPopulationCap = 1000000;
 
+// The limit counts every creature (owner, 2026-11-16: "the limit is not for
+// norns, but for all creatures"). The game's scripts compare the number of
+// norns with EGGL and HATL (TOTL 4 1 0, ENUM 4 1 0), so they are given the
+// limit less the grendels and ettins alive: "norns >= that" is "all
+// creatures >= the limit". No limit set: a number larger than any population.
+static int nornsAllowedUnderLimit() {
+	int limit = populationLimit();
+	if (limit <= 0)
+		return noPopulationCap;
+	int others = 0;
+	for (auto& a : world.agents)
+		if (a && a->family == 4 && a->genus != 1 && !a->isDying())
+			others++;
+	return std::max(0, limit - others);
+}
+
 /**
  EGGL (integer)
  %status stub
@@ -1019,8 +1035,7 @@ void v_EGGL(caosVM* vm) {
 	// player sets one in the Hatchery (owner, 2026-11-13). C2 read this from
 	// its options (16 by default); its egg and kiss scripts compare the
 	// number of norns with it.
-	int limit = populationLimit();
-	vm->result.setInt(limit > 0 ? limit : noPopulationCap);
+	vm->result.setInt(nornsAllowedUnderLimit());
 }
 
 /**
@@ -1034,8 +1049,7 @@ void v_EGGL(caosVM* vm) {
 void v_HATL(caosVM* vm) {
 	// openc2e: no cap on the population (owner, 2026-11-10), unless the
 	// player sets one in the Hatchery (owner, 2026-11-13); C2's was 12
-	int limit = populationLimit();
-	vm->result.setInt(limit > 0 ? limit : noPopulationCap);
+	vm->result.setInt(nornsAllowedUnderLimit());
 }
 
 /* vim: set noet: */

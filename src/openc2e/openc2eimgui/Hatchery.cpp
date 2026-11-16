@@ -1296,18 +1296,19 @@ static void DrawNursery() {
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar();
 
-	// the most norns the world allows (owner, 2026-11-13): the game's own
-	// egg and hatchery limits, which openc2e otherwise leaves open
+	// the most creatures the world allows (owner, 2026-11-13; all creatures,
+	// not only norns, 2026-11-16): the game's own egg and hatchery limits,
+	// which openc2e otherwise leaves open
 	{
-		int norns = 0;
+		int norns = 0; // (every creature)
 		for (auto& a : world.agents)
-			if (a && a->family == 4 && a->genus == 1 && !a->isDying())
+			if (a && a->family == 4 && !a->isDying())
 				norns++;
 		int limit = populationLimit();
 		bool on = limit > 0;
 		ImGui::Dummy(ImVec2(1, 2));
 		ImGui::AlignTextToFramePadding();
-		ImGui::Text("Norns in the world: %d", norns);
+		ImGui::Text("Creatures in the world: %d", norns);
 		// whether the world's creatures can breed at all (owner, 2026-11-14:
 		// on the same line, left of the limit); each creature's own setting in
 		// the Breeder's Kit overrides this
@@ -1316,10 +1317,10 @@ static void DrawNursery() {
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Unticked, no creature conceives or fathers young, except those set fertile in the Breeder's Kit.\nA creature's own setting there always wins.");
 		ImGui::SameLine(0, 24);
-		if (ImGui::Checkbox("Limit the number of norns", &on))
+		if (ImGui::Checkbox("Limit the number of creatures", &on))
 			setPopulationLimit(on ? std::max(norns, 16) : 0);
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("At the limit, norns stop mating and their eggs wait to hatch until there are fewer.\nGrendels and ettins keep their own rules.");
+			ImGui::SetTooltip("Counts every creature: norns, grendels and ettins.\nAt the limit, creatures stop mating, and eggs of every kind wait to hatch until there are fewer.");
 		if (on) {
 			ImGui::SameLine();
 			ImGui::TextUnformatted("at most");
