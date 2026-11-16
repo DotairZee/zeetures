@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 371 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 372 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 7 commits, 15 November 2026
+- [Unreleased](#unreleased): 8 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,18 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Nightly: a build for Intel Macs
+
+[`1d6ab4e8`](https://github.com/DotairZee/zeetures/commit/1d6ab4e82db8fd2f8a27c1229ece757d22cfa174)
+
+Owner, 2026-11-15: "can you build a version for Intel Macs?" A new
+macos-intel job cross-compiles on the Apple Silicon runner
+(CMAKE_OSX_ARCHITECTURES=x86_64; SDL3 from externals, the SDK's zlib)
+for macOS 10.15 and later (CMAKE_OSX_DEPLOYMENT_TARGET 10.15, the first
+with std::filesystem), checks with lipo that the engine is x86_64, and
+releases zeetures-nightly-macos-x86_64.zip. Allowed to fail, like the
+other new builds.
 
 #### READMEs: user folders on every system, the art not yet shipped, Apple Silicon only
 
