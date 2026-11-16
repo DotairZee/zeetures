@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 392 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 393 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 28 commits, 15 November 2026
+- [Unreleased](#unreleased): 29 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,29 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Relationship map: zoom with the wheel or a pinch, drag to move about
+
+[`cb986bd8`](https://github.com/DotairZee/zeetures/commit/cb986bd8574e32085c3b6e369eb678eb5cccb9ff)
+
+Owner, 2026-11-16: "I'll need to be able to zoom in on that relationship
+chart, and also to be able to click drag to move around it. let's mouse
+wheel zoom in and zoom out, and pinch zoom."
+
+- The map is drawn in its own clipped area. The mouse wheel (15% a
+  step) and a touchpad pinch zoom it about the pointer, 1x to 8x; a drag
+  (more than 4 px) moves it about; a click without a drag still selects
+  the creature under the pointer. "Reset view" (with the zoom shown)
+  appears at its top left while zoomed. The view is kept while the kit
+  is open. Dots and the centre grow a little with the zoom (up to 2x),
+  and more names are placed as it zooms in (8 times the zoom squared),
+  still only where they don't cover one another.
+- Pinches over the interface were dropped (kept from the world, which
+  would zoom the view of Albia); the SDL backend now adds their scale to
+  UiPinch (common/UiPinch.h), which the map takes when the pointer is
+  over it.
+- OPENC2E_TEST_RELMAP="zoom,dx,dy" starts the view zoomed and moved
+  (snapshot at 3x checked in a Home copy).
 
 #### Owner's Kit: Relationships shorter and scrolling; Life Story only as wide as it needs
 
