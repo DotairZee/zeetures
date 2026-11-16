@@ -16,7 +16,7 @@ Ready-to-run builds for each system are made automatically every night there are
 | --- | --- |
 | Linux (x86-64) | `zeetures-nightly-linux-x86_64.tar.gz` |
 | Windows (64-bit) | `zeetures-nightly-windows-x64.zip` |
-| macOS (Apple Silicon) | `zeetures-nightly-macos-arm64.zip` |
+| macOS (Apple Silicon: M1 or later; not Intel Macs) | `zeetures-nightly-macos-arm64.zip` |
 | Linux (32-bit x86) | `zeetures-nightly-linux-i386.tar.gz` |
 | Windows (32-bit) | `zeetures-nightly-windows-x86.zip` |
 
@@ -26,7 +26,13 @@ Unpack it and start the program (still called `openc2e`) with the path to your C
 * **Windows:** `openc2e.exe -d "C:\Program Files (x86)\Steam\steamapps\common\Creatures The Albian Years\Creatures 2"`
 * **macOS:** `./openc2e -d "/path/to/Creatures 2"`. The Steam release is for Windows, so copy the `Creatures 2` folder over from a Windows or Linux install. The download is not signed by Apple: the first time, right-click `openc2e` and choose Open, or run `xattr -dr com.apple.quarantine .` in its folder.
 
-The creatures use Zeetures's own mind (`--mind original` gives them openc2e's unfinished copy of the original brain, which does very little). Zeetures's world additions (new walkways, lifts, airlocks, plants and many map fixes) are built into the program and applied to every Creatures 2 world as it loads. Your worlds, saves and settings are kept in openc2e's user folder (`~/.openc2e` on Linux), never in the game's folder.
+The creatures use Zeetures's own mind (`--mind original` gives them openc2e's unfinished copy of the original brain, which does very little). Zeetures's world additions (map fixes, script fixes and new objects) are built into the program and applied to every Creatures 2 world as it loads. For now, the ones that draw new pictures (the walkways, new lifts, airlocks, seasonal bushes, the memorial stone and others: 17 of 39) are skipped on a fresh install, because their art is not shipped yet; it will be, made on your machine from your own copy of the game where it is based on the game's pictures.
+
+Your worlds, saves and settings are kept in the user folder, never in the game's folder:
+
+* **Linux:** `~/.openc2e/Creatures 2`
+* **Windows:** `Documents\My Games\Creatures 2`
+* **macOS:** `~/Documents/openc2e Data/Creatures 2`
 
 **Two breed packs, fetched on your machine.** The first time a Creatures 2 world runs, Zeetures downloads two community breed packs from the [Eem Foo archive](https://eem.foo/archive), which already hosts them, and imports them: [Boney Grendels](https://eem.foo/archive/downloads/1fad-boney-grendels) (Creature Labs' own Creatures 2 release) and [Frog Norns V3](https://eem.foo/archive/downloads/2538-frog-norns-v3) (by Alex of Norns of the Round Table, from Nornenmeister's V2), which takes the place of the game's own frog norn. Zeetures itself does not carry or host them. The files are kept in your user folder's `Downloads`; to skip this, put the line `breed-packs off` in your user folder's `settings.txt`.
 
@@ -48,6 +54,7 @@ Zeetures is at version 0.7.0 (shown in Help > About). It is a work in progress, 
 
 ### Not done yet
 
+* The new objects' art is not shipped yet, so on a fresh install the 17 additions that draw new pictures are skipped (see above).
 * Lifts, boats and the hand start each session as the world file has them.
 * Inherited mind traits and evolution.
 * Hunger in very crowded worlds (about 150 creatures in a world built for 16).

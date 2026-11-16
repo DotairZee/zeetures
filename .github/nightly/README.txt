@@ -33,7 +33,7 @@ Linux:
 Windows:
     openc2e.exe -d "C:\path\to\Creatures 2"
 
-macOS:
+macOS (Apple Silicon, M1 or later; this build does not run on Intel Macs):
     ./openc2e -d "/path/to/Creatures 2"
 
   The Steam release is for Windows: copy the Creatures 2 folder over from
@@ -54,8 +54,16 @@ the place of the game's own frog norn. Zeetures does not carry them. To
 skip this, put the line "breed-packs off" in your user folder's
 settings.txt.
 
-Your worlds, saves and settings are kept in openc2e's user folder
-(~/.openc2e on Linux), never in the game's own folder.
+Zeetures's world additions are built in and applied to every Creatures 2
+world. For now the 17 that draw new pictures (walkways, new lifts,
+airlocks, seasonal bushes, the memorial stone and others) are skipped,
+because their art is not shipped yet.
+
+Your worlds, saves and settings are kept in the user folder, never in
+the game's own folder:
+    Linux:    ~/.openc2e/Creatures 2
+    Windows:  Documents\My Games\Creatures 2
+    macOS:    ~/Documents/openc2e Data/Creatures 2
 
 License
 -------
