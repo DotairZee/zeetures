@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 387 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 388 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 23 commits, 15 November 2026
+- [Unreleased](#unreleased): 24 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,31 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Quieter startup log: script patches and backward seeks
+
+[`fd6eec4b`](https://github.com/DotairZee/zeetures/commit/fd6eec4bc88fbd2cec35ccd55c21c701d294bf77)
+
+From the owner's Mac install notes, two kinds of harmless lines filled
+the log at every start:
+
+- "Script patch ... text not found (already patched, or another
+  version)" for most patches: each built-in COB injected at load
+  applies the patches quietly (so a script it just installed is
+  patched), so by the final pass after the additions they were in
+  already. The final pass now says nothing when the patch's
+  replacement is already in the script, when the patch was applied
+  earlier this load (Engine::patchesApplied, cleared at each world load;
+  a later patch of the same script can change an earlier one's text
+  again, as in 2 20 7 9, 2 18 3 9 and 2 18 8 9), or when the script is
+  not in this world (an add-on not installed: 2 20 22 9). A patch that
+  truly finds nothing is still reported.
+- "WARNING: Backwards seek on file ..." (93 at a fresh start), upstream's
+  developer hint, from reading COB files and the game's creatures2.exe:
+  now only with OPENC2E_DEBUG_SEEKS.
+
+Fresh folder with both packs: no seek lines, no "not found" lines, all
+17 patches applied, 39 additions run, no script errors.
 
 #### Breeds: scan a genome's appearance genes only up to "gend"
 
