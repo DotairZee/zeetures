@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 390 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 391 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 26 commits, 15 November 2026
+- [Unreleased](#unreleased): 27 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,30 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Quieter log: C2 debug output, failed loci, sprite searches
+
+[`1c3daaf4`](https://github.com/DotairZee/zeetures/commit/1c3daaf4b15979fecdd200bfbd8029168817f5e0)
+
+A review of Home's logs (2026-11-16) found three kinds of harmless
+lines filling them, besides the mind's own:
+
+- C1/C2 objects' scripts' debug output (DBGM, DBGV, DBUG: "EAT - aim",
+  "SCRIPTEXTRAEAT" and the rest, about 1,600 lines a minute in Home),
+  which the original game sent to a debugger no player saw: printed only
+  with OPENC2E_DEBUG_CAOS now (C3's DBG: OUTS and OUTV as before).
+- "c2Creature::getLocusPointer failed to interpret locus" for every
+  creature made (about 34 a minute; brain-lobe loci such as the original
+  brain's dendrite settings, never finished in openc2e and unused under a
+  mind): once a run for each locus now.
+- "imageGallery couldn't find the sprite" from the creature picture
+  searches (about 220 a minute), which try ages and breeds in turn and
+  expect misses: imageManager::getImage takes quietIfMissing, used by
+  SkeletalCreature's search and its stage-size lookup; other misses are
+  still reported.
+
+Home copy, 4 minutes: none of the first and third, 53 locus lines in all,
+no script errors; the log a quarter of the size.
 
 #### Keep where each creature died with the world
 
