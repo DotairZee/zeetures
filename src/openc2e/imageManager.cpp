@@ -168,7 +168,7 @@ std::shared_ptr<creaturesImage> imageManager::getBackground(const std::string& n
  * Retrieve an image for rendering use. To retrieve a sprite, pass the name without
  * extension. To retrieve a background, pass the full filename (ie, with .blk).
  */
-std::shared_ptr<creaturesImage> imageManager::getImage(const std::string& name) {
+std::shared_ptr<creaturesImage> imageManager::getImage(const std::string& name, bool quietIfMissing) {
 	if (name.empty())
 		return std::shared_ptr<creaturesImage>(); // empty sprites definitely don't exist
 
@@ -223,7 +223,8 @@ std::shared_ptr<creaturesImage> imageManager::getImage(const std::string& name) 
 	if (img) {
 		images[name] = img;
 	} else {
-		fmt::print(stderr, "imageGallery couldn't find the sprite '{}'\n", name);
+		if (!quietIfMissing)
+			fmt::print(stderr, "imageGallery couldn't find the sprite '{}'\n", name);
 		return std::shared_ptr<creaturesImage>();
 	}
 

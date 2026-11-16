@@ -17,6 +17,7 @@
  *
  */
 
+#include <set>
 #include "c2eBrain.h"
 #include "c2eCreature.h"
 #include "oldBrain.h"
@@ -368,9 +369,16 @@ unsigned char* c2Creature::getLocusPointer(bool receptor, unsigned char o, unsig
 			break;
 	}
 
-	fmt::print(
-		"c2Creature::getLocusPointer failed to interpret locus ({}, {}, {}) of {}\n",
-		(int)o, (int)t, (int)l, receptor ? "receptor" : "emitter");
+	// once a run for each locus (it was printed for every creature made,
+	// over a thousand times a session: owner's log review, 2026-11-16). The
+	// brain-lobe loci here are the original brain's dendrite settings,
+	// never finished in openc2e; creatures under a mind (--mind) don't use
+	// that brain.
+	static std::set<int> told;
+	if (told.insert((int(receptor) << 24) | (o << 16) | (t << 8) | l).second)
+		fmt::print(
+			"c2Creature::getLocusPointer failed to interpret locus ({}, {}, {}) of {} (reported once)\n",
+			(int)o, (int)t, (int)l, receptor ? "receptor" : "emitter");
 
 	return 0;
 }

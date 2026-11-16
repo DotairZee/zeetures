@@ -226,7 +226,7 @@ static float partSetSize(char part, int species, bool female, int age, int breed
 		name += (char)('0' + species + (f ? 4 : 0));
 		name += (char)('0' + age);
 		name += breedSlotName(breed);
-		if (auto img = world.gallery->getImage(name)) {
+		if (auto img = world.gallery->getImage(name, true)) {
 			float sum = 0;
 			unsigned int n = img->numframes();
 			for (unsigned int i = 0; i < n; i++)
@@ -516,7 +516,7 @@ void SkeletalCreature::skeletonInit() {
 			while (var > -1 && !images[i]) {
 				int stage_to_try = creature->getStage();
 				while (stage_to_try > -1 && !images[i]) {
-					images[i] = world.gallery->getImage(x + dataString(stage_to_try, tryfemale, spe, var));
+					images[i] = world.gallery->getImage(x + dataString(stage_to_try, tryfemale, spe, var), true); // (a search: misses expected)
 					if (images[i]) {
 						foundstage = stage_to_try;
 						foundvar = var;

@@ -18,6 +18,7 @@
  */
 
 #include "Agent.h"
+#include "Engine.h"
 #include "Scriptorium.h"
 #include "World.h"
 #include "caosScript.h"
@@ -27,6 +28,8 @@
 #include "common/io/Writer.h"
 #include "common/io/WriterFmt.h"
 #include "common/throw_ifnot.h"
+
+#include <cstdlib>
 #include "dialect.h"
 
 #include <algorithm>
@@ -35,6 +38,16 @@
 
 // #include "malloc.h" <- unportable horror!
 #include <fmt/core.h>
+
+// C1/C2 objects' scripts leave debug output in (DBGM, DBGV, DBUG): the
+// original game sent it to a debugger no player saw, and here it filled the
+// log (thousands of "EAT - aim", "SCRIPTEXTRAEAT" lines a session; owner's
+// log review, 2026-11-16). For C1/C2 it is printed only with
+// OPENC2E_DEBUG_CAOS; C3's DBG: OUTS and DBG: OUTV always.
+static bool debugOutputShown() {
+	static const bool asked = getenv("OPENC2E_DEBUG_CAOS") != nullptr;
+	return engine.version >= 3 || asked;
+}
 
 /**
  DBG: OUTS (command) val (string)
@@ -51,7 +64,8 @@
 void c_DBG_OUTS(caosVM* vm) {
 	VM_PARAM_STRING(val)
 
-	fmt::print("{}\n", val);
+	if (debugOutputShown())
+		fmt::print("{}\n", val);
 }
 
 /**
@@ -72,6 +86,8 @@ void c_DBG_OUTV(caosVM* vm) {
 	VM_VERIFY_SIZE(1)
 	VM_PARAM_VALUE(val)
 
+	if (!debugOutputShown())
+		return;
 	if (val.hasFloat()) {
 		fmt::print("{:0.06f}", val.getFloat());
 	} else if (val.hasInt()) {
