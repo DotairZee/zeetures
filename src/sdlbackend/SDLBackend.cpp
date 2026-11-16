@@ -18,6 +18,8 @@
  */
 
 #include "SDLBackend.h"
+
+#include "common/UiPinch.h"
 #include "openc2e_icon.h"
 #include <cstdio>
 #include <cstdlib>
@@ -227,6 +229,9 @@ static bool ImGuiConsumeEvent(const SDL_Event& event) {
 
 	if (io.WantCaptureMouse && (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP || event.type == SDL_EVENT_MOUSE_WHEEL ||
 								   event.type == SDL_EVENT_PINCH_BEGIN || event.type == SDL_EVENT_PINCH_UPDATE || event.type == SDL_EVENT_PINCH_END)) {
+		// a pinch over the interface is the interface's (UiPinch.h)
+		if (event.type == SDL_EVENT_PINCH_UPDATE)
+			UiPinch::Add(event.pinch.scale);
 		return true;
 	}
 	if (io.WantCaptureKeyboard && (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP || event.type == SDL_EVENT_TEXT_INPUT)) {

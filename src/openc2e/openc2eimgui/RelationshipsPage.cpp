@@ -13,6 +13,7 @@
 #include "creatures/Relationships.h"
 #include "creatures/oldCreature.h"
 #include "historyManager.h"
+#include "common/UiPinch.h"
 
 #include <algorithm>
 #include <cmath>
@@ -111,14 +112,64 @@ void RelationshipsPage() {
 	}
 
 	// ---- the map ----
+	// It zooms (mouse wheel, or pinch on a touchpad) about the pointer and
+	// is dragged to move about (owner, 2026-11-16: with 150 creatures it
+	// needs zooming in); a click without a drag still selects a creature.
+	// The view is kept while the kit is open, for every creature.
+	static float zoom = 1.0f;
+	static ImVec2 pan(0, 0);
+	// developer aid: OPENC2E_TEST_RELMAP="zoom,dx,dy" starts the view zoomed
+	// and moved, for a snapshot
+	static bool testView = [] {
+		if (const char* t = getenv("OPENC2E_TEST_RELMAP"))
+			sscanf(t, "%f,%f,%f", &zoom, &pan.x, &pan.y);
+		return true;
+	}();
+	(void)testView;
 	const float size = 360, R = 150, rIn = 46, rRim = 168;
 	const float left = ImGui::GetCursorPosX(); // the words below start at the left
 	KitCenterNext(size + 40); // the map in the middle of the window
+	ImGui::BeginChild("relmapview", ImVec2(size + 40, size + 20), ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 	ImVec2 origin = ImGui::GetCursorScreenPos();
-	ImVec2 center(origin.x + size / 2 + 20, origin.y + size / 2 + 10);
+	ImGui::SetNextItemAllowOverlap(); // (the Reset view button sits on it)
+	ImGui::InvisibleButton("relmap", ImVec2(size + 40, size + 20));
+	const bool overMap = ImGui::IsItemHovered();
+	const ImGuiIO& io = ImGui::GetIO();
+	ImVec2 base(origin.x + size / 2 + 20, origin.y + size / 2 + 10); // the centre at zoom 1, no pan
+	// zoom about the pointer: wheel steps of 15%, pinches as they come
+	float pinch = UiPinch::Take();
+	float zf = 1.0f;
+	if (overMap) {
+		if (io.MouseWheel != 0)
+			zf *= std::pow(1.15f, io.MouseWheel);
+		zf *= pinch;
+	}
+	if (zf != 1.0f) {
+		float nz = std::clamp(zoom * zf, 1.0f, 8.0f);
+		ImVec2 m = io.MousePos;
+		// the map point under the pointer stays under it
+		ImVec2 mp((m.x - base.x - pan.x) / zoom, (m.y - base.y - pan.y) / zoom);
+		zoom = nz;
+		pan = ImVec2(m.x - base.x - mp.x * zoom, m.y - base.y - mp.y * zoom);
+	}
+	// drag to move about (a press on the map that moves more than a few px)
+	static bool dragging = false;
+	if (ImGui::IsItemActive() && ImGui::IsMouseDragging(0, 4.0f)) {
+		dragging = true;
+		pan.x += io.MouseDelta.x;
+		pan.y += io.MouseDelta.y;
+	}
+	bool clicked = ImGui::IsItemDeactivated() && !dragging;
+	if (!ImGui::IsItemActive())
+		dragging = dragging && ImGui::IsMouseDown(0);
+	if (zoom <= 1.0001f)
+		pan = ImVec2(0, 0); // (at full view, nothing to move)
+	auto at = [&](ImVec2 p) { return ImVec2(base.x + pan.x + (p.x - base.x) * zoom, base.y + pan.y + (p.y - base.y) * zoom); };
+	const ImVec2 center = at(base);
+	const float dot = 8.0f * std::min(zoom, 2.0f);
 	ImDrawList* dl = ImGui::GetWindowDrawList();
-	dl->AddCircle(center, R, IM_COL32(120, 120, 120, 60), 64, 1.0f);
-	dl->AddCircle(center, rRim, IM_COL32(120, 120, 120, 40), 64, 1.0f);
+	dl->AddCircle(center, R * zoom, IM_COL32(120, 120, 120, 60), 64, 1.0f);
+	dl->AddCircle(center, rRim * zoom, IM_COL32(120, 120, 120, 40), 64, 1.0f);
 	int hovered = -1;
 	const float step = 2.0f * 3.14159265f / (float)rows.size();
 	std::vector<ImVec2> spots(rows.size());
@@ -127,7 +178,7 @@ void RelationshipsPage() {
 		// the better liked, the nearer; enemies out by the ring; not yet met: the rim
 		float rad = r.mine ? rIn + (1.0f - std::clamp(r.mine->affinity, -1.0f, 1.0f)) / 2.0f * (R - rIn) : rRim;
 		float ang = -3.14159265f / 2 + step * (float)i;
-		ImVec2 p(center.x + std::cos(ang) * rad, center.y + std::sin(ang) * rad);
+		ImVec2 p = at(ImVec2(base.x + std::cos(ang) * rad, base.y + std::sin(ang) * rad));
 		spots[i] = p;
 		// the line in two halves: the near half is how the selected creature
 		// feels, the far half how they feel back; thicker for more familiar
@@ -137,30 +188,31 @@ void RelationshipsPage() {
 		dl->AddLine(center, mid, feelingColor(r.mine), wMine);
 		dl->AddLine(mid, p, feelingColor(r.theirs), wTheirs);
 	}
-	// names only for the closest: mates, the feared and the best liked (with
-	// a world of 150 every name overlapped into a smear; owner's screenshot,
-	// 2026-11-16); hovering any dot still names it
-	// (and only where a name fits without covering one already placed:
-	// the best liked sit side by side round the ring; mates and the feared
-	// are placed first)
+	// names for mates, the feared and the best liked (more as the map is
+	// zoomed in), each only where it doesn't cover a name already placed
+	// (with 150 creatures every name overlapped into a smear: owner's
+	// screenshot, 2026-11-16); pointing at any dot still names it
 	std::vector<bool> named(rows.size(), false);
 	{
+		const ImVec2 clipMin = origin, clipMax(origin.x + size + 40, origin.y + size + 20);
 		std::vector<size_t> order;
 		for (size_t i = 0; i < rows.size(); i++)
 			if (rows[i].mine && (rows[i].mine->mate || rows[i].mine->fear > 0.5f))
 				order.push_back(i);
-		int liked = 0;
+		int cap = (int)std::lround(8.0f * zoom * zoom), liked = 0;
 		for (size_t i = 0; i < rows.size(); i++)
-			if (!named[i] && (rows.size() <= 16 || (rows[i].mine && rows[i].mine->affinity > 0 && liked++ < 8)))
+			if (rows.size() <= 16 || (rows[i].mine && liked++ < cap))
 				order.push_back(i);
 		std::vector<ImVec4> placed; // x0 y0 x1 y1
 		for (size_t i : order) {
 			if (named[i])
 				continue;
 			ImVec2 p = spots[i];
+			if (p.x < clipMin.x || p.x > clipMax.x || p.y < clipMin.y || p.y > clipMax.y)
+				continue;
 			ImVec2 ts = ImGui::CalcTextSize(rows[i].name.c_str());
 			bool right = p.x >= center.x || p.x - 12 - ts.x < origin.x + 2;
-			ImVec4 box(right ? p.x + 12 : p.x - 12 - ts.x, p.y - ts.y / 2, 0, 0);
+			ImVec4 box(right ? p.x + dot + 4 : p.x - dot - 4 - ts.x, p.y - ts.y / 2, 0, 0);
 			box.z = box.x + ts.x;
 			box.w = box.y + ts.y;
 			bool clear = true;
@@ -176,13 +228,12 @@ void RelationshipsPage() {
 		const Row& r = rows[i];
 		ImVec2 p = spots[i];
 		bool feared = r.mine && r.mine->fear > 0.5f;
-		dl->AddCircleFilled(p, 8, IM_COL32(235, 235, 225, 255));
-		dl->AddCircle(p, 8, feared ? IM_COL32(170, 60, 200, 255) : feelingColor(r.mine), 16, feared ? 3.0f : 2.0f);
+		dl->AddCircleFilled(p, dot, IM_COL32(235, 235, 225, 255));
+		dl->AddCircle(p, dot, feared ? IM_COL32(170, 60, 200, 255) : feelingColor(r.mine), 16, feared ? 3.0f : 2.0f);
 		if (r.mine && r.mine->mate)
-			dl->AddCircle(p, 12, IM_COL32(240, 90, 150, 255), 16, 2.0f);
-
-		ImVec2 mouse = ImGui::GetIO().MousePos;
-		if (std::hypot(mouse.x - p.x, mouse.y - p.y) < 11)
+			dl->AddCircle(p, dot + 4, IM_COL32(240, 90, 150, 255), 16, 2.0f);
+		ImVec2 mouse = io.MousePos;
+		if (overMap && !dragging && std::hypot(mouse.x - p.x, mouse.y - p.y) < dot + 3)
 			hovered = (int)i;
 	}
 	// the names last, over every dot, on a dark backing so they read
@@ -193,14 +244,24 @@ void RelationshipsPage() {
 		const std::string& t = rows[i].name;
 		ImVec2 ts = ImGui::CalcTextSize(t.c_str());
 		bool right = p.x >= center.x || p.x - 12 - ts.x < origin.x + 2; // no room on the left: the right
-		ImVec2 tp(right ? p.x + 12 : p.x - 12 - ts.x, p.y - ts.y / 2);
+		ImVec2 tp(right ? p.x + dot + 4 : p.x - dot - 4 - ts.x, p.y - ts.y / 2);
 		dl->AddRectFilled(ImVec2(tp.x - 2, tp.y), ImVec2(tp.x + ts.x + 2, tp.y + ts.y), IM_COL32(20, 22, 30, 200), 3.0f);
 		dl->AddText(tp, IM_COL32(230, 230, 230, 255), t.c_str());
 	}
-	dl->AddCircleFilled(center, 13, IM_COL32(250, 220, 120, 255));
+	dl->AddCircleFilled(center, 13 * std::min(zoom, 2.0f), IM_COL32(250, 220, 120, 255));
 	ImVec2 ns = ImGui::CalcTextSize(myName.c_str());
-	dl->AddText(ImVec2(center.x - ns.x / 2, center.y + 16), IM_COL32(255, 230, 150, 255), myName.c_str());
-	ImGui::InvisibleButton("relmap", ImVec2(size + 40, size + 20));
+	dl->AddText(ImVec2(center.x - ns.x / 2, center.y + 16 * std::min(zoom, 2.0f)), IM_COL32(255, 230, 150, 255), myName.c_str());
+	// back to the whole map
+	if (zoom > 1.0001f) {
+		ImGui::SetCursorScreenPos(ImVec2(origin.x + 4, origin.y + 4));
+		if (ImGui::SmallButton("Reset view")) {
+			zoom = 1.0f;
+			pan = ImVec2(0, 0);
+		}
+		ImGui::SameLine();
+		ImGui::TextDisabled("%.1fx", zoom);
+	}
+	ImGui::EndChild();
 	ImGui::SetCursorPosX(left);
 	if (hovered >= 0) {
 		const Row& r = rows[hovered];
@@ -220,10 +281,10 @@ void RelationshipsPage() {
 		side(fmt::format("{} feels", r.name).c_str(), r.theirs);
 		ImGui::TextDisabled("Click to select %s", r.name.c_str());
 		ImGui::EndTooltip();
-		if (ImGui::IsMouseClicked(0))
+		if (clicked)
 			KitGoTo(r.agent);
 	}
-	KitNote("Nearer: better liked; on the rim: not met. Line: near half %s's feeling, far half theirs; blue liking, orange dislike, thicker more familiar. Pink ring: mate; purple: feared. Names shown for mates, the feared and the best liked; point at any other to see who it is.",
+	KitNote("Nearer: better liked; on the rim: not met. Line: near half %s's feeling, far half theirs; blue liking, orange dislike, thicker more familiar. Pink ring: mate; purple: feared. Names shown for mates, the feared and the best liked; point at any other to see who it is. Wheel or pinch to zoom, drag to move about.",
 		myName.c_str());
 
 	// ---- the list ----
