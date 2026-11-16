@@ -1987,6 +1987,14 @@ void Engine::applyScriptPatches(bool quiet) {
 					auto sc = world.scriptorium->getScript(f, g, sp, ev);
 					size_t at = sc ? sc->code.find(find) : std::string::npos;
 					if (at == std::string::npos) {
+						// nothing to say when the patch is already in (this
+						// load's COB injections apply the patches as they go;
+						// a replacement never contains its find text), was
+						// applied earlier this load and changed again by a
+						// later patch of the same script, or is for a script
+						// this world doesn't have (an add-on not installed)
+						if (!sc || sc->code.find(rest) != std::string::npos || patchesApplied.count(fmt::format("{} {} {} {}|{}", f, g, sp, ev, find)))
+							continue;
 						if (!quiet)
 							fmt::print("* Script patch for scrp {} {} {} {}: text not found (already patched, or another version); skipped\n", f, g, sp, ev);
 						continue;
@@ -2002,6 +2010,7 @@ void Engine::applyScriptPatches(bool quiet) {
 						caosVM vm(0);
 						patched.installScripts();
 						vm.runEntirely(patched.installer);
+						patchesApplied.insert(fmt::format("{} {} {} {}|{}", f, g, sp, ev, find));
 						fmt::print("* Patched scrp {} {} {} {} ({})\n", f, g, sp, ev, "script-patches.txt");
 					} catch (Exception& e) {
 						fmt::print(stderr, "* Script patch for scrp {} {} {} {} failed: {}\n", f, g, sp, ev, e.prettyPrint());
@@ -2195,6 +2204,7 @@ bool Engine::initialSetup() {
 	// below, these are made anew each time), before
 	// the additions, which may then adjust them. A COB the player does not
 	// have is skipped.
+	patchesApplied.clear(); // (script patches applied during this load)
 	if (version == 2) {
 		missingBuiltinCobs.clear();
 		auto names = CobManager::readNameList(CobManager::builtinListFile());

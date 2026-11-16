@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <cstdint>
+#include <cstdlib>
 #include <limits>
 #include <fmt/format.h>
 #include <string.h>
@@ -100,9 +101,13 @@ void FileReader::seek_absolute(size_t n) {
 	if (n < pos_) {
 		// Warn on backwards seeks. Most of the time, it's more efficient to read a file
 		// forwards-only, and this likely represents some weird logic that can be cleaned up.
-		fmt::print("WARNING: Backwards seek on file {} (-{})\n",
-			path_.string(),
-			pos_ - n);
+		// (Zeetures: only with OPENC2E_DEBUG_SEEKS; reading COB files and the game's
+		// own creatures2.exe seeks back as a matter of course, filling the log)
+		static const bool warn = getenv("OPENC2E_DEBUG_SEEKS") != nullptr;
+		if (warn)
+			fmt::print("WARNING: Backwards seek on file {} (-{})\n",
+				path_.string(),
+				pos_ - n);
 	}
 
 	// some static asserts to make sure the size check is well-formed

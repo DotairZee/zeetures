@@ -24,6 +24,7 @@
 #include <map>
 #include <memory>
 #include <stdint.h>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -116,6 +117,10 @@ class Engine {
 	// load; injectMissingBuiltinCobs() adds those found since (a breed pack
 	// just imported, BreedPacks.cpp)
 	std::vector<std::string> missingBuiltinCobs;
+	// the script patches applied during this world load ("f g s e|find"), so
+	// one a later patch of the same script changed again isn't reported as
+	// missing at the end of the load
+	std::set<std::string> patchesApplied;
 	void injectMissingBuiltinCobs();
 	bool worldready = false; // C1/C2: the world (and any saved state) has finished loading
 	bool autosave = true; // C1/C2: save the world on quit and when switching worlds (--no-autosave)
