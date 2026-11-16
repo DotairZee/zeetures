@@ -148,3 +148,126 @@ scrp 3 2 151 9
     setv ov00 0 setv ov01 0 setv ov02 0
   endi
 endm
+
+* 4. The sea current down to the hatch (owner, 2026-11-16: drowning was the
+*    second biggest avoidable death in Home, and the west sea's shelf the
+*    spot it kept happening: rooms 134 and 135, x 500-840, floors at y
+*    1096-1140 in open water above the rock, three times in the notes
+*    before this and once more in a test copy that day). A creature that
+*    sinks onto that shelf stands on the boundary between water rooms, high
+*    above the seabed (rooms 204 and 121 below it), and never reaches the
+*    hatch's pickup point at the seabed's low point (x 585-669, feet
+*    1330-1400); it drowns where it stands. A watcher (2 1 160, every 2 s)
+*    counts how long each live creature has stood on the shelf (OV92) and,
+*    after about 20 s (so a creature passing is not swept off), starts a
+*    current (2 1 161) that carries it, not quite smoothly (as the other
+*    rides), west along the shelf into open water (x 530), down through
+*    room 204 to the seabed (feet 1365), and east to the low point, where
+*    the hatch takes it in as it would anyone. Moved by script (MVTO with
+*    WAIT 1), so it is no fall to learn from or be hurt by. OV93 marks one
+*    being carried.
+enum 2 1 160 kill targ next
+enum 2 1 161 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 160 setv attr 16 mvto 5000 1350 tick 20 slow
+scrp 2 1 160 9
+  inst
+  enum 4 0 0
+    doif dead eq 0 and ov93 eq 0
+      setv var0 posl
+      addv var0 posr
+      divv var0 2
+      setv var1 0
+      doif var0 ge 500 and var0 le 840 and posb ge 1080 and posb le 1145
+        setv var1 1
+      endi
+      doif var1 eq 1
+        addv ov92 1
+        doif ov92 ge 10
+          setv ov92 0
+          setv ov93 1
+          setv var8 targ
+          new: simp blnk 1 0 0 0 setv cls2 2 1 161 setv attr 16 setv ov00 var8 mvto 5000 1360 tick 1
+          targ var8
+        endi
+      else
+        setv ov92 0
+      endi
+    endi
+  next
+endm
+* The current: carries its creature (OV00), then is removed.
+scrp 2 1 161 9
+  tick 0
+  inst
+  targ ov00
+*   var1 the middle's x, var2 half the width, var3 the height, var5 the feet
+  setv var1 posl
+  addv var1 posr
+  divv var1 2
+  setv var2 posr
+  subv var2 posl
+  divv var2 2
+  setv var3 posb
+  subv var3 post
+  setv var5 posb
+*   west along the shelf to open water, 3-5 px a tick
+  loop
+    rndv var9 3 5
+    subv var1 var9
+    doif var1 lt 530 setv var1 530 endi
+    setv var4 var1
+    subv var4 var2
+    setv var6 var5
+    subv var6 var3
+    mvto var4 var6
+    setv vely 0
+    wait 1
+    inst
+    rndv var9 0 7
+    doif var9 eq 0
+      setv vely 0
+      wait 1
+      inst
+    endi
+  untl var1 le 530
+*   down through the water to the seabed, 4-7 px a tick
+  loop
+    rndv var9 4 7
+    addv var5 var9
+    doif var5 gt 1365 setv var5 1365 endi
+    setv var4 var1
+    subv var4 var2
+    setv var6 var5
+    subv var6 var3
+    mvto var4 var6
+    setv vely 0
+    wait 1
+    inst
+    rndv var9 0 7
+    doif var9 eq 0
+      setv vely 0
+      wait 1
+      inst
+    endi
+  untl var5 ge 1365
+*   east along the seabed to the low point, 3-5 px a tick
+  loop
+    rndv var9 3 5
+    addv var1 var9
+    doif var1 gt 627 setv var1 627 endi
+    setv var4 var1
+    subv var4 var2
+    setv var6 var5
+    subv var6 var3
+    mvto var4 var6
+    setv vely 0
+    wait 1
+    inst
+  untl var1 ge 627
+  setv vely 1
+  setv ov93 0
+  targ ownr
+  kill ownr
+endm
+* (after a load, no currents are left and no creature counts as carried)
+enum 4 0 0 setv ov93 0 setv ov92 0 next

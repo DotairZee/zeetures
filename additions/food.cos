@@ -14,7 +14,10 @@
 * 7461 asks openc2e's world save to keep it). OV00 is its stage (0 seedling,
 * 1 young, 2 full) and OV01 its age in 25-second steps: young after about
 * 25 minutes, full after about an hour. Its picture is stage * 4 + season.
-* Young bushes carry up to two fruits, full ones four; a fruit grows on the
+* Young bushes carry up to three fruits, full ones six, and a new bud comes
+* every step while there is room (owner, 2026-11-16, "more food": Home's
+* 150 creatures were starving at about 15 fruits a minute from 15 bushes;
+* it was two and four, half the steps); a fruit grows on the
 * bush from a green bud and drops when ripe. OV02 is the bush's look, made
 * to suit where it grows (0 mossy green, sprite zfbs; 1 machine-cave teal
 * and rust, zfbm; 2 volcanic ember-red, zfbv; 3 warm-rock bronze, zfbw; 4 desert sage,
@@ -35,14 +38,14 @@ scrp 2 4 141 9
     doif ov01 ge 150 setv ov00 2 endi
   endi
   setv var8 ov00 mulv var8 4 addv var8 sean pose var8
-  setv var9 ov00 mulv var9 2
+  setv var9 ov00 mulv var9 3
   setv var0 0
   esee 2 25 141 addv var0 1 next
   esee 2 25 142 addv var0 1 next
   esee 2 25 143 addv var0 1 next
   esee 2 25 144 addv var0 1 next
   doif var0 lt var9
-    rndv var1 0 1
+    setv var1 0
     doif var1 eq 0
       * somewhere in the crown, over the leaves (measured on the pictures
       * of all four looks in every season: the crown is a dome, so the
@@ -94,7 +97,8 @@ endm
 * and 5 are ripe and overripe lying on the ground, see event 6 below):
 * it swells on the bush, drops when ripe, goes overripe on the ground, and
 * rots away; now and then a rotting fruit sprouts a seedling bush where it
-* lay, if no bush stands within 200 px and there are fewer than 16.
+* lay, if no bush stands within 200 px and there are fewer than 36 (16
+* until 2026-11-16, when all 15 left no room to spread).
 scrp 2 25 141 9
   doif pose eq 0
     pose 1 tick 600
@@ -112,7 +116,7 @@ scrp 2 25 141 9
         doif var0 eq 0
           setv var1 0 enum 2 4 141 addv var1 1 next
           setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
-          doif var1 lt 16
+          doif var1 lt 36
             * (nor in the dead-end pocket at the east end of the lava
             * corridor, room 167: a bush there drew hungry creatures into a
             * corner with one way out; owner, 2026-11-12)
@@ -216,7 +220,7 @@ scrp 2 25 142 9
         doif var0 eq 0
           setv var1 0 enum 2 4 141 addv var1 1 next
           setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
-          doif var1 lt 16
+          doif var1 lt 36
             * (nor in the dead-end pocket at the east end of the lava
             * corridor, room 167: a bush there drew hungry creatures into a
             * corner with one way out; owner, 2026-11-12)
@@ -320,7 +324,7 @@ scrp 2 25 143 9
         doif var0 eq 0
           setv var1 0 enum 2 4 141 addv var1 1 next
           setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
-          doif var1 lt 16
+          doif var1 lt 36
             * (nor in the dead-end pocket at the east end of the lava
             * corridor, room 167: a bush there drew hungry creatures into a
             * corner with one way out; owner, 2026-11-12)
@@ -424,7 +428,7 @@ scrp 2 25 144 9
         doif var0 eq 0
           setv var1 0 enum 2 4 141 addv var1 1 next
           setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
-          doif var1 lt 16
+          doif var1 lt 36
             * (nor in the dead-end pocket at the east end of the lava
             * corridor, room 167: a bush there drew hungry creatures into a
             * corner with one way out; owner, 2026-11-12)
