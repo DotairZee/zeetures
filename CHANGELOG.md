@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 375 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 376 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 11 commits, 15 November 2026
+- [Unreleased](#unreleased): 12 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,31 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Made art: pictures made from the game's own, in the engine
+
+[`b386b3b8`](https://github.com/DotairZee/zeetures/commit/b386b3b80bba99a53eb389f61ebc47ea42516fe8)
+
+Owner, 2026-11-15: the world additions are essential in every default
+world. Seven of them need pictures cut from the game's own (Back.s16 and
+sprites), which Zeetures cannot ship; the Python recipes in art/ made
+them on the owner's machine only. madeart/ makes them in the engine, on
+the player's machine, when a script first asks for one by name:
+
+- MadeArt.h/.cpp: Rgba and Plane (float) pictures; backgroundRegion()
+  and gameSprite() read the game's own Back.s16 and sprites
+  (findGameImageFile: the game's Images folder only) exactly as
+  art/background.py and art/s16.py do; recipes register by name
+  (Register), made once and kept as RGBA creaturesImages.
+  replacesGame lets a made picture stand in for a game sprite of the same
+  name (wfal), unless the player has an Overrides/Images file for it.
+- imageManager::getImage asks for a made picture when the player has no
+  file of that name; Additions' art check counts what can be made.
+- OPENC2E_DUMP_MADE_ART=DIR writes every made picture as NAME.rgba at
+  startup; art/compare_made.py compares them with the recipes' PNGs.
+- madeart/pillarfoot.cpp, the first port (zpft, art/pillarfoot.py):
+  identical to the owner's zpft.png (max difference 0). The other
+  recipes' files are placeholders for their ports.
 
 #### Ship the world additions' from-scratch sprites
 
