@@ -634,7 +634,8 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 		out << key << " " << e.kind << " " << e.tick << " " << e.genus << " " << (e.female ? 1 : 0) << " " << e.stage << " " << e.age << " "
 			<< (e.ageknown ? 1 : 0) << " " << (e.oldage ? 1 : 0) << " " << (e.moniker.empty() ? "-" : e.moniker) << " " << escapeLine(e.name) << "\n"
 			<< (e.child.empty() ? "" : "life-egg " + e.child + "\n") // (belongs to the line before)
-			<< (e.cause.empty() ? "" : "life-cause " + escapeLine(e.cause) + "\n");
+			<< (e.cause.empty() ? "" : "life-cause " + escapeLine(e.cause) + "\n")
+			<< (e.x < 0 ? "" : fmt::format("life-place {} {} {}\n", e.x, e.y, e.room));
 	};
 	for (auto& e : world.history->lifelog)
 		entry("life", e);
@@ -1120,6 +1121,9 @@ bool LoadWorldState(const fs::path& worlddir) {
 		} else if (key == "life-cause") {
 			if (lastEntry && !lastEntry->empty())
 				lastEntry->back().cause = unescapeLine(restOfLine(l));
+		} else if (key == "life-place") {
+			if (lastEntry && !lastEntry->empty())
+				l >> lastEntry->back().x >> lastEntry->back().y >> lastEntry->back().room;
 		} else if (key == "life-egg") {
 			if (lastEntry && !lastEntry->empty())
 				l >> lastEntry->back().child;

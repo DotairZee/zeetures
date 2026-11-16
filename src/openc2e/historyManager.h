@@ -155,6 +155,11 @@ struct lifeLogEntry {
 	bool oldage = false; // died at the end of its senile stage
 	std::string child; // eggLaid: the genome name of the baby in the egg (its egg's OBV0), or empty
 	std::string cause; // death: what it died of, in plain words ("old age", "starvation", "drowning", ...), or empty (not recorded)
+	// death: where (its middle, and the room there, -1 if none); x -1 if not
+	// recorded (deaths before 2026-11-16, or none in the world). Kept with the
+	// world, so where creatures die can be mapped over days, not only from
+	// home.log, which each relaunch replaces
+	int x = -1, y = -1, room = -1;
 };
 
 class historyManager {

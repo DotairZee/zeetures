@@ -25,6 +25,9 @@
 #include "Catalogue.h"
 #include "Engine.h" // version
 #include "World.h"
+#include "Map.h"
+#include "Room.h"
+#include "Agent.h"
 #include "caosValue.h"
 #include "common/Exception.h"
 #include "common/Random.h"
@@ -289,6 +292,14 @@ void historyManager::logLife(int kind, const std::string& mon, int stage, bool o
 	e.age = world.worldtickcount >= m.borntick ? world.worldtickcount - m.borntick : 0;
 	e.oldage = oldage;
 	e.ageknown = m.bornknown;
+	if (kind == lifeLogEntry::death)
+		if (Agent* a = m.owner.get()) {
+			float cx = a->x + a->getWidth() / 2.0f, cy = a->y + a->getHeight() / 2.0f;
+			e.x = (int)cx;
+			e.y = (int)cy;
+			auto r = world.map ? world.map->roomAt(cx, cy) : nullptr;
+			e.room = r ? (int)r->id : -1;
+		}
 	lifelog.push_back(e);
 	notices.push_back(e);
 }
