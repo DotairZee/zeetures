@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 370 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 371 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 6 commits, 15 November 2026
+- [Unreleased](#unreleased): 7 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,18 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### READMEs: user folders on every system, the art not yet shipped, Apple Silicon only
+
+[`64283e64`](https://github.com/DotairZee/zeetures/commit/64283e6452c797191c06bd1a201a24abe32a347d)
+
+The READMEs said the world additions (walkways, lifts, airlocks, plants)
+are applied to every world; on a fresh install the 17 that draw new
+pictures are skipped until their art ships (de8fd955), so they now say
+so, in the Status's "Not done yet" too. The user folder is given for
+each system (PathResolver's storageDirectory: ~/.openc2e/Creatures 2,
+Documents\My Games\Creatures 2, ~/Documents/openc2e Data/Creatures 2),
+and the macOS download is marked Apple Silicon only (M1 or later).
 
 #### Fetch and import the Boney Grendels and Frog Norns V3 packs
 
