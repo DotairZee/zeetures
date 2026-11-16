@@ -654,16 +654,58 @@ void c2Creature::tick() {
 			senses[3] = (unsigned char)std::clamp((r->temp - 140) * 3, 0, 255);
 		}
 	}
-	senses[5] = 0; // crowdedness (TODO)
-	senses[6] = 0; // radiation (TODO)
-	senses[7] = 0; // time of day (TODO)
-	senses[8] = 0; // season (TODO)
+	// Crowdedness, radiation and slopes (2026-11-16): every C2 genome (norn,
+	// grendel, ettin, Frog, Boney) reads them, and they were 0. The genome's
+	// inverted crowdedness emitter (Loneliness, chemical 8) then fed every
+	// creature loneliness even in a crowd, and its Crowded emitter (9) never
+	// fired. Our own definitions (C2's exact ones are not documented):
+	// crowdedness 40 for each other living creature within 200 px across and
+	// 120 up or down, to 255; radiation the room's; slope up and slope down
+	// the floor's rise or fall under it, the way it faces, 512 per pixel of
+	// rise per pixel (the genes' digital emitters fire above 64, about 7
+	// degrees). Time of day, season and wind are read by no genome: left 0.
+	senses[5] = 0;
+	senses[6] = 0;
+	senses[10] = 0;
+	senses[11] = 0;
+	static const bool oldSenses = getenv("OPENC2E_NO_NEW_SENSES") != nullptr; // (developer aid: as before, for comparing)
+	if (parentagent && world.map && !oldSenses) {
+		float cx = parentagent->x + parentagent->getWidth() / 2.0f;
+		float cy = parentagent->y + parentagent->getHeight() / 2.0f;
+		// (the living creatures' middles, gathered once a world tick)
+		static unsigned int gatheredAt = ~0u;
+		static std::vector<std::pair<Agent*, std::pair<float, float>>> living;
+		if (gatheredAt != world.tickcount) {
+			gatheredAt = world.tickcount;
+			living.clear();
+			for (auto& a : world.agents)
+				if (auto* ca = dynamic_cast<CreatureAgent*>(a.get()); ca && !a->isDying() && ca->getCreature() && ca->getCreature()->isAlive())
+					living.push_back({a.get(), {a->x + a->getWidth() / 2.0f, a->y + a->getHeight() / 2.0f}});
+		}
+		int near = 0;
+		for (auto& [a, pos] : living)
+			if (a != parentagent && std::fabs(pos.first - cx) < 200.0f && std::fabs(pos.second - cy) < 120.0f)
+				near++;
+		senses[5] = (unsigned char)std::min(255, near * 40);
+		if (std::shared_ptr<Room> r = world.map->roomAt(cx, cy)) {
+			senses[6] = (unsigned char)std::clamp(r->radn, 0, 255);
+			if (r->floorpoints.size()) {
+				float rise = (r->floorYatX(cx - 8) - r->floorYatX(cx + 8)) / 16.0f; // up to the right (y grows downward)
+				int facing = 2;
+				if (auto* sc = dynamic_cast<SkeletalCreature*>(parentagent))
+					facing = (int)sc->facing();
+				float ahead = facing == 2 ? rise : facing == 3 ? -rise : 0.0f;
+				senses[10] = (unsigned char)std::clamp((int)(ahead * 512.0f), 0, 255);
+				senses[11] = (unsigned char)std::clamp((int)(-ahead * 512.0f), 0, 255);
+			}
+		}
+	}
+	senses[7] = 0; // time of day (no genome reads it)
+	senses[8] = 0; // season (no genome reads it)
 	senses[9] = 255; // air quality: full, unless the head is under water (below)
 	updateUnderwater();
-	senses[10] = 0; // slope up (TODO)
-	senses[11] = 0; // slope down (TODO)
-	senses[12] = 0; // wind towards (TODO)
-	senses[13] = 0; // wind behind (TODO)
+	senses[12] = 0; // wind towards (no genome reads it)
+	senses[13] = 0; // wind behind (no genome reads it)
 
 	{
 		PROFILE_SCOPE("creature: tickBrain (whole)");
