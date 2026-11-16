@@ -250,6 +250,7 @@ struct Params {
 	// arrives and finds nothing (food regrows, so places are not forgotten
 	// at once), and saved with the creature.
 	float foodSeeEdible = 0.3f; // a visible object smelling this nourishing marks a food place
+	float unreachableFoodConfidence = 0.3f; // a new place marked by food seen out of reach
 	float foodMerge = 200.0f; // places this close (same floor) are one place
 	size_t foodPlaceMax = 8;
 	float foodArrived = 60.0f; // this close to a place: look whether food is there
@@ -1066,10 +1067,22 @@ class HomeostatMind : public CreatureMind {
 		}
 		wasRiding = p.riding;
 		bool foodInSight = false;
+		// Food out of reach (fruit hanging over the floor, food behind a
+		// wall) marks a place it may later be got, but neither renews a
+		// place already known nor counts as finding food there: hungry
+		// creatures waited for good at the seam corner (room 180) under the
+		// tomato plants of room 118, whose fruit hangs about 100 px up,
+		// the place renewed at every look (owner, 2026-11-16: "mind gives
+		// up waiting"). Arriving and finding only such food halves the
+		// place as finding nothing does, so it is given up and others tried.
+		static const bool noReachCheck = getenv("OPENC2E_NO_FOOD_REACH_CHECK") != nullptr; // (to compare)
 		for (auto& s : p.visible)
 			if (s.edible >= prm.foodSeeEdible) {
-				rememberFood(s.x, s.y, p.tick, 0.6f, false, s.category);
-				foodInSight = true;
+				if (s.reachable || noReachCheck) {
+					rememberFood(s.x, s.y, p.tick, 0.6f, false, s.category);
+					foodInSight = true;
+				} else if (!knowsFoodNear(s.x, s.y))
+					rememberFood(s.x, s.y, p.tick, prm.unreachableFoodConfidence, false, s.category);
 			}
 		for (auto& fp : foodPlaces) {
 			if (std::fabs(dxTo(p, fp.x)) < prm.foodArrived && std::fabs(fp.y - p.y) < prm.sameLevel && !foodInSight &&
@@ -2287,6 +2300,13 @@ class HomeostatMind : public CreatureMind {
 		return best;
 	}
 
+	bool knowsFoodNear(float x, float y) const {
+		for (auto& fp : foodPlaces)
+			if (std::fabs(wrapD(fp.x - x)) < prm.foodMerge && std::fabs(fp.y - y) < prm.sameLevel)
+				return true;
+		return false;
+	}
+
 	void rememberFood(float x, float y, unsigned int tick, float confidence, bool meal, int category = -1) {
 		for (auto& fp : foodPlaces)
 			if (std::fabs(wrapD(fp.x - x)) < prm.foodMerge && std::fabs(fp.y - y) < prm.sameLevel) {
@@ -2636,6 +2656,21 @@ class HomeostatMind : public CreatureMind {
 				c.food = true;
 				out.push_back(c);
 				return;
+			}
+			// The way there is barred from here (a wall, a cliff, a way found
+			// blocked) and no route was known: the place is out of reach from
+			// here, as a trip that gets no nearer is, at once. It stood as the
+			// best place, offering nothing, for foodTripTicks: hungry creatures
+			// at the west wall of the seam corner (room 180) stood still,
+			// waiting on food the short way round, across the seam, which is
+			// shut at that height, or on tomatoes hanging out of reach
+			// (owner, 2026-11-16: "mind gives up waiting").
+			static const bool noBarredGiveUp = getenv("OPENC2E_NO_BARRED_GIVEUP") != nullptr; // (to compare)
+			if (!noBarredGiveUp) {
+				FoodPlace& t = foodPlaces[bestSame - foodPlaces.data()];
+				t.confidence *= 0.5f;
+				t.cooldownUntil = p.tick + prm.foodCooldown;
+				foodTrip = -1;
 			}
 		}
 		if (bestOther && wantOther >= prm.seekMinWant) {
