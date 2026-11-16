@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 404 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 405 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 40 commits, 15 November 2026 to 16 November 2026
+- [Unreleased](#unreleased): 41 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,38 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### Mind gives up waiting on food it cannot reach
+
+[`637b17b8`](https://github.com/DotairZee/zeetures/commit/637b17b88d693f879e91bc4fee12d7c3d5369d0a)
+
+Hungry creatures gathered at the world's west seam (room 180, the
+58 px alcove at the west end of the corridor 120-119-118 where the
+west sea airlock lets creatures out) and waited there, up to 18 in a
+copy. Two reasons, from their choices:
+
+- The tomato plants of room 118 next door hang their fruit about
+  100 px over the floor. Food seen kept its place on the food map at
+  0.6 at every look and counted as "found food here", so the place
+  never faded. Now only food within reach does that; food seen out of
+  reach marks a new place at 0.3 (unreachableFoodConfidence; it may
+  fall later) but does not renew a known one.
+  OPENC2E_NO_FOOD_REACH_CHECK turns this off.
+- The best remembered food was often the short way round, across the
+  seam, which is shut at that height, or behind the alcove's wall. With
+  the way barred and no route known, the food step offered nothing and
+  the place stood as best until its trip timed out. Now a place whose
+  way is barred from here is out of reach at once: confidence halved,
+  not tried for foodCooldown ticks, so the next decision tries another.
+  OPENC2E_NO_BARRED_GIVEUP turns this off.
+
+Tests: 8 creatures with Hunger 180+ moved into room 180, counted every
+10 s for about 4 minutes, three side-by-side pairs (both changes vs
+neither): creatures in the alcove over the last 10 samples 6.4/7.3/2.0
+vs 9.4/7.7/8.0; Hunger 150+ world-wide 70.2/69.9/75.8 vs 73.4/73.8/
+77.7; meals that fed per 1,000 decisions 44/39/43 vs 43/49/43; deaths
+the same. The reach change alone (three earlier pairs) did not empty
+the alcove (8.6/5.6/16.6 vs 7.5/6.7/11.4).
 
 #### No "Couldn't play" script errors when there is no audio device
 
