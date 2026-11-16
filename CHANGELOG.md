@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 391 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 392 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 27 commits, 15 November 2026
+- [Unreleased](#unreleased): 28 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,27 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Owner's Kit: Relationships shorter and scrolling; Life Story only as wide as it needs
+
+[`a45b3683`](https://github.com/DotairZee/zeetures/commit/a45b3683884ea1d01ce3b6bb71020521f51c447e)
+
+Owner, 2026-11-16 (screenshots): "the Relationships tab of the Owner's
+kit needs to be shorter and have a scroll! and the Life Story tab does
+not need to extend as far out to the right as it does."
+
+- Relationships: the list is about ten rows high and scrolls, its
+  header kept in place, instead of a row for every creature in the world
+  below the map. The map names only mates, the feared and the eight best
+  liked, each only where it doesn't cover a name already placed (the
+  best liked sit side by side round the ring), drawn last on a dark
+  backing; with 150 creatures every name had overlapped into a smear.
+  Pointing at any dot still names it.
+- Life Story: the table is as wide as its longest date and sentence (the
+  sentences wrap past 380 px) instead of a fixed 620, and the date column
+  fits the dates instead of 200 px.
+
+Checked in Home copies (snapshots of both pages).
 
 #### Quieter log: C2 debug output, failed loci, sprite searches
 
