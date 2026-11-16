@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 374 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 375 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 10 commits, 15 November 2026
+- [Unreleased](#unreleased): 11 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,34 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Ship the world additions' from-scratch sprites
+
+[`be44d4a8`](https://github.com/DotairZee/zeetures/commit/be44d4a86896740cf380d9cbae4783e12c74cda9)
+
+Toward the same world on any machine: the 39 sprites the additions use
+that the art recipes draw from scratch (no game pixels read: checked
+recipe by recipe; lift.py only took positions and three rail colors
+from a preview, westlock.py's doors and car are drawn, its rock is cut
+from the background and stays out) are committed in art/sprites (4.8 MB,
+marked binary in .gitattributes): bamboo walkways, bushes and planters,
+sea plants and fruit, catwalk, plinth, sand ramp, pipes, ledges, the
+lower deck, lifts and callers, the iris hatch, the lab treat, the flying
+fox, the cave mouth, the memorial stone and tablet, and the west sea
+airlock's doors and car. Four no script uses (zbrc, zfpd, zfpk, zfpm)
+are left out.
+
+They ship beside the program as "zeetures-art" (a post-build copy next
+to the built program; installed into every download), not built in:
+about 5 MB of arrays would strain the 32-bit Windows compiler.
+findImageFile looks there last, for C2, after the player's and the
+game's folders (so the player's own picture of a name wins; SDL's base
+path finds the folder).
+
+Fresh user folder: 32 of the 39 additions run, 7 skipped (their art is
+cut from the game's own pictures: pillar, treehouse-lift,
+volcano-passage, volcano-trunk, water-pocket, waterfall-path,
+westlock), no script errors, no missing sprites. READMEs updated.
 
 #### Start with all sounds on
 
