@@ -21,7 +21,10 @@
 
 #include "Backend.h"
 
+#include <chrono>
+#include <csignal>
 #include <memory>
+#include <thread>
 #include <stdint.h>
 
 class NullRenderTarget : public RenderTarget {
@@ -64,5 +67,15 @@ class NullBackend : public Backend {
 	Texture createTexture(int32_t, int32_t) override { return {}; }
 	void updateTexture(Texture&, Rect2i, const Image&) override {}
 
-	void run(std::function<bool()>) override {}
+	// no window: the world's ticks with no drawing, about 60 a second, until
+	// the engine is done (with run empty, -k null loaded the world and quit)
+	// (and Ctrl-C or a TERM ends it, as closing the window would: with no
+	// window SDL's quit event never came, and a TERM was ignored)
+	void run(std::function<bool()> update_callback) override {
+		static volatile std::sig_atomic_t stop = 0;
+		std::signal(SIGINT, [](int) { stop = 1; });
+		std::signal(SIGTERM, [](int) { stop = 1; });
+		while (!stop && update_callback())
+			std::this_thread::sleep_for(std::chrono::milliseconds(16));
+	}
 };

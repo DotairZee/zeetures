@@ -383,6 +383,10 @@ static int handViewX(Camera* cam, PointerAgent* hand) {
 }
 
 void Engine::drawWorld() {
+	// -k null: no window to draw in (the null backend's render targets draw
+	// nothing, and the world's drawing asserted on its missing surface)
+	if (get_backend() == NullBackend::get_instance())
+		return;
 	PROFILE_SCOPE("draw: world and interface (per tick)");
 	if (Profile::enabled())
 		Profile::totals()["frames drawn (count, per tick)"] += 1.0;
@@ -2072,7 +2076,11 @@ bool Engine::initialSetup() {
 	possible_backends.clear();
 	Openc2eImGui::Init();
 
-	if (cmdline_norun)
+	// -s (silent): no audio device at all. Only muting at the start was not
+	// enough: the player's own sound choices in settings.txt are loaded
+	// later and win, so headless test copies (-s) played creature voices
+	// and world sounds through the speakers (2026-11-16)
+	if (cmdline_norun || !cmdline_enable_sound)
 		preferred_audiobackend = "null";
 	if (preferred_audiobackend != "null")
 		fmt::print("* Initialising audio backend {}...\n", preferred_audiobackend);
