@@ -41,6 +41,7 @@
 #include "caosVM.h"
 #include "caosScript.h"
 #include "common/audio/AudioBackend.h"
+#include "common/audio/NullAudioBackend.h"
 #include "common/creaturesImage.h"
 #include "common/io/FileReader.h"
 #include "common/throw_ifnot.h"
@@ -592,12 +593,20 @@ int Agent::handleClick(float clickx, float clicky) {
 	return -1;
 }
 
+// No audio device (-s, -k null or the null audio backend): sounds that
+// cannot play are expected, not script errors. Since -s chose the null
+// backend (606d6367) every sound and voice logged "Couldn't play", about
+// 25,000 lines per test run, burying the real errors.
+static bool noAudioDevice() {
+	return get_audio_backend() == NullAudioBackend::get_instance();
+}
+
 void Agent::playAudio(std::string filename, bool controlled, bool loop) {
 	assert(!dying);
 
 	sound.stop();
 	sound = soundmanager.playSound(filename, loop);
-	if (!sound) {
+	if (!sound && !noAudioDevice()) {
 		unhandledException(fmt::format("Couldn't play sound '{}'", filename), false);
 	}
 	updateAudio(sound);
@@ -1988,7 +1997,7 @@ void Agent::tickVoices() {
 		} else {
 			// uncontrolled audio is easier, we shall hope no-one notices
 			auto voice = soundmanager.playVoice(it->first, voice_pitch);
-			if (!voice) {
+			if (!voice && !noAudioDevice()) {
 				unhandledException(fmt::format("Couldn't play voice '{}'", it->first), false);
 			}
 			updateAudio(voice);
