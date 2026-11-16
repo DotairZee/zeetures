@@ -1014,6 +1014,16 @@ void Agent::findCollisionInDirection(unsigned int i, class MetaRoom* m, Point sr
 	}
 
 	if (!room) { // out of room system
+		// Only testing a place (validInRoomSystem): a point outside every
+		// room makes the place unfit. It went on as below, so the test found
+		// no wall and passed the place, and marked the object out of the
+		// room map as it tested: a ball set back from the rock at the west
+		// sea airlock's land door was put back with its top-middle in the
+		// rock, again and again (2026-11-16)
+		if (s_nudging) {
+			collided = true;
+			return;
+		}
 		// C2: an object partly outside the room map, such as an egg laid
 		// against a wall (the gene lab's east wall, moved in to its drawn
 		// floor; 2026-11-14), is set back at the nearest place it fits, once
@@ -1202,7 +1212,40 @@ void Agent::markOutOfRoomSystem() {
 		displaycore = true;
 }
 
+// C2: an object that physics found partly outside the room map stopped
+// there for good, its physics off: it hung in the rock, or, once something
+// moved it back inside, in mid-air. Two objects (2 5 2) and a 2 15 9 were
+// left so at the west sea airlock's land door, where the floor room (120,
+// x 399-573, y 1400-1540) opens east into room 115 (from y 1472) through a
+// doorway only 68 px tall: what crossed it with its top above 1472 hung
+// with its top in the rock (owner, 2026-11-15, a fruit seen there). Now such
+// an object is tried back in a little later and every second after (a
+// place around it, up, to the sides or down; tryMoveToPlaceAround), and
+// falls from there. Only objects that collide with walls and fall, and are
+// not carried or riding: clouds and other free objects are left alone.
+bool Agent::healOutOfRoomSystem() {
+	if (engine.version != 2 || !outofroomsystem || family != 2)
+		return false;
+	if (!suffercollisions() || !sufferphysics() || carriedby || invehicle)
+		return false;
+	if (++roomSystemHealTicks < 10)
+		return false;
+	roomSystemHealTicks = 0;
+	float wasx = x, wasy = y;
+	if (!validInRoomSystem() && !tryMoveToPlaceAround(x, y))
+		return false;
+	outofroomsystem = false;
+	falling = true;
+	velx = 0;
+	vely = 0;
+	fmt::print("* {} set back inside the room map: ({:.0f}, {:.0f}) to ({:.0f}, {:.0f})\n", identify(), wasx, wasy, x, y);
+	return true;
+}
+
 void Agent::physicsTickC2() {
+	if (outofroomsystem && healOutOfRoomSystem())
+		return;
+
 	int dx = round(velx), dy = round(vely);
 
 	if (dx != 0 || dy != 0)
@@ -1868,14 +1911,21 @@ bool Agent::tryMoveToPlaceAround(float x, float y) {
 			return true;
 		return world.map->roomAt(px + getWidth() / 2.0f, py + getHeight() - 1) == home;
 	};
-	for (int pass = home ? 0 : 1; pass < 2; pass++) {
+	// (C2, last: places below too, anywhere. An object whose top is caught
+	// in the rock over a room fits a few px lower, where only up and to the
+	// sides was tried: two at the west sea airlock's land door stayed in the
+	// rock; healOutOfRoomSystem)
+	int passes = engine.version == 2 ? 3 : 2;
+	for (int pass = home ? 0 : 1; pass < passes; pass++) {
 		bool sameRoom = pass == 0;
+		float ydir = pass == 2 ? 1.0f : -1.0f;
 		for (unsigned int xadjust = 0; xadjust < trywidth; xadjust++) {
-			for (unsigned int yadjust = 0; yadjust < tryheight; yadjust++) {
-				if (fits(x - xadjust, y - yadjust, sameRoom))
-					moveTo(x - xadjust, y - yadjust);
-				else if ((xadjust != 0) && fits(x + xadjust, y - yadjust, sameRoom))
-					moveTo(x + xadjust, y - yadjust);
+			for (unsigned int yadjust = pass == 2 ? 1 : 0; yadjust < tryheight; yadjust++) {
+				float ty = y + ydir * yadjust;
+				if (fits(x - xadjust, ty, sameRoom))
+					moveTo(x - xadjust, ty);
+				else if ((xadjust != 0) && fits(x + xadjust, ty, sameRoom))
+					moveTo(x + xadjust, ty);
 				else
 					continue;
 				return true;

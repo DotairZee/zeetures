@@ -177,6 +177,10 @@ class Agent : public std::enable_shared_from_this<Agent> {
 	bool displaycore : 1;
 	bool outofroomsystem = false; // physics found it outside the room map (see markOutOfRoomSystem)
 	void markOutOfRoomSystem();
+	// C2: an object physics left outside the room map is tried back in now
+	// and then (healOutOfRoomSystem), counting ticks here
+	unsigned int roomSystemHealTicks = 0;
+	bool healOutOfRoomSystem();
 
 	int clac[3];
 	int clik;

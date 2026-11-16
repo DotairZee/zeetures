@@ -33,6 +33,19 @@ doif room 121 3 eq 1472
 endi
 setv door 0 120 119 255
 *
+* 1b. Objects that crossed from the floor room into room 115 (east, from y
+*    1472) with their tops above 1472 were stopped by physics there, partly
+*    in the rock, and hung (two 2 5 2 and a 2 15 9, 2026-11-15). The engine
+*    now sets such an object back in and lets it fall
+*    (Agent::healOutOfRoomSystem), once it moves; these are given a push.
+enum 2 0 0
+  setv var1 attr andv var1 128
+  setv var2 posl addv var2 posr divv var2 2
+  doif var1 ne 0 doif var2 ge 560 doif var2 le 680 doif posb ge 1440 doif posb le 1545 doif vely eq 0
+    setv vely 1
+  endi endi endi endi endi endi
+next
+*
 * 2. The doors (behind creatures, plane 1400) and the rock in front of a
 *    rider (plane 1550; riders are at 1501).
 enum 2 3 247 kill targ next
