@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 372 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 374 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 8 commits, 15 November 2026
+- [Unreleased](#unreleased): 10 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,44 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Start with all sounds on
+
+[`75fc9ed3`](https://github.com/DotairZee/zeetures/commit/75fc9ed38ea0ad1c0f2c935157732d4c9697cdcf)
+
+Owner, 2026-11-15: "for future nightlies: I want new compiles to start
+with all sounds on." Music, world sounds and creature speech began muted
+(2a793d9b); they now begin on unless sound is disabled on the command
+line (-s). The player's own File &gt; Sound choices, kept in settings.txt,
+still win at startup (LoadViewSettings), so a player who turned them off
+keeps them off.
+
+#### READMEs: playing on a Mac, from a real install on an M4 MacBook Pro
+
+[`862c180b`](https://github.com/DotairZee/zeetures/commit/862c180bff3a1ec6e2773e0a5e9c71458bbdbbea)
+
+From the owner's notes of a first install on a Mac with no developer
+tools (MacBook Pro M4, macOS 15.7.3, commit 6c36fe1a), where Zeetures
+built and ran natively (Metal, CoreAudio), made Home from Eden.sfc and
+fetched and imported both breed packs:
+
+- The game's files on a Mac: Steam for Mac won't install the game (it
+  is Windows-only there), but its console downloads them
+  (download_depot 1818340 1818341) into
+  ~/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/
+  MacOS/steamapps/content/app_1818340/depot_1818341; copy them to a
+  permanent place such as ~/Games/Creatures The Albian Years. A new
+  "On a Mac" section says so, and that Wine, CrossOver and Steam Play
+  are not needed: only the game's data comes from Steam.
+- The game folder is the one with Images, Sounds and Eden.sfc (C2 has
+  no Bootstrap folder; that is C3/DS).
+- The Intel Mac download (macOS 10.15 or later) in the table and the
+  download's own README; the "not Intel Macs" note gone.
+- Building on macOS: the command line tools' hidden-installer gotcha and
+  its two fixes; CMake from PyPI in a venv with the tools' Python 3.9
+  (Homebrew optional); --target openc2e; the harmless
+  -Winconsistent-missing-override warnings; the flags for an Intel build
+  on Apple Silicon; Python 3.9 stated as enough.
 
 #### Nightly: a build for Intel Macs
 
