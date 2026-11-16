@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 382 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 386 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 18 commits, 15 November 2026
+- [Unreleased](#unreleased): 22 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,62 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Made art: dump every frame's size; compare frames of different sizes
+
+[`33313228`](https://github.com/DotairZee/zeetures/commit/33313228e279cb811813237e77825926128ca4f0)
+
+The female ettin's head (a60a) has frames of several sizes (97 of 48x48,
+the rest 45x48 to 56x52), which the dump's header (frame 0's size) and
+art/compare_made.py (one stacked sheet) could not describe. The dump now
+writes a second line with every frame's size, and compare_made.py reads
+the frames one by one and takes the recipe's output from NAME.png or
+NAME.s16 (Overrides pictures are .s16). With it: all 18 made pictures
+(a60a and wfal included) identical to the owner's, and the 17 made
+body-data files byte-identical (ettinhead's a60a.att, the 16 Golden
+Desert .att files).
+
+#### Made art: port ettinhead (the female ettin's head, a60a)
+
+[`65dff8fc`](https://github.com/DotairZee/zeetures/commit/65dff8fcdeb05391907d3c3cf5cd9bedcb580b6e)
+
+C++ port of art/ettinhead.py: a60a (120 frames, the female ettin's head
+rebuilt from the game's male a20a.s16, replacing the game's own a60a) and
+a60a.att (a byte copy of the game's Body Data/a20a.att).
+
+Verified with OPENC2E_DUMP_MADE_ART against the Python recipe's output:
+all 120 frames of a60a identical to its a60a.s16 as s16.py reads it (max
+diff 0, every channel, transparent pixels included), and a60a.att
+byte-identical.
+
+#### Made art: port golden_desert_heads (Golden Desert head seating, 16 .att)
+
+[`b6db9052`](https://github.com/DotairZee/zeetures/commit/b6db90524ab36b36e0a805a6da5325a76f75a8f8)
+
+C++ port of art/golden_desert_heads.py: a{0,4}{0,1,3,5}k.att and
+b{0,4}{0,1,3,5}k.att made from the game's own Golden Desert (k) and Hebe
+(h) body data and head sprites, a and b of each sex and stage computed
+once and cached.
+
+Verified: built on Linux (Ninja, RelWithDebInfo) and ran with an empty
+home and OPENC2E_DUMP_MADE_ART; all 16 dumped files are byte-identical
+to the Python recipe's output in Overrides/Body Data.
+
+#### Made art: body data made from the game's own
+
+[`7f6e3f73`](https://github.com/DotairZee/zeetures/commit/7f6e3f730d268072fbf9395e848029547cf3bc40)
+
+For the two appearance fixes the owner's Home has in its Overrides
+folder (the female ettin's head, ettinhead.py; the Golden Desert norns'
+head seating, golden_desert_heads.py), which rewrite body data as well
+as pictures. MadeArt gains RegisterBodyData (a recipe for a .att file's
+text, by file name) and bodyDataFile(), which writes the made text once
+per run into the user data folder's "Zeetures made/Body Data" and is
+asked by findFile for body data after the Overrides folder (a file of
+the player's there still wins) and before the game's own. gameFile()
+reads a file from the game's own folder only. OPENC2E_DUMP_MADE_ART
+writes the made body data too. The two recipes' files are placeholders
+for their ports.
 
 #### Made art: build on Windows and 32-bit systems
 
