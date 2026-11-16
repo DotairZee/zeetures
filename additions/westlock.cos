@@ -12,14 +12,24 @@
 * A round sea door is set in the rock at the foot of the slope (x 600-656,
 * left of the game's own rock, which is drawn over everything from x ~650;
 * 2 3 247, sprite zwsd), and a
-* brass land door (2 3 248, zwld) in the rock face at the east end of the
-* floor by the cage lift (room 120, floor 1540). An invisible car (vehicle
-* 3 2 151, zwcr) waits at the sea door. When a creature is at the low point
-* the sea door opens and the car takes it in, pulls it down fast (as if
-* sucked in), shuts the door behind it, drains the chamber for a moment,
-* and shoots it out of the land door onto the floor; the door shuts again. While it
-* rides, the rock (2 3 249, zwrk, cut from the player's own background) is
-* drawn in front of it, with the two doorways left open.
+* brass land door (2 3 248, zwld) in the west wall of the shallow pool just
+* east of it (room 110, x 669-1170, water 1352-1440; owner, 2026-11-16, its
+* place chosen from airlock-pool-exit-mockup2.png). An invisible car
+* (vehicle 3 2 151, zwcr) waits at the sea door. When a creature is at the
+* low point the sea door opens and the car takes it in, pulls it down fast
+* (as if sucked in), shuts the door behind it, drains the chamber for a
+* moment, and shoots it out of the land door into the pool, facing east;
+* the door shuts again. From the pool it wades east and walks out up the far
+* bank (room 113, then 108 and the rest of the world). While it rides, the
+* rock (2 3 249, zwrk, cut from the player's own background) is drawn in
+* front of it, with the doorways left open.
+*
+* Until 2026-11-16 the land door was in the rock face at the east end of the
+* floor by the cage lift (room 120, floor 1540). That floor opens only into
+* a corridor (rooms 120, 119, 118 and the seam alcove 180) with no way out
+* on foot, only two cage lifts: rescued creatures spent a median 355
+* decisions there and many starved. The rooms changed for that exit (1.
+* below) are kept; they do no harm.
 *
 * 1. The floor by the lift (room 120) was 68 px tall and its doorway to the
 *    lift's room (119) was too small for creatures (100; creatures are 224).
@@ -46,12 +56,17 @@ enum 2 0 0
   endi endi endi endi endi endi
 next
 *
-* 2. The doors (behind creatures, plane 1400) and the rock in front of a
-*    rider (plane 1550; riders are at 1501).
+* 2. The doors (the sea door behind creatures, plane 1400; the land door
+*    9000, see below) and the rock in front of a rider (plane 1550; riders
+*    are at 1501).
 enum 2 3 247 kill targ next
 inst new: simp zwsd 6 0 1400 0 setv cls2 2 3 247 setv attr 0 mvto 600 1302 slow
 enum 2 3 248 kill targ next
-inst new: simp zwld 5 0 1400 0 setv cls2 2 3 248 setv attr 0 mvto 538 1484 slow
+* (the land door in front of the game's own rock over the pool's west bank,
+* scenery cvl2/cvlk at plane 8999, as in the approved mock-up; behind it,
+* at 1400, it was hidden; creatures at the pool's very west edge pass
+* behind it)
+inst new: simp zwld 5 0 9000 0 setv cls2 2 3 248 setv attr 0 mvto 662 1366 slow
 enum 2 3 249 kill targ next
 inst new: simp zwrk 1 0 1550 0 setv cls2 2 3 249 setv attr 0 mvto 573 1245 slow
 *
@@ -82,11 +97,23 @@ scrp 3 2 151 9
     doif ov01 lt 10 stop endi
     setv ov01 0
     setv var0 0
+    * (not one it has just let out into the pool, OV94 1: the pool's west
+    * end meets the seabed's low point at about the same height, x 669, so
+    * creatures wading back to the pool's west wall were taken in again and
+    * again; the mark is cleared once it has left the pool's area)
     enum 4 0 0
       setv var1 posl addv var1 posr divv var1 2
-      doif var1 ge 585 doif var1 le 669 doif posb ge 1330 doif posb le 1400
+      doif ov94 eq 1
+        setv var2 1
+        doif var1 lt 560 setv var2 0 endi
+        doif var1 gt 1200 setv var2 0 endi
+        doif posb lt 1250 setv var2 0 endi
+        doif posb gt 1470 setv var2 0 endi
+        doif var2 eq 0 setv ov94 0 endi
+      endi
+      doif ov94 eq 0 doif var1 ge 585 doif var1 le 669 doif posb ge 1330 doif posb le 1400
         setv var0 1
-      endi endi endi endi
+      endi endi endi endi endi
     next
     doif var0 eq 1
       enum 2 3 247 pose 1 next
@@ -116,10 +143,12 @@ scrp 3 2 151 9
     doif var1 eq 0 stop endi
     rndv var1 12 20
     setv var0 post addv var0 var1
-    doif var0 ge 1352
+    * (down to the pool's level: the car's bottom 1418, 4 px over the
+    * pool's bed where the rider is let out; 1428, room 120's floor, before)
+    doif var0 ge 1290
       doif ov02 eq 0 setv ov02 1 enum 2 3 247 snde dor1 anim [54321] next endi
     endi
-    doif var0 ge 1428 setv var0 1428 setv ov00 4 setv ov01 0 snde bubb endi
+    doif var0 ge 1308 setv var0 1308 setv ov00 4 setv ov01 0 snde bubb endi
     mvto posl var0
     stop
   endi
@@ -130,27 +159,27 @@ scrp 3 2 151 9
     setv ov00 5 setv ov01 0
     stop
   endi
-  * to the land door: in one move, while the rider is hidden in the rock;
-  * set down wholly inside the floor room (west of x 573) and 2 px above its
-  * floor, or the physics finds a corner outside the rooms and pushes it up
-  * (moved little by little, a creature walking in its seat through rock that
-  * belongs to no room was pushed back by its own foot checks and let out
-  * under the sea door, outside every room)
+  * to the land door: in one move, from the rock into the pool just east
+  * of the door (the car x 716-764, bottom 1418: the pool's bed slopes from
+  * 1372 at its west wall to 1432, and is about 1422 under the car's middle;
+  * set down wholly inside the pool room and a little above its bed, or the
+  * physics finds a corner outside the rooms and pushes it up)
   doif ov00 eq 5
-    mvto 516 post
+    mvto 716 post
     setv ov00 6 setv ov01 0
     stop
   endi
-  * letting out: shot out of the land door, west across the floor (owner,
-  * 2026-11-13: "it should shoot them out the exit"); the land door
-  * shutting, back to wait at the sea door
+  * letting out: shot out of the land door, east into the pool (owner,
+  * 2026-11-13: "it should shoot them out the exit"; gentler than the old
+  * shot across a dry floor, as it lands in water); the land door shutting,
+  * back to wait at the sea door
   doif ov00 eq 6
     doif ov01 eq 2
       dpas
       enum 4 0 0
         setv var1 posl addv var1 posr divv var1 2
-        doif var1 ge 470 doif var1 le 600 doif posb ge 1480 doif posb le 1545
-          setv velx -26 setv vely -9
+        doif var1 ge 690 doif var1 le 800 doif posb ge 1330 doif posb le 1445
+          setv velx 14 setv vely -5 setv ov94 1
         endi endi endi endi
       next
     endi
