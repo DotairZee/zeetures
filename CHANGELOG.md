@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 388 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 389 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 24 commits, 15 November 2026
+- [Unreleased](#unreleased): 25 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,35 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### More fruit, more bushes; a sea current from the west sea's shelf to the hatch
+
+[`e996d0dc`](https://github.com/DotairZee/zeetures/commit/e996d0dc871ee6debab53a8e5ac8908bde3b202f)
+
+Home's deaths over the last 24 game hours (the save's life records):
+548, of them 291 old age, 145 starvation, 78 drowning, 34 organ failure;
+149 creatures living, 53 very hungry (hunger drive over 200), spread
+across the world. Owner, 2026-11-16: more food, and drowning in the same
+pass.
+
+- food.cos: the seasonal bushes were all 15 at their cap of 16 (a
+  rotting fruit sprouts a seedling only below it), each full bush holding
+  at most 4 fruit, adding one at a 25-second step half the time. Now the
+  cap is 36, a full bush holds 6 (a young one 3), and a bud comes every
+  step while there is room. Two Home copies side by side for 20 minutes
+  (sampled each minute): with the change, very hungry creatures 26-31 at
+  the end (33-55 without), average hunger about 90 (113), food lying
+  about 166-175 (136-153), starvation deaths 0 (4).
+- westlock.cos: the shelf in the west sea (rooms 134 and 135, x 500-840,
+  floors at y 1096-1140 in open water) stands far above the seabed and
+  the hatch's pickup point; creatures that sank onto it drowned there
+  (three times in the notes, once more in a copy). A watcher (2 1 160)
+  gives a creature 20 s there, then a current (2 1 161) carries it, not
+  quite smoothly, west into open water, down through room 204 to the
+  seabed and east to the low point, where the hatch takes it in. Moved
+  by script, so no fall. Tested in a copy: a creature put on the shelf
+  was carried down, taken in by the hatch and let out on the floor by
+  the lift.
 
 #### Quieter startup log: script patches and backward seeks
 
