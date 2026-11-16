@@ -26,19 +26,29 @@ Running it
 Linux:
     ./openc2e -d "/path/to/Creatures 2"
 
-  The path is the folder that holds Creatures 2's Images, Sounds and
-  Bootstrap folders. With Steam it is usually under
+  The path is the folder that holds Creatures 2's Images and Sounds
+  folders and Eden.sfc. With Steam it is usually under
   ~/.local/share/Steam/steamapps/common/Creatures The Albian Years/Creatures 2
 
 Windows:
     openc2e.exe -d "C:\path\to\Creatures 2"
 
-macOS (Apple Silicon, M1 or later; this build does not run on Intel Macs):
-    ./openc2e -d "/path/to/Creatures 2"
+macOS (the arm64 download for Apple Silicon, M1 or later; x86_64 for
+Intel Macs, macOS 10.15 or later):
+    ./openc2e -d "$HOME/Games/Creatures The Albian Years/Creatures 2"
 
-  The Steam release is for Windows: copy the Creatures 2 folder over from
-  a Windows or Linux install. The download is not signed by Apple: the
-  first time, right-click openc2e and choose Open, or run
+  Zeetures runs natively: no Wine, CrossOver or Steam Play is needed,
+  only the game's files. Steam for Mac won't install the game (it is
+  listed as Windows-only), but downloads its files through its console:
+  run  open "steam://open/console"  in Terminal, then type
+      download_depot 1818340 1818341
+  in Steam's Console tab. The files land in
+  ~/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/
+  MacOS/steamapps/content/app_1818340/depot_1818341 ; copy that folder
+  somewhere permanent, for example ~/Games/Creatures The Albian Years
+  (ditto <that folder> ~/Games/"Creatures The Albian Years"), and use its
+  Creatures 2 folder. The download is not signed by Apple: the first
+  time, right-click openc2e and choose Open, or run
   xattr -dr com.apple.quarantine .  in its folder.
 
   (The Windows and macOS builds are new and less tried than Linux.)

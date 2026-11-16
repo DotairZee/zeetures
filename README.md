@@ -16,15 +16,16 @@ Ready-to-run builds for each system are made automatically every night there are
 | --- | --- |
 | Linux (x86-64) | `zeetures-nightly-linux-x86_64.tar.gz` |
 | Windows (64-bit) | `zeetures-nightly-windows-x64.zip` |
-| macOS (Apple Silicon: M1 or later; not Intel Macs) | `zeetures-nightly-macos-arm64.zip` |
+| macOS (Apple Silicon: M1 or later) | `zeetures-nightly-macos-arm64.zip` |
+| macOS (Intel, macOS 10.15 Catalina or later) | `zeetures-nightly-macos-x86_64.zip` |
 | Linux (32-bit x86) | `zeetures-nightly-linux-i386.tar.gz` |
 | Windows (32-bit) | `zeetures-nightly-windows-x86.zip` |
 
-Unpack it and start the program (still called `openc2e`) with the path to your Creatures 2 folder, the one that holds its `Images`, `Sounds` and `Bootstrap` folders:
+Unpack it and start the program (still called `openc2e`) with the path to your Creatures 2 folder, the one that holds its `Images` and `Sounds` folders and `Eden.sfc`:
 
 * **Linux:** `./openc2e -d "$HOME/.local/share/Steam/steamapps/common/Creatures The Albian Years/Creatures 2"`
 * **Windows:** `openc2e.exe -d "C:\Program Files (x86)\Steam\steamapps\common\Creatures The Albian Years\Creatures 2"`
-* **macOS:** `./openc2e -d "/path/to/Creatures 2"`. The Steam release is for Windows, so copy the `Creatures 2` folder over from a Windows or Linux install. The download is not signed by Apple: the first time, right-click `openc2e` and choose Open, or run `xattr -dr com.apple.quarantine .` in its folder.
+* **macOS:** `./openc2e -d "$HOME/Games/Creatures The Albian Years/Creatures 2"`. Steam for Mac won't install the game, but it will download its files: see [On a Mac](#on-a-mac) below.
 
 The creatures use Zeetures's own mind (`--mind original` gives them openc2e's unfinished copy of the original brain, which does very little). Zeetures's world additions (map fixes, script fixes and new objects) are built into the program and applied to every Creatures 2 world as it loads. For now, the ones that draw new pictures (the walkways, new lifts, airlocks, seasonal bushes, the memorial stone and others: 17 of 39) are skipped on a fresh install, because their art is not shipped yet; it will be, made on your machine from your own copy of the game where it is based on the game's pictures.
 
@@ -33,6 +34,29 @@ Your worlds, saves and settings are kept in the user folder, never in the game's
 * **Linux:** `~/.openc2e/Creatures 2`
 * **Windows:** `Documents\My Games\Creatures 2`
 * **macOS:** `~/Documents/openc2e Data/Creatures 2`
+
+### On a Mac
+
+Zeetures runs natively on macOS (Metal graphics, CoreAudio sound). You do **not** need Wine, CrossOver or Steam Play: only the game's *data* comes from Steam. Checked on an M4 MacBook Pro with macOS 15 Sequoia.
+
+**Getting the Creatures 2 files.** Steam for Mac lists *Creatures: The Albian Years* as Windows-only and won't install it, but an account that owns it can download its files through Steam's console:
+
+1. With Steam running, open its console: in Terminal, run `open "steam://open/console"` (or open that link in a browser). Steam shows a **Console** tab. If it doesn't appear, run the command again.
+2. Type `download_depot 1818340 1818341` and press Return. (1818340 is the game; 1818341 its one depot, the Windows files, with both Creatures 1 and Creatures 2: about 84 MB, 307 MB unpacked.) Steam answers `Depot download complete`.
+3. The files are in `~/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamapps/content/app_1818340/depot_1818341/`. Copy them somewhere permanent, since Steam may clear that folder later:
+
+   ```bash
+   mkdir -p ~/Games
+   ditto ~/Library/Application\ Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamapps/content/app_1818340/depot_1818341 ~/Games/"Creatures The Albian Years"
+   ```
+
+   The folder to give Zeetures is then `~/Games/Creatures The Albian Years/Creatures 2`. (The same console command works on Linux and Windows, to get the files without installing the game. With the GOG release, use the `Creatures 2` folder from a Windows install of it.)
+
+**Running the download.** It is not signed by Apple: the first time, right-click `openc2e` and choose Open, or run `xattr -dr com.apple.quarantine .` in its folder. Then:
+
+```bash
+./openc2e -d "$HOME/Games/Creatures The Albian Years/Creatures 2"
+```
 
 **Two breed packs, fetched on your machine.** The first time a Creatures 2 world runs, Zeetures downloads two community breed packs from the [Eem Foo archive](https://eem.foo/archive), which already hosts them, and imports them: [Boney Grendels](https://eem.foo/archive/downloads/1fad-boney-grendels) (Creature Labs' own Creatures 2 release) and [Frog Norns V3](https://eem.foo/archive/downloads/2538-frog-norns-v3) (by Alex of Norns of the Round Table, from Nornenmeister's V2), which takes the place of the game's own frog norn. Zeetures itself does not carry or host them. The files are kept in your user folder's `Downloads`; to skip this, put the line `breed-packs off` in your user folder's `settings.txt`.
 
@@ -65,7 +89,7 @@ Every change, in technical detail, is in the [changelog](CHANGELOG.md).
 
 ## Building it yourself
 
-You need CMake (3.16 or newer), Python 3, Git and a C++20 compiler. SDL3, SDL3_mixer, zlib (on Windows), fmt, imgui and the rest come with the source, in `externals`.
+You need CMake (3.16 or newer), Python 3 (3.9 is enough), Git and a C++20 compiler. SDL3, SDL3_mixer, zlib (on Windows), fmt, imgui and the rest come with the source, in `externals`.
 
 ```bash
 git clone https://github.com/DotairZee/zeetures.git
@@ -98,13 +122,32 @@ build\RelWithDebInfo\openc2e.exe -d "C:\path\to\Creatures 2"
 
 ### macOS
 
-Install the Xcode command line tools (`xcode-select --install`) and CMake and Python 3 (for example with [Homebrew](https://brew.sh/): `brew install cmake python`). Then:
+1. Install Apple's command line tools (clang, git and Python 3):
 
-```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF
-cmake --build build -j"$(sysctl -n hw.ncpu)"
-./build/openc2e -d "/path/to/Creatures 2"
-```
+   ```bash
+   xcode-select --install
+   ```
+
+   A window asks you to click **Install**, then **Agree** (about 1 GB). `xcode-select -p` prints `/Library/Developer/CommandLineTools` once they are in. On a Mac without them, `git`, `clang` and `python3` are only stand-ins that open the same installer. If that window gets closed or hidden, the installer keeps running unseen and `xcode-select --install` then does nothing: bring it back with `open -a "/System/Library/CoreServices/Install Command Line Developer Tools.app"`, or quit it with `osascript -e 'quit app "Install Command Line Developer Tools"'` and run `xcode-select --install` again.
+
+2. Get CMake. Homebrew works (`brew install cmake`), but isn't needed: the Python 3 that comes with the command line tools (3.9) is enough for the build, and CMake installs from PyPI into a folder of its own (here beside the clone):
+
+   ```bash
+   python3 -m venv .tools
+   .tools/bin/pip install --upgrade pip cmake
+   ```
+
+3. Clone and build (with Homebrew's CMake, just `cmake`):
+
+   ```bash
+   git clone https://github.com/DotairZee/zeetures.git
+   cd zeetures
+   ../.tools/bin/cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF
+   ../.tools/bin/cmake --build build -j"$(sysctl -n hw.ncpu)" --target openc2e
+   ./build/openc2e -d "$HOME/Games/Creatures The Albian Years/Creatures 2"
+   ```
+
+   `--target openc2e` builds just the game; leave it off to build the tools and tests too. Clang prints some `-Winconsistent-missing-override` warnings; they are harmless. For an Intel Mac build on an Apple Silicon Mac, add `-DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15` to the first `cmake` line.
 
 ### 32-bit builds
 
