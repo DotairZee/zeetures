@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 406 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 407 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 42 commits, 15 November 2026 to 16 November 2026
+- [Unreleased](#unreleased): 43 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,30 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### Close room 108's floor doorway into the rock below it
+
+[`b982eb66`](https://github.com/DotairZee/zeetures/commit/b982eb6643b6ce78ee4332c285952c909328fc62)
+
+Room 108 (x 1342-1473, floor 1300) has a doorway (perm 50) to room 112
+below, but the two rooms do not touch: 140 px of rock lie between
+(112's top is 1440). A creature or object falling onto 108's floor went
+through it into the rock, out of the room map ("out of room system" at
+x 1420-1450, y 1320-1340, seen in several test runs), and on down
+through 112's own perm-50 floor to room 114, the lower west cave, whose
+only way up is the cage lift into the dead-end corridor by the west
+airlock. Creatures let out into the pool by the west airlock (bebe039f)
+walk out over this floor, so more of them fell there; a live survey
+afterwards found hungry creatures gathered in rooms 112 and 114.
+
+westlock.cos now sets that doorway to 0. Test: four creatures dropped
+onto 108's floor at x 1350-1440 with vely 12: all four stayed on it and
+walked on east (before: two of three fell to 112, then 114).
+
+A scan of the map found six other open doorways between rooms that do
+not touch (17-219, 61-65, 65-68, 95-206, 108-109, 157-179); not changed
+here (most are far apart or overlapping; 61-65, perm 100 across 37 px of
+rock, is the next to check).
 
 #### West sea airlock lets creatures out into the pool east of it
 
