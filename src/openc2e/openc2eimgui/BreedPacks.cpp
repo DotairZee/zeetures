@@ -29,6 +29,16 @@
 #include <system_error>
 #include <thread>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
+
 namespace fs = std::filesystem;
 
 std::string readPlayerSetting(const std::string& key); // CreatureSpeech.h
@@ -89,16 +99,14 @@ bool startsWith(const fs::path& p, const char* magic) {
 	return in && b[0] == magic[0] && b[1] == magic[1];
 }
 
+#ifndef _WIN32
 std::string quoted(const std::string& s) {
-#ifdef _WIN32
-	return "\"" + s + "\"";
-#else
 	std::string q = "'";
 	for (char c : s)
 		q += c == '\'' ? std::string("'\\''") : std::string(1, c);
 	return q + "'";
-#endif
 }
+#endif
 
 // on a thread: the system's curl (Windows 10 and later, macOS and most
 // Linux systems have one), the pack's page as the referrer (the archive
@@ -108,14 +116,30 @@ void download(int i) {
 	Job& j = s_jobs[i];
 	fs::path part = j.path;
 	part += ".part";
-	std::string cmd = fmt::format("{} -fsSL --max-time 600 -A Zeetures -e {} -o {} {}",
 #ifdef _WIN32
-		"curl.exe",
+	// Windows: curl.exe started directly, with no window. std::system went
+	// through cmd.exe, whose console window flashed up over the game for
+	// each download. The part file's path as wide text, for a user folder
+	// whose name is not plain ASCII; the page and address are ASCII.
+	auto wide = [](const std::string& s) { return std::wstring(s.begin(), s.end()); };
+	std::wstring cmd = L"curl.exe -fsSL --max-time 600 -A Zeetures -e \"" + wide(p.page) + L"\" -o \"" + part.wstring() + L"\" \"" + wide(p.url) + L"\"";
+	int rc = -1;
+	STARTUPINFOW si{};
+	si.cb = sizeof(si);
+	PROCESS_INFORMATION pi{};
+	if (CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+		WaitForSingleObject(pi.hProcess, INFINITE);
+		DWORD code = 1;
+		if (GetExitCodeProcess(pi.hProcess, &code))
+			rc = (int)code;
+		CloseHandle(pi.hThread);
+		CloseHandle(pi.hProcess);
+	}
 #else
-		"curl",
-#endif
+	std::string cmd = fmt::format("curl -fsSL --max-time 600 -A Zeetures -e {} -o {} {}",
 		quoted(p.page), quoted(part.string()), quoted(p.url));
 	int rc = std::system(cmd.c_str());
+#endif
 	std::error_code ec;
 	if (rc == 0 && fs::exists(part, ec) && startsWith(part, p.magic)) {
 		fs::rename(part, j.path, ec);
