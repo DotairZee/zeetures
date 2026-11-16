@@ -290,6 +290,10 @@ void dumpIfAsked() {
 		}
 		std::ofstream out(fs::path(dir) / (n + ".rgba"), std::ios::binary);
 		out << fr[0].w << " " << fr[0].h << " " << fr.size() << "\n";
+		// every frame's size, for pictures whose frames differ (a60a)
+		for (size_t i = 0; i < fr.size(); i++)
+			out << (i ? " " : "") << fr[i].w << "x" << fr[i].h;
+		out << "\n";
 		for (auto& f : fr)
 			out.write(reinterpret_cast<const char*>(f.px.data()), f.px.size());
 		fmt::print("* Made art dump: {}\n", n);

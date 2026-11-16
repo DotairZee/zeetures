@@ -105,8 +105,9 @@ std::vector<Rgba> frames(const std::string& name);
 std::vector<std::string> names();
 
 // developer aid: OPENC2E_DUMP_MADE_ART=DIR writes every made picture to DIR
-// as NAME.rgba (a header line "W H FRAMES", then the RGBA bytes, frames one
-// after another), and every made body-data file as itself (a60a.att), for
+// as NAME.rgba (a header line "W H FRAMES" with frame 0's size, a line of
+// every frame's size "WxH WxH ...", then the RGBA bytes, frames one after
+// another), and every made body-data file as itself (a60a.att), for
 // comparing with the Python recipes' output
 void dumpIfAsked();
 
