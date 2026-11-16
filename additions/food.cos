@@ -897,6 +897,57 @@ doif var0 eq 0
   inst new: simp zfbw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 1972 2214 setv ov00 2 setv ov01 150 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
 endi
 
+* Four bushes where hungry creatures gathered with no food in reach (owner
+* chose them from the mock-ups, 2026-11-16: bush-spots-mockup2.png and
+* bush-workshop-pot.png; Home's samples that evening put 34 of 60 very
+* hungry creatures more than 1500 px from any food on their floor, while
+* food piled up where no creature went). Each stands wholly inside its room
+* (checked against the room map: the first picks, from the painted
+* background alone, hung half outside), on a floor measured by dropping an
+* object there: the library (room 114, floor 1841, at its west end clear of
+* the lift; potted, mossy); the far west workshop (room 105, floor 2329, in
+* the dark rock left of the brick archway, clear of the potion machines;
+* potted, mossy); the lower middle caves at the foot of the pipe roots (room
+* 50, floor 2255; mossy); the treehouse walkway left of the hut's door
+* (room 38, floor 1858; potted, warm rock, as built decks are). Planted
+* full-grown wherever one is missing.
+setv var0 0
+enum 2 4 141
+  doif posl eq 1102
+    doif post eq 1714 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfps 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 1102 1714 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 2
+    doif post eq 2202 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfps 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 2 2202 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 4162
+    doif post eq 2148 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfbs 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 4162 2148 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 4554
+    doif post eq 1731 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfpw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 4554 1731 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+
 * the berry shrubs, standing on the floor (made again each load; the old
 * hidden patches 2 1 141 are cleared above): the dome's garden at the far
 * east top (8222/969, floor 1029, clear of the lamp machine) and the bamboo walkway

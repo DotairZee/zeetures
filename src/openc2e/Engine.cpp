@@ -23,6 +23,7 @@
 #include "Engine.h"
 
 #include "Additions.h"
+#include "AgentHelpers.h"
 #include "madeart/MadeArt.h"
 
 #include <SDL3/SDL_events.h>
@@ -947,6 +948,31 @@ void Engine::update() {
 				} else
 					fmt::print("* ZONE CLICK {}: none on this creature\n", z);
 			}
+	}
+	// developer aid: OPENC2E_FOOD_CENSUS=N: at session tick N, every object
+	// that smells of food (its eat script nourishes), by classifier: how
+	// many, how many edible as they are now (edibleNow), how many carried,
+	// and where (for "why is food left uneaten", 2026-11-16)
+	if (static const char* k = getenv("OPENC2E_FOOD_CENSUS"); k && world.tickcount == (unsigned int)atoi(k)) {
+		struct Tally {
+			int n = 0, edible = 0, carried = 0;
+			std::string where;
+		};
+		std::map<std::tuple<int, int, int>, Tally> t;
+		for (auto& a : world.agents) {
+			if (!a || a->isDying() || a->family == 4 || edibleScent(a.get()) <= 0)
+				continue;
+			auto& e = t[{(int)a->family, (int)a->genus, a->species}];
+			e.n++;
+			if (edibleNow(a.get()) > 0)
+				e.edible++;
+			if (a->carriedby)
+				e.carried++;
+			if (e.n <= 4)
+				e.where += fmt::format(" {:.0f},{:.0f}", a->x, a->y + a->getHeight());
+		}
+		for (auto& [c, e] : t)
+			fmt::print("* FOOD CENSUS {} {} {}: {} ({} edible now, {} carried) at{}\n", std::get<0>(c), std::get<1>(c), std::get<2>(c), e.n, e.edible, e.carried, e.where);
 	}
 	// developer aid: OPENC2E_TEST_PINCH="N,scale,count": from tick N, one SDL
 	// pinch update of that scale each tick, count of them, printing the zoom
