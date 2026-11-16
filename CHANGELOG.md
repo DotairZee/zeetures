@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 407 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 408 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 43 commits, 15 November 2026 to 16 November 2026
+- [Unreleased](#unreleased): 44 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,23 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### Close room 95's leftover doorway to the waterwheel pit
+
+[`2cf21662`](https://github.com/DotairZee/zeetures/commit/2cf216628d194d01ce65aa38b5df9f25d1e443f7)
+
+water-pocket.cos shrank room 95 (the water under the dock by the cave
+lift) to x 2206-2308; its doorway (100) to room 206, the pit behind the
+waterwheel (x 2800-3060), stayed, joining rooms 500 px apart. No
+creature or object could cross it, but food smell spread through it
+(World::tickFoodScent uses every open doorway). It is now 0.
+
+Checked with the other open doorways between rooms that do not touch
+(scan after b982eb66): drops over 61-65 (perm 100, overlapping in x
+with 37 px of rock between) left all four creatures on room 61's
+floor; walks across the 65-68 corner went through cleanly. 17-219
+overlap (a real way through), and 108-109 and 157-179 are the game's
+own and join rooms that are far apart; left as they are.
 
 #### Close room 108's floor doorway into the rock below it
 
