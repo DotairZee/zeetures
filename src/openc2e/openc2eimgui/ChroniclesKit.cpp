@@ -115,9 +115,20 @@ void LifeStoryPage() {
 		lines.insert(lines.begin(), b);
 	}
 	std::stable_sort(lines.begin(), lines.end(), [](const storyEntry& x, const storyEntry& y) { return x.tick < y.tick; });
-	if (ImGui::BeginTable("story", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(620, 300))) {
+	// as wide as the dates and the sentences need (the longest wraps past
+	// 380 px), not a fixed 620 (owner, 2026-11-16: it reached far out to the
+	// right of its words)
+	const ImGuiStyle& st = ImGui::GetStyle();
+	float whenW = ImGui::CalcTextSize("When").x, whatW = ImGui::CalcTextSize("What happened").x;
+	for (auto& e : lines) {
+		whenW = std::max(whenW, ImGui::CalcTextSize(KitDateText(e.tick).c_str()).x);
+		whatW = std::max(whatW, ImGui::CalcTextSize(sentence(*m, e).c_str()).x);
+	}
+	whatW = std::min(whatW, 380.0f);
+	float tableW = whenW + whatW + st.CellPadding.x * 4 + st.ScrollbarSize + 8;
+	if (ImGui::BeginTable("story", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(tableW, 300))) {
 		ImGui::TableSetupScrollFreeze(0, 1);
-		ImGui::TableSetupColumn("When", 0, 200);
+		ImGui::TableSetupColumn("When", ImGuiTableColumnFlags_WidthFixed, whenW + 8);
 		ImGui::TableSetupColumn("What happened", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableHeadersRow();
 		for (size_t i = 0; i < lines.size(); i++) {

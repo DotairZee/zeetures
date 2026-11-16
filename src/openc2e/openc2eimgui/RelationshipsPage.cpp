@@ -137,6 +137,41 @@ void RelationshipsPage() {
 		dl->AddLine(center, mid, feelingColor(r.mine), wMine);
 		dl->AddLine(mid, p, feelingColor(r.theirs), wTheirs);
 	}
+	// names only for the closest: mates, the feared and the best liked (with
+	// a world of 150 every name overlapped into a smear; owner's screenshot,
+	// 2026-11-16); hovering any dot still names it
+	// (and only where a name fits without covering one already placed:
+	// the best liked sit side by side round the ring; mates and the feared
+	// are placed first)
+	std::vector<bool> named(rows.size(), false);
+	{
+		std::vector<size_t> order;
+		for (size_t i = 0; i < rows.size(); i++)
+			if (rows[i].mine && (rows[i].mine->mate || rows[i].mine->fear > 0.5f))
+				order.push_back(i);
+		int liked = 0;
+		for (size_t i = 0; i < rows.size(); i++)
+			if (!named[i] && (rows.size() <= 16 || (rows[i].mine && rows[i].mine->affinity > 0 && liked++ < 8)))
+				order.push_back(i);
+		std::vector<ImVec4> placed; // x0 y0 x1 y1
+		for (size_t i : order) {
+			if (named[i])
+				continue;
+			ImVec2 p = spots[i];
+			ImVec2 ts = ImGui::CalcTextSize(rows[i].name.c_str());
+			bool right = p.x >= center.x || p.x - 12 - ts.x < origin.x + 2;
+			ImVec4 box(right ? p.x + 12 : p.x - 12 - ts.x, p.y - ts.y / 2, 0, 0);
+			box.z = box.x + ts.x;
+			box.w = box.y + ts.y;
+			bool clear = true;
+			for (auto& b : placed)
+				clear &= box.z < b.x - 2 || box.x > b.z + 2 || box.w < b.y || box.y > b.w;
+			if (clear) {
+				named[i] = true;
+				placed.push_back(box);
+			}
+		}
+	}
 	for (size_t i = 0; i < rows.size(); i++) {
 		const Row& r = rows[i];
 		ImVec2 p = spots[i];
@@ -145,14 +180,22 @@ void RelationshipsPage() {
 		dl->AddCircle(p, 8, feared ? IM_COL32(170, 60, 200, 255) : feelingColor(r.mine), 16, feared ? 3.0f : 2.0f);
 		if (r.mine && r.mine->mate)
 			dl->AddCircle(p, 12, IM_COL32(240, 90, 150, 255), 16, 2.0f);
-		std::string t = r.name;
-		ImVec2 ts = ImGui::CalcTextSize(t.c_str());
-		bool right = p.x >= center.x || p.x - 12 - ts.x < origin.x + 2; // no room on the left: the right
-		ImVec2 tp(right ? p.x + 12 : p.x - 12 - ts.x, p.y - ts.y / 2);
-		dl->AddText(tp, IM_COL32(230, 230, 230, 255), t.c_str());
+
 		ImVec2 mouse = ImGui::GetIO().MousePos;
 		if (std::hypot(mouse.x - p.x, mouse.y - p.y) < 11)
 			hovered = (int)i;
+	}
+	// the names last, over every dot, on a dark backing so they read
+	for (size_t i = 0; i < rows.size(); i++) {
+		if (!named[i])
+			continue;
+		ImVec2 p = spots[i];
+		const std::string& t = rows[i].name;
+		ImVec2 ts = ImGui::CalcTextSize(t.c_str());
+		bool right = p.x >= center.x || p.x - 12 - ts.x < origin.x + 2; // no room on the left: the right
+		ImVec2 tp(right ? p.x + 12 : p.x - 12 - ts.x, p.y - ts.y / 2);
+		dl->AddRectFilled(ImVec2(tp.x - 2, tp.y), ImVec2(tp.x + ts.x + 2, tp.y + ts.y), IM_COL32(20, 22, 30, 200), 3.0f);
+		dl->AddText(tp, IM_COL32(230, 230, 230, 255), t.c_str());
 	}
 	dl->AddCircleFilled(center, 13, IM_COL32(250, 220, 120, 255));
 	ImVec2 ns = ImGui::CalcTextSize(myName.c_str());
@@ -180,11 +223,16 @@ void RelationshipsPage() {
 		if (ImGui::IsMouseClicked(0))
 			KitGoTo(r.agent);
 	}
-	KitNote("Nearer: better liked; on the rim: not met. Line: near half %s's feeling, far half theirs; blue liking, orange dislike, thicker more familiar. Pink ring: mate; purple: feared.",
+	KitNote("Nearer: better liked; on the rim: not met. Line: near half %s's feeling, far half theirs; blue liking, orange dislike, thicker more familiar. Pink ring: mate; purple: feared. Names shown for mates, the feared and the best liked; point at any other to see who it is.",
 		myName.c_str());
 
 	// ---- the list ----
-	if (ImGui::BeginTable("rels", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
+	// about ten rows, scrolling (owner, 2026-11-16: the page ran on for every
+	// creature in the world)
+	float listH = ImGui::GetFrameHeightWithSpacing() * 11;
+	if (ImGui::BeginTable("rels", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY,
+			ImVec2(0, listH))) {
+		ImGui::TableSetupScrollFreeze(0, 1);
 		ImGui::TableSetupColumn("Creature");
 		ImGui::TableSetupColumn(fmt::format("{} feels", myName).c_str());
 		ImGui::TableSetupColumn("They feel");
