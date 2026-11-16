@@ -461,6 +461,7 @@ struct Params {
 	// 335 times in a row; owner, 2026-11-11)
 	float tiredWalk = 174.0f / 255.0f, tiredBlockedShare = 0.2f;
 	float blockedNear = 40.0f; // still this close to where it got stuck
+	float turnBumpWay = 10.0f; // a walk's bump behind it after less way than this toward it: turning, not a wall
 	unsigned int blockedTicks = 600;
 
 	// 7. Facial expression from affect. Slots refer to the head sprites'
@@ -1223,6 +1224,23 @@ class HomeostatMind : public CreatureMind {
 			// action: it stops, keeps away from walking that way here for a
 			// while, and an object it was walking to is passed over.
 			bool walled = p.walledCount >= episodeWalledStart + 2 && (p.walledDir == 10 || p.walledDir == 11);
+			// A walk's bumps behind it, with no way made toward that side, are
+			// the creature turning at a wall, not a wall ahead: one standing
+			// against a wall swings its foot past it as it turns to walk away,
+			// and both ways were marked blocked there, so it never left.
+			// Creatures starved pinned to the east wall of the ledge under the
+			// east dock (room 14, x 6320), 4-5 of them at all times (owner,
+			// 2026-11-16). A creature whose "west" walk really goes east (its
+			// genes) makes way that side first, and is still caught as before.
+			{
+				int walkDir = current.decision == 26 ? 10 : current.decision == 27 ? 11 : current.decision;
+				static const bool noTurnBump = getenv("OPENC2E_NO_TURN_BUMP") != nullptr; // (to compare)
+				if (walled && !noTurnBump && current.category < 0 && (walkDir == 10 || walkDir == 11) && p.walledDir != walkDir) {
+					float towardBump = p.walledDir == 11 ? -dxTo(p, episodeStartX) : dxTo(p, episodeStartX);
+					if (towardBump < prm.turnBumpWay)
+						walled = false;
+				}
+			}
 			if (walled && !finished) {
 				noteBlocked(p, p.walledDir);
 				// and the walk itself, if it was one: which way a creature's
