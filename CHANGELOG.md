@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 389 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 390 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 25 commits, 15 November 2026
+- [Unreleased](#unreleased): 26 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,19 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Keep where each creature died with the world
+
+[`028c812b`](https://github.com/DotairZee/zeetures/commit/028c812b60d926b0f1e63052b84ab2655cd7bc10)
+
+Where a creature died (its middle and the room there) was only printed
+to home.log, which each relaunch replaces, so deaths could not be mapped
+over a day (2026-11-16: checking the starvation and drowning fixes).
+lifeLogEntry gains x, y and room, set by logLife for a death from the
+creature's agent; the world save writes them as "life-place X Y ROOM"
+after the entry (deaths before this have none) and reads them back.
+Tested in a Home copy: a creature killed by OPENC2E_TEST_KILL and the
+world saved: "life-place 4616 532 9".
 
 #### More fruit, more bushes; a sea current from the west sea's shelf to the hatch
 
