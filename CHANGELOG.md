@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 395 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 396 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 31 commits, 15 November 2026
+- [Unreleased](#unreleased): 32 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,29 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### C2 senses: crowdedness, radiation and slopes, which every genome reads
+
+[`c2c7350a`](https://github.com/DotairZee/zeetures/commit/c2c7350abd1c67a099772e436e4dff665e3448a1)
+
+Every C2 genome checked (norn, grendel, ettin, the Frog and Boney packs)
+has emitter genes reading senses openc2e left at 0: crowdedness (an
+inverted emitter of Loneliness, chemical 8, and one of Crowded, 9),
+radiation (Heavy Metals, 140, above 48) and slope up and down (upatrophin
+178 and downatrophin 177, digital above 64). With crowdedness at 0 every
+creature was fed loneliness even in a crowd, and Crowded never rose.
+Time of day, season and wind are read by no genome and stay 0.
+
+Our own definitions (C2's are not documented): crowdedness 40 for each
+other living creature within 200 px across and 120 up or down, to 255
+(the living creatures' middles gathered once a world tick); radiation
+the room's; slopes the floor's rise or fall under the creature the way
+it faces, 512 per unit of rise per pixel (about 7 degrees reaches 64).
+OPENC2E_NO_NEW_SENSES leaves them at 0, for comparing.
+
+Two 20-minute Home copies side by side: loneliness 9 against 17,
+Crowded 66 against 48, hunger 144 against 161 (very hungry 55 against
+66), deaths 1 against 3; groups no smaller (biggest 11 against 9).
 
 #### The population limit counts every creature, not only norns
 
