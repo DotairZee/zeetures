@@ -66,28 +66,49 @@ void seedSequence(uint32_t seed, uint64_t out[4]) {
 		out[i] = uint64_t(words[2 * i]) | (uint64_t(words[2 * i + 1]) << 32);
 }
 
+// 128-bit arithmetic without __int128 (MSVC and 32-bit builds lack it)
+struct U128 {
+	uint64_t hi, lo;
+};
+
+U128 mul64(uint64_t a, uint64_t b) {
+	uint64_t a0 = a & 0xffffffffu, a1 = a >> 32, b0 = b & 0xffffffffu, b1 = b >> 32;
+	uint64_t p00 = a0 * b0, p01 = a0 * b1, p10 = a1 * b0, p11 = a1 * b1;
+	uint64_t mid = (p00 >> 32) + (p01 & 0xffffffffu) + (p10 & 0xffffffffu);
+	return {p11 + (p01 >> 32) + (p10 >> 32) + (mid >> 32), (mid << 32) | (p00 & 0xffffffffu)};
+}
+
+U128 mul(U128 a, U128 b) {
+	U128 r = mul64(a.lo, b.lo);
+	r.hi += a.hi * b.lo + a.lo * b.hi;
+	return r;
+}
+
+U128 add(U128 a, U128 b) {
+	uint64_t lo = a.lo + b.lo;
+	return {a.hi + b.hi + (lo < a.lo), lo};
+}
+
 // numpy's PCG64 (XSL-RR), seeded as numpy seeds it
 struct Pcg64 {
-	using u128 = unsigned __int128;
-	u128 state = 0, inc = 0;
-	static u128 mult() { return (u128(0x2360ed051fc65da4ULL) << 64) | 0x4385df649fccf645ULL; }
+	U128 state{0, 0}, inc{0, 0};
 	explicit Pcg64(uint32_t seed) {
 		uint64_t s[4];
 		seedSequence(seed, s);
-		u128 initstate = (u128(s[0]) << 64) | s[1];
-		u128 initseq = (u128(s[2]) << 64) | s[3];
-		state = 0;
-		inc = (initseq << 1) | 1;
+		U128 initstate{s[0], s[1]}, initseq{s[2], s[3]};
+		inc = {(initseq.hi << 1) | (initseq.lo >> 63), (initseq.lo << 1) | 1};
 		step();
-		state += initstate;
+		state = add(state, initstate);
 		step();
 	}
-	void step() { state = state * mult() + inc; }
+	void step() {
+		const U128 MULT{0x2360ed051fc65da4ULL, 0x4385df649fccf645ULL};
+		state = add(mul(state, MULT), inc);
+	}
 	uint64_t next64() {
 		step();
-		uint64_t hi = uint64_t(state >> 64), lo = uint64_t(state);
-		unsigned rot = unsigned(state >> 122);
-		uint64_t x = hi ^ lo;
+		uint64_t x = state.hi ^ state.lo;
+		unsigned rot = unsigned(state.hi >> 58);
 		return (x >> rot) | (x << ((64 - rot) & 63));
 	}
 	double nextDouble() { return double(next64() >> 11) * (1.0 / 9007199254740992.0); }

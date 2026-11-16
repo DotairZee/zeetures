@@ -24,6 +24,11 @@
 namespace MadeArt {
 
 namespace {
+const double kPi = 3.14159265358979323846; // (M_PI is not standard C++: MSVC lacks it)
+}
+
+
+namespace {
 
 const int X0 = 2300, Y0 = 2290, X1 = 2600, Y1 = 2410;
 const double SLOPE = 0.30;            // px down per px east (about 17 degrees)
@@ -168,7 +173,7 @@ const int PRECISION_BITS = 32 - 8 - 2;
 double sincFilter(double x) {
 	if (x == 0.0)
 		return 1.0;
-	x = x * M_PI;
+	x = x * kPi;
 	return std::sin(x) / x;
 }
 
@@ -286,7 +291,7 @@ Rgba rotateBicubic(Rgba im, double angle) {
 	if (angle < 0)
 		angle += 360.0;
 	double cx = w / 2.0, cy = h / 2.0;
-	double rad = -(angle * (M_PI / 180.0)); // math.radians
+	double rad = -(angle * (kPi / 180.0)); // math.radians
 	double m[6] = {round15(std::cos(rad)), round15(std::sin(rad)), 0.0, round15(-std::sin(rad)), round15(std::cos(rad)), 0.0};
 	auto tf = [&](double x, double y, double& ox, double& oy) {
 		double a = m[0] * x + m[1] * y + m[2];
@@ -348,7 +353,7 @@ std::vector<Rgba> ramp() {
 	FImg bg = toFloat(bgSrc);
 	const int w = bg.w, h = bg.h;
 	// tilt it: rotate about its top-left corner, down to the east
-	double ang = std::atan(SLOPE) * (180.0 / M_PI); // math.degrees
+	double ang = std::atan(SLOPE) * (180.0 / kPi); // math.degrees
 	Rgba im(flat.w, flat.h);
 	for (size_t i = 0; i < flat.v.size(); i++)
 		im.px[i] = uint8_t(std::clamp(flat.v[i], 0.0f, 255.0f));
@@ -356,7 +361,7 @@ std::vector<Rgba> ramp() {
 	Rgba rot = rotateBicubic(big, -ang);
 	rot = resizeLanczos(rot, std::max(1, rot.w / 4), std::max(1, rot.h / 4));
 	// where the strip's top-left corner went in the rotated picture
-	double th = ang * (M_PI / 180.0); // math.radians
+	double th = ang * (kPi / 180.0); // math.radians
 	int fh = flat.h;
 	double ox = fh * std::sin(th); // expand put the corner this far right
 	// alpha_composite onto a clear canvas: over nothing, a pixel with any
