@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 402 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 404 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 38 commits, 15 November 2026 to 16 November 2026
+- [Unreleased](#unreleased): 40 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,47 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### No "Couldn't play" script errors when there is no audio device
+
+[`79bee4b0`](https://github.com/DotairZee/zeetures/commit/79bee4b0eab6f5fdbcd7ab2f01e00a982a1b62ac)
+
+Since -s selects the null audio backend (606d6367), every sound and
+creature voice a script played failed and was logged as a script error:
+about 25,000 "Couldn't play sound/voice" lines per 6-minute test copy,
+burying the real errors. Agent::playAudio and the voice queue now skip
+the error when the audio backend is the null one. With a real device a
+missing sound is still reported.
+
+Test: a -s copy of Home logged 0 script errors in 40 s (thousands
+before).
+
+#### Mind: interrupted walks and turning no longer mark a way blocked
+
+[`53f2910f`](https://github.com/DotairZee/zeetures/commit/53f2910fcacefbca2b3770b44d35f9598c76e959)
+
+Follow-up to 27be8d12 at the ledge under the east dock (room 14).
+Instrumented there (every blocked mark, with its cause), the hungry
+creatures' ways were still marked blocked in 640 of 754 choices, by two
+causes:
+
+- Turning itself moves a creature's middle 14-20 px, past the 10 px
+  allowed for a bump behind a turning walk: turnBumpWay is now 30 px.
+  The creature whose "west" walk really went east made 200 px of way
+  first, and is still caught.
+- A walk cut off within 2-6 ticks (in a crowd, another creature's poke,
+  hit or pickup ends it) counted as "got nowhere" and marked its way
+  blocked. A walk now has to run nowhereMinTicks (6) ticks first.
+  OPENC2E_NO_SHORT_WALK_CHECK turns this off (with OPENC2E_NO_TURN_BUMP,
+  the old behavior), for comparison.
+
+Tests, three side-by-side pairs of fast Home copies (about 6 minutes
+each, the same machine load): creatures with Hunger 150+ across the
+world, averaged over the last 13 samples, 56.1/46.8/53.5 with, 60.9/
+51.0/57.5 without (about 4 fewer); meals that fed per 1,000 decisions
+77/85/85 with, 87/65/72 without; at the room 14 spot 6.5/2.6/5.9 with,
+8.8/2.2/2.2 without (still no consistent change there); no deaths in
+any copy.
 
 #### Mind: a bump behind a turning creature is not a wall ahead
 
