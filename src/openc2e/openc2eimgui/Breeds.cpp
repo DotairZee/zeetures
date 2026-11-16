@@ -297,7 +297,14 @@ static int appearancePart(char x) {
 // Patching keeps everything else exactly as it was, including what follows
 // "gend" in the genome's 36001-byte block. The raw scan must find exactly
 // the appearance genes the genome reader finds, or the genome is left
-// unchanged.
+// unchanged. It stops where the reader stopped, at "gend": the block's
+// leftovers past it can hold an old appearance gene (the game's gren.gen,
+// the Boney pack's bone.gen and the grendels made from them have one), and
+// counting it made those genomes unchangeable: a grendel breed moved to
+// another slot on import kept pointing at its old one, and an egg for a
+// grendel breed without a genome of its own hatched a standard grendel
+// (found 2026-11-16 from the "6 vs 5 appearance genes" warning on the
+// owner's Mac install).
 template <typename F>
 static std::vector<uint8_t> editGenome(const std::vector<uint8_t>& bytes, F edit) {
 	try {
@@ -306,12 +313,13 @@ static std::vector<uint8_t> editGenome(const std::vector<uint8_t>& bytes, F edit
 		genomeFile g;
 		SpanReader r(std::span<const uint8_t>(bytes.data(), bytes.size()));
 		r >> g;
+		const size_t genesEnd = std::min(r.tell(), bytes.size());
 		std::vector<creatureAppearanceGene*> parsed;
 		for (auto& gp : g.genes)
 			if (auto* a = dynamic_cast<creatureAppearanceGene*>(gp.get()))
 				parsed.push_back(a);
 		std::vector<size_t> at;
-		for (size_t i = 4; i + 14 <= bytes.size(); i++)
+		for (size_t i = 4; i + 14 <= genesEnd; i++)
 			if (std::memcmp(&bytes[i], "gene", 4) == 0 && bytes[i + 4] == 2 && bytes[i + 5] == 2)
 				at.push_back(i + 11);
 		if (at.size() != parsed.size()) {
