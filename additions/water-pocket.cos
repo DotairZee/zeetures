@@ -54,6 +54,11 @@ room 96 2308 2180 2800 2399 room 96 4 room 96 5 room 96 6 room 96 7 room 96 8 ro
 ssfc 96 4 0 79 24 79 237 15 492 15
 setv door 0 94 96 255
 setv door 0 95 96 0
+* (and room 95's old doorway to the pit behind the waterwheel, room 206,
+* x 2800-3060: room 95 now ends at x 2308, 500 px short of it, so the
+* doorway joins rooms that do not touch; no creature or object could use
+* it, but food smell spread through it as if they did; 2026-11-16)
+setv door 0 95 206 0
 enum 2 3 252 doif posl eq 2300 kill targ endi next
 enum 2 3 222 kill targ next
 inst new: simp zcrp 1 0 -5 0 setv cls2 2 3 222 setv attr 0 mvto 2300 2290 slow
