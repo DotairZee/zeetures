@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 376 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 381 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 12 commits, 15 November 2026
+- [Unreleased](#unreleased): 17 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,78 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### READMEs: all 39 world additions run on a fresh install
+
+[`c928fdc2`](https://github.com/DotairZee/zeetures/commit/c928fdc25450d4f4f09a629891e9910bf6f27e9b)
+
+With the from-scratch sprites shipped in zeetures-art and the pictures
+cut from the game's own made by the engine (madeart/: cavepath,
+cave_ramp, pillarfoot, stream_bed, treelift_top, tube_short,
+volcano_passage, volcano_trunk, westlock's rock, each identical to the
+Python recipes' output on the owner's machine), an empty user data
+folder runs all 39 additions: none skipped, no script errors, no
+missing sprites; the west sea hatch, the volcano passage and the
+treehouse lift are there. The READMEs say so.
+
+#### Made art: port volcano_passage (zvdr, zvpc, zvpr, zvps)
+
+[`577e0653`](https://github.com/DotairZee/zeetures/commit/577e06538e32da20ce214238fb6d774d14332009)
+
+C++ port of art/volcano_passage.py: the seam bands, the carved passage,
+the ramp and the mirrored dor2 hatch door (5 frames). Includes numpy's
+default_rng (SeedSequence + PCG64, Lemire integers, the shared 32-bit
+half), the recipe's float32/float64 promotions, and PIL's GaussianBlur
+(box-blur passes) and alpha_composite.
+
+Verified with an empty home and OPENC2E_DUMP_MADE_ART against the owner's
+pictures made by the Python recipe: all four the same size and frame
+count, max channel difference 0.
+
+#### Made art: port stream_bed (zsbd), volcano_trunk (zvtk) and westlock's rock (zwrk)
+
+[`ce5bb707`](https://github.com/DotairZee/zeetures/commit/ce5bb707d1ff9e3590cfe80895b7e4fb8cc0e125)
+
+C++ ports of art/stream_bed.py, art/volcano_trunk.py and the rock() picture
+of art/westlock.py. stream_bed carries numpy's default_rng(7) (SeedSequence,
+PCG64, Lemire-bounded integers) and its float32/float64 promotions;
+volcano_trunk reimplements Pillow 10's polygon fill, fixed-point LANCZOS
+resize and extended-box GaussianBlur.
+
+Verified with OPENC2E_DUMP_MADE_ART (empty home) and art/compare_made.py
+against the pictures the Python recipes made: all three the same size and
+frame count, max channel difference 0. The ported RNG also matches numpy
+for other seeds and ranges.
+
+#### Made art: port treelift_top (ztla, ztlc) and tube_short (ztbf, ztde, zths)
+
+[`88245555`](https://github.com/DotairZee/zeetures/commit/88245555f9024a75428925852345240ce5219fcb)
+
+C++ ports of art/treelift_top.py and art/tube_short.py. ztla carries the
+parts of art/flyingfox.py it draws with (Canvas, tube, lashing, noise,
+cnoise), with numpy's default_rng (SeedSequence, PCG64), Pillow's bicubic
+resize and alpha_composite reimplemented, and numpy 1.26's float32/float64
+steps kept.
+
+Verified with OPENC2E_DUMP_MADE_ART and art/compare_made.py against the
+pictures the Python recipes made: all five are the same size and frame
+count with max channel difference 0.
+
+#### Made art: port cavepath (zajb, wfal) and cave_ramp (zcrp)
+
+[`80c6bbb9`](https://github.com/DotairZee/zeetures/commit/80c6bbb94eb48578857dcd86da419182818fbe9f)
+
+C++ ports of art/cavepath.py (zajb, the arch jamb; wfal, the waterfall
+with only the water kept, replacing the game's own) and art/cave_ramp.py
+(zcrp, the dock's planks sloping into the stream). cave_ramp reimplements
+Pillow 10.2's LANCZOS resize, BICUBIC expand-rotate and RGBA/RGBa
+conversions as its C code does them; each was checked bit-exact against
+Pillow on random pictures.
+
+Verified with the engine run on an empty home (OPENC2E_DUMP_MADE_ART)
+against the pictures the Python recipes made: zajb 108x143x1, zcrp
+300x120x1 and wfal 73x154x6 (the Overrides s16 read back) all match with
+max channel difference 0.
 
 #### Made art: pictures made from the game's own, in the engine
 
