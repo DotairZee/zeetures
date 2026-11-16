@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 381 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 382 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 17 commits, 15 November 2026
+- [Unreleased](#unreleased): 18 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,18 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Made art: build on Windows and 32-bit systems
+
+[`9d9244b9`](https://github.com/DotairZee/zeetures/commit/9d9244b9b5629766195145987935a950664b639c)
+
+The nightly's Windows, 32-bit Windows and 32-bit Linux builds failed:
+treelift_top.cpp's PCG64 used unsigned \_\_int128 (not in MSVC, nor in
+32-bit GCC), and cave_ramp.cpp used M_PI (not standard C++; MSVC lacks
+it without \_USE_MATH_DEFINES). treelift_top now does its 128-bit
+arithmetic in two 64-bit halves, as stream_bed.cpp does, and cave_ramp
+has its own kPi. All 16 made pictures are still identical to the
+owner's (max difference 0).
 
 #### READMEs: all 39 world additions run on a fresh install
 
