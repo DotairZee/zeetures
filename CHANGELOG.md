@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 396 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 397 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 32 commits, 15 November 2026
+- [Unreleased](#unreleased): 33 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,27 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Cliff-edge markers: hidden from creatures, no flashing arrows
+
+[`7900f56a`](https://github.com/DotairZee/zeetures/commit/7900f56a76c528cc4dc0c304329d3d0fe655d9fc)
+
+Owner, 2026-11-16 (screenshots): "weird little arrow graphics that flash
+in and out" at deck edges and in the caves. They are the game's 18
+cliff-edge markers (2 10 2, sprite edge: an arrow left, an arrow right,
+a blank). Their timer shows the blank and makes a creature touching one
+teeter; their activate scripts show an arrow, until the next timer tick.
+Creatures could see them and, curious, acted on them: in one session 88
+activations (each a flash) and 26 tries to eat one, among hundreds of
+choices on category 10.
+
+- edges.cos: the markers are invisible to creatures (ATTR + 16; the
+  teetering is by touch, and our mind finds drops from the room map).
+- script-patches.txt: their activate scripts no longer set the arrow
+  poses (they keep setting the direction, OV00).
+
+Home copy: attr 212 on all 18, both patches applied, activating every
+marker left them blank, no creature choices on category 10 in 4 minutes.
 
 #### C2 senses: crowdedness, radiation and slopes, which every genome reads
 
