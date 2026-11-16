@@ -461,7 +461,10 @@ struct Params {
 	// 335 times in a row; owner, 2026-11-11)
 	float tiredWalk = 174.0f / 255.0f, tiredBlockedShare = 0.2f;
 	float blockedNear = 40.0f; // still this close to where it got stuck
-	float turnBumpWay = 10.0f; // a walk's bump behind it after less way than this toward it: turning, not a wall
+	float turnBumpWay = 30.0f; // a walk's bump behind it after less way than this toward it: turning, not a wall
+	// a walk cut off sooner than this (another creature's poke or hit, a
+	// stimulus) has not shown that the way is blocked
+	int nowhereMinTicks = 6;
 	unsigned int blockedTicks = 600;
 
 	// 7. Facial expression from affect. Slots refer to the head sprites'
@@ -1230,8 +1233,9 @@ class HomeostatMind : public CreatureMind {
 			// and both ways were marked blocked there, so it never left.
 			// Creatures starved pinned to the east wall of the ledge under the
 			// east dock (room 14, x 6320), 4-5 of them at all times (owner,
-			// 2026-11-16). A creature whose "west" walk really goes east (its
-			// genes) makes way that side first, and is still caught as before.
+			// 2026-11-16). Turning itself moves a creature's middle 14-20 px.
+			// A creature whose "west" walk really goes east (its genes) makes
+			// way that side first (200 px seen), and is still caught as before.
 			{
 				int walkDir = current.decision == 26 ? 10 : current.decision == 27 ? 11 : current.decision;
 				static const bool noTurnBump = getenv("OPENC2E_NO_TURN_BUMP") != nullptr; // (to compare)
@@ -4326,9 +4330,14 @@ class HomeostatMind : public CreatureMind {
 			} else if (std::fabs(dxTo(p, startX)) >= blockedMove)
 				stepFails = 0;
 		}
-		// (any walk that got nowhere, plain wandering too)
+		// (any walk that got nowhere, plain wandering too; not one cut off
+		// before it could: in a crowd, pokes and hits ended walks within
+		// 2-6 ticks, and each marked its way blocked, so hungry creatures in
+		// the crowd at room 14's east wall had both ways marked; 2026-11-16)
+		static const bool noShortWalks = getenv("OPENC2E_NO_SHORT_WALK_CHECK") != nullptr; // (to compare)
 		if ((current.decision == 10 || current.decision == 11) && current.category < 0 && !p.riding &&
-			std::fabs(dxTo(p, startX)) < blockedMove && !(steppedNowhere && gaitWalk)) {
+			std::fabs(dxTo(p, startX)) < blockedMove && !(steppedNowhere && gaitWalk) &&
+			(noShortWalks || episodeTicks >= prm.nowhereMinTicks)) {
 			noteBlocked(p, current.decision);
 			if (current.place == "explore" && exploreTarget >= 0)
 				exploreBlockedUntil[exploreTarget] = p.tick + prm.blockedTicks * 8;
