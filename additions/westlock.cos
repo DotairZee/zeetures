@@ -56,6 +56,16 @@ enum 2 0 0
   endi endi endi endi endi endi
 next
 *
+* 1c. Room 108's floor (x 1342-1473, floor 1300) has a doorway (50) to room
+*    112 below, but the rooms do not touch: 140 px of rock lie between
+*    (112's top is 1440). A creature or object falling onto that floor went
+*    through it into the rock, out of the room map, and on down to rooms 112
+*    and 114, the lower west cave, whose only way up is the cage lift into
+*    the corridor of 1. (two of three test creatures dropped there, 2026-11-16).
+*    Creatures let out into the pool (3.) walk out over this floor, so it is
+*    closed.
+setv door 0 108 112 0
+*
 * 2. The doors (the sea door behind creatures, plane 1400; the land door
 *    9000, see below) and the rock in front of a rider (plane 1550; riders
 *    are at 1501).
