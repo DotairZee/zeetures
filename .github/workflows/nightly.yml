@@ -2,7 +2,8 @@ name: nightly
 
 # A nightly build of Zeetures, this fork (owner, 2026-11-15): each night, if anything
 # has been committed since the last nightly, build it and replace the
-# "nightly" pre-release with the new build (Linux, Windows, macOS). Run by hand (Actions > nightly >
+# "nightly" pre-release with the new build (Linux, Windows, macOS on Apple
+# Silicon and Intel, and 32-bit Linux and Windows). Run by hand (Actions > nightly >
 # Run workflow) to build now, changed or not.
 
 on:
@@ -118,6 +119,33 @@ jobs:
         name: macos
         path: zeetures-nightly-macos-arm64.zip
 
+  # Intel Macs (owner, 2026-11-15), cross-compiled on the Apple Silicon
+  # runner: x86_64 only, for macOS 10.15 and later (std::filesystem)
+  macos-intel:
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: macos-latest
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15
+        cmake --build build -j3
+    - name: Package
+      run: |
+        out=zeetures-nightly-macos-x86_64
+        cmake --install build --prefix "$out"
+        strip "$out"/openc2e "$out"/cobdumper "$out"/mngdumper "$out"/mngplayer2 "$out"/praybuilder "$out"/praydumper "$out"/spritedumper || true
+        file "$out"/openc2e
+        lipo -archs "$out"/openc2e | grep -qx x86_64
+        cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
+        ditto -c -k --keepParent "$out" "$out.zip"
+    - uses: actions/upload-artifact@v4
+      with:
+        name: macos-intel
+        path: zeetures-nightly-macos-x86_64.zip
+
   # 32-bit builds (owner, 2026-11-15: it should run on 32-bit machines
   # too); allowed to fail like the other new ones
   windows-32:
@@ -173,7 +201,7 @@ jobs:
         path: zeetures-nightly-linux-i386.tar.gz
 
   release:
-    needs: [check, linux, windows, macos, windows-32, linux-32]
+    needs: [check, linux, windows, macos, macos-intel, windows-32, linux-32]
     if: always() && needs.check.outputs.build == 'true' && needs.linux.result == 'success'
     runs-on: ubuntu-latest
     steps:
