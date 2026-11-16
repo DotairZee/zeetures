@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 397 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 398 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 33 commits, 15 November 2026
+- [Unreleased](#unreleased): 34 commits, 15 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,29 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 15 November 2026
+
+#### Four bushes where hungry creatures gather; a food census test aid
+
+[`631441db`](https://github.com/DotairZee/zeetures/commit/631441db33e2d60db5b0a0df75e33d213c2f4066)
+
+Home that evening (2026-11-16): almost every food object was edible,
+but it piled up where no creature went (22 of 2 21 1 around 1800-2400,
+1500; fruit around 2400-3600, 900-1500; and more), while 34 of 60 very
+hungry creatures had no food within 1500 px on their floor. Owner: bushes
+at the hungry spots.
+
+- food.cos: four seasonal bushes, planted full-grown wherever missing,
+  each wholly inside a room where hungry creatures were sampled (the
+  first picks, made from the painted background, hung half outside their
+  rooms; owner caught it) on a floor measured by dropping an object: the
+  library (room 114, 1102/1714, potted, mossy, clear of its lift), the
+  far west workshop (room 105, 2/2202, potted, left of the brick arch,
+  clear of the potion machines; owner), the lower middle caves by the
+  pipe roots (room 50, 4162/2148, mossy), the treehouse walkway left of
+  the hut's door (room 38, 4554/1731, potted, warm rock). Mock-ups chosen
+  by the owner: bush-spots-mockup2.png, bush-workshop-pot.png.
+- OPENC2E_FOOD_CENSUS=N: at session tick N, every object that smells of
+  food, by classifier: how many, how many edible now, carried, where.
 
 #### Cliff-edge markers: hidden from creatures, no flashing arrows
 
