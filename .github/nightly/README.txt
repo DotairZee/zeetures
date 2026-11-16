@@ -65,12 +65,12 @@ skip this, put the line "breed-packs off" in your user folder's
 settings.txt.
 
 Zeetures's world additions are built in and applied to every Creatures 2
-world, with the pictures Zeetures draws itself in the zeetures-art
-folder (keep it beside the program). For now 7 of the 39 are skipped,
-because their pictures are cut from the game's own and are not yet made
-on your machine (the waterwheel stream, the west sea airlock, the
-volcano passage and trunk, the treehouse lift, the waterfall path and a
-pillar's foot).
+world: all 39 of them. The pictures Zeetures draws itself are in the
+zeetures-art folder (keep it beside the program); the ones cut from the
+game's own pictures (the waterwheel stream, the west sea airlock's rock,
+the volcano passage and trunk, the treehouse lift, the waterfall path, a
+pillar's foot) are made by Zeetures from your own copy of the game when
+it starts.
 
 Your worlds, saves and settings are kept in the user folder, never in
 the game's own folder:

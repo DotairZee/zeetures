@@ -27,7 +27,7 @@ Unpack it and start the program (still called `openc2e`) with the path to your C
 * **Windows:** `openc2e.exe -d "C:\Program Files (x86)\Steam\steamapps\common\Creatures The Albian Years\Creatures 2"`
 * **macOS:** `./openc2e -d "$HOME/Games/Creatures The Albian Years/Creatures 2"`. Steam for Mac won't install the game, but it will download its files: see [On a Mac](#on-a-mac) below.
 
-The creatures use Zeetures's own mind (`--mind original` gives them openc2e's unfinished copy of the original brain, which does very little). Zeetures's world additions (map fixes, script fixes and new objects) are built into the program and applied to every Creatures 2 world as it loads. Their pictures that Zeetures draws itself (walkways, lifts, bushes, the memorial stone and more) come with the download, in its `zeetures-art` folder. For now, 7 of the 39 additions are skipped on a fresh install, because their pictures are cut from the game's own (the waterwheel stream, the west sea airlock, the volcano passage and trunk, the treehouse lift, the waterfall path and a pillar's foot); they will be made on your machine from your own copy of the game.
+The creatures use Zeetures's own mind (`--mind original` gives them openc2e's unfinished copy of the original brain, which does very little). Zeetures's world additions (map fixes, script fixes and new objects) are built into the program and applied to every Creatures 2 world as it loads. All 39 run on a fresh install. Their pictures that Zeetures draws itself (walkways, lifts, bushes, the memorial stone and more) come with the download, in its `zeetures-art` folder: keep it beside the program. The pictures that are cut from the game's own (the waterwheel stream, the west sea airlock's rock, the volcano passage and trunk, the treehouse lift, the waterfall path, a pillar's foot) are made by Zeetures on your machine, from your own copy of the game, when it starts.
 
 Your worlds, saves and settings are kept in the user folder, never in the game's folder:
 
@@ -78,7 +78,6 @@ Zeetures is at version 0.7.0 (shown in Help > About). It is a work in progress, 
 
 ### Not done yet
 
-* Pictures made from the game's own art are not made on your machine yet, so on a fresh install 7 of the 39 additions are skipped (see above).
 * Lifts, boats and the hand start each session as the world file has them.
 * Inherited mind traits and evolution.
 * Hunger in very crowded worlds (about 150 creatures in a world built for 16).
