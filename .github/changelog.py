@@ -55,6 +55,15 @@ VERSIONS = [
      "The memorial stone, an Easter egg for the four who grew old together, and the \"Together\" notice when "
      "four or more that hatched together die of old age together; the world's additions and art recipes in the "
      "repository; the waterwheel and seabed airlock rides a touch less smooth; this changelog."),
+    ("0.8.0", "f63adf35",
+     "The same default world on any machine: the world additions built into the program, their art shipped or "
+     "made in the engine from the player's own game, Home's settings as defaults, and the Boney Grendels and Frog "
+     "Norns V3 packs fetched and imported; an Intel Mac build; all sounds on to start. Seasons that change "
+     "creatures' biology (eat more in autumn, save in winter), how strongly inherited from the parents. The west "
+     "sea airlock lets creatures out into the pool east of it; mind fixes that freed creatures pinned at walls "
+     "and waiting on food out of reach; real crowdedness, radiation and slope senses; the population limit counts "
+     "every creature; more fruit and bushes; stranded objects set back inside the rooms; a census of hunger and "
+     "food every 5 minutes; the relationship map's zoom and drag; where each creature died kept with the world."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
