@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 427 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 428 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 2 commits, 16 November 2026 to 17 November 2026
+- [Unreleased](#unreleased): 3 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
@@ -22,6 +22,25 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 17 November 2026
+
+#### Temperament partly inherited from the parents
+
+[`a883fc66`](https://github.com/DotairZee/zeetures/commit/a883fc66425e82b9bf2ccb6938fc825463a9fb21)
+
+A bred creature's temperament now comes partly from its parents instead
+of being drawn fresh at hatching. Each trait gets 0.4 of the parents'
+average (heritability 0.4, within what twin and animal studies find) and
+the rest from chance, drawn with the traits' usual links, so a child
+correlates about 0.2 with each parent and the population's spread holds
+from one generation to the next. As with the seasonal rhythm, the child's
+temperament is written at conception beside its genome
+(Genetics/NAME.temperament) and read when the creature is made from that
+genome; the game's own eggs and older genomes still draw one at random.
+The MATE line logs the child's temperament, and hatching logs "hatched
+with a temperament from its parents".
+
+Tested in a copy of Home: 18 conceptions in 9 minutes, and hatched
+creatures carried the temperament written at their conception.
 
 #### Developer aid: OPENC2E_MIND_PARAMS sets travel parameters for a test
 
