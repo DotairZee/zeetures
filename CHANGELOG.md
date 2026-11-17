@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 408 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 409 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 44 commits, 15 November 2026 to 16 November 2026
+- [Unreleased](#unreleased): 45 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,30 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### A census of hunger and food every 5 minutes (C2)
+
+[`889126b7`](https://github.com/DotairZee/zeetures/commit/889126b7a8cc94f82d3ff757e9bb18c44ab0734f)
+
+Owner, 2026-11-16: "add a logger", to see hunger across seasons and
+overnight. The hungry share in Home read 26% in a morning sample and
+54% in an evening one, and copies swing from 40 to 90 hungry of 150
+within minutes, so single samples mislead.
+
+Every OPENC2E_CENSUS_EVERY world ticks (3000 by default, about 5
+minutes at 10 a second; 0 turns it off) the engine appends a row to
+census.csv in the world's folder (header on first write) and prints a
+"\* CENSUS" line: local time, world tick, season, year, living
+creatures, hungry (Hunger drive 150+), starving (216+, the level that
+counts as starvation at death), adults (life stage 4) and adults
+hungry, creature eggs (2 5 2, 2 5 3), edible food lying within 60 px of
+its room's floor (as World::tickFoodScent counts reachable food), and
+deaths since the last row by cause (starvation, drowning, old age,
+other). Deaths are tallied in Creature's death report (censusDeaths()).
+
+Test: a copy of Home with OPENC2E_CENSUS_EVERY=200 wrote the header and
+a row every 200 ticks (e.g. 154 creatures, 52 hungry, 34 starving; 101
+adults, 42 hungry; 31 eggs; 47 food in reach; 1 died of old age).
 
 #### Close room 95's leftover doorway to the waterwheel pit
 
