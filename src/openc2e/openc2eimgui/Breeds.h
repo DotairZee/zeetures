@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <set>
 #include <string>
@@ -93,6 +94,24 @@ bool MoveBreedToNornSet(const BreedInfo& b, int slot, std::string& err);
 bool MoveBreedTo(const BreedInfo& b, int toSpecies, int slot, std::string& err);
 // the {species, slot} pairs a C2 genome's appearance genes use
 std::set<std::pair<int, int>> GenomeAppearanceSlots(const std::vector<uint8_t>& genome);
+
+// A C2 egg file (the game's and add-on packs' Eggs folders). Layout: "eggf",
+// gender (1 male, 2 female, 0 either), egg picture index, 8 unused bytes,
+// two 4-character monikers, a 32-bit description length and the
+// description (empty in the game's own eggs; pack authors fill it, e.g.
+// Nova Subterra's "Nova Subterra: Breed H female"), then one or two
+// genomes, each a 32-bit length and the genome ("dna2...").
+struct C2EggFile {
+	int gender = 0;
+	int frame = 0;
+	std::string description;
+	std::vector<std::vector<uint8_t>> genomes;
+};
+// false if the data is not a C2 egg with at least one genome
+bool ReadC2Egg(const std::vector<uint8_t>& data, C2EggFile& out);
+// the egg with each genome passed through fn (header, description and
+// anything after the genomes kept); unchanged if it is not a C2 egg
+std::vector<uint8_t> C2EggWithGenomes(const std::vector<uint8_t>& egg, const std::function<std::vector<uint8_t>(const std::vector<uint8_t>&)>& fn);
 
 // The genome a breed's eggs start from: its own (imported) or the species'
 // standard one from Genetics (norn.gen, gren.gen, ettn.gen).

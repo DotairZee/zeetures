@@ -453,23 +453,7 @@ bool MoveBreedTo(const BreedInfo& orig, int toSpecies, int slot, std::string& er
 			if (ext == ".gen")
 				out = GenomeWithBreedsMoved(d, moves);
 			else {
-				out = d;
-				if (d.size() >= 30 && std::memcmp(d.data(), "eggf", 4) == 0) {
-					out.assign(d.begin(), d.begin() + 26);
-					size_t pos = 26;
-					while (pos + 4 <= d.size()) {
-						uint32_t len = d[pos] | (d[pos + 1] << 8) | (d[pos + 2] << 16) | ((uint32_t)d[pos + 3] << 24);
-						if (len < 4 || pos + 4 + len > d.size() || std::memcmp(&d[pos + 4], "dna", 3) != 0)
-							break;
-						std::vector<uint8_t> g(d.begin() + pos + 4, d.begin() + pos + 4 + len);
-						g = GenomeWithBreedsMoved(g, moves);
-						uint32_t n = (uint32_t)g.size();
-						out.insert(out.end(), {(uint8_t)n, (uint8_t)(n >> 8), (uint8_t)(n >> 16), (uint8_t)(n >> 24)});
-						out.insert(out.end(), g.begin(), g.end());
-						pos += 4 + len;
-					}
-					out.insert(out.end(), d.begin() + pos, d.end());
-				}
+				out = C2EggWithGenomes(d, [&](const std::vector<uint8_t>& g) { return GenomeWithBreedsMoved(g, moves); });
 			}
 			if (out != d) {
 				std::ofstream o(p, std::ios::binary);
@@ -517,6 +501,61 @@ std::set<std::pair<int, int>> GenomeAppearanceSlots(const std::vector<uint8_t>& 
 		out.insert({geneBreedSpecies(a.species), geneBreedSlot(a.species, a.variant)});
 		return false;
 	});
+	return out;
+}
+
+static uint32_t eggLe32(const std::vector<uint8_t>& d, size_t p) {
+	return d[p] | (d[p + 1] << 8) | (d[p + 2] << 16) | ((uint32_t)d[p + 3] << 24);
+}
+
+// where an egg's genomes start: after the 22-byte header, the description's
+// length and the description; 0 if it is not a C2 egg
+static size_t eggGenomesStart(const std::vector<uint8_t>& d) {
+	if (d.size() < 26 || std::memcmp(d.data(), "eggf", 4) != 0)
+		return 0;
+	uint32_t desc = eggLe32(d, 22);
+	if (desc > d.size() - 26)
+		return 0;
+	return 26 + desc;
+}
+
+bool ReadC2Egg(const std::vector<uint8_t>& d, C2EggFile& out) {
+	size_t pos = eggGenomesStart(d);
+	if (!pos)
+		return false;
+	C2EggFile e;
+	e.gender = d[4];
+	e.frame = d[5];
+	e.description.assign(d.begin() + 26, d.begin() + pos);
+	while (pos + 4 <= d.size()) {
+		uint32_t len = eggLe32(d, pos);
+		if (len < 4 || len > d.size() - pos - 4 || std::memcmp(&d[pos + 4], "dna", 3) != 0)
+			break;
+		e.genomes.emplace_back(d.begin() + pos + 4, d.begin() + pos + 4 + len);
+		pos += 4 + len;
+	}
+	if (e.genomes.empty())
+		return false;
+	out = std::move(e);
+	return true;
+}
+
+std::vector<uint8_t> C2EggWithGenomes(const std::vector<uint8_t>& egg, const std::function<std::vector<uint8_t>(const std::vector<uint8_t>&)>& fn) {
+	size_t pos = eggGenomesStart(egg);
+	if (!pos)
+		return egg;
+	std::vector<uint8_t> out(egg.begin(), egg.begin() + pos);
+	while (pos + 4 <= egg.size()) {
+		uint32_t len = eggLe32(egg, pos);
+		if (len < 4 || len > egg.size() - pos - 4 || std::memcmp(&egg[pos + 4], "dna", 3) != 0)
+			break;
+		std::vector<uint8_t> g = fn(std::vector<uint8_t>(egg.begin() + pos + 4, egg.begin() + pos + 4 + len));
+		uint32_t n = (uint32_t)g.size();
+		out.insert(out.end(), {(uint8_t)n, (uint8_t)(n >> 8), (uint8_t)(n >> 16), (uint8_t)(n >> 24)});
+		out.insert(out.end(), g.begin(), g.end());
+		pos += 4 + len;
+	}
+	out.insert(out.end(), egg.begin() + pos, egg.end());
 	return out;
 }
 

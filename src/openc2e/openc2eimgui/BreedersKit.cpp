@@ -496,7 +496,6 @@ static int firstFreeSlot(int species, const ImportPlan* plan, const ImportGroup*
 }
 
 static std::string renamed(const std::string& name, int target, int species = -1);
-static std::vector<uint8_t> eggWithGenomes(const std::vector<uint8_t>& egg, const std::function<std::vector<uint8_t>(const std::vector<uint8_t>&)>& fn);
 
 // an installed breed file (the game's folders or the user's), by name;
 // empty if there is none
@@ -555,7 +554,7 @@ static void findSlotQuestions(ImportPlan& plan) {
 	for (size_t i : plan.genomes)
 		note(plan.files[i].data, plan.files[i].name);
 	for (size_t i : plan.eggs)
-		eggWithGenomes(plan.files[i].data, [&](const std::vector<uint8_t>& g) {
+		C2EggWithGenomes(plan.files[i].data, [&](const std::vector<uint8_t>& g) {
 			note(g, plan.files[i].name);
 			return g;
 		});
@@ -658,7 +657,7 @@ static void planImport(const std::vector<std::string>& picked) {
 	if (plan->groups.empty())
 		plan->problems.push_back(plan->genomes.empty() && plan->eggs.empty() && plan->cobs.empty()
 				? "No body-part pictures (like a04k.s16) were found, so there is no breed to install."
-				: "No body-part pictures (like a04k.s16): only its genomes, eggs and objects are installed.");
+				: "No body-part pictures (like a04k.s16): only its genomes, eggs and objects are installed. Its eggs go on the Hatchery's shelf.");
 	s_plan = std::move(plan);
 }
 
@@ -670,26 +669,6 @@ static std::string renamed(const std::string& name, int target, int species) {
 	return stem.substr(0, 3) + breedSlotName(target) + to_ascii_lowercase(p.extension().string());
 }
 
-// a C2 egg with each genome rewritten
-static std::vector<uint8_t> eggWithGenomes(const std::vector<uint8_t>& egg, const std::function<std::vector<uint8_t>(const std::vector<uint8_t>&)>& fn) {
-	if (egg.size() < 30 || std::memcmp(egg.data(), "eggf", 4) != 0)
-		return egg;
-	std::vector<uint8_t> out(egg.begin(), egg.begin() + 26);
-	size_t pos = 26;
-	while (pos + 4 <= egg.size()) {
-		uint32_t len = le32(egg, pos);
-		if (len < 4 || pos + 4 + len > egg.size() || std::memcmp(&egg[pos + 4], "dna", 3) != 0)
-			break;
-		std::vector<uint8_t> g(egg.begin() + pos + 4, egg.begin() + pos + 4 + len);
-		g = fn(g);
-		uint32_t n = (uint32_t)g.size();
-		out.insert(out.end(), {(uint8_t)n, (uint8_t)(n >> 8), (uint8_t)(n >> 16), (uint8_t)(n >> 24)});
-		out.insert(out.end(), g.begin(), g.end());
-		pos += 4 + len;
-	}
-	out.insert(out.end(), egg.begin() + pos, egg.end());
-	return out;
-}
 
 static void installPlan(ImportPlan& plan) {
 	fs::path main = getUserDataDir();
@@ -736,7 +715,7 @@ static void installPlan(ImportPlan& plan) {
 		write(genetics, to_ascii_lowercase(plan.files[i].name), plan.files[i].data, shared);
 	for (size_t i : plan.eggs) {
 		fs::create_directories(eggsDir, ec);
-		write(eggsDir, plan.files[i].name, eggWithGenomes(plan.files[i].data, moveSlots), shared);
+		write(eggsDir, plan.files[i].name, C2EggWithGenomes(plan.files[i].data, moveSlots), shared);
 	}
 	// objects that came with the breed go where the Agent Injector finds them
 	for (size_t i : plan.cobs) {

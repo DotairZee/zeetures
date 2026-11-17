@@ -100,11 +100,10 @@ std::array<C1EggInfo, 6> s_c1eggs = {{
 	{"hatchery/EGG5.bmp", {}, 200, 150},
 }};
 
-// A C2 egg from the Eggs folder. File layout (read from the eggs themselves):
-// "eggf", gender (1 male, 2 female, 0 unspecified), egg picture index
-// (frame in Omelette.s16 and, x8, in the world's eggs.s16), 8 unused bytes,
-// two 4-character monikers, 4 unused bytes, then one or two genomes, each
-// as a 32-bit length followed by the genome file data ("dna2...").
+// A Hatchery egg: one of each breed, eggs from packs with no pictures of
+// their own, and genome or egg files imported. (C2 egg files: Breeds.h,
+// C2EggFile; the picture index is the frame in Omelette.s16 and, x8, in the
+// world's eggs.s16.)
 struct C2EggInfo {
 	std::filesystem::path file;
 	int gender = 0;
@@ -171,14 +170,47 @@ static int StableEggFrame(const std::string& key) {
 	return (int)(h % 11);
 }
 
+// A Hatchery egg from a C2 egg file: its genomes (mother's and father's),
+// labeled with its author's description or, without one, the file's name
+static bool EggFromEggFile(const std::filesystem::path& path, const std::vector<uint8_t>& d, C2EggInfo& egg) {
+	C2EggFile f;
+	if (!ReadC2Egg(d, f))
+		return false;
+	egg.file = path;
+	egg.gender = f.gender == 1 || f.gender == 2 ? f.gender : 0;
+	egg.moniker = path.stem().string().substr(0, 4);
+	egg.genomes = f.genomes;
+	egg.breed = !f.description.empty() ? f.description : BreedNameOfGenome(f.genomes[0]);
+	if (egg.breed.empty())
+		egg.breed = path.stem().string();
+	egg.label = egg.breed;
+	// its own egg picture when the shelf has it (0-10), else one of its own
+	egg.frame = f.frame >= 0 && f.frame <= 10 ? f.frame : StableEggFrame(egg.label);
+	egg.imported = true;
+	egg.group = std::clamp(GenomeGenus(f.genomes[0]), 0, 3);
+	return true;
+}
+
 // Makes a Hatchery egg from a C2 genome file ("dna2..."): one parent
-// genome, so the creature is that genome (with the usual small mutations).
+// genome, so the creature is that genome (with the usual small mutations);
+// or from a C2 egg file, with its two genomes
 static void ImportGenome(const std::string& path) {
 	std::ifstream in(path, std::ios::binary);
 	std::vector<uint8_t> d((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 	std::string name = std::filesystem::path(path).filename().string();
+	if (d.size() >= 4 && std::memcmp(d.data(), "eggf", 4) == 0) {
+		C2EggInfo egg;
+		if (!EggFromEggFile(path, d, egg)) {
+			s_import_message = fmt::format("{} is a Creatures 2 egg with no genome in it.", name);
+			return;
+		}
+		egg.added = NowSeconds();
+		s_c2eggs.push_back(egg);
+		s_import_message = fmt::format("Made an egg from {}.", name);
+		return;
+	}
 	if (d.size() < 8 || std::memcmp(d.data(), "dna2", 4) != 0) {
-		s_import_message = fmt::format("{} is not a Creatures 2 genome.", name);
+		s_import_message = fmt::format("{} is not a Creatures 2 genome or egg.", name);
 		return;
 	}
 	C2EggInfo egg;
@@ -414,8 +446,47 @@ static void LoadC2Eggs() {
 				recent.erase(recent.begin());
 		}
 	}
+	// eggs a pack installed (Breeder's Kit) that belong to none of its
+	// breeds: packs of genomes only, with no pictures of their own (Nova
+	// Subterra's six eggs use the game's norn pictures); a pack's eggs that
+	// go with a breed are that breed's egg above
+	{
+		std::set<std::string> ofBreeds;
+		for (auto& b : KnownBreeds())
+			for (auto& f : b.files)
+				ofBreeds.insert(to_ascii_lowercase(std::filesystem::path(f).generic_string()));
+		std::error_code ec;
+		std::filesystem::path eggs = getUserDataDir() / "Eggs";
+		std::vector<std::filesystem::path> files;
+		for (auto& f : std::filesystem::directory_iterator(eggs, ec))
+			if (f.is_regular_file(ec) && to_ascii_lowercase(f.path().extension().string()) == ".egg")
+				files.push_back(f.path());
+		std::sort(files.begin(), files.end());
+		int packEggs = 0;
+		for (auto& f : files) {
+			if (ofBreeds.count(to_ascii_lowercase(("Eggs" / f.filename()).generic_string())))
+				continue;
+			std::ifstream in(f, std::ios::binary);
+			std::vector<uint8_t> d((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+			C2EggInfo egg;
+			if (!EggFromEggFile(f, d, egg))
+				continue;
+			auto t = std::filesystem::last_write_time(f, ec);
+			if (!ec) {
+				auto sys = std::chrono::system_clock::now() + std::chrono::duration_cast<std::chrono::system_clock::duration>(t - std::filesystem::file_time_type::clock::now());
+				egg.added = (long long)std::chrono::duration_cast<std::chrono::seconds>(sys.time_since_epoch()).count();
+			}
+			if (auto it = placed.find(egg.label); it != placed.end())
+				egg.placed = it->second;
+			s_c2eggs.push_back(egg);
+			packEggs++;
+		}
+		if (packEggs)
+			kinds += fmt::format("{}{} egg{} from packs without pictures", kinds.empty() ? "" : "; ", packEggs, packEggs == 1 ? "" : "s");
+	}
 	for (auto& e : fromFiles)
-		s_c2eggs.push_back(e);
+		if (!std::filesystem::exists(e.file) || e.file.parent_path() != getUserDataDir() / "Eggs")
+			s_c2eggs.push_back(e);
 	fmt::print("* Hatchery: {} eggs, one of each breed: {}\n", s_c2eggs.size(), kinds);
 }
 
@@ -1222,11 +1293,11 @@ static void DrawNursery() {
 			ImGui::SetTooltip("Each click goes to the next creature's egg in the world that has not hatched\n(laid or taken from here; not the world's own grendel and ettin eggs).");
 		ImGui::SameLine();
 		if (ImGui::Button(import)) {
-			static const SDL_DialogFileFilter filters[] = {{"Creatures 2 genomes", "gen"}, {"All files", "*"}};
+			static const SDL_DialogFileFilter filters[] = {{"Creatures 2 genomes and eggs", "gen;egg"}, {"All files", "*"}};
 			SDL_ShowOpenFileDialog(ImportGenomeChosen, nullptr, nullptr, filters, 2, nullptr, true);
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Make an egg from a genome file (.gen) anywhere on disk.");
+			ImGui::SetTooltip("Make an egg from a genome file (.gen) or a Creatures 2 egg file (.egg) anywhere on disk.");
 	}
 	ImGui::Dummy(ImVec2(1, 2));
 
