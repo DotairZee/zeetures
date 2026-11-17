@@ -858,6 +858,7 @@ MindPerception oldCreature::buildPerception() {
 	p.creatureId = parentagent->getUNID();
 	p.temperament = temperament.z;
 	p.season = (int)world.season;
+	p.timeOfDay = (int)world.timeofday;
 	p.seasonalStrength = SeasonalRhythm::strength(seasonalZ);
 	p.tick = ticks / 4;
 	p.stage = stage;

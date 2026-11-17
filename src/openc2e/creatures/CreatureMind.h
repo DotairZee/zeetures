@@ -171,6 +171,8 @@ struct MindPerception {
 	// the season (0 spring, 1 summer, 2 autumn, 3 winter) and how strongly
 	// this creature follows it (SeasonalRhythm::strength: 1 average)
 	int season = -1;
+	// the part of the day (0 dawn, 1 morning, 2 midday, 3 dusk, 4 night)
+	int timeOfDay = -1;
 	float seasonalStrength = 1.0f;
 	// water (C2 room type 2): whether the creature is in it, and which way the
 	// nearest dry room lies through open doors (10 west, 11 east, -1 up,

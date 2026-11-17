@@ -10,7 +10,7 @@ Zeetures's creatures run on an original mind and an original set of behaviours, 
 ## The mind (drives, learning and choice)
 
 - Cannon, W. B. (1932). *The Wisdom of the Body.* Norton. Homeostasis: needs as departures from a set point.
-  - Since then: Ramsay, D. S., & Woods, S. C. (2014). Clarifying the roles of homeostasis and allostasis in physiological regulation. *Psychological Review, 121*(2), 225-247. [PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC4166604) Regulation also anticipates needs (allostasis), not only corrects them; the autumn appetite is an example.
+  - Since then: Ramsay, D. S., & Woods, S. C. (2014). Clarifying the roles of homeostasis and allostasis in physiological regulation. *Psychological Review, 121*(2), 225-247. [PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC4166604) Regulation also anticipates needs (allostasis), not only corrects them. Informed: the autumn appetite, and eating ahead of need with food at hand when dusk, a sleep or scarcity is coming.
 - Hull, C. L. (1943). *Principles of Behavior.* Appleton-Century. Drive reduction as reward.
   - Since then: drive reduction as the whole of reward is superseded; the mind's modern basis is Keramati & Gutkin (2014, below) and Berridge & Robinson's wanting and liking (below).
 - Keramati, M., & Gutkin, B. (2014). Homeostatic reinforcement learning for integrating reward collection and physiological stability. *eLife, 3*, e04811. [Link](https://doi.org/10.7554/eLife.04811) The overall drive, in which a severe need outweighs several mild ones, and reward as the drop in it.

@@ -266,6 +266,10 @@ struct Params {
 	// autumn appetite: the share of the way to full hunger added to how
 	// hungry it feels in autumn, times its seasonal strength, at most the max
 	float autumnAppetite = 0.2f, autumnAppetiteMax = 0.45f;
+	// anticipating hunger: the share of the way to full hunger added per cue
+	// (dusk, sleepiness, scarcity), at most anticipateMax, with food at hand
+	// within anticipateNear px
+	float anticipate = 0.12f, anticipateMax = 0.3f, anticipateNear = 250.0f;
 	// seasonal behavior (each times seasonal strength and stage weight): the
 	// share of the way to full sex drive added in spring, the share taken
 	// off in winter; the share added to loneliness and to sleepiness in
@@ -954,6 +958,41 @@ class HomeostatMind : public CreatureMind {
 			}
 			if (p.season == 1)
 				seasonalCuriosity = 1.0f + prm.summerPlay * w(SeasonalRhythm::SEASON_PLAY);
+		}
+		// Anticipating hunger (owner, 2026-11-16, from the citations pass:
+		// regulation also acts ahead of need, allostasis; Ramsay & Woods
+		// 2014). With food at hand (reachable, within anticipateNear px),
+		// and not yet very hungry, hunger is felt a share of the way to full
+		// for each cue that a long time without food is coming: dusk (night
+		// next; half at night), sleepiness (a sleep is due) and scarcity (it
+		// knows at most one good food place). So it eats while it can.
+		// OPENC2E_NO_ANTICIPATION turns this off (for comparison).
+		{
+			static const bool noAnticipation = getenv("OPENC2E_NO_ANTICIPATION") != nullptr;
+			if (!noAnticipation && d[HUNGER] < prm.starveAwake) {
+				bool foodAtHand = false;
+				for (auto& s : p.visible)
+					if (s.edible >= prm.foodSeeEdible && s.reachable && s.distance <= prm.anticipateNear) {
+						foodAtHand = true;
+						break;
+					}
+				if (foodAtHand) {
+					float cues = 0.0f;
+					if (p.timeOfDay == 3)
+						cues += 1.0f;
+					else if (p.timeOfDay == 4)
+						cues += 0.5f;
+					if (d[SLEEPY] >= 0.5f)
+						cues += 1.0f;
+					int good = 0;
+					for (auto& fp : foodPlaces)
+						good += fp.confidence >= 0.5f;
+					if (good <= 1)
+						cues += 1.0f;
+					if (cues > 0.0f)
+						d[HUNGER] += (1.0f - d[HUNGER]) * std::min(prm.anticipateMax, prm.anticipate * cues);
+				}
+			}
 		}
 		float D = overallDrive(d);
 		lastTickForView = p.tick;
