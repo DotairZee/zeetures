@@ -651,7 +651,7 @@ static void DrawC2MenuBar() {
 			ImGui::SetNextItemOpen(true);
 			s_open_citations = false;
 		}
-		if (ImGui::CollapsingHeader("Research behind the creatures"))
+		if (ImGui::CollapsingHeader("Research behind Zeetures"))
 			DrawCitations();
 		ImGui::PopTextWrapPos();
 		ImGui::Spacing();

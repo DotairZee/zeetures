@@ -1,4 +1,4 @@
-# Research behind the creatures
+# Research behind Zeetures
 
 Zeetures's creatures run on an original mind and an original set of behaviours, not a recreation of the Creatures 2 brain. These are the published works and sources that informed them. Each entry says what it informed. The list is also shown in the game, under Help > About.
 
