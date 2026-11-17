@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 416 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 417 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 5 commits, 16 November 2026
+- [Unreleased](#unreleased): 6 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
@@ -21,6 +21,32 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### CITATIONS.md: newer research beside the older sources
+
+[`51787523`](https://github.com/DotairZee/zeetures/commit/51787523259a79a8920b1ccaf75f3d503744b886)
+
+Owner, 2026-11-16: "a lot of our citations are hella old!" Each older
+work now has a "Since then" line (an indented sub-entry, "  - " in the
+file, shown indented in Help &gt; About) giving more recent research on
+the same idea, checked by web search: Ramsay &amp; Woods 2014 (allostasis)
+for Cannon; a note that drive reduction alone is superseded, for Hull;
+Schultz 2016 for Rescorla &amp; Wagner; Kidd &amp; Hayden 2015, Gottlieb &amp;
+Oudeyer 2018 and Oudeyer et al. 2016 (curiosity as information seeking
+and learning progress) for Berlyne; Berridge &amp; Robinson 2016 for their
+1998 paper; Dunovan &amp; Verstynen 2016 for action selection; McDiarmid
+et al. 2019 for habituation; Barrett &amp; Bliss-Moreau 2009 and a 2024
+review for Russell; Shiner et al. 2012 for Thomas &amp; Chess; Wolf &amp;
+Weissing 2012 for animal personality; Bleidorn et al. 2022 for
+Roberts &amp; DelVecchio; Walum &amp; Young 2018 for pair bonds; Dunbar 2018
+for grooming and friendship; Kiyokawa &amp; Hennessy 2018 for social
+buffering; Le &amp; Agnew 2003 for Rusbult; Corns 2018 (a critique) for the
+negativity bias, noting the threefold harm weight is a design choice;
+Wyatt 2014 for pheromones. Details that could not be confirmed (a
+volume and pages) were left out.
+
+About's citation list also collapses the double space a removed link
+leaves.
 
 #### About: research in its own window; temperament and relationship sources
 
