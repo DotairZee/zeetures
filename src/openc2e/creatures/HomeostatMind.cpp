@@ -36,6 +36,7 @@
  */
 
 #include "CreatureMind.h"
+#include "Temperament.h"
 
 #include <algorithm>
 #include <array>
@@ -253,6 +254,11 @@ struct Params {
 	// autumn appetite: the share of the way to full hunger added to how
 	// hungry it feels in autumn, times its seasonal strength, at most the max
 	float autumnAppetite = 0.2f, autumnAppetiteMax = 0.45f;
+	// seasonal behavior (each times seasonal strength and stage weight): the
+	// share of the way to full sex drive added in spring, the share taken
+	// off in winter; the share added to loneliness and to sleepiness in
+	// winter; the extra worth of novelty in summer
+	float springSex = 0.25f, winterSexDamp = 0.4f, winterLonely = 0.25f, winterSleepy = 0.2f, summerPlay = 0.5f;
 	float unreachableFoodConfidence = 0.3f; // a new place marked by food seen out of reach
 	float foodMerge = 200.0f; // places this close (same floor) are one place
 	size_t foodPlaceMax = 8;
@@ -894,6 +900,32 @@ class HomeostatMind : public CreatureMind {
 		if (!noSeasons && p.season == 2) {
 			float a = std::min(prm.autumnAppetiteMax, prm.autumnAppetite * p.seasonalStrength);
 			d[HUNGER] += (1.0f - d[HUNGER]) * a;
+		}
+		// Seasonal behavior (owner, 2026-11-16: "A, B, and E", with "life
+		// stage as a mediating factor"; Temperament.h, SeasonalRhythm),
+		// each times the creature's seasonal strength and its life stage's
+		// weight for that effect:
+		// - the breeding season: the sex drive felt stronger in spring, and
+		//   weaker in winter (and conceiving likelier in spring, less so in
+		//   winter: Breeding.cpp);
+		// - winter bonds: loneliness felt stronger in winter (and the
+		//   company of creatures it is bonded to warms it in the cold:
+		//   Creature.cpp);
+		// - winter rest: sleepiness felt stronger in winter;
+		// - summer play: the new and untried worth more in summer.
+		seasonalCuriosity = 1.0f;
+		if (SeasonalRhythm::behaviorOn() && p.season >= 0) {
+			float s = std::min(2.0f, p.seasonalStrength);
+			auto w = [&](int effect) { return s * SeasonalRhythm::stageWeight(effect, p.stage); };
+			if (p.season == 0)
+				d[SEX] += (1.0f - d[SEX]) * std::min(0.5f, prm.springSex * w(SeasonalRhythm::SEASON_BREEDING));
+			if (p.season == 3) {
+				d[SEX] *= std::max(0.2f, 1.0f - prm.winterSexDamp * w(SeasonalRhythm::SEASON_BREEDING));
+				d[LONELY] += (1.0f - d[LONELY]) * std::min(0.5f, prm.winterLonely * w(SeasonalRhythm::SEASON_BONDS));
+				d[SLEEPY] += (1.0f - d[SLEEPY]) * std::min(0.4f, prm.winterSleepy * w(SeasonalRhythm::SEASON_REST));
+			}
+			if (p.season == 1)
+				seasonalCuriosity = 1.0f + prm.summerPlay * w(SeasonalRhythm::SEASON_PLAY);
 		}
 		float D = overallDrive(d);
 		lastTickForView = p.tick;
@@ -2053,6 +2085,7 @@ class HomeostatMind : public CreatureMind {
 				return true;
 		return false;
 	}
+	float seasonalCuriosity = 1.0f; // summer play: novelty's extra worth this tick (tickChoose)
 	float mood = 0.0f; // short-term affect: fast-following, decaying average of reward
 	int lastFace = -1;
 
@@ -2160,7 +2193,7 @@ class HomeostatMind : public CreatureMind {
 		// 5. Affect: negative valence dampens curiosity; Boredom raises it;
 		// a pressing survival need quiets it.
 		float survival = std::max({d[PAIN], d[HUNGER], d[COLD], d[HOT], d[INJURY], d[SUFFOCATE], d[THIRST]});
-		float curiosity = prm.curiosity * (1.0f + prm.boredomCuriosityGain * d[BORED]) * std::clamp(1.0f + 10.0f * valence, 0.2f, 1.5f)
+		float curiosity = seasonalCuriosity * prm.curiosity * (1.0f + prm.boredomCuriosityGain * d[BORED]) * std::clamp(1.0f + 10.0f * valence, 0.2f, 1.5f)
 			* (1.0f - prm.survivalCuriosityDamp * std::clamp(survival, 0.0f, 1.0f));
 		auto add = [&](int category, int decision, float distance, float edible, const SeenAgent* who = nullptr) {
 			// what smells of poison is never eaten (a grendel's single bite of

@@ -36,6 +36,8 @@
 #include "historyManager.h"
 #include "oldBrain.h"
 #include "oldCreature.h"
+#include "Temperament.h"
+#include "Relationships.h"
 #include "caosVM.h"
 #include "caosScript.h"
 
@@ -635,6 +637,28 @@ void oldCreature::tickBody() {
 #endif
 }
 
+int oldCreature::companyNear(float radius, float minAffinity, int most) {
+	if (companyAt != 0 && world.tickcount < companyAt + 20 && world.tickcount >= companyAt)
+		return companyCount;
+	companyAt = world.tickcount ? world.tickcount : 1;
+	companyCount = 0;
+	if (!parentagent || bonds.empty())
+		return 0;
+	float cx = parentagent->x + parentagent->getWidth() / 2.0f, cy = parentagent->y + parentagent->getHeight() / 2.0f;
+	for (auto& a : world.agents) {
+		auto* ca = dynamic_cast<CreatureAgent*>(a.get());
+		if (!ca || a.get() == parentagent || a->isDying() || !ca->getCreature() || !ca->getCreature()->isAlive())
+			continue;
+		float ox = a->x + a->getWidth() / 2.0f, oy = a->y + a->getHeight() / 2.0f;
+		if (std::fabs(ox - cx) > radius || std::fabs(oy - cy) > radius)
+			continue;
+		const Bond* b = Relationships::bondOf(this, world.history->findMoniker(ca->getCreature()->getGenome()));
+		if (b && b->affinity >= minAffinity && ++companyCount >= most)
+			break;
+	}
+	return companyCount;
+}
+
 void c2Creature::tick() {
 	// TODO: should we tick some things even if dead?
 	if (!alive) {
@@ -656,7 +680,15 @@ void c2Creature::tick() {
 			// three per degree beyond. The hot side agrees with real C2 (a
 			// newborn heated up in a ~170 room, not at 89-114); the cold side
 			// is our choice: real C2 creatures felt no cold even at 30.
-			senses[2] = (unsigned char)std::clamp((50 - r->temp) * 3, 0, 255);
+			// Company warms (owner, 2026-11-16: winter bonds; animals huddle
+			// in the cold, small ones gaining most): in a cold room each
+			// creature it is bonded to within 120 px (affinity 0.3 or more,
+			// at most three) counts as 8 degrees warmer, times its life
+			// stage's weight for bonds (babies 1.5, adults 0.8).
+			int temp = r->temp;
+			if (temp < 50 && SeasonalRhythm::behaviorOn())
+				temp += (int)std::lround(8.0f * companyNear(120.0f, 0.3f, 3) * SeasonalRhythm::stageWeight(SeasonalRhythm::SEASON_BONDS, (int)stage));
+			senses[2] = (unsigned char)std::clamp((50 - temp) * 3, 0, 255);
 			senses[3] = (unsigned char)std::clamp((r->temp - 140) * 3, 0, 255);
 		}
 	}

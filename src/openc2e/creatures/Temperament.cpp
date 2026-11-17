@@ -22,6 +22,7 @@
 #include <filesystem>
 
 #include <algorithm>
+#include <cstdlib>
 #include <fmt/core.h>
 #include <random>
 #include <sstream>
@@ -147,6 +148,33 @@ const char* describe(float z) {
 	if (z > -1.0f)
 		return "a slight seasonal rhythm";
 	return "almost no seasonal rhythm: it lives the same all year";
+}
+
+float stageWeight(int effect, int stage) {
+	static const float w[NUM_SEASONAL_EFFECTS][7] = {
+		{0.0f, 0.0f, 0.6f, 1.0f, 1.0f, 0.6f, 0.0f}, // breeding
+		{1.5f, 1.3f, 1.0f, 0.8f, 0.8f, 1.2f, 1.5f}, // bonds
+		{1.2f, 1.0f, 0.8f, 0.8f, 1.0f, 1.3f, 1.5f}, // rest
+		{1.5f, 1.5f, 1.2f, 1.0f, 0.7f, 0.5f, 0.3f}, // play
+	};
+	if (effect < 0 || effect >= NUM_SEASONAL_EFFECTS)
+		return 0.0f;
+	return w[effect][std::clamp(stage, 0, 6)];
+}
+
+float fertilityFactor(int season, float mumZ, int mumStage, float dadZ, int dadStage) {
+	if (!behaviorOn() || season < 0 || season > 3)
+		return 1.0f;
+	// spring, summer, autumn, winter
+	static const float swing[4] = {0.6f, 0.1f, -0.3f, -0.6f};
+	float s = std::min(2.0f, (strength(mumZ) + strength(dadZ)) / 2.0f);
+	float w = (stageWeight(SEASON_BREEDING, mumStage) + stageWeight(SEASON_BREEDING, dadStage)) / 2.0f;
+	return std::max(0.1f, 1.0f + swing[season] * s * w);
+}
+
+bool behaviorOn() {
+	static const bool off = getenv("OPENC2E_NO_SEASONAL_BEHAVIOR") != nullptr;
+	return !off;
 }
 
 static std::filesystem::path fileFor(const std::string& genomeName) {

@@ -143,6 +143,12 @@ class oldCreature : public Creature {
 	float seasonalZ = SeasonalRhythm::roll();
 	// winter thrift: a share of biochemistry steps skipped (Biochemistry.cpp)
 	float thriftCarry = 0.0f;
+	// how many creatures it is bonded to are within radius (affinity at
+	// least minAffinity), up to most; worked out every 20 ticks (company
+	// warms in the cold, Creature.cpp)
+	int companyNear(float radius, float minAffinity, int most);
+	int companyCount = 0;
+	unsigned int companyAt = 0;
 	int lastNeedSaid = -2;
 	unsigned int lastNeedTick = 0;
 

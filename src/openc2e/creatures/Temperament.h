@@ -94,6 +94,22 @@ float child(float mum, float dad);
 inline float strength(float z) { return std::exp(0.5f * z); }
 int percent(float z); // the share of creatures with less (50% average)
 const char* describe(float z); // "a strong seasonal rhythm", ...
+// Seasonal behavior (owner, 2026-11-16: a spring breeding season, winter
+// bonds, winter rest and summer play, "life stage as a mediating
+// factor"): how much each effect applies at each life stage (0 baby,
+// 1 child, 2 adolescent, 3 youth, 4 adult, 5 old, 6 senile), times the
+// creature's seasonal strength. Breeding is for the grown; bonds matter
+// most to the young and the old (they gain most from company and warmth,
+// as small and weak animals do from huddling); rest weighs on the old;
+// play and exploring belong to the young (juvenile play in animals).
+enum SeasonalEffect { SEASON_BREEDING, SEASON_BONDS, SEASON_REST, SEASON_PLAY, NUM_SEASONAL_EFFECTS };
+float stageWeight(int effect, int stage);
+// the change to the chance of conceiving this season (1 none): spring up,
+// winter down, from both parents' strengths and stages
+float fertilityFactor(int season, float mumZ, int mumStage, float dadZ, int dadStage);
+// whether seasonal behavior is on (OPENC2E_NO_SEASONAL_BEHAVIOR turns it off)
+bool behaviorOn();
+
 // the value beside a genome (Genetics/NAME.season), if there is one
 bool load(const std::string& genomeName, float& z);
 void store(const std::string& genomeName, float z);

@@ -378,7 +378,10 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	// climbs high enough for her genes to make her receptive (2026-11-10)
 	else if (!test && rand_float(0, 1) > (mum->getFertile() / 255.0f) * (0.5f + 0.5f * mum->getReceptive() / 255.0f) *
 											   stageFertility((int)mum->getStage()) * stageFertility((int)dad->getStage()) *
-											   Relationships::mateFactor(a, b))
+											   Relationships::mateFactor(a, b) *
+											   // the breeding season (Temperament.h, SeasonalRhythm)
+											   SeasonalRhythm::fertilityFactor((int)world.season, mum->seasonalZ, (int)mum->getStage(),
+												   dad->seasonalZ, (int)dad->getStage()))
 		why = "chance";
 	std::string mumMon = world.history->findMoniker(mum->getGenome());
 	std::string dadMon = world.history->findMoniker(dad->getGenome());
