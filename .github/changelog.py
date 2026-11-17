@@ -64,6 +64,13 @@ VERSIONS = [
      "and waiting on food out of reach; real crowdedness, radiation and slope senses; the population limit counts "
      "every creature; more fruit and bushes; stranded objects set back inside the rooms; a census of hunger and "
      "food every 5 minutes; the relationship map's zoom and drag; where each creature died kept with the world."),
+    ("0.9.0", "db095114",
+     "Seasons that shape breeding, bonds, rest and play, weighted by life stage (a spring breeding season, "
+     "company as warmth and stronger loneliness in winter, more rest in winter and play in summer); curiosity "
+     "that follows learning progress; eating ahead of a long time without food; food less pleasant the fuller "
+     "a creature is; the research behind Zeetures listed in Help > About, with newer work beside each older "
+     "source; about half the CPU use (a room lookup grid, cached record and kinship lookups, lighter status-bar "
+     "and drawing work) and a built-in sampling profiler."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

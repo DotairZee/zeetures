@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 424 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 425 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 13 commits, 16 November 2026
+- [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
@@ -16,11 +16,20 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.9.0
 
-Changes since the last version.
+Seasons that shape breeding, bonds, rest and play, weighted by life stage (a spring breeding season, company as warmth and stronger loneliness in winter, more rest in winter and play in summer); curiosity that follows learning progress; eating ahead of a long time without food; food less pleasant the fuller a creature is; the research behind Zeetures listed in Help > About, with newer work beside each older source; about half the CPU use (a room lookup grid, cached record and kinship lookups, lighter status-bar and drawing work) and a built-in sampling profiler.
 
 ### 16 November 2026
+
+#### Version 0.9.0
+
+[`db095114`](https://github.com/DotairZee/zeetures/commit/db09511443e77c80704e986174243261ecea206b)
+
+Help &gt; About and the README's Status now say 0.9.0 (owner, 2026-11-16).
+The README also mentions curiosity by learning progress, eating ahead of
+need, food less pleasant when full, the seasonal breeding, bond, rest
+and play changes shaped by life stage, and the lower CPU use.
 
 #### Performance: egg notices checked once a tick; off-screen creatures not drawn
 
