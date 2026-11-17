@@ -227,7 +227,7 @@ static const char* GenusName(int genus) {
 // 0.5.0 (2026-11-14, night): every object kept between launches (stage 3).
 // 0.6.0 (2026-11-14, night): signature scents; the hand takes things from
 // creatures and keeps its mode; the gene lab's east end sealed.
-#define OPENC2E_FORK_VERSION "0.7.0"
+#define OPENC2E_FORK_VERSION "0.8.0"
 // the openc2e this fork started from (an unreleased development build)
 #define OPENC2E_UPSTREAM_BASE "commit dfcd46f2, 7 October 2026 (825 commits after its v0.2 release)"
 #define OPENC2E_WEB "https://openc2e.github.io/"
