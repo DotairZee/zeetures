@@ -19,6 +19,8 @@
 
 #include "MetaRoom.h"
 
+#include <algorithm>
+
 #include "Engine.h"
 #include "Map.h"
 #include "Room.h"
@@ -126,6 +128,45 @@ unsigned int MetaRoom::addRoom(std::shared_ptr<Room> r) {
 	return r->id;
 }
 
+void MetaRoom::buildRoomGrid() {
+	gridCols = wid / gridCell + 1;
+	gridRows = hei / gridCell + 1;
+	roomGrid.assign((size_t)gridCols * gridRows, {});
+	for (unsigned int i = 0; i < rooms.size(); i++) {
+		const Room& r = *rooms[i];
+		// the room's box, padded a little for rounding in its slanted edges
+		long top = (long)std::min(r.y_left_ceiling, r.y_right_ceiling) - 2;
+		long bottom = (long)std::max(r.y_left_floor, r.y_right_floor) + 2;
+		long c0 = ((long)r.x_left - (long)xloc) / (long)gridCell;
+		long c1 = ((long)r.x_right - (long)xloc) / (long)gridCell;
+		long r0 = (top - (long)yloc) / (long)gridCell;
+		long r1 = (bottom - (long)yloc) / (long)gridCell;
+		if ((long)r.x_left < (long)xloc)
+			c0 = 0;
+		if (top < (long)yloc)
+			r0 = 0;
+		c1 = std::min(c1, (long)gridCols - 1);
+		r1 = std::min(r1, (long)gridRows - 1);
+		for (long row = r0; row <= r1; row++)
+			for (long col = c0; col <= c1; col++)
+				roomGrid[(size_t)row * gridCols + col].push_back(i);
+	}
+	gridRoomCount = rooms.size();
+	gridGeneration = Room::boundsGeneration;
+}
+
+const std::vector<unsigned int>* MetaRoom::roomCell(float x, float y) {
+	if (gridRoomCount != rooms.size() || gridGeneration != Room::boundsGeneration)
+		buildRoomGrid();
+	// outside the metaroom (or not a number): the caller scans every room
+	if (!(x >= (float)xloc && y >= (float)yloc))
+		return nullptr;
+	float fc = (x - (float)xloc) / (float)gridCell, fr = (y - (float)yloc) / (float)gridCell;
+	if (!(fc < (float)gridCols && fr < (float)gridRows))
+		return nullptr;
+	return &roomGrid[(size_t)fr * gridCols + (size_t)fc];
+}
+
 std::shared_ptr<Room> MetaRoom::roomAt(float _x, float _y) {
 	if (wraps) {
 		if (_x > (int)xloc + (int)wid)
@@ -134,7 +175,14 @@ std::shared_ptr<Room> MetaRoom::roomAt(float _x, float _y) {
 			_x += wid;
 	}
 
-	for (auto r : rooms) {
+	if (const std::vector<unsigned int>* cell = roomCell(_x, _y)) {
+		for (unsigned int i : *cell)
+			if (rooms[i]->containsPoint(_x, _y))
+				return rooms[i];
+		return std::shared_ptr<Room>();
+	}
+
+	for (const auto& r : rooms) {
 		if (r->containsPoint(_x, _y))
 			return r;
 	}
@@ -152,7 +200,14 @@ std::vector<std::shared_ptr<Room> > MetaRoom::roomsAt(float _x, float _y) {
 
 	std::vector<std::shared_ptr<Room> > ourlist;
 
-	for (auto r : rooms) {
+	if (const std::vector<unsigned int>* cell = roomCell(_x, _y)) {
+		for (unsigned int i : *cell)
+			if (rooms[i]->containsPoint(_x, _y))
+				ourlist.push_back(rooms[i]);
+		return ourlist;
+	}
+
+	for (const auto& r : rooms) {
 		if (r->containsPoint(_x, _y))
 			ourlist.push_back(r);
 	}

@@ -55,8 +55,11 @@ Room::Room(unsigned int x_l, unsigned int x_r, unsigned int y_l_t, unsigned int 
 		ca[i] = catemp[i] = 0.0f;
 }
 
+unsigned int Room::boundsGeneration = 0;
+
 void Room::setBounds(unsigned int x_l, unsigned int x_r, unsigned int y_l_t, unsigned int y_r_t,
 	unsigned int y_l_b, unsigned int y_r_b) {
+	boundsGeneration++;
 	if (x_l > x_r)
 		std::swap(x_l, x_r);
 	x_left = x_l;

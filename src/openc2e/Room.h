@@ -63,6 +63,9 @@ class Room {
 
 	unsigned int x_left, x_right, y_left_ceiling, y_right_ceiling;
 	unsigned int y_left_floor, y_right_floor;
+	// raised whenever any room's bounds are set: MetaRoom's lookup grid is
+	// rebuilt when it changes
+	static unsigned int boundsGeneration;
 
 	std::vector<std::pair<unsigned int, unsigned int>> floorpoints;
 

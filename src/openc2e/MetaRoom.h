@@ -40,6 +40,20 @@ class MetaRoom {
 	std::string current_background;
 	bool wraps;
 
+	// Lookup grid for roomAt/roomsAt (performance, 2026-11-16): for each
+	// 32-pixel cell, the indices into rooms of those whose bounding box
+	// touches it, in the rooms' own order, so a lookup tests a handful of
+	// rooms instead of all of them and answers exactly as the full scan did.
+	// Rebuilt when rooms are added or any room's bounds change.
+	static constexpr unsigned int gridCell = 32;
+	std::vector<std::vector<unsigned int>> roomGrid;
+	unsigned int gridCols = 0, gridRows = 0;
+	size_t gridRoomCount = (size_t)-1;
+	unsigned int gridGeneration = 0;
+	void buildRoomGrid();
+	// the cell's room indices for a point, or null outside the grid
+	const std::vector<unsigned int>* roomCell(float x, float y);
+
 	MetaRoom() {}
 
   public:
