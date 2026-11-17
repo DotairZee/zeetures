@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 420 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 424 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 9 commits, 16 November 2026
+- [Unreleased](#unreleased): 13 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
@@ -21,6 +21,58 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### Performance: egg notices checked once a tick; off-screen creatures not drawn
+
+[`28c4d0d8`](https://github.com/DotairZee/zeetures/commit/28c4d0d82e0d24d42870e0a9a887131b7bdf72b6)
+
+The status bar checked every frame whether each egg notice's egg had
+hatched, scanning every object and every record for each; eggs hatch
+only on a world tick, so it now checks once a tick. A creature whose
+drawn bounds (with a 32-pixel margin) lie outside the picture returns
+before walking its body parts; the world is drawn three times a frame
+for its wraparound. Together with the room grid and the record caches,
+a normal-speed copy of Home went from about 57% to about 29% of a core,
+and the world tick from 57 ms to 15 ms.
+
+#### Performance: cache creature records by genome, and kinship answers
+
+[`bbc317d4`](https://github.com/DotairZee/zeetures/commit/bbc317d4e23e1f20fc4c01520b7a80cd29f51cff)
+
+historyManager::findMoniker(genome) scanned every record ever kept,
+locking a weak pointer for each, and creatures' code calls it many times
+a tick. Its answers are now kept by genome, checked against the record
+on each hit and cleared whenever a record is added, removed or renamed.
+closeKin, which built both creatures' ancestor sets as string sets for
+every possible mate in sight, keeps its answers until the lineage
+changes (historyManager::lineageGeneration: a conception or splice
+event, a record added, removed or renamed, or parents restored from a
+save). hasMoniker and getMoniker take their argument by reference.
+Both caches were checked against the uncached answers in a headless run
+(6.5 million record lookups, 100,000 kinship answers).
+
+#### Performance: a lookup grid for which room is at a point
+
+[`eb8d8574`](https://github.com/DotairZee/zeetures/commit/eb8d85747fd95b6a122746123c9ff53d852c1cea)
+
+MetaRoom::roomAt and roomsAt scanned every room, copying a shared
+pointer for each, and creatures' sight checks call them for every object
+in range: a quarter of the program's time in a profile of Home. Each
+metaroom now keeps a grid of 32-pixel cells listing, in the rooms' own
+order, the rooms whose bounding box touches each cell, so a lookup tests
+only those and returns exactly what the full scan did. The grid is
+rebuilt when a room is added or any room's bounds change
+(Room::boundsGeneration); points outside it fall back to the full scan.
+Checked against the full scan on 231 million lookups.
+
+#### Developer aid: OPENC2E_SAMPLE, a sampling profiler
+
+[`466712b1`](https://github.com/DotairZee/zeetures/commit/466712b169c612e8a7271e31147b763632a19c54)
+
+On Linux, OPENC2E_SAMPLE=FILE records the call stack every 2 ms of CPU
+time (SIGPROF) and writes one line per sample at exit: the program's own
+frames as offsets for addr2line, other libraries by name. The system's
+perf is not available to users on the development machine.
 
 #### Mind: food is less pleasant the fuller a creature is
 
