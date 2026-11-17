@@ -41,6 +41,7 @@
 #include <fmt/core.h>
 #include <map>
 #include <tuple>
+#include <unordered_map>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -294,9 +295,43 @@ std::string monikerOf(CreatureAgent* a) {
 
 } // namespace
 
+namespace {
+
+// closeKin's answers, until the lineage changes (historyManager::
+// lineageGeneration): creatures ask it for every possible mate in sight, and
+// each answer walks both family trees (performance, 2026-11-16)
+struct KinKeyHash {
+	size_t operator()(const std::pair<std::string, std::string>& k) const {
+		return std::hash<std::string>()(k.first) * 31 + std::hash<std::string>()(k.second);
+	}
+};
+std::unordered_map<std::pair<std::string, std::string>, bool, KinKeyHash> kinAnswers;
+unsigned int kinAnswersGeneration = (unsigned int)-1;
+
+bool closeKinUncached(const std::string& a, const std::string& b);
+
+} // namespace
+
 bool closeKin(const std::string& a, const std::string& b) {
 	if (a.empty() || b.empty() || a == b)
 		return false;
+	if (kinAnswersGeneration != historyManager::lineageGeneration) {
+		kinAnswers.clear();
+		kinAnswersGeneration = historyManager::lineageGeneration;
+	}
+	// the answer is symmetric: one entry for both orders
+	auto key = a < b ? std::make_pair(a, b) : std::make_pair(b, a);
+	auto it = kinAnswers.find(key);
+	if (it != kinAnswers.end())
+		return it->second;
+	bool kin = closeKinUncached(a, b);
+	kinAnswers.emplace(std::move(key), kin);
+	return kin;
+}
+
+namespace {
+
+bool closeKinUncached(const std::string& a, const std::string& b) {
 	std::set<std::string> ancA = ancestorsOf(a), ancB = ancestorsOf(b);
 	if (ancA.count(b) || ancB.count(a))
 		return true; // one descends from the other
@@ -307,6 +342,8 @@ bool closeKin(const std::string& a, const std::string& b) {
 	auto shared = [](const std::string& x, const std::string& y) { return !x.empty() && x == y; };
 	return shared(da.mother, db.mother) || shared(da.father, db.father) || shared(da.mother, db.father) || shared(da.father, db.mother);
 }
+
+} // namespace
 
 bool kinBarred(CreatureAgent* a, CreatureAgent* b) {
 	std::string ma = monikerOf(a), mb = monikerOf(b);

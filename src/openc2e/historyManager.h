@@ -24,6 +24,7 @@
 #include "creatures/lifestage.h"
 
 #include <map>
+#include <unordered_map>
 #include <memory>
 #include <vector>
 
@@ -165,8 +166,17 @@ struct lifeLogEntry {
 class historyManager {
   private:
 	std::map<std::string, monikerData> monikers;
+	// findMoniker(genome) answers, by genome: the creatures' code asks it many
+	// times a tick, and each answer otherwise scans every record ever kept
+	// (performance, 2026-11-16). A hit is checked against its record; any
+	// change to the set of records clears it.
+	std::unordered_map<const genomeFile*, std::string> genomeMonikers;
 
   public:
+	// raised whenever a record's parents, or the set of records, may have
+	// changed (any world's history; never reset), so answers about kinship
+	// can be kept until it moves (performance, 2026-11-16)
+	static unsigned int lineageGeneration;
 	std::vector<lifeLogEntry> lifelog;
 	std::vector<lifeLogEntry> notices; // not yet shown by the interface (it takes them)
 	std::vector<lifeLogEntry> shownNotices; // on the status bar until clicked or dismissed (kept with the world)
@@ -194,8 +204,8 @@ class historyManager {
 	void tell(const std::string& moniker, int kind, const std::string& other = "", const std::string& detail = "");
 
 	std::string newMoniker(std::shared_ptr<genomeFile>);
-	bool hasMoniker(std::string);
-	monikerData& getMoniker(std::string);
+	bool hasMoniker(const std::string&);
+	monikerData& getMoniker(const std::string&);
 	std::string findMoniker(std::shared_ptr<genomeFile>);
 	std::string findMoniker(AgentRef);
 	void delMoniker(std::string);

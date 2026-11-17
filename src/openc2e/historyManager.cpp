@@ -87,6 +87,7 @@ historyevent& monikerData::addEvent(unsigned int event, std::string moniker1, st
 	events.back().monikers[0] = moniker1;
 	events.back().monikers[1] = moniker2;
 	if (event == 0 || event == 1) { // conceived, spliced: its parents
+		historyManager::lineageGeneration++;
 		mother = moniker1;
 		father = moniker2;
 	}
@@ -218,11 +219,15 @@ std::string historyManager::newMoniker(std::shared_ptr<genomeFile> genome) {
 	if (engine.version > 2)
 		newmoniker = "001-" + newmoniker; // TODO: bad hack we should use the generation number here!
 
+	genomeMonikers.clear();
+	lineageGeneration++;
 	monikers[newmoniker].init(newmoniker, genome);
 	return newmoniker;
 }
 
-bool historyManager::hasMoniker(std::string s) {
+unsigned int historyManager::lineageGeneration = 0;
+
+bool historyManager::hasMoniker(const std::string& s) {
 	std::map<std::string, monikerData>::iterator i = monikers.find(s);
 	if (i == monikers.end())
 		return false;
@@ -230,7 +235,7 @@ bool historyManager::hasMoniker(std::string s) {
 		return true;
 }
 
-monikerData& historyManager::getMoniker(std::string s) {
+monikerData& historyManager::getMoniker(const std::string& s) {
 	std::map<std::string, monikerData>::iterator i = monikers.find(s);
 	if (i == monikers.end())
 		throw Exception("getMoniker was called with a non-existant moniker");
@@ -238,9 +243,21 @@ monikerData& historyManager::getMoniker(std::string s) {
 }
 
 std::string historyManager::findMoniker(std::shared_ptr<genomeFile> g) {
+	if (g) {
+		auto c = genomeMonikers.find(g.get());
+		if (c != genomeMonikers.end()) {
+			auto m = monikers.find(c->second);
+			if (m != monikers.end() && m->second.genome.lock() == g)
+				return c->second;
+			genomeMonikers.erase(c);
+		}
+	}
 	for (auto& moniker : monikers) {
-		if (moniker.second.genome.lock() == g)
+		if (moniker.second.genome.lock() == g) {
+			if (g)
+				genomeMonikers[g.get()] = moniker.first;
 			return moniker.first;
+		}
 	}
 
 	return "";
@@ -259,6 +276,8 @@ void historyManager::delMoniker(std::string s) {
 	std::map<std::string, monikerData>::iterator i = monikers.find(s);
 	if (i == monikers.end())
 		throw Exception("getMoniker was called with a non-existant moniker");
+	genomeMonikers.clear();
+	lineageGeneration++;
 	monikers.erase(i);
 }
 
@@ -389,6 +408,8 @@ std::string historyManager::nextDefaultName(int genus) {
 bool historyManager::renameMoniker(const std::string& from, const std::string& to) {
 	if (from == to || to.empty() || hasMoniker(to) || !hasMoniker(from))
 		return false;
+	genomeMonikers.clear();
+	lineageGeneration++;
 	auto node = monikers.extract(from); // the records themselves stay where they are
 	node.key() = to;
 	node.mapped().moniker = to;
@@ -397,6 +418,8 @@ bool historyManager::renameMoniker(const std::string& from, const std::string& t
 }
 
 monikerData& historyManager::addRecord(const std::string& mon, unsigned char genus, int gender) {
+	genomeMonikers.clear();
+	lineageGeneration++;
 	monikerData& m = monikers[mon];
 	m.initRecord(mon, genus, gender);
 	return m;

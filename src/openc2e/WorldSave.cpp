@@ -994,6 +994,7 @@ static void restoreCreature(const fs::path& savedir, const SavedCreature& s, boo
 	m.name = s.name;
 	m.mother = s.mother;
 	m.father = s.father;
+	historyManager::lineageGeneration++;
 	m.story = s.story;
 	m.registered = s.registered;
 	m.photos = s.photos;
@@ -1341,6 +1342,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 		m.diedstage = r.diedstage;
 		m.mother = r.mother;
 		m.father = r.father;
+		historyManager::lineageGeneration++;
 	}
 	for (auto& s : eggs)
 		restoreEgg(s);
