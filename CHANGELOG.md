@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 412 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 414 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 1 commits, 16 November 2026
+- [Unreleased](#unreleased): 3 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
@@ -21,6 +21,60 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### CITATIONS.md: the research behind the creatures, also in Help &gt; About
+
+[`aaa621f8`](https://github.com/DotairZee/zeetures/commit/aaa621f8c640e446b1758002e849392e60a7717a)
+
+Owner, 2026-11-16: "create a citations list somewhere for the research
+we have used to inform behaviors and other stuff ... in the About
+section". CITATIONS.md lists the published works and sources behind
+the mind (from the mind model's design references), temperament and
+relationships (general reading; the specific sources were not recorded
+at the time), scents (from the scent design's research) and seasons
+(today's research), each with what it informed and links where there
+are any. It is built into the program (EMBEDDED_FILES) and shown in
+Help &gt; About under "Research behind the creatures" (collapsed): "## "
+headings as separators, entries wrapped, each link a small button that
+opens it. The README's Status links to it. Developer aid:
+OPENC2E_OPEN_KITS="about,citations" opens the section.
+
+#### Seasonal behavior: a spring breeding season, winter bonds, winter rest, summer play
+
+[`67bf1b87`](https://github.com/DotairZee/zeetures/commit/67bf1b8736b783db1a65152d5194541cf1298e36)
+
+Owner, 2026-11-16: "A, B, and E", with "life stage as a mediating
+factor" (proposal after research on seasonal patterns in animals and
+people; sources in CITATIONS.md). Each effect is scaled by the
+creature's inherited seasonal strength (SeasonalRhythm) and by a weight
+for its life stage (SeasonalRhythm::stageWeight, stages 0-6):
+breeding 0, 0, 0.6, 1, 1, 0.6, 0; bonds 1.5, 1.3, 1, 0.8, 0.8, 1.2,
+1.5; rest 1.2, 1, 0.8, 0.8, 1, 1.3, 1.5; play 1.5, 1.5, 1.2, 1, 0.7,
+0.5, 0.3.
+
+- Breeding season: the chance of conceiving (Breeding.cpp) is
+  multiplied by 1 + swing x strength x stage weight (both parents'
+  averages, strength at most 2), swing +0.6 spring, +0.1 summer, -0.3
+  autumn, -0.6 winter, never below 0.1. The mind feels the sex drive
+  stronger in spring (springSex 0.25 of the way to full) and weaker in
+  winter (winterSexDamp 0.4).
+- Winter bonds: loneliness felt stronger in winter (winterLonely 0.25).
+  Company warms: in a room colder than 50, each creature it is bonded to
+  (affinity 0.3 or more) within 120 px, at most three, counts as 8
+  degrees warmer for its air coldness sense, times its stage's bonds
+  weight (oldCreature::companyNear, worked out every 20 ticks).
+- Winter rest: sleepiness felt stronger in winter (winterSleepy 0.2).
+- Summer play: novelty worth more in summer (summerPlay 0.5 extra).
+- OPENC2E_NO_SEASONAL_BEHAVIOR turns all of these off (the autumn
+  appetite and winter thrift keep their own switch).
+
+Tests, season forced (OPENC2E_TEST_SEASON), two rounds of six
+side-by-side copies of Home, on vs off: winter sleep choices per 1,000
+decisions 80/79 vs 57/55; conceptions in spring 11/0 vs 6/0, in winter
+0/0 vs 3/0 (round 2 conceived none either way); summer roaming (map
+cells per creature) 17.9/18.0 vs 18.1/17.1, no change; loneliness was
+already low (drive 6-9 of 255) and the test rooms were not cold, so
+winter bonds hardly showed; no deaths.
 
 #### Changelog: version 0.8.0 in the version list
 
