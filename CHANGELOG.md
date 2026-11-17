@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 418 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 419 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 7 commits, 16 November 2026
+- [Unreleased](#unreleased): 8 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
@@ -21,6 +21,30 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### Mind: eat ahead of need when a long time without food is coming
+
+[`ae915649`](https://github.com/DotairZee/zeetures/commit/ae9156497491f86ae1f70d8d809a647504450add)
+
+Owner, 2026-11-16 ("Yes, try it"), from the citations pass: regulation
+also acts ahead of need (allostasis; Ramsay &amp; Woods 2014). With food at
+hand (edible, reachable, within anticipateNear 250 px) and not yet very
+hungry (below starveAwake), hunger is felt a share of the way to full
+(anticipate 0.12 per cue, at most anticipateMax 0.3) for each cue that a
+long time without food is coming: dusk (half at night), sleepiness (0.5
+or more) and scarcity (at most one known food place of confidence 0.5
+or more). The mind's perception gains the part of the day (timeOfDay).
+OPENC2E_NO_ANTICIPATION turns it off, for comparison. CITATIONS.md says
+what Ramsay &amp; Woods now informs.
+
+Tests, three side-by-side pairs of fast copies of Home (on vs off):
+choices to eat food 1105/1122/1192 vs 1034/1179/1034; share of them
+made below Hunger 64 54/61/54% vs 52/56/57%; hungry over the last 10
+samples 28.4/31.6/28.0 vs 27.9/21.4/30.8; starving 16.3/21.2/15.4 vs
+17.8/11.5/22.6; no deaths. Little measurable change: creatures already
+choose most meals with little hunger (median Hunger 0 at the choice),
+eating being pleasant, so there is little room to add. Kept as a
+principled, harmless part of the design.
 
 #### Mind: curiosity follows learning progress
 
