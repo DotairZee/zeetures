@@ -44,6 +44,11 @@
 #include <cassert>
 #include <memory>
 
+std::map<std::string, int>& censusDeaths() {
+	static std::map<std::string, int> tally;
+	return tally;
+}
+
 Creature::Creature(std::shared_ptr<genomeFile> g, bool is_female, unsigned char _variant, CreatureAgent* a) {
 	assert(g);
 	genome = g;
@@ -270,6 +275,7 @@ void Creature::die() {
 			m.diedtick = world.worldtickcount;
 			m.diedstage = (int)stage;
 			std::string cause = diedofoldage ? "old age" : !diedof.empty() ? diedof : "unknown causes";
+			censusDeaths()[cause]++;
 			size_t before = world.history->notices.size();
 			world.history->logLife(lifeLogEntry::death, mon, (int)stage, diedofoldage);
 			if (world.history->notices.size() > before) {

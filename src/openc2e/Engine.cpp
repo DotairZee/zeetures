@@ -21,6 +21,7 @@
 #include "creatures/SkeletalCreature.h"
 #include <chrono>
 #include "Engine.h"
+#include <ctime>
 
 #include "Additions.h"
 #include "AgentHelpers.h"
@@ -977,6 +978,75 @@ void Engine::update() {
 		}
 		for (auto& [c, e] : t)
 			fmt::print("* FOOD CENSUS {} {} {}: {} ({} edible now, {} carried) at{}\n", std::get<0>(c), std::get<1>(c), std::get<2>(c), e.n, e.edible, e.carried, e.where);
+	}
+	// C2: a census of the creatures and their food (owner, 2026-11-16: "add a
+	// logger", to see hunger across seasons and overnight; a single sample
+	// misled, as the hungry share swings widely in minutes). Every
+	// OPENC2E_CENSUS_EVERY ticks (3000, about 5 minutes at 10 a second) a
+	// row is added to census.csv in the world's folder and a line printed:
+	// season, creatures, how many hungry (Hunger 150+) and starving (216+,
+	// what counts as starvation at death), by life stage (adults: stage 4),
+	// eggs, edible food lying within reach of the floor, and deaths by
+	// cause since the last row. OPENC2E_CENSUS_EVERY=0 turns it off.
+	if (version == 2 && world.map && !currentworlddir.empty()) {
+		static const long every = getenv("OPENC2E_CENSUS_EVERY") ? atol(getenv("OPENC2E_CENSUS_EVERY")) : 3000;
+		static unsigned int lastCensus = 0;
+		if (every > 0 && world.tickcount >= lastCensus + (unsigned int)every) {
+			lastCensus = world.tickcount;
+			int creatures = 0, hungry = 0, starving = 0, adults = 0, adultsHungry = 0, eggs = 0, food = 0;
+			for (auto& a : world.agents) {
+				if (!a || a->isDying())
+					continue;
+				if (a->family == 2 && a->genus == 5 && (a->species == 2 || a->species == 3)) {
+					eggs++;
+					continue;
+				}
+				if (auto* ca = dynamic_cast<CreatureAgent*>(a.get())) {
+					auto* c = dynamic_cast<oldCreature*>(ca->getCreature());
+					if (!c || !c->isAlive())
+						continue;
+					creatures++;
+					int h = c->getDrive(2);
+					bool adult = (int)c->getStage() == 4;
+					adults += adult;
+					if (h >= 150) {
+						hungry++;
+						adultsHungry += adult;
+					}
+					if (h >= 216)
+						starving++;
+					continue;
+				}
+				if (a->family != 2 || a->carriedby || edibleNow(a.get()) <= 0.0f)
+					continue;
+				auto r = world.map->roomAt(a->x + a->getWidth() / 2.0f, a->y + a->getHeight() / 2.0f);
+				if (r && r->floorYatX(a->x + a->getWidth() / 2.0f) - (a->y + a->getHeight()) <= 60.0f)
+					food++;
+			}
+			auto& deaths = censusDeaths();
+			auto take = [&](const char* k) {
+				int n = deaths.count(k) ? deaths[k] : 0;
+				return n;
+			};
+			int dStarve = take("starvation"), dDrown = take("drowning"), dOld = take("old age"), dOther = 0;
+			for (auto& [k, n] : deaths)
+				if (k != "starvation" && k != "drowning" && k != "old age")
+					dOther += n;
+			deaths.clear();
+			std::filesystem::path csv = currentworlddir / "census.csv";
+			std::error_code ec;
+			bool fresh = !std::filesystem::exists(csv, ec);
+			std::ofstream out(csv, std::ios::app | std::ios::binary);
+			if (fresh)
+				out << "time,world tick,season,year,creatures,hungry,starving,adults,adults hungry,eggs,food in reach,died starving,died drowning,died old,died other\n";
+			std::time_t now = std::time(nullptr);
+			char stamp[32];
+			std::strftime(stamp, sizeof stamp, "%Y-%m-%d %H:%M", std::localtime(&now));
+			out << fmt::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n", stamp, world.worldtickcount, world.season, world.year, creatures, hungry, starving,
+				adults, adultsHungry, eggs, food, dStarve, dDrown, dOld, dOther);
+			fmt::print("* CENSUS season {} year {}: {} creatures, {} hungry ({:.0f}%), {} starving; adults {} ({} hungry); {} eggs; {} food in reach; died: {} starving, {} drowning, {} old, {} other\n",
+				world.season, world.year, creatures, hungry, creatures ? 100.0 * hungry / creatures : 0.0, starving, adults, adultsHungry, eggs, food, dStarve, dDrown, dOld, dOther);
+		}
 	}
 	// developer aid: OPENC2E_TEST_PINCH="N,scale,count": from tick N, one SDL
 	// pinch update of that scale each tick, count of them, printing the zoom

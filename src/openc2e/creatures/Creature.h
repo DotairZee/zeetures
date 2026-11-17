@@ -25,10 +25,16 @@
 
 #include <cassert>
 #include <deque>
+#include <map>
 #include <memory>
+#include <string>
 
 class Agent;
 class CreatureAgent;
+
+// deaths by cause since the last census took them (Engine's census; owner,
+// 2026-11-16: "add a logger")
+std::map<std::string, int>& censusDeaths();
 
 class Creature {
   protected:
