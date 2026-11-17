@@ -263,6 +263,9 @@ struct Params {
 	// arrives and finds nothing (food regrows, so places are not forgotten
 	// at once), and saved with the creature.
 	float foodSeeEdible = 0.3f; // a visible object smelling this nourishing marks a food place
+	// food less pleasant when full (alliesthesia): below this hunger, eating's
+	// expected ease of other drives scales with hunger, down to satedLiking
+	float satiationHunger = 0.35f, satedLiking = 0.2f;
 	// autumn appetite: the share of the way to full hunger added to how
 	// hungry it feels in autumn, times its seasonal strength, at most the max
 	float autumnAppetite = 0.2f, autumnAppetiteMax = 0.45f;
@@ -2309,6 +2312,26 @@ class HomeostatMind : public CreatureMind {
 				Expectation unscented = e;
 				unscented.delta[HUNGER] = 0.0f;
 				c.want = predictedRelief(d, D, unscented);
+			}
+			// Food is less pleasant the fuller one is (negative alliesthesia:
+			// Cabanac 1971; sensory-specific satiety, Rolls; Berridge 1991).
+			// Eating eases the need for pleasure, boredom and stress (the
+			// genomes' own eating stimulus), so full creatures ate for fun:
+			// 68% of meals that fed went to creatures with Hunger under 64
+			// and 13% to those at 150 or more, in a crowded world short of
+			// food (2026-11-16). Below satiationHunger, what eating is
+			// expected to ease besides hunger shrinks with hunger, to
+			// satedLiking when full. OPENC2E_NO_ALLIESTHESIA turns it off.
+			static const bool noAlliesthesia = getenv("OPENC2E_NO_ALLIESTHESIA") != nullptr;
+			if (!noAlliesthesia && decision == prm.eatDecision && (category < 36 || category > 39) && d[HUNGER] < prm.satiationHunger) {
+				float liking = std::max(prm.satedLiking, d[HUNGER] / prm.satiationHunger);
+				Expectation sated = e;
+				if (edible < 0.05f && sated.delta[HUNGER] < 0.0f)
+					sated.delta[HUNGER] = 0.0f;
+				for (int i = 0; i < NUM_DRIVES; i++)
+					if (i != HUNGER && sated.delta[i] < 0.0f)
+						sated.delta[i] *= liking;
+				c.want = predictedRelief(d, D, sated);
 			}
 			static const bool countCuriosity = getenv("OPENC2E_COUNT_CURIOSITY") != nullptr;
 			if (countCuriosity || known < prm.firstTries || !record)
