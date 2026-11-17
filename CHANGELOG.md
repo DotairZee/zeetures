@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 409 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 410 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 45 commits, 15 November 2026 to 16 November 2026
+- [Unreleased](#unreleased): 46 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -20,6 +20,47 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### Seasonal biology: fatten in autumn, save in winter, inherited
+
+[`55745742`](https://github.com/DotairZee/zeetures/commit/55745742cfa0ef08c876bb2adf504fa01cde72da)
+
+Owner, 2026-11-16: "should they eat more in autumn to get through
+winter?", and chose that how strongly each creature does so be
+inherited. A season is 2 hours of play and a lifespan about 9.7, so a
+creature lives about one year and one winter.
+
+- Seasonal rhythm (Temperament.h/.cpp, SeasonalRhythm): a z-score per
+  creature like the temperament traits (0 average, clipped to +-2), but
+  inherited: at MATE the child's is its parents' average plus chance
+  (normal, sd 0.71, so the population's spread holds), written beside
+  the child's genome as Genetics/NAME.season; NEW: CREA reads it when
+  making a creature from that genome. A genome with none (the game's own
+  eggs, older genomes) gives a random one. Saved with the world
+  ("seasonal" per creature). Strength exp(0.5 z): about 0.37 to 2.7.
+- Autumn appetite (HomeostatMind tickChoose): in autumn hunger is felt
+  as if a share of the way to full (autumnAppetite 0.2 times the
+  strength, at most autumnAppetiteMax 0.45), so a creature seeks food
+  sooner and eats past its need; its own chemistry stores the surplus.
+- Winter thrift (c2Creature::tickBiochemistry): in winter a share of
+  biochemistry steps is skipped (0.2 times the strength, at most a
+  half): burning, digesting and making all run slower, so stores last.
+- OPENC2E_NO_SEASONAL_BIOLOGY turns both effects off, for comparison.
+  OPENC2E_TEST_SEASON=n sets the season after loading (test aid).
+- Owner's Kit, Temperament page: a "Seasonal rhythm" bar and a line
+  saying it is passed on from the parents.
+- MATE's log line gives the child's seasonal rhythm and the parents'.
+
+Tests, three rounds of four side-by-side copies of Home (season forced
+with OPENC2E_TEST_SEASON; on vs off), last five samples: autumn, meals
+that fed per 1,000 decisions 65/61/74 vs 42/44/41, energy stores
+(chemicals 70-74, mean per creature) 382/384/386 vs 360/355/349, hungry
+50.6/34.0/27.0 vs 46.0/43.4/36.8; winter, stores 388/377/399 vs
+371/383/361, hungry 40.0/38.2/24.8 vs 46.2/28.4/47.8, starving
+25.8/26.8/13.2 vs 33.6/19.2/33.4; no deaths with, one without.
+Inheritance: two test matings gave -0.85 (parents -1.27, -0.24) and
++0.72 (+0.35, +0.86), the first written to its .season file; a test
+save wrote a seasonal line for each of 148 creatures.
 
 #### A census of hunger and food every 5 minutes (C2)
 
