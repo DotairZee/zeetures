@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 430 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 431 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 5 commits, 16 November 2026 to 17 November 2026
+- [Unreleased](#unreleased): 6 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
@@ -22,6 +22,65 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 17 November 2026
+
+#### Brain profiles for custom genomes; lobe 7 read as attention
+
+[`a188934d`](https://github.com/DotairZee/zeetures/commit/a188934d16d24f42dcf0726682496e9d1e5b1ece)
+
+Custom C2 genomes add lobes to the game's ten (Lummox JR's Nova
+Subterra: search, sub-attention, afterdrive, change; Lis Morris and
+Chris Double's Canny Norns: echo, search, choice). The original brain is
+not run, so each added lobe now gets a role in the mind
+(creatures/BrainProfiles.h), and each role multiplies some of the mind's
+settings, applied after temperament:
+- object-good, learns which things are worth attending to:
+  betterLearning 1.2, curiosity 1.1;
+- object-bad, learns which things to stay clear of: worseLearning 1.2;
+- drive-change, notices its needs easing or worsening:
+  unfeltLearningShare 1.4, learningRate 1.1;
+- search, searches for what it needs: seekDiscount 1.2, forageShare 1.15;
+- choice, weighs what an action on a thing will do: learningRate 1.15;
+- a concept lobe bigger than the game's 640 cells is more memory:
+  foodPlaceMax times the square root of the ratio, at most 2x.
+Roles and known genomes are in brain-profiles.txt (built in, or the
+player's own beside pheromones.txt), so players and pack makers can read
+and change them. Known genomes are matched by their added lobes' place
+and size: Nova Subterra and Canny Norns (plus curiosity 1.2 for Canny,
+"much more curious than a normal norn"), from their authors' notes; a
+hybrid keeps the roles of the lobes it inherited. A lobe no profile
+names gets a role from its wiring: output reaching the attention lobe
+(directly or through other added lobes) learns what to attend to, or,
+taught only by punishment, what to avoid; reaching the decision lobe,
+choice; reading the drives, drive-change; else none. From wiring alone
+Nova's four lobes get exactly the roles its author describes.
+
+The Breeder's Kit's import review lists a pack's brain ("Its brain, in
+Zeetures": the known genome, each added lobe's role and why, the memory
+size), and creatures log theirs at birth.
+
+Lobe 7 is attention, not heard nouns. In the C2 CAOS guide's lobe order
+(perception, drive, source, verb, noun, sense, decision, attention,
+concept) lobe 2 is the source (what stimulated it) and 7 attention; the
+genomes wire 7 to read 2 and 4. Instincts on lobe 7 had waited as heard
+words: the game's norns' "hungry, attending to a flower: push or pull"
+and every object instinct of Canny Norns, whose authors moved them
+there (eat food and fruit when hungry, back away from cliff edges, eat
+plants, not bad plants). Canny babies hatched without their eating
+instincts and ate less. Lobe 7 now names the object as lobe 2 does, lobe
+4 is heard nouns, and the attention lobe's cells are set for emitters
+(nine pack genomes have one there). Saves before (state version 7)
+unmark lobe-7 instincts so they are read on loading.
+
+OPENC2E_NO_BRAIN_PROFILES reads and logs profiles without applying them
+(A/B testing).
+
+Tested, matched 9-minute copies of Home, each with three babies each of
+the game's norn, Nova Subterra and Canny hatched together:
+- profiles on vs off, before the lobe-7 fix: Canny 38.3 vs 26.6 meals a
+  baby, 6% vs 11% of choices made hungry; Nova 39.6 vs 40.7; the game's
+  norn (no added lobes) 42.2 vs 39.9;
+- with the lobe-7 fix, profiles off: Canny 39.1 meals, 3% hungry, level
+  with the others; population hungry 38-46% either way, as before.
 
 #### Genome bridge: the genomes' brain-cell chemistry and waiting instincts work
 
