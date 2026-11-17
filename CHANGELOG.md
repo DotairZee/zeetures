@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 415 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 416 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 4 commits, 16 November 2026
+- [Unreleased](#unreleased): 5 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
@@ -21,6 +21,31 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### About: research in its own window; temperament and relationship sources
+
+[`a683f0eb`](https://github.com/DotairZee/zeetures/commit/a683f0ebe0fd80dbe9029cb9e48eaea1c59dca66)
+
+- Help &gt; About grew taller than the game's window with the research
+  list open inside it (owner's screenshot). About now has a "Research
+  behind Zeetures" button beside "openc2e on the Web" and "OK", which
+  opens the list in its own window sized to the screen (80% of its
+  height, up to 560 wide), scrolling, with a Close button; Escape closes
+  that window first. About itself is never taller than 95% of the
+  window, scrolling instead. Checked at 820 x 700.
+- CITATIONS.md: the temperament and relationship sources, recovered from
+  the two research briefs of 2026-11-11 (owner: "it's not enough to say
+  we can't find what research we did"). Temperament: Thomas &amp; Chess,
+  Rothbart, Kagan, Saudino, Reale et al. 2007, Sih et al. 2004, Gosling
+  &amp; John 1999, Bell et al. 2009, Dochtermann et al. 2015, the clonal
+  fish, identical mice and fly individuality studies, Ayroles et al.
+  2015, Roberts &amp; DelVecchio 2000, differential susceptibility.
+  Relationships: Aragona &amp; Wang 2004, Montoya et al. 2017, Dunbar,
+  Carter &amp; Wilkinson 2013, Leedale et al. 2020 and the Westermarck
+  effect, Hsu et al. 2006 and de Waal 2000, Harlow, Kikusui et al. 2006
+  and Hennessy et al. 2009, Rusbult 1983, Gottman, Baumeister et al.
+  2001, Almaatouq et al. 2016, Roberts &amp; Dunbar 2011, and the games
+  consulted. Each with what it informed.
 
 #### About: "Research behind Zeetures"
 
