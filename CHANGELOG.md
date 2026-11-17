@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 426 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 427 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 1 commits, 16 November 2026
+- [Unreleased](#unreleased): 2 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
@@ -20,6 +20,20 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 ## Unreleased
 
 Changes since the last version.
+
+### 17 November 2026
+
+#### Developer aid: OPENC2E_MIND_PARAMS sets travel parameters for a test
+
+[`e6115173`](https://github.com/DotairZee/zeetures/commit/e6115173c58d1666463eb4da1eae3c8f6511c33c)
+
+OPENC2E_MIND_PARAMS="name=value,..." overrides the homeostat mind's
+hungerPatience, travelHalf, floorChangeDistance, routeMaxCost and
+seekDistanceCost, and prints the values in use once ("\* MIND PARAMS").
+Without it nothing changes. First used for a doubled hungerPatience
+(12 instead of 6) in three matched pairs of Home copies: hungry
+65.4/65.2/64.0 vs 81.2/65.6/64.6, starving 42.0/40.2/40.9 vs
+49.8/38.9/36.9, no consistent difference, so the default stays.
 
 ### 16 November 2026
 
