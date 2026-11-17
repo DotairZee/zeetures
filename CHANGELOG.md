@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 429 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 430 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 4 commits, 16 November 2026 to 17 November 2026
+- [Unreleased](#unreleased): 5 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
@@ -22,6 +22,60 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 17 November 2026
+
+#### Genome bridge: the genomes' brain-cell chemistry and waiting instincts work
+
+[`fbcb5662`](https://github.com/DotairZee/zeetures/commit/fbcb566223cd7e4cfe96fa7ddecec2fcf532da70)
+
+Custom C2 genomes (and the game's own) wire chemistry and instincts to
+brain cells the mind replaces. Two parts make more of them work as their
+authors meant, without running the original brain.
+
+The genome's brain cells, set from what the creature does (option 2 of
+genome-translation-options.md). Emitters reading the sense, drive and
+decision lobes read nothing before, since those lobes never ran (only
+the attention lobe and the mate cell were set). Now each mind tick sets:
+- the sense lobe's 32 situations, with the meanings of the C2 CAOS guide:
+  bumped, near a wall, in a vehicle; IT approaching or moving away, how
+  near, object or creature, my sibling, parent or child; walking toward
+  an edge, falling, landed. Stimuli light the cell their stimulus gene
+  (sensory neuron, intensity) or script (full form's input) names, so a
+  pat lights "patted", fading over a second or two;
+- the drive lobe from the drives, and the decision lobe from the action
+  under way.
+The stock norns' parent, child and sibling pheromones, wired to sense
+cells 16-18, are emitted for the first time. Each genome's reward and
+punishment chemicals are read from its decision lobe's first two
+chemical slots (52 and 53 in every genome checked).
+
+The waiting instincts (option 1). Instincts naming a situation sense, or
+rewarding no drive, waited (dormant). Now:
+- "it is a creature" names the creature categories, "it is an object"
+  any object;
+- with a drive, the senses only narrow when; the drive's expectation is
+  applied as before;
+- with no drive they are inborn nudges (Params::innateNudge, 0.12 at
+  full strength) added to an action's score while their situation holds:
+  back away seeing a cliff edge, rest in a vehicle, back away when
+  slapped or hit, eat plants and not bad plants, approach the hand. Each
+  counts as legacyInstinctResilience x strength^2 tries; each try is
+  judged by the approval felt (the genome's reward chemical rising, its
+  punishment chemical falling; decision 1 of 2026-11-07), so a nudge
+  that brings none fades as experience outweighs it.
+Instincts on heard words still wait for language. Nudges are saved
+(state version 6); saves made before mark the formerly dormant instincts
+unread, so they take effect on loading.
+
+OPENC2E_NO_GENOME_BRIDGE turns both off (A/B testing). With
+OPENC2E_WATCH_CREATURES the lit senses and each nudge's tries are logged.
+
+Tested: three matched 9-minute pairs, bridge on vs off: hungry 45.0 /
+42.1 / 46.9 vs 45.2 / 48.9 / 44.9, meals per 1,000 choices 42.4 / 42.1
+/ 41.0 vs 43.6 / 37.6 / 41.0, no starvation or drowning. Babies of four
+genomes hatched side by side (Lummox JR's Nova Subterra, Lis Morris and
+Chris Double's Canny Norns v1.2, the Akamai Canny Norns pack, and the
+game's norn): 4, 0, 1 and 5 nudges; every sense cell above lit from
+real events (patted about 1,100 times in 9 minutes).
 
 #### Eggs with a description: read correctly, and hatchable
 
