@@ -72,7 +72,7 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	attFile att[17];
 
 	int width, height, adjustx, adjusty;
-	int drawnwidth = 50;
+	int drawnwidth = 50, drawnheight = 100;
 	int partx[17], party[17];
 
 	std::string dataString(unsigned int _stage, bool sprite, unsigned int dataspecies, unsigned int databreed);

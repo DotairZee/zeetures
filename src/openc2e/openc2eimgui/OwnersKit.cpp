@@ -774,7 +774,13 @@ void DrawLifeNotices(float room) {
 	}
 	if (remove >= 0)
 		s_notices.erase(s_notices.begin() + remove);
-	// egg notices go once the egg has hatched (the life log keeps them)
+	// egg notices go once the egg has hatched (the life log keeps them);
+	// checked once a world tick, when an egg can hatch, not every frame: each
+	// check scans every object and every record (performance, 2026-11-16)
+	static unsigned int s_eggs_checked_tick = (unsigned int)-1;
+	if (s_eggs_checked_tick == world.tickcount)
+		return;
+	s_eggs_checked_tick = world.tickcount;
 	s_notices.erase(std::remove_if(s_notices.begin(), s_notices.end(), [](const lifeLogEntry& e) {
 		return e.kind == lifeLogEntry::eggLaid && !e.child.empty() && !KitEggOf(e.child) && KitHatchedFrom(e.child);
 	}), s_notices.end());

@@ -625,6 +625,15 @@ std::shared_ptr<creaturesImage> SkeletalCreature::tintBodySprite(std::shared_ptr
 }
 
 void SkeletalCreature::render(RenderTarget* renderer, int xoffset, int yoffset) {
+	// nowhere near the picture (the world is drawn three times for its
+	// wraparound): none of its parts would be drawn (performance,
+	// 2026-11-16); the margin covers poses whose pictures differ in size
+	// from the ones its bounds were worked out with
+	if (!displaycore) {
+		const int margin = 32;
+		if (xoffset + drawnwidth + margin < 0 || xoffset - margin > renderer->getWidth() || yoffset + drawnheight + margin < 0 || yoffset - margin > renderer->getHeight())
+			return;
+	}
 	bool mirror_body_parts = (world.variables["engine_mirror_creature_body_parts"] == 1);
 
 	for (int j = 0; j < 17; j++) {
@@ -845,6 +854,7 @@ void SkeletalCreature::recalculateSkeleton() {
 	adjustx = -lowestx;
 	adjusty = -lowesty;
 	drawnwidth = std::max(1, highestx - lowestx);
+	drawnheight = std::max(1, highesty - lowesty);
 
 	// TODO: muh, we should cooperate with physics system etc
 	if (!carriedby && !invehicle && calculated) {
