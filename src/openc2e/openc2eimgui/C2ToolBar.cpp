@@ -252,7 +252,8 @@ static void DrawCitations() {
 		ImGui::TextDisabled("(the list is missing from this build)");
 		return;
 	}
-	ImGui::BeginChild("citations", ImVec2(420, 320), ImGuiChildFlags_Borders);
+	// (filling its window, less a row for the Close button)
+	ImGui::BeginChild("citations", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()), ImGuiChildFlags_Borders);
 	int id = 0;
 	for (auto& raw : lines) {
 		if (raw.rfind("# ", 0) == 0 || raw.empty())
@@ -599,6 +600,8 @@ static void DrawC2MenuBar() {
 		ImGui::OpenPopup("About " FORK_NAME);
 		s_open_about = false;
 	}
+	// (never taller than the window: it scrolls instead)
+	ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(FLT_MAX, ImGui::GetMainViewport()->WorkSize.y * 0.95f));
 	if (ImGui::BeginPopupModal("About " FORK_NAME, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 		ImGui::SetWindowFontScale(1.6f);
 		ImGui::TextUnformatted(FORK_NAME);
@@ -642,24 +645,37 @@ static void DrawC2MenuBar() {
 			}
 			ImGui::TextWrapped("with contributions from expwnent, Michael Lynch, Shreddan, pushfoo, Jelle De Loecker and callym.");
 		}
-		// the research behind the creatures (owner, 2026-11-16: "a
-		// citations list ... in the About section"): CITATIONS.md, built
-		// into the program, the same file as on GitHub
-		// (developer aid: OPENC2E_OPEN_KITS="about,citations" opens it)
-		static bool s_open_citations = getenv("OPENC2E_OPEN_KITS") && strstr(getenv("OPENC2E_OPEN_KITS"), "citations");
-		if (s_open_citations) {
-			ImGui::SetNextItemOpen(true);
-			s_open_citations = false;
-		}
-		if (ImGui::CollapsingHeader("Research behind Zeetures"))
-			DrawCitations();
 		ImGui::PopTextWrapPos();
 		ImGui::Spacing();
+		// the research behind Zeetures (owner, 2026-11-16: "a citations
+		// list ... in the About section"): CITATIONS.md, built into the
+		// program, the same file as on GitHub, in a window of its own
+		// sized to the screen (inside About it made About taller than the
+		// game's window; owner's screenshot)
+		// (developer aid: OPENC2E_OPEN_KITS="about,citations" opens it)
+		static bool s_open_citations = getenv("OPENC2E_OPEN_KITS") && strstr(getenv("OPENC2E_OPEN_KITS"), "citations");
+		if (ImGui::Button("Research behind " FORK_NAME) || s_open_citations) {
+			ImGui::OpenPopup("Research behind " FORK_NAME);
+			s_open_citations = false;
+		}
+		ImGui::SameLine();
 		if (ImGui::Button("openc2e on the Web"))
 			SDL_OpenURL(OPENC2E_WEB);
 		ImGui::SameLine();
-		if (ImGui::Button("OK") || ImGui::IsKeyPressed(ImGuiKey_Escape))
+		bool researchOpen = ImGui::IsPopupOpen("Research behind " FORK_NAME);
+		if (ImGui::Button("OK") || (!researchOpen && ImGui::IsKeyPressed(ImGuiKey_Escape)))
 			ImGui::CloseCurrentPopup();
+		{
+			const ImGuiViewport* vp = ImGui::GetMainViewport();
+			ImGui::SetNextWindowSize(ImVec2(std::min(560.0f, vp->WorkSize.x * 0.9f), vp->WorkSize.y * 0.8f), ImGuiCond_Appearing);
+			ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+			if (ImGui::BeginPopupModal("Research behind " FORK_NAME, nullptr)) {
+				DrawCitations();
+				if (ImGui::Button("Close") || ImGui::IsKeyPressed(ImGuiKey_Escape))
+					ImGui::CloseCurrentPopup();
+				ImGui::EndPopup();
+			}
+		}
 		ImGui::EndPopup();
 	}
 
