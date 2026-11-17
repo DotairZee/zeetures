@@ -127,6 +127,18 @@ struct Params {
 	int driveIncreaseChem = 18, driveDecreaseChem = 35;
 	float unfeltLearningShare = 0.25f;
 	float curiosity = 0.02f; // novelty bonus scale
+	// Curiosity by learning progress (owner, 2026-11-16, from the citations
+	// pass: Kidd & Hayden 2015; Gottlieb & Oudeyer 2018; Oudeyer, Gottlieb &
+	// Lopes 2016). For its first firstTries tries a thing is worth trying
+	// for being little known (curiosity / sqrt(1 + tries), as before);
+	// after that, for how fast the creature is still learning about it:
+	// the gap between its recent and longer-run prediction errors, an error
+	// change of lpScale worth full curiosity, at most lpMax times. What is
+	// fully known, and what is too random to learn, lose their pull; what
+	// starts to surprise again regains it. OPENC2E_COUNT_CURIOSITY: rarity
+	// alone, as before (for comparison).
+	int firstTries = 3;
+	float lpScale = 0.05f, lpMax = 1.5f;
 	float boredomCuriosityGain = 2.0f; // Boredom raises curiosity
 	float temperature = 0.015f; // softmax base temperature
 	float arousalFocus = 2.0f; // high D lowers temperature
@@ -530,6 +542,22 @@ struct Expectation {
 	std::array<float, NUM_DRIVES> delta{}; // expected change in each drive
 	int count = 0; // times experienced
 	float prior = 0; // innate weight, in remembered experiences (from instincts)
+	// how wrong the expectation has been lately (the summed size of its
+	// errors over the drives): a fast and a slow running average. Their
+	// difference is learning progress, which curiosity follows (see
+	// Params::lpScale)
+	float errFast = 0, errSlow = 0;
+	void noteError(float err) {
+		// (new, or loaded from a save made before errors were kept: start
+		// both at this error, so no progress is read into the first one)
+		if (count == 0 || (errFast == 0.0f && errSlow == 0.0f)) {
+			errFast = errSlow = err;
+			return;
+		}
+		errFast += 0.5f * (err - errFast);
+		errSlow += 0.1f * (err - errSlow);
+	}
+	float progress() const { return std::fabs(errSlow - errFast); }
 };
 
 struct Place {
@@ -1497,6 +1525,8 @@ class HomeostatMind : public CreatureMind {
 			s += "\n";
 			if (e.prior > 0)
 				s += fmt::format("prior {} {} {}\n", key / 64 - 1, key % 64, e.prior);
+			if (e.errFast > 0 || e.errSlow > 0)
+				s += fmt::format("lp {} {} {:.4g} {:.4g}\n", key / 64 - 1, key % 64, e.errFast, e.errSlow);
 		}
 		for (auto& [who, decisions] : individuals)
 			for (auto& [decision, e] : decisions) {
@@ -1720,6 +1750,16 @@ class HomeostatMind : public CreatureMind {
 					l >> f;
 				if (l)
 					individuals[who][decision] = e;
+			} else if (what == "lp") {
+				// learning progress of an expectation (after its "expect" line)
+				int category, decision;
+				float fast, slow;
+				l >> category >> decision >> fast >> slow;
+				if (l)
+					if (auto it = expectations.find((category + 1) * 64 + decision); it != expectations.end()) {
+						it->second.errFast = fast;
+						it->second.errSlow = slow;
+					}
 			} else if (what == "expect") {
 				int category, decision;
 				Expectation e;
@@ -2203,6 +2243,7 @@ class HomeostatMind : public CreatureMind {
 			Expectation& kind = expectation(category, decision);
 			Expectation blend = kind;
 			int known = kind.count;
+			const Expectation* record = &kind; // whose learning progress counts
 			Candidate c{category, decision, distance, 0, 0, 0};
 			if (who && !who->who.empty()) {
 				// a particular creature: its own record, as far as it goes
@@ -2212,6 +2253,7 @@ class HomeostatMind : public CreatureMind {
 					if (auto jt = it->second.find(decision); jt != it->second.end())
 						own = &jt->second;
 				known = own ? own->count : 0;
+				record = own;
 				float w = known / (known + prm.individualPrior);
 				if (own)
 					for (int i = 0; i < NUM_DRIVES; i++)
@@ -2229,7 +2271,11 @@ class HomeostatMind : public CreatureMind {
 				unscented.delta[HUNGER] = 0.0f;
 				c.want = predictedRelief(d, D, unscented);
 			}
-			c.novelty = curiosity / std::sqrt(1.0f + known);
+			static const bool countCuriosity = getenv("OPENC2E_COUNT_CURIOSITY") != nullptr;
+			if (countCuriosity || known < prm.firstTries || !record)
+				c.novelty = curiosity / std::sqrt(1.0f + known);
+			else
+				c.novelty = curiosity * std::min(prm.lpMax, record->progress() / prm.lpScale);
 			c.score = c.want + c.novelty - prm.distanceCost * distance;
 			if (category >= 0 && category < (int)habituation.size()) {
 				// 4. habituation scales the pull of an object
@@ -4442,6 +4488,16 @@ class HomeostatMind : public CreatureMind {
 			// an innate prior counts as remembered experience: learning is slow
 			// while it outweighs real experience and speeds up as that grows
 			float rate = prm.learningRate * (e.count + 1.0f) / (e.count + 1.0f + e.prior);
+			// how wrong it was this time, before learning from it
+			auto errorOf = [&](const Expectation& x) {
+				float err = 0.0f;
+				for (int i = 0; i < NUM_DRIVES; i++) {
+					float target = feltAny[i] ? std::clamp(startDrives[i] + felt[i], 0.0f, 1.0f) - startDrives[i] : effect[i];
+					err += (feltAny[i] ? 1.0f : prm.unfeltLearningShare) * std::fabs(target - x.delta[i]);
+				}
+				return err;
+			};
+			e.noteError(errorOf(e));
 			for (int i = 0; i < NUM_DRIVES; i++) {
 				if (feltAny[i]) {
 					// a drive cannot go below empty or above full
@@ -4456,6 +4512,7 @@ class HomeostatMind : public CreatureMind {
 			// and from the particular creature acted on
 			if (!current.who.empty() && current.target) {
 				Expectation& own = individuals[current.who][current.decision];
+				own.noteError(errorOf(own));
 				float r = prm.learningRate * 1.5f; // a single individual: learned a little faster than a kind
 				for (int i = 0; i < NUM_DRIVES; i++) {
 					float target = feltAny[i] ? std::clamp(startDrives[i] + felt[i], 0.0f, 1.0f) - startDrives[i] : effect[i];
