@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 417 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 418 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 6 commits, 16 November 2026
+- [Unreleased](#unreleased): 7 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
@@ -21,6 +21,40 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### Mind: curiosity follows learning progress
+
+[`98a3dc00`](https://github.com/DotairZee/zeetures/commit/98a3dc00d286c59dc6dc0b8ba193cf5dcbdde27f)
+
+Owner, 2026-11-16 ("Yes, try it"), from the citations pass: current
+research treats curiosity as information seeking drawn to what one is
+still learning (Kidd &amp; Hayden 2015; Gottlieb &amp; Oudeyer 2018; Oudeyer,
+Gottlieb &amp; Lopes 2016), not novelty alone. The mind valued a (kind,
+action) only for being little tried: curiosity / sqrt(1 + tries).
+
+- Expectation keeps how wrong it has been lately: the summed size of
+  its errors over the drives, before each update, as a fast (0.5) and a
+  slow (0.1) running average (noteError). Learning progress is the gap
+  between them, either way: falling errors (still learning) and rising
+  ones (it began to surprise again) both count. The same for each
+  individual creature's own record.
+- Novelty: for the first firstTries (3) tries, as before; after that,
+  curiosity x min(lpMax 1.5, progress / lpScale 0.05). What is fully
+  known, and what is too random to learn, lose their pull.
+- A record with no error history (new, or from a save made before this)
+  starts both averages at its first error, so no progress is read into
+  it.
+- Saved with the mind ("lp CATEGORY DECISION FAST SLOW" after each
+  "expect" line); older saves load as before.
+- OPENC2E_COUNT_CURIOSITY: rarity alone, as before (for comparison).
+- CITATIONS.md says what the curiosity research now informs.
+
+Tests, three side-by-side pairs of fast copies of Home (learning progress
+vs rarity), hungry over the last 10 samples 25.6/29.9/27.6 vs
+29.7/29.4/27.7; meals that fed per 1,000 decisions 49/52/54 vs
+53/45/43; different actions per creature 18.6/18.7/20.2 vs
+20.0/20.1/21.3 (more focused); share of choices acting on other
+creatures 0.33/0.31/0.32 vs 0.32/0.34/0.35; deaths 0/0/0 vs 1/0/0.
 
 #### CITATIONS.md: newer research beside the older sources
 
