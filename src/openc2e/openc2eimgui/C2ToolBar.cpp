@@ -264,7 +264,10 @@ static void DrawCitations() {
 			continue;
 		}
 		bool bullet = raw.rfind("- ", 0) == 0;
-		std::string line = bullet ? raw.substr(2) : raw;
+		// "  - ": a line under the entry above ("Since then": newer
+		// research on the same idea), indented
+		bool sub = raw.rfind("  - ", 0) == 0;
+		std::string line = bullet ? raw.substr(2) : sub ? raw.substr(4) : raw;
 		std::string shown;
 		std::vector<std::pair<std::string, std::string>> links;
 		for (size_t k = 0; k < line.size(); k++) {
@@ -281,8 +284,13 @@ static void DrawCitations() {
 				continue;
 			shown += line[k];
 		}
+		// (a link taken out leaves two spaces)
+		for (size_t sp; (sp = shown.find("  ")) != std::string::npos;)
+			shown.erase(sp, 1);
 		while (!shown.empty() && shown.back() == ' ')
 			shown.pop_back();
+		if (sub)
+			ImGui::Indent();
 		if (bullet)
 			ImGui::Bullet();
 		ImGui::TextWrapped("%s", shown.c_str());
@@ -299,6 +307,8 @@ static void DrawCitations() {
 			if (n + 1 == links.size())
 				ImGui::Unindent();
 		}
+		if (sub)
+			ImGui::Unindent();
 	}
 	ImGui::EndChild();
 }
