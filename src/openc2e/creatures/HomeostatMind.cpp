@@ -780,6 +780,10 @@ class HomeostatMind : public CreatureMind {
 	}
 
 	MindOutput tick(const MindPerception& p) override {
+		if (!paramsOverridden) {
+			paramsOverridden = true;
+			overrideParams();
+		}
 		wrapW = p.wrapWidth;
 		applyTemperament(p.temperament, p.creatureId);
 		MindOutput out = tickChoose(p);
@@ -1863,6 +1867,33 @@ class HomeostatMind : public CreatureMind {
 
   private:
 	Params prm;
+	// developer aid: OPENC2E_MIND_PARAMS="name=value,..." sets travel
+	// parameters for a test (hungerPatience, travelHalf,
+	// floorChangeDistance, routeMaxCost, seekDistanceCost)
+	bool paramsOverridden = false;
+	void overrideParams() {
+		const char* env = getenv("OPENC2E_MIND_PARAMS");
+		if (!env)
+			return;
+		std::map<std::string, float*> known = {{"hungerPatience", &prm.hungerPatience}, {"travelHalf", &prm.travelHalf},
+			{"floorChangeDistance", &prm.floorChangeDistance}, {"routeMaxCost", &prm.routeMaxCost}, {"seekDistanceCost", &prm.seekDistanceCost}};
+		std::stringstream ss(env);
+		std::string item;
+		while (std::getline(ss, item, ',')) {
+			auto eq = item.find('=');
+			if (eq == std::string::npos)
+				continue;
+			auto it = known.find(item.substr(0, eq));
+			if (it != known.end())
+				*it->second = std::strtof(item.c_str() + eq + 1, nullptr);
+		}
+		static bool told = false;
+		if (!told) {
+			told = true;
+			fmt::print("* MIND PARAMS hungerPatience {} travelHalf {} floorChangeDistance {} routeMaxCost {} seekDistanceCost {}\n",
+				prm.hungerPatience, prm.travelHalf, prm.floorChangeDistance, prm.routeMaxCost, prm.seekDistanceCost);
+		}
+	}
 	std::map<int, Expectation> expectations; // key: (category + 1) * 64 + decision
 	// Individuals (owner, 2026-11-11): what acting on a particular creature
 	// did, by its moniker and the decision, alongside what acting on its kind
