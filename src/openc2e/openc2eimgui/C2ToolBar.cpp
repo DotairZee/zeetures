@@ -26,6 +26,7 @@
 #include "creatures/Creature.h"
 #include "Camera.h"
 #include "Engine.h"
+#include "EmbeddedFiles.h"
 #include "Hatchery.h"
 #include "ImportCreature.h"
 #include "ImGuiUtils.h"
@@ -228,6 +229,78 @@ static const char* GenusName(int genus) {
 // 0.6.0 (2026-11-14, night): signature scents; the hand takes things from
 // creatures and keeps its mode; the gene lab's east end sealed.
 #define OPENC2E_FORK_VERSION "0.8.0"
+
+// CITATIONS.md, as Help > About shows it: "## " headings as separators,
+// "- " entries wrapped, each Markdown link [text](url) as a small button
+// that opens it; italics marks dropped
+static void DrawCitations() {
+	static std::vector<std::string> lines = [] {
+		std::vector<std::string> v;
+		auto bytes = EmbeddedFile("CITATIONS.md");
+		std::string text(bytes.begin(), bytes.end());
+		size_t at = 0;
+		while (at <= text.size()) {
+			size_t nl = text.find('\n', at);
+			if (nl == std::string::npos)
+				nl = text.size();
+			v.push_back(text.substr(at, nl - at));
+			at = nl + 1;
+		}
+		return v;
+	}();
+	if (lines.empty() || (lines.size() == 1 && lines[0].empty())) {
+		ImGui::TextDisabled("(the list is missing from this build)");
+		return;
+	}
+	ImGui::BeginChild("citations", ImVec2(420, 320), ImGuiChildFlags_Borders);
+	int id = 0;
+	for (auto& raw : lines) {
+		if (raw.rfind("# ", 0) == 0 || raw.empty())
+			continue;
+		if (raw.rfind("## ", 0) == 0) {
+			ImGui::Spacing();
+			ImGui::SeparatorText(raw.substr(3).c_str());
+			continue;
+		}
+		bool bullet = raw.rfind("- ", 0) == 0;
+		std::string line = bullet ? raw.substr(2) : raw;
+		std::string shown;
+		std::vector<std::pair<std::string, std::string>> links;
+		for (size_t k = 0; k < line.size(); k++) {
+			if (line[k] == '[') {
+				size_t close = line.find("](", k);
+				size_t end = close == std::string::npos ? std::string::npos : line.find(')', close + 2);
+				if (end != std::string::npos) {
+					links.push_back({line.substr(k + 1, close - k - 1), line.substr(close + 2, end - close - 2)});
+					k = end;
+					continue;
+				}
+			}
+			if (line[k] == '*')
+				continue;
+			shown += line[k];
+		}
+		while (!shown.empty() && shown.back() == ' ')
+			shown.pop_back();
+		if (bullet)
+			ImGui::Bullet();
+		ImGui::TextWrapped("%s", shown.c_str());
+		for (size_t n = 0; n < links.size(); n++) {
+			if (n == 0)
+				ImGui::Indent();
+			else
+				ImGui::SameLine();
+			std::string label = links[n].first + "##cite" + std::to_string(id++);
+			if (ImGui::SmallButton(label.c_str()))
+				SDL_OpenURL(links[n].second.c_str());
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("%s", links[n].second.c_str());
+			if (n + 1 == links.size())
+				ImGui::Unindent();
+		}
+	}
+	ImGui::EndChild();
+}
 // the openc2e this fork started from (an unreleased development build)
 #define OPENC2E_UPSTREAM_BASE "commit dfcd46f2, 7 October 2026 (825 commits after its v0.2 release)"
 #define OPENC2E_WEB "https://openc2e.github.io/"
@@ -569,6 +642,17 @@ static void DrawC2MenuBar() {
 			}
 			ImGui::TextWrapped("with contributions from expwnent, Michael Lynch, Shreddan, pushfoo, Jelle De Loecker and callym.");
 		}
+		// the research behind the creatures (owner, 2026-11-16: "a
+		// citations list ... in the About section"): CITATIONS.md, built
+		// into the program, the same file as on GitHub
+		// (developer aid: OPENC2E_OPEN_KITS="about,citations" opens it)
+		static bool s_open_citations = getenv("OPENC2E_OPEN_KITS") && strstr(getenv("OPENC2E_OPEN_KITS"), "citations");
+		if (s_open_citations) {
+			ImGui::SetNextItemOpen(true);
+			s_open_citations = false;
+		}
+		if (ImGui::CollapsingHeader("Research behind the creatures"))
+			DrawCitations();
 		ImGui::PopTextWrapPos();
 		ImGui::Spacing();
 		if (ImGui::Button("openc2e on the Web"))

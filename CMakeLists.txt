@@ -599,7 +599,8 @@ set(EMBEDDED_FILES
 	${SRC}/data/hatchery/board.png
 	${SRC}/data/hatchery/nests.png
 	${SRC}/data/hatchery/nests.txt
-	${SRC}/data/thoughts/icons.png)
+	${SRC}/data/thoughts/icons.png
+	${SRC}/CITATIONS.md)
 add_custom_command(
 	OUTPUT ${GEN}/embedded_files.cpp
 	COMMAND ${Python_EXECUTABLE} scripts/embed_files.py ${GEN}/embedded_files.cpp ${EMBEDDED_FILES}
