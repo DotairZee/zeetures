@@ -34,6 +34,10 @@ Zeetures's creatures run on an original mind and an original set of behaviours, 
 - Russell, J. A. (1980). A circumplex model of affect. *Journal of Personality and Social Psychology, 39*(6), 1161-1178. Mood as valence and arousal.
   - Since then: Barrett, L. F., & Bliss-Moreau, E. (2009). Affect as a psychological primitive. *Advances in Experimental Social Psychology, 41*, 167-218. [PDF](https://www.affective-science.org/pubs/2009/barrett-blissmoreau-2009.pdf) And a 2024 review of valence and arousal research in *Motivation and Emotion*, noting how calm, pleasant states are neglected. [PDF](https://link.springer.com/content/pdf/10.1007/s11031-024-10062-5.pdf) Valence and arousal still the standard description of mood.
 
+## Reading the game's genomes
+
+- Ashton, M. (1999). *Creatures 2 CAOS Language Guide.* Creature Labs (now Gameware Development). The documented meanings of the genome's brain cells: the sense lobe's 32 situations, the drive and decision lobes, and the object categories. Informed how the genomes' sense-, drive- and decision-cell emitters and their instincts are read, without running the original brain.
+
 ## Temperament
 
 Researched on 2026-11-11 for the seven inborn traits. Several entries were read from abstracts and summaries rather than the full papers.

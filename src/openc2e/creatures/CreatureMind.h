@@ -86,6 +86,9 @@ struct StimulusEvent {
 	// stimulus genes and sleep): chemical numbers and amounts, 0 = none.
 	std::array<int, 4> feltChem{};
 	std::array<int, 4> feltAmount{};
+	// the sense cell it lights (C2: its stimulus gene's sensory neuron, or
+	// the full form's input) and how strongly; -1 none
+	int feltSense = -1, feltSenseIntensity = 0;
 };
 
 // An action the world's creature scripts make available (event 16 + decision).
@@ -186,6 +189,17 @@ struct MindPerception {
 	bool wallWest = false, wallEast = false;
 	int dryWay = 0, dryRooms = 0;
 	std::vector<InnateInstinct> newInstincts; // genome instincts expressed since the last tick
+	// C2: the 32 situation senses of the genomes' sense lobe (C2 CAOS guide,
+	// "Offsets into SENSE_LOBE": 0 patted, 1 slapped, 2 bumped, 3 near a wall,
+	// 4 in a vehicle ... 10 it is approaching, 15 it is a creature, 16-18 it
+	// is my sibling, parent, child, 19 a mate in sight ... 30 falling, 31
+	// landed), 0-255, as set for the genome's emitters (oldCreature::
+	// updateBrainCells). Instincts that name a sense wait for it.
+	std::array<unsigned char, 32> senses{};
+	// the chemicals this genome rewards and punishes learning with (those
+	// its decision lobe's first two chemical slots take: 52 and 53 in the
+	// game's genomes)
+	int rewardChem = 52, punishChem = 53;
 };
 
 struct MindOutput {

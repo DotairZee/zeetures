@@ -795,6 +795,9 @@ void oldCreature::handleStimulus(const StimulusEvent& s) {
 		// and its feeling for whoever did it moves (Relationships.h)
 		Relationships::felt(parentagent, this, felt.source.get(), felt.feltChem, felt.feltAmount);
 	}
+	// the sense cell it names (a pat lights "patted", a slap "slapped" ...)
+	if (felt.feltSense >= 0 && felt.feltSense < 32 && felt.feltSenseIntensity > 0)
+		senseFromStimuli[felt.feltSense] = std::max(senseFromStimuli[felt.feltSense], (float)std::min(felt.feltSenseIntensity, 255));
 	if (pendingstimuli.size() < 64)
 		pendingstimuli.push_back(felt);
 }
@@ -819,6 +822,8 @@ void oldCreature::applyStimulusChemistry(StimulusEvent& s) {
 			return;
 		if (asleep && !g->whenasleep)
 			return;
+		s.feltSense = g->sensoryneuron;
+		s.feltSenseIntensity = g->intensity;
 		for (unsigned int i = 0; i < 4; i++) {
 			if (g->drives[i] != 0 && g->drives[i] != 255 && g->amounts[i] > 0) {
 				addChemical(g->drives[i], g->amounts[i]);
@@ -827,6 +832,8 @@ void oldCreature::applyStimulusChemistry(StimulusEvent& s) {
 			}
 		}
 	} else {
+		s.feltSense = s.input;
+		s.feltSenseIntensity = s.intensity;
 		for (unsigned int i = 0; i < 4; i++) {
 			int chem = s.chem[i], amount = s.amount[i];
 			if (chem > 0 && chem < 255 && amount > 0) {
@@ -1242,6 +1249,131 @@ MindPerception oldCreature::buildPerception() {
 	return p;
 }
 
+// C2 under a mind: the genome's emitters that read the replaced brain's
+// cells keep working, as their authors wired them, because those cells are
+// set here from what the creature perceives and does (the brain itself does
+// not run; feedSensoryCells does the attention lobe and the mate cell).
+// Meanings from the C2 CAOS guide: the sense lobe's 32 situations (tissue
+// 5), the drive lobe (1: the 17 drives) and the decision lobe (6: the
+// action under way). The senses also go to the mind, for the instincts that
+// name them. Stimuli light the sense cell their gene or script names (a pat
+// "patted"), fading over a second or two.
+void oldCreature::updateBrainCells(MindPerception& p) {
+	// (OPENC2E_NO_GENOME_BRIDGE: as before, for A/B testing)
+	static const bool off = getenv("OPENC2E_NO_GENOME_BRIDGE") != nullptr;
+	if (engine.version != 2 || !brain || off)
+		return;
+	// which chemicals its decision lobe learns from: the receptors on that
+	// lobe's first two chemical slots (loci 13 and 14)
+	if (rewardChem < 0) {
+		rewardChem = 52;
+		punishChem = 53;
+		for (auto& gene : genome->genes)
+			if (auto* r = dynamic_cast<bioReceptorGene*>(gene.get()); r && r->organ == 0 && r->tissue == 6) {
+				if (r->locus == 13)
+					rewardChem = r->chemical;
+				else if (r->locus == 14)
+					punishChem = r->chemical;
+			}
+	}
+	p.rewardChem = rewardChem;
+	p.punishChem = punishChem;
+
+	std::array<float, 32> s{};
+	for (int i = 0; i < 32; i++) {
+		s[i] = senseFromStimuli[i];
+		senseFromStimuli[i] = senseFromStimuli[i] < 2.0f ? 0.0f : senseFromStimuli[i] * 0.9f;
+	}
+	auto set = [&](int i, float v) { s[i] = std::max(s[i], std::clamp(v, 0.0f, 255.0f)); };
+	if (!brainCellsStarted) {
+		brainCellsStarted = true;
+		lastWallBumps = p.walledCount;
+	}
+	if (p.walledCount != lastWallBumps)
+		set(2, 255); // bumped into a wall
+	lastWallBumps = p.walledCount;
+	if (p.wallWest || p.wallEast)
+		set(3, 255); // near a wall
+	if (p.riding)
+		set(4, 255); // in a vehicle
+	// IT: what it is attending to
+	Agent* it = attention.get();
+	if (it) {
+		float dx = (it->x + it->getWidth() / 2.0f) - p.x, dy = (it->y + it->getHeight() / 2.0f) - p.y;
+		if (p.wrapWidth > 0 && std::fabs(dx) > p.wrapWidth / 2.0f)
+			dx -= (dx > 0 ? p.wrapWidth : -p.wrapWidth);
+		float dist = std::sqrt(dx * dx + dy * dy);
+		if (lastIt.get() == it && lastItDistance >= 0) {
+			if (dist < lastItDistance - 2.0f)
+				set(10, 255); // approaching
+			else if (dist > lastItDistance + 2.0f)
+				set(11, 255); // moving away
+		}
+		lastIt = attention;
+		lastItDistance = dist;
+		set(12, 255.0f * (1.0f - dist / 400.0f)); // how near
+		auto* ca = dynamic_cast<CreatureAgent*>(it);
+		set(ca ? 15 : 14, 255); // a creature, or an object
+		if (ca && ca->getCreature() && world.history) {
+			std::string me = world.history->findMoniker(genome), them = world.history->findMoniker(ca->getCreature()->getGenome());
+			if (!me.empty() && !them.empty() && world.history->hasMoniker(me) && world.history->hasMoniker(them)) {
+				monikerData& m = world.history->getMoniker(me);
+				monikerData& t = world.history->getMoniker(them);
+				if (m.mother == them || m.father == them)
+					set(17, 255); // my parent
+				else if (t.mother == me || t.father == me)
+					set(18, 255); // my child
+				else if ((!m.mother.empty() && (m.mother == t.mother || m.mother == t.father)) || (!m.father.empty() && (m.father == t.father || m.father == t.mother)))
+					set(16, 255); // my brother or sister
+			}
+		}
+	} else {
+		lastIt = AgentRef();
+		lastItDistance = -1;
+	}
+	if (mateInSight)
+		set(19, 255);
+	{
+		int dir = (p.currentDecision == 26) ? 10 : (p.currentDecision == 27) ? 11 : p.currentDecision;
+		if ((dir == 10 && p.dropWest > 40.0f) || (dir == 11 && p.dropEast > 40.0f))
+			set(28, 255); // walking toward an edge
+	}
+	if (parentagent->falling && !p.carried && !p.riding && !p.inWater)
+		set(30, 255); // falling
+	if (p.fellHeight > 0)
+		set(31, 255); // landed
+
+	if (oldLobe* sense = brain->getLobeByTissue(5))
+		for (unsigned int n = 0; n < 32 && n < sense->getNoNeurons(); n++) {
+			if (n == 19)
+				continue; // feedSensoryCells
+			oldNeuron* cell = sense->getNeuron(n);
+			cell->state = cell->output = (unsigned char)std::lround(s[n]);
+		}
+	if (oldLobe* drive = brain->getLobeByTissue(1))
+		for (unsigned int n = 0; n < 17 && n < drive->getNoNeurons(); n++) {
+			oldNeuron* cell = drive->getNeuron(n);
+			cell->state = cell->output = p.drives[n];
+		}
+	if (oldLobe* decision = brain->getLobeByTissue(6))
+		for (unsigned int n = 0; n < decision->getNoNeurons(); n++) {
+			oldNeuron* cell = decision->getNeuron(n);
+			cell->state = cell->output = ((int)n == decn) ? 255 : 0;
+		}
+	for (int i = 0; i < 32; i++)
+		p.senses[i] = (unsigned char)std::lround(s[i]);
+	// developer aid: OPENC2E_WATCH_CREATURES lists the lit senses now and then
+	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	if (watch && ticks % 200 == 0) {
+		std::string lit;
+		for (int i = 0; i < 32; i++)
+			if (p.senses[i] >= 64)
+				lit += fmt::format(" {}", i);
+		if (!lit.empty())
+			fmt::print("* WATCH SENSES unid {} lit:{} (reward chem {}, punishment {})\n", parentagent->getUNID(), lit, rewardChem, punishChem);
+	}
+}
+
 // Genome instincts, translated for a mind (gene-translation.md, section 3).
 // C2 instinct inputs name a lobe and a neuron; in the C2 genomes' standard
 // lobe layout (C2 CAOS guide: DRIVE_LOBE, SENSE_LOBE ...) lobe 1 holds the
@@ -1271,6 +1403,12 @@ static bool translateInstinct(creatureInstinctGene* g, InnateInstinct& out, int 
 			case 5:
 				if (neuron == 19 && genus >= 1 && genus <= 4)
 					out.conditions.push_back({InnateCondition::Attention, 35 + genus});
+				else if (neuron == 15) {
+					// "it is a creature": any of the creature categories (36-39)
+					for (int c = 36; c <= 39; c++)
+						out.conditions.push_back({InnateCondition::Attention, c});
+				} else if (neuron == 14)
+					; // "it is an object": any object, no condition
 				else
 					out.conditions.push_back({InnateCondition::Sense, neuron});
 				break;
@@ -1294,6 +1432,7 @@ void oldCreature::tickMind() {
 		buildMindActions();
 	MindPerception p = [&] { PROFILE_SCOPE("creature: perception"); return buildPerception(); }();
 	PROFILE_SCOPE("creature: tickMind after perception");
+	updateBrainCells(p);
 	pendingstimuli.clear();
 	if (engine.version == 2) {
 		while (!unprocessedinstincts.empty()) {

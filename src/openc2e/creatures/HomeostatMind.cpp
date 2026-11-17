@@ -191,6 +191,17 @@ struct Params {
 	float instinctDriveChange = 0.25f;
 	float legacyInstinctResilience = 12.0f; // legacy genes have one number; scaled by strength squared
 	float anyObjectInstinctWeight = 1.5f; // an instinct naming no object is a weak hunch about objects in general
+	// Instincts that name no drive ("seeing a cliff edge: back away", "in a
+	// vehicle: rest", "seeing a bad plant: don't eat it") are inborn nudges:
+	// at full strength they add this much to an action's score while their
+	// situation holds. Each counts as legacyInstinctResilience x strength^2
+	// remembered tries; every try in that situation is judged by the
+	// approval felt (the genome's reward chemical rising, its punishment
+	// chemical falling; decision 1 of 2026-11-07), so a nudge that brings no
+	// approval fades as experience outweighs it, and one that does holds.
+	float innateNudge = 0.12f;
+	float approvalScale = 32.0f; // a change of this much reward minus punishment chemical is full approval
+	unsigned char senseOn = 64; // a sense cell at least this lit counts as the situation holding
 
 	// Seeking: when something wanted is out of sight, head for where it was
 	// last seen (a first sense of place).
@@ -1477,6 +1488,11 @@ class HomeostatMind : public CreatureMind {
 		current = choice;
 		inEpisode = true;
 		fellAsleep = false;
+		episodeNudges.clear();
+		for (size_t i = 0; i < nudges.size(); i++)
+			if (nudgeHolds(nudges[i], p, choice.category, choice.decision))
+				episodeNudges.push_back(i);
+		episodeApprovalStart = approvalNow(p);
 		if (choice.blindPress && !blindPending) {
 			blindPending = true;
 			blindX = p.x;
@@ -1551,7 +1567,7 @@ class HomeostatMind : public CreatureMind {
 	// (learned numbers are written to 4 significant figures: at 9, with 145
 	// creatures, the save was 28 MB; 2026-11-13)
 	std::string saveState() const override {
-		std::string s = fmt::format("statever 5\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
+		std::string s = fmt::format("statever 6\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
 		s += "drift";
 		for (float f : drift)
 			s += fmt::format(" {:.4g}", f);
@@ -1593,6 +1609,11 @@ class HomeostatMind : public CreatureMind {
 		}
 		for (auto& sig : appliedInstincts)
 			s += fmt::format("instinct {}\n", sig);
+		for (auto& n : nudges)
+			if (n.tries > 0)
+				s += fmt::format("nudge {} {} {:.4g}\n", n.signature, n.tries, n.approvalSum);
+		for (auto& [sig, st] : savedNudges)
+			s += fmt::format("nudge {} {} {:.4g}\n", sig, st.first, st.second);
 		for (auto& l : links)
 			s += fmt::format("link {} {} {} {} {}\n", l.x, l.fromY, l.toY, l.decision, l.uses);
 		for (auto& [category, edible] : scents)
@@ -1773,6 +1794,13 @@ class HomeostatMind : public CreatureMind {
 				std::string sig;
 				l >> sig;
 				appliedInstincts.insert(sig);
+			} else if (what == "nudge") {
+				std::string sig;
+				int tries = 0;
+				float approval = 0;
+				l >> sig >> tries >> approval;
+				if (l)
+					savedNudges[sig] = {tries, approval};
 			} else if (what == "valence")
 				l >> valence;
 			else if (what == "mood")
@@ -1850,6 +1878,26 @@ class HomeostatMind : public CreatureMind {
 				fmt::print("[homeostat] relearning sleep (learned while sleep could be refused)\n");
 			}
 		}
+		if (version < 6) {
+			// Saved while instincts naming a sense, or no drive, waited
+			// (dormant); their genes were marked read all the same. Unmark
+			// them, so they are read again now that they take effect.
+			// Signatures: "lobe.neuron.lobe.neuron.lobe.neuron-action-drive-level".
+			for (auto it = appliedInstincts.begin(); it != appliedInstincts.end();) {
+				int v[6] = {0, 0, 0, 0, 0, 0};
+				bool words = false, sense = false, drive = false;
+				if (std::sscanf(it->c_str(), "%d.%d.%d.%d.%d.%d", &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]) == 6)
+					for (int i = 0; i < 3; i++) {
+						words |= v[2 * i] == 3 || v[2 * i] == 7;
+						sense |= v[2 * i] == 5 && v[2 * i + 1] != 19;
+						drive |= v[2 * i] == 1;
+					}
+				if (!words && (sense || !drive))
+					it = appliedInstincts.erase(it);
+				else
+					++it;
+			}
+		}
 		if (version < 2) {
 			// Saved before body chemistry ran (frozen bodies: every action seemed
 			// to do nothing). That experience misleads, so start learning afresh.
@@ -1904,6 +1952,39 @@ class HomeostatMind : public CreatureMind {
 	std::map<int, Expectation> innateDefaults; // by decision: instincts about any object
 	std::set<std::string> appliedInstincts;
 	int activeInstincts = 0, dormantInstincts = 0;
+	// inborn nudges (Params::innateNudge): from instincts that name no drive
+	struct Nudge {
+		std::string signature;
+		int decision = 0;
+		std::vector<int> categories; // empty: whatever it acts on (or nothing)
+		std::vector<int> senses; // situation senses that must all be lit
+		float value = 0; // +strength rewarded, -strength punished
+		float weight = 1; // in remembered tries
+		int tries = 0;
+		float approvalSum = 0; // the approval felt over those tries
+		float effect() const { return (value * weight + approvalSum) / (weight + tries); }
+	};
+	std::vector<Nudge> nudges;
+	std::map<std::string, std::pair<int, float>> savedNudges; // signature -> tries, approval (until the gene is read again)
+	std::vector<size_t> episodeNudges; // the nudges whose situation held when this episode began
+	float episodeApprovalStart = 0;
+	float approvalNow(const MindPerception& p) const {
+		if (!p.chemicals)
+			return 0.0f;
+		float r = (p.rewardChem > 0 && p.rewardChem < 256) ? p.chemicals[p.rewardChem] : 0.0f;
+		float q = (p.punishChem > 0 && p.punishChem < 256) ? p.chemicals[p.punishChem] : 0.0f;
+		return r - q;
+	}
+	bool nudgeHolds(const Nudge& n, const MindPerception& p, int category, int decision) const {
+		if (n.decision != decision)
+			return false;
+		if (!n.categories.empty() && std::find(n.categories.begin(), n.categories.end(), category) == n.categories.end())
+			return false;
+		for (int s : n.senses)
+			if (s < 0 || s >= 32 || p.senses[s] < prm.senseOn)
+				return false;
+		return true;
+	}
 	std::map<int, Place> places; // where each category was last seen
 	std::vector<Link> links; // learned rides between floors
 	std::vector<FoodPlace> foodPlaces; // the food map
@@ -2377,6 +2458,9 @@ class HomeostatMind : public CreatureMind {
 			}
 			if (inEpisodeJustEnded && category == current.category && decision == current.decision)
 				c.score += prm.commitment;
+			for (auto& n : nudges)
+				if (nudgeHolds(n, p, category, decision))
+					c.score += prm.innateNudge * n.effect();
 			const auto& z = appliedTemperament;
 			if (who && !who->who.empty()) {
 				c.score += prm.strangerBias * z[0] * (1.0f - who->familiarity); // boldness
@@ -4349,20 +4433,49 @@ class HomeostatMind : public CreatureMind {
 		if (appliedInstincts.count(inst.signature))
 			return;
 		appliedInstincts.insert(inst.signature);
-		std::vector<int> drives, categories;
+		std::vector<int> drives, categories, senses;
 		bool dormant = false;
 		for (auto& c : inst.conditions) {
 			if (c.kind == InnateCondition::Drive && c.index >= 0 && c.index < NUM_DRIVES)
 				drives.push_back(c.index);
 			else if (c.kind == InnateCondition::Attention)
 				categories.push_back(c.index);
+			else if (c.kind == InnateCondition::Sense)
+				senses.push_back(c.index);
 			else
-				dormant = true; // heard words and senses: waiting for language and senses
+				dormant = true; // heard words: waiting for language
 		}
-		if (drives.empty())
-			dormant = true; // reward with no drive: waiting for the approval feeling
+		// (OPENC2E_NO_GENOME_BRIDGE: senses and no drive wait, as before)
+		static const bool oldWay = getenv("OPENC2E_NO_GENOME_BRIDGE") != nullptr;
+		if (oldWay && (drives.empty() || !senses.empty()))
+			dormant = true;
 		if (dormant) {
 			dormantInstincts++;
+			return;
+		}
+		// (with a drive, the situation senses only narrow when; the drive's
+		// expectation below carries it, as before)
+		if (drives.empty()) {
+			// no drive: an inborn nudge, judged by approval (Params::innateNudge)
+			Nudge n;
+			n.signature = inst.signature;
+			n.decision = inst.decision;
+			n.categories = categories;
+			n.senses = senses;
+			n.value = (inst.reward ? 1.0f : -1.0f) * inst.strength;
+			n.weight = 1.0f + (prm.legacyInstinctResilience - 1.0f) * inst.strength * inst.strength;
+			if (auto it = savedNudges.find(inst.signature); it != savedNudges.end()) {
+				n.tries = it->second.first;
+				n.approvalSum = it->second.second;
+				savedNudges.erase(it);
+			}
+			nudges.push_back(n);
+			activeInstincts++;
+			fmt::print("[homeostat] creature {} instinct: {} nudged {}{}{} (strength {:.2f}, weight {:.1f})\n", p.creatureId, actionName(inst.decision),
+				inst.reward ? "toward" : "against",
+				[&] { std::string w; for (int c : categories) w += fmt::format(" seeing {}", c); return w; }(),
+				[&] { std::string w; for (int s : senses) w += fmt::format(" when sense {}", s); return w; }(),
+				inst.strength, n.weight);
 			return;
 		}
 		std::array<float, NUM_DRIVES> delta{};
@@ -4445,6 +4558,19 @@ class HomeostatMind : public CreatureMind {
 		inEpisode = false;
 		inEpisodeJustEnded = true;
 		episodes++;
+		if (!episodeNudges.empty()) {
+			float approval = std::clamp((approvalNow(p) - episodeApprovalStart) / prm.approvalScale, -1.0f, 1.0f);
+			static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+			for (size_t i : episodeNudges)
+				if (i < nudges.size()) {
+					nudges[i].tries++;
+					nudges[i].approvalSum += approval;
+					if (watch)
+						fmt::print("[homeostat] creature {} nudge {} tried ({} tries): approval {:+.2f}, now {:+.2f}\n", p.creatureId, actionName(nudges[i].decision),
+							nudges[i].tries, approval, nudges[i].effect());
+				}
+			episodeNudges.clear();
+		}
 		std::array<float, NUM_DRIVES> change{};
 		float total = 0.0f;
 		for (int i = 0; i < NUM_DRIVES; i++) {

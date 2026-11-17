@@ -124,6 +124,16 @@ class oldCreature : public Creature {
 	// conception (MATE) and a restored pregnancy set it; laying the egg clears it
 	void setPregnant(unsigned char p) { pregnant = p; }
 	void feedSensoryCells(); // C2 under a mind: see CreatureAI.cpp
+	// C2 under a mind: the replaced brain's cells the genome's emitters read
+	// (senses, drives, decision), set from what the creature perceives and
+	// does; see CreatureAI.cpp
+	void updateBrainCells(struct MindPerception& p);
+	std::array<float, 32> senseFromStimuli{}; // sense cells lit by stimuli, fading
+	AgentRef lastIt;
+	float lastItDistance = -1;
+	unsigned int lastWallBumps = 0;
+	bool brainCellsStarted = false;
+	int rewardChem = -1, punishChem = -1; // read from the genome on first use
 	void tickInvoluntaryActions(); // under a mind: see CreatureAI.cpp
 	void sayNeed(); // SAYN: see CreatureAI.cpp
 	// words heard and learned: for each word of the game's word list
