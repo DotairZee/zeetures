@@ -681,6 +681,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			if (a->babymoniker != 0)
 				out << "baby " << genomeNameFromInt(a->babymoniker) << "\n";
 			out << "temperament " << Temperaments::toLine(c->temperament) << "\n";
+			out << "seasonal " << fmt::format("{:.3f}", c->seasonalZ) << "\n";
 			if (c->fertilityOverride >= 0)
 				out << "fertility " << c->fertilityOverride << "\n"; // the owner's setting (Breeder's Kit)
 			// what it feels about the creatures it has met (Relationships.h)
@@ -815,6 +816,7 @@ struct SavedCreature {
 	std::vector<std::pair<int, int>> words; // word-list number, familiarity
 	std::vector<std::string> bonds; // bond lines (Relationships::fromLine)
 	std::string temperament; // Temperaments::toLine; empty: keep the one drawn at hatching
+	std::string seasonal; // its seasonal rhythm (SeasonalRhythm); empty: keep the one it has
 	int fertility = -1; // the owner's setting: -1 the world's, 0 fertile, 1 infertile
 	float x = 0, y = 0;
 	float foot = -1; // where its feet were (y), or -1 (older saves)
@@ -932,6 +934,8 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 	}
 	if (!s.temperament.empty())
 		Temperaments::fromLine(s.temperament, c->temperament);
+	if (!s.seasonal.empty())
+		c->seasonalZ = std::clamp((float)std::atof(s.seasonal.c_str()), -2.0f, 2.0f);
 	c->fertilityOverride = s.fertility;
 	for (auto& line : s.bonds) {
 		std::string other;
@@ -1204,6 +1208,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 				l >> c->baby;
 			else if (key == "temperament")
 				std::getline(l, c->temperament);
+			else if (key == "seasonal")
+				std::getline(l, c->seasonal);
 			else if (key == "fertility")
 				l >> c->fertility;
 			else if (key == "bond") {

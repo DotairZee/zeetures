@@ -168,6 +168,10 @@ struct MindPerception {
 	// boldness, curiosity, energy, sociability, temper, reactivity,
 	// steadiness; 0 is average
 	std::array<float, 7> temperament{};
+	// the season (0 spring, 1 summer, 2 autumn, 3 winter) and how strongly
+	// this creature follows it (SeasonalRhythm::strength: 1 average)
+	int season = -1;
+	float seasonalStrength = 1.0f;
 	// water (C2 room type 2): whether the creature is in it, and which way the
 	// nearest dry room lies through open doors (10 west, 11 east, -1 up,
 	// 1 down, 0 none found) and how many rooms away

@@ -2380,6 +2380,15 @@ bool Engine::initialSetup() {
 
 	applyScriptPatches(false);
 
+	// developer aid: OPENC2E_TEST_SEASON=n (0 spring, 1 summer, 2 autumn,
+	// 3 winter) sets the season after loading, for testing seasonal
+	// behavior in a short run (a season is 2 hours of play)
+	if (const char* sea = getenv("OPENC2E_TEST_SEASON")) {
+		world.season = (unsigned int)(std::atoi(sea) % 4);
+		world.dayofseason = 0;
+		fmt::print("* TEST SEASON {}\n", world.season);
+	}
+
 	if (const char* dumppath = getenv("OPENC2E_DUMP_SCRIPTS")) {
 		std::ofstream dump(dumppath, std::ios::binary);
 		world.scriptorium->dumpScripts(dump);

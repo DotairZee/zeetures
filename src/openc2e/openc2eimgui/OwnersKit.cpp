@@ -1499,6 +1499,30 @@ static void TemperamentPage() {
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s ... %s", Temperaments::lowWord(i), Temperaments::highWord(i));
 	}
+	// the seasonal rhythm (Temperament.h, SeasonalRhythm): inherited, unlike
+	// the traits above (owner, 2026-11-16)
+	ImGui::Spacing();
+	ImGui::Spacing();
+	{
+		int pc = SeasonalRhythm::percent(c->seasonalZ);
+		std::string label = fmt::format("Seasonal rhythm {}%", pc);
+		const float h = ImGui::GetTextLineHeight() + 6, width = 280;
+		ImVec2 p = ImGui::GetCursorScreenPos();
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+		dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), IM_COL32(45, 45, 50, 255), 3);
+		dl->AddRectFilled(p, ImVec2(p.x + width * std::clamp(pc, 0, 100) / 100.0f, p.y + h), IM_COL32(190, 120, 50, 255), 3); // autumn
+		dl->AddLine(ImVec2(p.x + width / 2, p.y), ImVec2(p.x + width / 2, p.y + h), IM_COL32(255, 255, 255, 140), 1.0f);
+		dl->AddRect(p, ImVec2(p.x + width, p.y + h), IM_COL32(110, 110, 120, 255), 3);
+		ImVec2 ts = ImGui::CalcTextSize(label.c_str());
+		ImVec2 tp(p.x + 6, p.y + (h - ts.y) / 2);
+		dl->AddText(ImVec2(tp.x + 1, tp.y + 1), IM_COL32(0, 0, 0, 200), label.c_str());
+		dl->AddText(tp, IM_COL32(255, 255, 255, 255), label.c_str());
+		ImGui::Dummy(ImVec2(width, h));
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("lives the same all year ... fattens up in autumn, saves itself in winter");
+		KitNote("%s has %s. Passed on from its parents (a mix of theirs, with some chance); a creature from the game's own eggs has its own by chance.",
+			name.c_str(), SeasonalRhythm::describe(c->seasonalZ));
+	}
 }
 
 void DrawOwnersKit() {

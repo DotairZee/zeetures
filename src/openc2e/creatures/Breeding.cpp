@@ -18,6 +18,7 @@
  */
 
 #include "Breeding.h"
+#include "Temperament.h"
 #include "Relationships.h"
 #include <set>
 
@@ -392,12 +393,16 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	std::string name = storeGenome(*child);
 	if (name.empty())
 		return false;
+	// the child's seasonal rhythm, from both parents (Temperament.h)
+	float childSeasonal = SeasonalRhythm::child(mum->seasonalZ, dad->seasonalZ);
+	SeasonalRhythm::store(name, childSeasonal);
 	mumBody->babymoniker = genomeNameToInt(name);
 	mum->setPregnant(255);
 	Relationships::conceived(mumAgent, dadAgent);
 	world.history->tell(mumMon, storyEntry::pregnant, dadMon);
 	world.history->tell(dadMon, storyEntry::fathered, mumMon);
-	fmt::print("* MATE {} and {}: conceived, genome {} ({} genes: {} from her, {} from him, {} crossovers, {} mutations, {} duplications, {} losses)\n",
-		mumMon, dadMon, name, rep.genes, rep.fromMum, rep.fromDad, rep.crossovers, rep.mutations, rep.duplications, rep.deletions);
+	fmt::print("* MATE {} and {}: conceived, genome {} ({} genes: {} from her, {} from him, {} crossovers, {} mutations, {} duplications, {} losses; seasonal rhythm {:+.2f} from {:+.2f} and {:+.2f})\n",
+		mumMon, dadMon, name, rep.genes, rep.fromMum, rep.fromDad, rep.crossovers, rep.mutations, rep.duplications, rep.deletions, childSeasonal,
+		mum->seasonalZ, dad->seasonalZ);
 	return true;
 }

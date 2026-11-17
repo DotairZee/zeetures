@@ -138,6 +138,11 @@ class oldCreature : public Creature {
 	int fertilityOverride = -1;
 	// inborn temperament, drawn at hatching (creatures/Temperament.h); saved
 	Temperament temperament;
+	// how strongly it fattens in autumn and saves in winter, inherited
+	// (Temperament.h, SeasonalRhythm); saved with the world
+	float seasonalZ = SeasonalRhythm::roll();
+	// winter thrift: a share of biochemistry steps skipped (Biochemistry.cpp)
+	float thriftCarry = 0.0f;
 	int lastNeedSaid = -2;
 	unsigned int lastNeedTick = 0;
 

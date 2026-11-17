@@ -36,6 +36,7 @@
 #include "CreatureSpeech.h"
 #include "creatures/Thoughts.h"
 #include "oldCreature.h"
+#include "Temperament.h"
 #include <map>
 #include <sstream>
 
@@ -856,6 +857,8 @@ MindPerception oldCreature::buildPerception() {
 	MindPerception p;
 	p.creatureId = parentagent->getUNID();
 	p.temperament = temperament.z;
+	p.season = (int)world.season;
+	p.seasonalStrength = SeasonalRhythm::strength(seasonalZ);
 	p.tick = ticks / 4;
 	p.stage = stage;
 	p.asleep = asleep;

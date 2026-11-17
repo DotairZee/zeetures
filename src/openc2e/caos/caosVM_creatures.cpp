@@ -33,6 +33,7 @@
 #include "creatures/c2eCreature.h"
 #include "creatures/CreatureSpeech.h"
 #include "creatures/oldCreature.h"
+#include "creatures/Temperament.h"
 #include "historyManager.h"
 
 #include <cassert>
@@ -1314,6 +1315,12 @@ void c_NEW_CREA_c1(caosVM* vm) {
 
 	a->setCreature(c);
 	a->finishInit();
+	// its seasonal rhythm, if one was passed on with this genome (MATE)
+	{
+		float z;
+		if (SeasonalRhythm::load(realmoniker, z))
+			c->seasonalZ = z;
+	}
 
 	a->genome_slots[0] = genome;
 	world.newMoniker(genome, realmoniker, a);

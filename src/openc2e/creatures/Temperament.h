@@ -75,3 +75,27 @@ std::string toLine(const Temperament& t);
 bool fromLine(const std::string& line, Temperament& t);
 
 } // namespace Temperaments
+
+// Seasonal rhythm (owner, 2026-11-16: should creatures "eat more in autumn
+// to get through winter?"; chose that it be inherited): how strongly a
+// creature fattens in autumn and saves in winter. A z-score like the
+// traits (0 average, clipped to +-2), but passed on rather than drawn at
+// hatching: a child's is its parents' average plus chance (as a trait made
+// by many genes is, with half the spread of the whole population), kept in
+// a small file beside the child's genome in the user data folder's
+// Genetics (NAME.season), so a creature made from that genome anywhere has
+// it. A creature from a genome with none (the game's own eggs, older
+// genomes) draws one at random. Saved with the world.
+namespace SeasonalRhythm {
+
+float roll();
+float child(float mum, float dad);
+// the cycle's strength, exp(0.5 z): about 0.37 to 2.7, 1 on average
+inline float strength(float z) { return std::exp(0.5f * z); }
+int percent(float z); // the share of creatures with less (50% average)
+const char* describe(float z); // "a strong seasonal rhythm", ...
+// the value beside a genome (Genetics/NAME.season), if there is one
+bool load(const std::string& genomeName, float& z);
+void store(const std::string& genomeName, float z);
+
+} // namespace SeasonalRhythm

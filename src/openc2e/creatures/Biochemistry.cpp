@@ -22,6 +22,8 @@
 #include "c2eCreature.h"
 #include "oldBrain.h"
 #include "oldCreature.h"
+#include "World.h"
+#include "Temperament.h"
 
 #include <algorithm>
 #include <cassert>
@@ -114,6 +116,22 @@ void c2Creature::tickBiochemistry() {
 
 	if ((ticks % 2) != 0)
 		return; // every 2 ticks (0.2s)
+
+	// Winter thrift (owner, 2026-11-16; the strength inherited, Temperament.h,
+	// SeasonalRhythm): in winter a share of biochemistry steps is skipped, a
+	// creature saving itself: what it burns, digests and makes all run
+	// slower, so its stores last (hunger rises slower too). The share is
+	// 0.2 times its seasonal strength, at most a half: about 7% to 50%, 20%
+	// on average. OPENC2E_NO_SEASONAL_BIOLOGY turns this and the autumn
+	// appetite off.
+	static const bool noSeasons = getenv("OPENC2E_NO_SEASONAL_BIOLOGY") != nullptr;
+	if (!noSeasons && world.season == 3) {
+		thriftCarry += std::min(0.5f, 0.2f * SeasonalRhythm::strength(seasonalZ));
+		if (thriftCarry >= 1.0f) {
+			thriftCarry -= 1.0f;
+			return;
+		}
+	}
 
 	// tick organs (the reproductive switches summed over their receptors)
 	reproSum[0] = reproSum[1] = 0;

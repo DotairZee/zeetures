@@ -17,6 +17,9 @@
  */
 
 #include "Temperament.h"
+#include "PathResolver.h"
+#include <fstream>
+#include <filesystem>
 
 #include <algorithm>
 #include <fmt/core.h>
@@ -110,3 +113,62 @@ bool fromLine(const std::string& line, Temperament& t) {
 }
 
 } // namespace Temperaments
+
+namespace SeasonalRhythm {
+
+static std::mt19937& rng() {
+	static std::mt19937 g{std::random_device{}()};
+	return g;
+}
+
+float roll() {
+	std::normal_distribution<float> n(0.0f, 1.0f);
+	return std::clamp(n(rng()), -2.0f, 2.0f);
+}
+
+float child(float mum, float dad) {
+	// the parents' average keeps half the population's variance; chance
+	// adds the other half back (sd sqrt(1/2)), so the spread holds
+	std::normal_distribution<float> n(0.0f, 0.7071f);
+	return std::clamp((mum + dad) / 2.0f + n(rng()), -2.0f, 2.0f);
+}
+
+int percent(float z) {
+	return (int)std::lround(50.0 * (1.0 + std::erf(z / std::sqrt(2.0))));
+}
+
+const char* describe(float z) {
+	if (z >= 1.0f)
+		return "a strong seasonal rhythm: it fattens up in autumn and saves itself in winter";
+	if (z >= 0.3f)
+		return "a marked seasonal rhythm";
+	if (z > -0.3f)
+		return "an average seasonal rhythm";
+	if (z > -1.0f)
+		return "a slight seasonal rhythm";
+	return "almost no seasonal rhythm: it lives the same all year";
+}
+
+static std::filesystem::path fileFor(const std::string& genomeName) {
+	return getUserDataDir() / "Genetics" / (genomeName + ".season");
+}
+
+bool load(const std::string& genomeName, float& z) {
+	if (genomeName.empty())
+		return false;
+	std::ifstream in(fileFor(genomeName));
+	float v;
+	if (!(in >> v))
+		return false;
+	z = std::clamp(v, -2.0f, 2.0f);
+	return true;
+}
+
+void store(const std::string& genomeName, float z) {
+	if (genomeName.empty())
+		return;
+	std::ofstream out(fileFor(genomeName), std::ios::binary);
+	out << fmt::format("{:.3f}\n", z);
+}
+
+} // namespace SeasonalRhythm

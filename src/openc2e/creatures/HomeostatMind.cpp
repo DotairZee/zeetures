@@ -250,6 +250,9 @@ struct Params {
 	// arrives and finds nothing (food regrows, so places are not forgotten
 	// at once), and saved with the creature.
 	float foodSeeEdible = 0.3f; // a visible object smelling this nourishing marks a food place
+	// autumn appetite: the share of the way to full hunger added to how
+	// hungry it feels in autumn, times its seasonal strength, at most the max
+	float autumnAppetite = 0.2f, autumnAppetiteMax = 0.45f;
 	float unreachableFoodConfidence = 0.3f; // a new place marked by food seen out of reach
 	float foodMerge = 200.0f; // places this close (same floor) are one place
 	size_t foodPlaceMax = 8;
@@ -881,6 +884,17 @@ class HomeostatMind : public CreatureMind {
 			pendingPassOver = AgentRef();
 		}
 		std::array<float, NUM_DRIVES> d = normalize(p.drives);
+		// Autumn appetite (owner, 2026-11-16: "should they eat more in autumn
+		// to get through winter?"; the strength inherited, Temperament.h,
+		// SeasonalRhythm): in autumn hunger is felt as if a share of the way
+		// to full, so a creature looks for food sooner and eats past its
+		// need; its own chemistry stores what it does not burn (glycogen,
+		// fat) for the winter, when its body runs slower (Biochemistry.cpp).
+		static const bool noSeasons = getenv("OPENC2E_NO_SEASONAL_BIOLOGY") != nullptr; // (to compare)
+		if (!noSeasons && p.season == 2) {
+			float a = std::min(prm.autumnAppetiteMax, prm.autumnAppetite * p.seasonalStrength);
+			d[HUNGER] += (1.0f - d[HUNGER]) * a;
+		}
 		float D = overallDrive(d);
 		lastTickForView = p.tick;
 
