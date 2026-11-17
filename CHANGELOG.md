@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 428 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 429 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 3 commits, 16 November 2026 to 17 November 2026
+- [Unreleased](#unreleased): 4 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
@@ -22,6 +22,31 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 17 November 2026
+
+#### Eggs with a description: read correctly, and hatchable
+
+[`5d574694`](https://github.com/DotairZee/zeetures/commit/5d574694b6b6450408c898aa54a2d9e796379c7c)
+
+C2 egg files carry a description after their 22-byte header (a 32-bit
+length, then the text): empty in the game's own eggs, filled in by pack
+authors, e.g. Nova Subterra's "Nova Subterra: Breed H female". Three
+readers assumed the genomes start at byte 26, so for such eggs the
+Breeder's Kit's install, its check of which breed slots a pack's eggs
+use, and the breed mover all saw no genomes and left them unchanged.
+One shared reader now handles the description (ReadC2Egg and
+C2EggWithGenomes in Breeds.h).
+
+A pack of genomes only, with no pictures of its own (Nova Subterra: six
+eggs that use the game's norn pictures), had its eggs installed into the
+Eggs folder, which nothing read, so they could not be hatched. The
+Hatchery now lists every installed egg that belongs to no breed, labeled
+with its author's description (or the file's name), with its own egg
+picture when the shelf has it. Import Genome also takes .egg files (both
+genomes) as well as .gen.
+
+Tested with a copy of the user data folder: the Breeder's Kit installed
+Nova Subterra's six eggs, the Hatchery listed them (24 eggs: 18 breeds
+and the 6), and the packs whose eggs go with a breed were not doubled.
 
 #### Temperament partly inherited from the parents
 
