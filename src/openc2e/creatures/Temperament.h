@@ -66,6 +66,20 @@ const char* highWord(int t);
 // A new temperament, drawn at random.
 Temperament roll();
 
+// A child's temperament, partly passed on (2026-11-17, the TODO's "partial
+// inheritance"): heritability 0.4 for every trait, about what twin and
+// animal studies find for personality. The child gets 0.4 of its parents'
+// average and the rest from chance, drawn with the traits' usual links, so
+// a child correlates with each parent about 0.2 and the population's
+// spread holds from one generation to the next.
+Temperament child(const Temperament& mum, const Temperament& dad);
+
+// The temperament beside a genome (Genetics/NAME.temperament, written at
+// conception), if there is one; the game's own eggs and older genomes have
+// none and draw one at hatching.
+bool load(const std::string& genomeName, Temperament& t);
+void store(const std::string& genomeName, const Temperament& t);
+
 // A few words: the one or two strongest traits ("bold and curious, quick
 // to anger"), or "even-tempered" when none stands out.
 std::string describe(const Temperament& t);

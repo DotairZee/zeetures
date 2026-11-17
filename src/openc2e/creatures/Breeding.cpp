@@ -436,13 +436,16 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	// the child's seasonal rhythm, from both parents (Temperament.h)
 	float childSeasonal = SeasonalRhythm::child(mum->seasonalZ, dad->seasonalZ);
 	SeasonalRhythm::store(name, childSeasonal);
+	// and its temperament, partly from them (Temperament.h)
+	Temperament childTemperament = Temperaments::child(mum->temperament, dad->temperament);
+	Temperaments::store(name, childTemperament);
 	mumBody->babymoniker = genomeNameToInt(name);
 	mum->setPregnant(255);
 	Relationships::conceived(mumAgent, dadAgent);
 	world.history->tell(mumMon, storyEntry::pregnant, dadMon);
 	world.history->tell(dadMon, storyEntry::fathered, mumMon);
-	fmt::print("* MATE {} and {}: conceived, genome {} ({} genes: {} from her, {} from him, {} crossovers, {} mutations, {} duplications, {} losses; seasonal rhythm {:+.2f} from {:+.2f} and {:+.2f})\n",
+	fmt::print("* MATE {} and {}: conceived, genome {} ({} genes: {} from her, {} from him, {} crossovers, {} mutations, {} duplications, {} losses; seasonal rhythm {:+.2f} from {:+.2f} and {:+.2f}; temperament {})\n",
 		mumMon, dadMon, name, rep.genes, rep.fromMum, rep.fromDad, rep.crossovers, rep.mutations, rep.duplications, rep.deletions, childSeasonal,
-		mum->seasonalZ, dad->seasonalZ);
+		mum->seasonalZ, dad->seasonalZ, Temperaments::toLine(childTemperament));
 	return true;
 }

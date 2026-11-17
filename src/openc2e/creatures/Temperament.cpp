@@ -63,18 +63,55 @@ const char* highWord(int t) {
 	return t >= 0 && t < NUM_TRAITS ? highs[t] : "?";
 }
 
-Temperament roll() {
+// one draw with the traits' links (unclipped)
+static std::array<float, NUM_TRAITS> draw() {
 	std::normal_distribution<float> n(0.0f, 1.0f);
-	Temperament t;
+	std::array<float, NUM_TRAITS> z{};
 	float f = n(rng());
-	for (int i = 0; i < NUM_TRAITS; i++) {
-		float own = n(rng());
-		float z = loading[i] * f + std::sqrt(1.0f - loading[i] * loading[i]) * own;
-		t.z[i] = std::clamp(z, -2.0f, 2.0f);
-	}
+	for (int i = 0; i < NUM_TRAITS; i++)
+		z[i] = loading[i] * f + std::sqrt(1.0f - loading[i] * loading[i]) * n(rng());
 	// sociable creatures run a little less to temper
-	t.z[TEMPER] = std::clamp(t.z[TEMPER] - 0.15f * t.z[SOCIABILITY], -2.0f, 2.0f);
+	z[TEMPER] -= 0.15f * z[SOCIABILITY];
+	return z;
+}
+
+Temperament roll() {
+	Temperament t;
+	auto z = draw();
+	for (int i = 0; i < NUM_TRAITS; i++)
+		t.z[i] = std::clamp(z[i], -2.0f, 2.0f);
 	return t;
+}
+
+Temperament child(const Temperament& mum, const Temperament& dad) {
+	// h2 of the parents' average; chance makes up the rest of the variance
+	// (the average's variance is 1/2, so h2 * h2 / 2 of it is passed on)
+	const float h2 = 0.4f;
+	const float chance = std::sqrt(1.0f - h2 * h2 / 2.0f);
+	Temperament t;
+	auto z = draw();
+	for (int i = 0; i < NUM_TRAITS; i++)
+		t.z[i] = std::clamp(h2 * (mum.z[i] + dad.z[i]) / 2.0f + chance * z[i], -2.0f, 2.0f);
+	return t;
+}
+
+static std::filesystem::path fileFor(const std::string& genomeName) {
+	return getUserDataDir() / "Genetics" / (genomeName + ".temperament");
+}
+
+bool load(const std::string& genomeName, Temperament& t) {
+	if (genomeName.empty())
+		return false;
+	std::ifstream in(fileFor(genomeName));
+	std::string line;
+	return std::getline(in, line) && fromLine(line, t);
+}
+
+void store(const std::string& genomeName, const Temperament& t) {
+	if (genomeName.empty())
+		return;
+	std::ofstream out(fileFor(genomeName), std::ios::binary);
+	out << toLine(t) << "\n";
 }
 
 std::string describe(const Temperament& t) {

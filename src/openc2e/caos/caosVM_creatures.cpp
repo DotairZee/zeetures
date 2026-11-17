@@ -1320,6 +1320,12 @@ void c_NEW_CREA_c1(caosVM* vm) {
 		float z;
 		if (SeasonalRhythm::load(realmoniker, z))
 			c->seasonalZ = z;
+		// and its temperament (MATE), in place of the one drawn at random
+		Temperament t;
+		if (Temperaments::load(realmoniker, t)) {
+			c->temperament = t;
+			fmt::print("* {} hatched with a temperament from its parents: {} ({})\n", realmoniker, Temperaments::describe(t), Temperaments::toLine(t));
+		}
 	}
 
 	a->genome_slots[0] = genome;
