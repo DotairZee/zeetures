@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 419 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 420 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 8 commits, 16 November 2026
+- [Unreleased](#unreleased): 9 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
@@ -21,6 +21,32 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 16 November 2026
+
+#### Mind: food is less pleasant the fuller a creature is
+
+[`56696abb`](https://github.com/DotairZee/zeetures/commit/56696abb89cfdd50ca1d01e95f0c1897fd594b12)
+
+Owner, 2026-11-16: "look into" full creatures eating food the hungry
+need. In matched copies 68% of meals that fed went to creatures with
+Hunger under 64 and 13% to those at 150 or more. Eating eases the need
+for pleasure, boredom and stress (the genomes' own eating stimulus,
+about 0.06 each), so to a full creature food was entertainment.
+
+Negative alliesthesia (Cabanac 1971; Berridge 1991; sensory-specific
+satiety): below satiationHunger (0.35), what eating food (not other
+creatures, categories 36-39) is expected to ease besides hunger is
+scaled by hunger / satiationHunger, down to satedLiking (0.2) when
+full. Hunger as felt counts, so the autumn appetite and eating ahead of
+need still raise it. OPENC2E_NO_ALLIESTHESIA turns it off. CITATIONS.md
+gains Cabanac (1971), with Berridge (1991), sensory-specific satiety
+and a 2021 review.
+
+Tests, three side-by-side pairs of fast copies of Home (with vs
+without): hungry over the last 10 samples 22.3/24.4/24.4 vs
+34.9/29.4/31.4; starving 12.1/17.3/12.7 vs 23.3/18.9/20.7; meals by
+creatures under Hunger 64 202/203/167 vs 526/414/520 (share of meals
+going to those at 150+ 21/15/19% vs 18/13/14%); meals per 1,000
+decisions 19/17/17 vs 36/28/33 (the pleasure meals gone); no deaths.
 
 #### Mind: eat ahead of need when a long time without food is coming
 
