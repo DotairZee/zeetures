@@ -27,9 +27,75 @@
 
 #include <fmt/core.h>
 #include <memory>
+#include <cstring>
 
 #ifdef _WIN32
 #include <windows.h>
+#endif
+
+#if defined(__linux__)
+#include <atomic>
+#include <cstdio>
+#include <cstdlib>
+#include <dlfcn.h>
+#include <execinfo.h>
+#include <signal.h>
+#include <sys/time.h>
+// developer aid: OPENC2E_SAMPLE=FILE, a sampling profiler (2026-11-16: the
+// system's perf is not open to users here). Every 2 ms of CPU time the call
+// stack is recorded; at exit each sample goes to FILE as one line of
+// frames, the program's own as offsets ("+0x1234", for addr2line) and
+// others by library name.
+namespace {
+constexpr int kMaxSamples = 60000, kDepth = 24;
+void* g_samples[kMaxSamples][kDepth];
+int g_depths[kMaxSamples];
+std::atomic<int> g_nsamples{0};
+void sampleHandler(int) {
+	int i = g_nsamples.fetch_add(1);
+	if (i < kMaxSamples)
+		g_depths[i] = backtrace(g_samples[i], kDepth);
+}
+void dumpSamples() {
+	const char* path = getenv("OPENC2E_SAMPLE");
+	if (!path)
+		return;
+	itimerval off{};
+	setitimer(ITIMER_PROF, &off, nullptr);
+	FILE* f = fopen(path, "w");
+	if (!f)
+		return;
+	int n = std::min(g_nsamples.load(), kMaxSamples);
+	for (int i = 0; i < n; i++) {
+		for (int k = 0; k < g_depths[i]; k++) {
+			Dl_info info{};
+			if (dladdr(g_samples[i][k], &info) && info.dli_fname) {
+				const char* base = strrchr(info.dli_fname, '/');
+				base = base ? base + 1 : info.dli_fname;
+				if (strcmp(base, "openc2e") == 0)
+					fprintf(f, "%s+0x%lx", k ? " " : "", (unsigned long)((char*)g_samples[i][k] - (char*)info.dli_fbase));
+				else
+					fprintf(f, "%s%s", k ? " " : "", base);
+			} else
+				fprintf(f, "%s?", k ? " " : "");
+		}
+		fputc('\n', f);
+	}
+	fclose(f);
+}
+void startSampler() {
+	if (!getenv("OPENC2E_SAMPLE"))
+		return;
+	void* warm[4];
+	backtrace(warm, 4); // (loads what backtrace needs before any signal)
+	signal(SIGPROF, sampleHandler);
+	itimerval t{};
+	t.it_interval.tv_usec = 2000;
+	t.it_value.tv_usec = 2000;
+	setitimer(ITIMER_PROF, &t, nullptr);
+	std::atexit(dumpSamples);
+}
+} // namespace
 #endif
 
 // SDL tries stealing main on some platforms, which we don't want.
@@ -37,6 +103,9 @@
 
 int main(int argc, char* argv[]) {
 	install_backtrace_printer();
+#if defined(__linux__)
+	startSampler();
+#endif
 
 	std::string version;
 #ifdef DEV_BUILD
