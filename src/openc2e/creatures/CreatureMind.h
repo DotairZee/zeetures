@@ -200,6 +200,9 @@ struct MindPerception {
 	// its decision lobe's first two chemical slots take: 52 and 53 in the
 	// game's genomes)
 	int rewardChem = 52, punishChem = 53;
+	// a custom genome's brain add-ons, as the mind's settings to multiply
+	// (creatures/BrainProfiles.h); null or empty: none
+	const std::vector<std::pair<std::string, float>>* brainSettings = nullptr;
 };
 
 struct MindOutput {

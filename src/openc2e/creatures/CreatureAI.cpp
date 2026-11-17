@@ -37,6 +37,7 @@
 #include "creatures/Thoughts.h"
 #include "oldCreature.h"
 #include "Temperament.h"
+#include "BrainProfiles.h"
 #include <map>
 #include <sstream>
 
@@ -60,11 +61,14 @@
 void oldCreature::feedSensoryCells() {
 	if (engine.version != 2 || !brain)
 		return;
-	if (oldLobe* att = brain->getLobeByTissue(2))
-		for (unsigned int n = 0; n < att->getNoNeurons(); n++) {
-			oldNeuron* cell = att->getNeuron(n);
-			cell->state = cell->output = ((int)n == attn && attention) ? 255 : 0;
-		}
+	// the source lobe (2) and the attention lobe (7, from 2026-11-17: some
+	// genomes' emitters read it): the category attended to
+	for (unsigned int tissue : {2u, 7u})
+		if (oldLobe* att = brain->getLobeByTissue(tissue))
+			for (unsigned int n = 0; n < att->getNoNeurons(); n++) {
+				oldNeuron* cell = att->getNeuron(n);
+				cell->state = cell->output = ((int)n == attn && attention) ? 255 : 0;
+			}
 	if (oldLobe* sit = brain->getLobeByTissue(5); sit && sit->getNoNeurons() > 19) {
 		// looked for on the mind's cadence (every 4 ticks), not every tick:
 		// a scan of every agent, run by every creature (performance,
@@ -1278,6 +1282,21 @@ void oldCreature::updateBrainCells(MindPerception& p) {
 	}
 	p.rewardChem = rewardChem;
 	p.punishChem = punishChem;
+	// brain add-ons of a custom genome: roles for the mind (BrainProfiles.h)
+	if (!brainProfileRead) {
+		brainProfileRead = true;
+		BrainProfiles::Result r = BrainProfiles::read(*genome);
+		// (OPENC2E_NO_BRAIN_PROFILES: read and logged, not applied; A/B testing)
+		static const bool off = getenv("OPENC2E_NO_BRAIN_PROFILES") != nullptr;
+		if (!off)
+			brainSettings = r.settings;
+		if (r.any()) {
+			std::string who = world.history ? world.history->findMoniker(genome) : std::string();
+			for (auto& line : BrainProfiles::describe(r))
+				fmt::print("* {} brain: {}\n", who, line);
+		}
+	}
+	p.brainSettings = &brainSettings;
 
 	std::array<float, 32> s{};
 	for (int i = 0; i < 32; i++) {
@@ -1376,9 +1395,13 @@ void oldCreature::updateBrainCells(MindPerception& p) {
 
 // Genome instincts, translated for a mind (gene-translation.md, section 3).
 // C2 instinct inputs name a lobe and a neuron; in the C2 genomes' standard
-// lobe layout (C2 CAOS guide: DRIVE_LOBE, SENSE_LOBE ...) lobe 1 holds the
-// drives, 2 the attention categories, 3 heard verbs, 5 senses and 7 heard
-// nouns. Lobe 0 neuron 0 marks an unused input. The reinforcer is chemical 52
+// lobe layout (the C2 CAOS guide's order: perception, drive, source, verb,
+// noun, sense, decision, attention, concept) lobe 1 holds the drives, 2 the
+// source (the category of what stimulated it), 3 heard verbs, 4 heard
+// nouns, 5 senses and 7 attention. Source and attention both name the
+// object. (Lobe 7 was read as heard nouns until 2026-11-17: the game's
+// norns' "hungry, attending to a flower: push or pull it" waited; the
+// genomes' wiring shows 7 reading 2 and 4, as attention does.) Lobe 0 neuron 0 marks an unused input. The reinforcer is chemical 52
 // (reward) or 53 (punishment).
 // Sense 19 (the other sex of the creature's own genus in sight, set by
 // feedSensoryCells) names the object of the act: a creature of its own genus
@@ -1412,7 +1435,8 @@ static bool translateInstinct(creatureInstinctGene* g, InnateInstinct& out, int 
 				else
 					out.conditions.push_back({InnateCondition::Sense, neuron});
 				break;
-			case 7: out.conditions.push_back({InnateCondition::HeardNoun, neuron}); break;
+			case 4: out.conditions.push_back({InnateCondition::HeardNoun, neuron}); break;
+			case 7: out.conditions.push_back({InnateCondition::Attention, neuron}); break;
 			default: return false; // not a lobe these genomes use for instincts
 		}
 	}

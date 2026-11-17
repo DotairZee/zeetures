@@ -8,6 +8,7 @@
 
 #include "Agent.h"
 #include "Breeds.h"
+#include "creatures/BrainProfiles.h"
 #include "C2KitsInternal.h"
 #include "Hatchery.h"
 #include "PathResolver.h"
@@ -222,6 +223,7 @@ struct ImportPlan {
 	std::vector<ImportGroup> groups;
 	std::vector<size_t> genomes, notes, eggs, cobs, skipped;
 	std::vector<std::string> problems;
+	std::vector<std::string> brain; // its genome's brain add-ons and the roles they get (BrainProfiles.h)
 	std::vector<SlotQuestion> slotQuestions;
 	int asking = -1; // the group the slot dialog is asking about
 };
@@ -654,6 +656,27 @@ static void planImport(const std::vector<std::string>& picked) {
 			g.install = false; // already here: not installed again unless asked
 	}
 	findSlotQuestions(*plan);
+	// the brain add-ons of its first genome (or its first egg's), and the
+	// roles Zeetures's mind gives them
+	{
+		std::vector<uint8_t> g;
+		if (!plan->genomes.empty())
+			g = plan->files[plan->genomes[0]].data;
+		else if (!plan->eggs.empty()) {
+			C2EggFile e;
+			if (ReadC2Egg(plan->files[plan->eggs[0]].data, e))
+				g = e.genomes[0];
+		}
+		if (g.size() > 4) {
+			try {
+				genomeFile gf;
+				SpanReader r(std::span<const uint8_t>(g.data(), g.size()));
+				r >> gf;
+				plan->brain = BrainProfiles::describe(BrainProfiles::read(gf));
+			} catch (...) {
+			}
+		}
+	}
 	if (plan->groups.empty())
 		plan->problems.push_back(plan->genomes.empty() && plan->eggs.empty() && plan->cobs.empty()
 				? "No body-part pictures (like a04k.s16) were found, so there is no breed to install."
@@ -946,6 +969,15 @@ static void ImportReview() {
 	ImGui::InputText("Name", plan.name, sizeof(plan.name));
 	for (auto& p : plan.problems)
 		ImGui::TextColored(ImVec4(1, 0.6f, 0.4f, 1), "%s", p.c_str());
+	if (!plan.brain.empty()) {
+		ImGui::TextUnformatted("Its brain, in Zeetures:");
+		ImGui::PushTextWrapPos(0);
+		for (auto& b : plan.brain)
+			ImGui::BulletText("%s", b.c_str());
+		ImGui::PopTextWrapPos();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("The original brain is not run: each added lobe gets a role in Zeetures's mind (brain-profiles.txt).");
+	}
 	SlotDialog(plan);
 	for (size_t gi = 0; gi < plan.groups.size(); gi++) {
 		auto& g = plan.groups[gi];
@@ -1070,6 +1102,8 @@ static void BreedsPage() {
 			planImport({t});
 			for (auto& pr : s_plan->problems)
 				fmt::print("* Breed import problem: {}\n", pr);
+			for (auto& b : s_plan->brain)
+				fmt::print("* Breed import brain: {}\n", b);
 			for (auto& g : s_plan->groups)
 				fmt::print("* Breed import: species {} slot {} -> {} ({} files)\n", g.species, breedSlotName(g.slot), breedSlotName(g.target), g.files.size());
 			if (!s_plan->groups.empty()) {

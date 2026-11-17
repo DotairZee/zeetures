@@ -37,6 +37,8 @@ Zeetures's creatures run on an original mind and an original set of behaviours, 
 ## Reading the game's genomes
 
 - Ashton, M. (1999). *Creatures 2 CAOS Language Guide.* Creature Labs (now Gameware Development). The documented meanings of the genome's brain cells: the sense lobe's 32 situations, the drive and decision lobes, and the object categories. Informed how the genomes' sense-, drive- and decision-cell emitters and their instincts are read, without running the original brain.
+- Lummox JR (1999). *Nova Subterra* genome for Creatures 2, with its author's notes ("Genetic Overview", "Search and Sub-Attention Lobes", "Afterdrive and Change Lobes"). What its four added lobes are for. Informed the roles Nova Subterra's lobes get (brain-profiles.txt).
+- Morris, L., & Double, C. *The Canny Norns for C2* (genome v1.2), with its authors' notes. What the echo, search and choice lobes are for, and that Canny norns are "much more curious than a normal norn". Informed the roles Canny's lobes get and its curiosity setting (brain-profiles.txt).
 
 ## Temperament
 

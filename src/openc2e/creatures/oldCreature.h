@@ -134,6 +134,9 @@ class oldCreature : public Creature {
 	unsigned int lastWallBumps = 0;
 	bool brainCellsStarted = false;
 	int rewardChem = -1, punishChem = -1; // read from the genome on first use
+	// its genome's brain add-ons (BrainProfiles.h), read at birth
+	std::vector<std::pair<std::string, float>> brainSettings;
+	bool brainProfileRead = false;
 	void tickInvoluntaryActions(); // under a mind: see CreatureAI.cpp
 	void sayNeed(); // SAYN: see CreatureAI.cpp
 	// words heard and learned: for each word of the game's word list

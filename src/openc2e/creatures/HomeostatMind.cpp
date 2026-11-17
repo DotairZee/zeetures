@@ -656,6 +656,10 @@ class HomeostatMind : public CreatureMind {
 	std::string name() const override { return "homeostat"; }
 
 	void born(const MindPerception& p) override {
+		if (p.brainSettings && *p.brainSettings != brainSettings) {
+			brainSettings = *p.brainSettings;
+			temperamentApplied = false;
+		}
 		applyTemperament(p.temperament, p.creatureId);
 		rng.seed((unsigned int)p.creatureId);
 		std::string acts;
@@ -783,6 +787,35 @@ class HomeostatMind : public CreatureMind {
 		prm.betterLearning = f(5, -0.1f);
 		// steadiness (6): sticks with what it is doing
 		prm.commitment *= f(6, 0.5f);
+		// brain add-ons of a custom genome (BrainProfiles.h): their roles'
+		// settings, as multipliers
+		for (auto& [name, factor] : brainSettings) {
+			if (name == "learningRate")
+				prm.learningRate *= factor;
+			else if (name == "betterLearning")
+				prm.betterLearning *= factor;
+			else if (name == "worseLearning")
+				prm.worseLearning *= factor;
+			else if (name == "unfeltLearningShare")
+				prm.unfeltLearningShare = std::min(1.0f, prm.unfeltLearningShare * factor);
+			else if (name == "curiosity")
+				prm.curiosity *= factor;
+			else if (name == "seekDiscount")
+				prm.seekDiscount = std::min(1.0f, prm.seekDiscount * factor);
+			else if (name == "forageShare")
+				prm.forageShare *= factor;
+			else if (name == "foodPlaceMax")
+				prm.foodPlaceMax = (size_t)std::lround(prm.foodPlaceMax * factor);
+			else if (name == "commitment")
+				prm.commitment *= factor;
+			else if (name == "temperature")
+				prm.temperature *= factor;
+			else {
+				static std::set<std::string> told;
+				if (told.insert(name).second)
+					fmt::print("Warning: brain-profiles.txt names a setting the mind does not have: {}\n", name);
+			}
+		}
 		if (getenv("OPENC2E_WATCH_CREATURES"))
 			fmt::print("[homeostat] creature {} temperament z {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f}: fear w {:.2f} lonely w {:.2f} bored w {:.2f} anger w {:.2f} "
 					   "curiosity {:.3f} commitment {:.3f} worse/better learning {:.2f}/{:.2f}\n",
@@ -796,6 +829,10 @@ class HomeostatMind : public CreatureMind {
 			overrideParams();
 		}
 		wrapW = p.wrapWidth;
+		if (p.brainSettings && *p.brainSettings != brainSettings) {
+			brainSettings = *p.brainSettings;
+			temperamentApplied = false;
+		}
 		applyTemperament(p.temperament, p.creatureId);
 		MindOutput out = tickChoose(p);
 		if (gaitWalk && (out.decision == 10 || out.decision == 11))
@@ -1567,7 +1604,7 @@ class HomeostatMind : public CreatureMind {
 	// (learned numbers are written to 4 significant figures: at 9, with 145
 	// creatures, the save was 28 MB; 2026-11-13)
 	std::string saveState() const override {
-		std::string s = fmt::format("statever 6\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
+		std::string s = fmt::format("statever 7\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
 		s += "drift";
 		for (float f : drift)
 			s += fmt::format(" {:.4g}", f);
@@ -1878,6 +1915,21 @@ class HomeostatMind : public CreatureMind {
 				fmt::print("[homeostat] relearning sleep (learned while sleep could be refused)\n");
 			}
 		}
+		if (version < 7) {
+			// Saved while lobe 7 was read as heard nouns (it is attention):
+			// its instincts waited. Unmark them, so they are read again.
+			for (auto it = appliedInstincts.begin(); it != appliedInstincts.end();) {
+				int v[6] = {0, 0, 0, 0, 0, 0};
+				bool seven = false;
+				if (std::sscanf(it->c_str(), "%d.%d.%d.%d.%d.%d", &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]) == 6)
+					for (int i = 0; i < 3; i++)
+						seven |= v[2 * i] == 7;
+				if (seven)
+					it = appliedInstincts.erase(it);
+				else
+					++it;
+			}
+		}
 		if (version < 6) {
 			// Saved while instincts naming a sense, or no drive, waited
 			// (dormant); their genes were marked read all the same. Unmark
@@ -1952,6 +2004,7 @@ class HomeostatMind : public CreatureMind {
 	std::map<int, Expectation> innateDefaults; // by decision: instincts about any object
 	std::set<std::string> appliedInstincts;
 	int activeInstincts = 0, dormantInstincts = 0;
+	std::vector<std::pair<std::string, float>> brainSettings; // BrainProfiles: applied in applyTemperament
 	// inborn nudges (Params::innateNudge): from instincts that name no drive
 	struct Nudge {
 		std::string signature;

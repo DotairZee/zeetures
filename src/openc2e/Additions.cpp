@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 namespace Additions {
 
 fs::path userPath(const std::string& name) {
-	if (name == "pheromones.txt" || name == "breed-names.txt")
+	if (name == "pheromones.txt" || name == "breed-names.txt" || name == "brain-profiles.txt")
 		return getUserDataDir() / name;
 	return getUserDataDir() / "Additions" / name;
 }

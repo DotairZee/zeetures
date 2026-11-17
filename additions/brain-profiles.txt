@@ -1,0 +1,38 @@
+# Brain add-ons of custom Creatures 2 genomes (Zeetures; creatures/BrainProfiles.h)
+#
+# Custom genomes add lobes to the game's ten. Zeetures does not run the
+# original brain, so each added lobe gets a role, and each role multiplies
+# some of the mind's settings. Players and pack makers can change this file:
+# put a copy in the user data folder (beside pheromones.txt) and it is read
+# instead of the built-in one.
+#
+#   role NAME | what it does | setting factor setting factor ...
+#   memory setting ...   (scaled by the square root of how much bigger the
+#                         concept lobe is than the game's 640 cells, at most 2x)
+#   genome NAME | BY | x y w h ROLE ; x y w h ROLE ... | setting factor ...
+#
+# A genome's lobes are matched by their place and size in the brain (the
+# Genetics Kit's x, y, width, height). A lobe no genome names gets a role
+# from its wiring: one whose output reaches the attention lobe learns what
+# to attend to (taught by punishment only: what to avoid), one that reaches
+# the decision lobe weighs actions, one that reads the drives notices them
+# change. The settings are the homeostat mind's Params (HomeostatMind.cpp).
+
+role object-good | learns which things are worth attending to | betterLearning 1.2 curiosity 1.1
+role object-bad | learns which things to stay clear of | worseLearning 1.2
+role drive-change | notices its needs easing or worsening | unfeltLearningShare 1.4 learningRate 1.1
+role search | searches for what it needs | seekDiscount 1.2 forageShare 1.15
+role choice | weighs what an action on a thing will do | learningRate 1.15
+
+memory foodPlaceMax
+
+# Lummox JR's Nova Subterra (1999): search and sub-attention decide what is
+# good and bad to pay attention to; afterdrive and change notice a drive
+# rising or falling suddenly (the author's notes).
+genome Nova Subterra | Lummox JR | 24 32 8 5 object-good ; 50 36 5 8 object-bad ; 24 40 6 3 drive-change ; 24 44 6 3 drive-change
+
+# Lis Morris and Chris Double's Canny Norns (v1.2): the echo lobe identifies
+# a need, the search lobe searches for what will satisfy it, the choice lobe
+# picks what to attend to; "much more curious than a normal norn" (the
+# authors' notes).
+genome Canny Norns | Lis Morris and Chris Double | 55 37 6 3 drive-change ; 11 22 10 4 search ; 24 23 4 10 object-good | curiosity 1.2
