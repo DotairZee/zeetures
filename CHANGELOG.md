@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 425 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 426 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [Unreleased](#unreleased): 1 commits, 16 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
@@ -15,6 +16,16 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Unreleased
+
+Changes since the last version.
+
+### 16 November 2026
+
+#### Changelog: version 0.9.0 in the version list
+
+[`ebceaa06`](https://github.com/DotairZee/zeetures/commit/ebceaa067fdeef2df98112d2f4125c56be6f5a94)
 
 ## Version 0.9.0
 
