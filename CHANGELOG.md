@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 443 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 444 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 11 commits, 17 November 2026 to 18 November 2026
+- [Unreleased](#unreleased): 12 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
@@ -23,6 +23,18 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Creature's View: less eye, more checkered see-through
+
+[`159722fc`](https://github.com/DotairZee/zeetures/commit/159722fc08ca1587fd9fa5335366e8ab739303bd)
+
+The owner (2026-11-18) asked for more of C2's checkered transparency
+and for the eye to take up less of the view. The opening now reaches
+past the view's sides (lids only take the corners and the top and
+bottom edges), the pupil is at least 72% of the iris, a grendel's slit
+is wider, and the white, the inner iris and a 40 px band along the
+lids' edge are a 50% checkerboard the world shows through. Shut lids
+stay solid, so sleep is still dark.
 
 #### Creature's View: seen through a living eye, centred on what it looks at
 
