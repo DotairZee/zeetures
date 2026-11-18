@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 460 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 461 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 7 commits, 18 November 2026
+- [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
@@ -20,11 +20,18 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.12.1
 
-Changes since the last version.
+Fixes: creatures no longer fall down the cage lift's shaft stepping into the tunnel at its middle stop; wide creatures by the pipe machine stay in the room map; a creature stuck on the seabed tries the jump pad beside it instead of pacing (the way out of water ignores floors it cannot step up to); hatchlings stand where their egg lay instead of in the floor; the far-east lift balcony's railing keeps creatures in; a developer aid prints creatures' fuel chemicals.
 
 ### 18 November 2026
+
+#### Version 0.12.1
+
+[`44dd6505`](https://github.com/DotairZee/zeetures/commit/44dd6505ad840e5acfaaddfd9f2d7d5f934f80eb)
+
+Help &gt; About and the README's Status now say 0.12.1 (owner,
+2026-11-18): fixes since 0.12.0, no new features.
 
 #### Far-east lift balcony: its railing keeps creatures in
 

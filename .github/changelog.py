@@ -93,6 +93,12 @@ VERSIONS = [
      "the seas throw creatures in an arc onto the shore instead of into the sky; creatures fall to far floors "
      "instead of jumping there in one step (at the desert lift's shaft and the treehouse platform's end); no "
      "fruit bushes on the water's surface."),
+    ("0.12.1", "44dd6505",
+     "Fixes: creatures no longer fall down the cage lift's shaft stepping into the tunnel at its middle stop; "
+     "wide creatures by the pipe machine stay in the room map; a creature stuck on the seabed tries the jump pad "
+     "beside it instead of pacing (the way out of water ignores floors it cannot step up to); hatchlings stand "
+     "where their egg lay instead of in the floor; the far-east lift balcony's railing keeps creatures in; a "
+     "developer aid prints creatures' fuel chemicals."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
