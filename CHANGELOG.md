@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 456 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 457 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 3 commits, 18 November 2026
+- [Unreleased](#unreleased): 4 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
@@ -25,6 +25,17 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Developer aid: OPENC2E_WATCH_FUEL prints creatures' fuel chemicals
+
+[`da115e1b`](https://github.com/DotairZee/zeetures/commit/da115e1b3b3dc0dc322dcb89281e2b8caf610919)
+
+Every N ticks, each C2 creature's moniker, hunger, glucose, glycogen,
+starch, fat, adipose tissue, energy, ATP and ADP. The CAOS CHEM reading
+cannot tell creatures apart in C2 (UNID is not readable there). Used to
+trace 1RUW in Home, which starts with almost no fat (adipose 6, the
+others about 210), finds two meals in the upper desert and treetops,
+and faints at about tick 3900 in every copy.
 
 #### Room 108 reaches down over the rock under its floor
 
