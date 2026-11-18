@@ -230,6 +230,10 @@ struct MindOutput {
 	// and again.
 	std::vector<std::string> thought;
 	std::string thoughtKey;
+	// an action tried mostly for its novelty (curiosity) has just turned out
+	// well (+1) or badly (-1), or 0: what shapes a young creature's
+	// curiosity (Temperament.h, EXPERIENCE_EXPLORE)
+	int noveltyOutcome = 0;
 };
 
 // What a mind holds, for the Mind Kit (openc2e addition, owner 2026-11-11):

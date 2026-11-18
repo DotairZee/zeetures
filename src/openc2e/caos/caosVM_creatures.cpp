@@ -1324,6 +1324,7 @@ void c_NEW_CREA_c1(caosVM* vm) {
 		Temperament t;
 		if (Temperaments::load(realmoniker, t)) {
 			c->temperament = t;
+			c->temperamentBorn = t;
 			fmt::print("* {} hatched with a temperament from its parents: {} ({})\n", realmoniker, Temperaments::describe(t), Temperaments::toLine(t));
 		}
 	}

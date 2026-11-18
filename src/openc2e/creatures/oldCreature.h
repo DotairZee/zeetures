@@ -151,6 +151,12 @@ class oldCreature : public Creature {
 	int fertilityOverride = -1;
 	// inborn temperament, drawn at hatching (creatures/Temperament.h); saved
 	Temperament temperament;
+	// the one it was born with, and how life has shifted it while young
+	// (Temperament.h, TemperamentDrift); temperament is the two together
+	Temperament temperamentBorn;
+	TemperamentDrift temperamentDrift;
+	std::array<float, NUM_TRAITS> driftLogged{};
+	void temperamentExperience(int kind, float size); // CreatureAI.cpp
 	// how strongly it fattens in autumn and saves in winter, inherited
 	// (Temperament.h, SeasonalRhythm); saved with the world
 	float seasonalZ = SeasonalRhythm::roll();

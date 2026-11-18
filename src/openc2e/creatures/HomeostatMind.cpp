@@ -835,6 +835,8 @@ class HomeostatMind : public CreatureMind {
 		}
 		applyTemperament(p.temperament, p.creatureId);
 		MindOutput out = tickChoose(p);
+		out.noveltyOutcome = pendingNovelty;
+		pendingNovelty = 0;
 		if (gaitWalk && (out.decision == 10 || out.decision == 11))
 			out.decision += 16; // walk-a / walk-b: the same way, by gait
 		out.say = chooseSpeech(p, normalize(p.drives));
@@ -2005,6 +2007,7 @@ class HomeostatMind : public CreatureMind {
 	std::set<std::string> appliedInstincts;
 	int activeInstincts = 0, dormantInstincts = 0;
 	std::vector<std::pair<std::string, float>> brainSettings; // BrainProfiles: applied in applyTemperament
+	int pendingNovelty = 0; // MindOutput::noveltyOutcome, for the next tick
 	// inborn nudges (Params::innateNudge): from instincts that name no drive
 	struct Nudge {
 		std::string signature;
@@ -4632,6 +4635,10 @@ class HomeostatMind : public CreatureMind {
 		}
 		float reward = startD - D;
 		const float expectedReward = current.want; // what it expected (the same scale: overall drive eased)
+		// tried mostly for its novelty: how it turned out shapes a young
+		// creature's curiosity (Temperament.h, EXPERIENCE_EXPLORE)
+		if (current.novelty > current.want && current.novelty > 0.0f && std::fabs(reward) > 0.02f)
+			pendingNovelty = reward > 0 ? 1 : -1;
 
 		// an object action that keeps getting nowhere: stop offering it here
 		if (current.category >= 0) {

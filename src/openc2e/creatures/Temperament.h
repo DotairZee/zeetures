@@ -56,6 +56,29 @@ struct Temperament {
 	int percent(int t) const;
 };
 
+// Drift with experience while young (owner, 2026-11-17: young and tapering,
+// up to half a step for each kind of experience and about a full step for
+// several together, weighted by the evidence). Early hardship in rats moves
+// anxiety-like behavior by about 0.3-0.5 standard deviations, more when
+// hardships stack (Wang et al. 2020; Bonapersona et al. 2019); care and
+// handling make calmer adults; winner and loser effects in fights are real
+// but fade within days (Yan et al. 2024); personality is most changeable
+// early and settles by early adulthood (Bleidorn et al. 2022). Each kind of
+// experience keeps its own shift of each trait; a creature's temperament is
+// its inborn one plus these shifts.
+enum TemperamentExperience {
+	EXPERIENCE_HURT, // hurt or frightened: more reactive, less bold, less sociable
+	EXPERIENCE_COMFORT, // comforted, played with: calmer, bolder, more sociable
+	EXPERIENCE_FIGHT, // in a fight: quicker to anger (partly fades back)
+	EXPERIENCE_EXPLORE, // the new turned out well (+) or badly (-): more or less curious
+	NUM_EXPERIENCES
+};
+struct TemperamentDrift {
+	std::array<std::array<float, NUM_TRAITS>, NUM_EXPERIENCES> shift{};
+	float fightRecent = 0; // the fading part of the fight shift (of temper)
+	bool any() const;
+};
+
 namespace Temperaments {
 
 const char* traitName(int t); // "boldness"
@@ -83,6 +106,21 @@ void store(const std::string& genomeName, const Temperament& t);
 // A few words: the one or two strongest traits ("bold and curious, quick
 // to anger"), or "even-tempered" when none stands out.
 std::string describe(const Temperament& t);
+
+// How changeable a creature of this life stage is (0 baby, 1 child, 2
+// adolescent, 3 youth ...): 1, 0.6, 0.25, then 0 (settled).
+float plasticity(int stage);
+// An experience of a kind, of a size (about 1 for a hard slap, a bad fall,
+// a pat; negative for EXPERIENCE_EXPLORE gone badly), at a life stage.
+// Returns true when it moved the temperament.
+bool experience(TemperamentDrift& d, int kind, float size, int stage);
+// the fights' fading part eases back, per mind tick
+void fadeFights(TemperamentDrift& d);
+// the inborn temperament plus the drift (each trait at most about a full
+// step from where it was born, within the usual +-2)
+Temperament withDrift(const Temperament& born, const TemperamentDrift& d);
+std::string driftLine(const TemperamentDrift& d);
+bool driftFromLine(const std::string& line, TemperamentDrift& d);
 
 // World saving: "z0 z1 ... z6", and back.
 std::string toLine(const Temperament& t);

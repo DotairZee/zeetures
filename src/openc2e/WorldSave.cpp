@@ -681,6 +681,9 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			if (a->babymoniker != 0)
 				out << "baby " << genomeNameFromInt(a->babymoniker) << "\n";
 			out << "temperament " << Temperaments::toLine(c->temperament) << "\n";
+			out << "temperament-born " << Temperaments::toLine(c->temperamentBorn) << "\n";
+			if (c->temperamentDrift.any())
+				out << "temperament-drift " << Temperaments::driftLine(c->temperamentDrift) << "\n";
 			out << "seasonal " << fmt::format("{:.3f}", c->seasonalZ) << "\n";
 			if (c->fertilityOverride >= 0)
 				out << "fertility " << c->fertilityOverride << "\n"; // the owner's setting (Breeder's Kit)
@@ -816,6 +819,7 @@ struct SavedCreature {
 	std::vector<std::pair<int, int>> words; // word-list number, familiarity
 	std::vector<std::string> bonds; // bond lines (Relationships::fromLine)
 	std::string temperament; // Temperaments::toLine; empty: keep the one drawn at hatching
+	std::string temperamentBorn, temperamentDrift; // (saves before 2026-11-17 have neither: born is the temperament)
 	std::string seasonal; // its seasonal rhythm (SeasonalRhythm); empty: keep the one it has
 	int fertility = -1; // the owner's setting: -1 the world's, 0 fertile, 1 infertile
 	float x = 0, y = 0;
@@ -934,6 +938,11 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 	}
 	if (!s.temperament.empty())
 		Temperaments::fromLine(s.temperament, c->temperament);
+	c->temperamentBorn = c->temperament;
+	if (!s.temperamentBorn.empty())
+		Temperaments::fromLine(s.temperamentBorn, c->temperamentBorn);
+	if (!s.temperamentDrift.empty())
+		Temperaments::driftFromLine(s.temperamentDrift, c->temperamentDrift);
 	if (!s.seasonal.empty())
 		c->seasonalZ = std::clamp((float)std::atof(s.seasonal.c_str()), -2.0f, 2.0f);
 	c->fertilityOverride = s.fertility;
@@ -1209,6 +1218,10 @@ bool LoadWorldState(const fs::path& worlddir) {
 				l >> c->baby;
 			else if (key == "temperament")
 				std::getline(l, c->temperament);
+			else if (key == "temperament-born")
+				std::getline(l, c->temperamentBorn);
+			else if (key == "temperament-drift")
+				std::getline(l, c->temperamentDrift);
 			else if (key == "seasonal")
 				std::getline(l, c->seasonal);
 			else if (key == "fertility")

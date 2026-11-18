@@ -150,7 +150,104 @@ bool fromLine(const std::string& line, Temperament& t) {
 	return true;
 }
 
+namespace {
+// what each kind of experience does to each trait (boldness, curiosity,
+// energy, sociability, temper, reactivity, steadiness), and how strongly
+// the kind counts (the evidence: hurt and comfort fully, fights less,
+// exploring least)
+const float effect[NUM_EXPERIENCES][NUM_TRAITS] = {
+	{-0.7f, 0.0f, 0.0f, -0.5f, 0.0f, 1.0f, 0.0f}, // hurt
+	{0.6f, 0.0f, 0.0f, 0.6f, 0.0f, -1.0f, 0.0f}, // comfort
+	{0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f}, // fights
+	{0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}, // exploring (signed)
+};
+const float weight[NUM_EXPERIENCES] = {1.0f, 1.0f, 0.5f, 0.35f};
+const float STEP = 0.003f; // one full-size experience, before stage, weight and saturation (0.03 moved babies near the cap in minutes)
+const float KIND_CAP = 0.5f; // each kind's shift of a trait, at most
+const float TOTAL_CAP = 1.0f; // all kinds together
+const float FIGHT_LASTING = 0.3f; // the share of a fight's shift that stays
+const float FIGHT_FADE = 0.9995f; // the rest, per mind tick (half-life about 1400 mind ticks)
+} // namespace
+
+float plasticity(int stage) {
+	static const float p[7] = {1.0f, 0.6f, 0.25f, 0.0f, 0.0f, 0.0f, 0.0f};
+	return stage >= 0 && stage < 7 ? p[stage] : 0.0f;
+}
+
+bool experience(TemperamentDrift& d, int kind, float size, int stage) {
+	if (kind < 0 || kind >= NUM_EXPERIENCES)
+		return false;
+	float step = STEP * weight[kind] * plasticity(stage) * std::clamp(size, -2.0f, 2.0f);
+	if (step == 0.0f)
+		return false;
+	bool moved = false;
+	for (int t = 0; t < NUM_TRAITS; t++) {
+		float delta = step * effect[kind][t];
+		if (delta == 0.0f)
+			continue;
+		float& s = d.shift[kind][t];
+		// harder to move further the more it has moved that way already
+		float room = 1.0f - std::fabs(s) / KIND_CAP * ((s > 0) == (delta > 0) ? 1.0f : 0.0f);
+		delta *= std::max(0.0f, room);
+		if (kind == EXPERIENCE_FIGHT) {
+			s += delta * FIGHT_LASTING;
+			d.fightRecent = std::clamp(d.fightRecent + delta * (1.0f - FIGHT_LASTING), -KIND_CAP, KIND_CAP);
+		} else
+			s += delta;
+		s = std::clamp(s, -KIND_CAP, KIND_CAP);
+		moved |= delta != 0.0f;
+	}
+	return moved;
+}
+
+void fadeFights(TemperamentDrift& d) {
+	d.fightRecent *= FIGHT_FADE;
+	if (std::fabs(d.fightRecent) < 1e-4f)
+		d.fightRecent = 0.0f;
+}
+
+Temperament withDrift(const Temperament& born, const TemperamentDrift& d) {
+	Temperament t = born;
+	for (int i = 0; i < NUM_TRAITS; i++) {
+		float total = 0.0f;
+		for (int k = 0; k < NUM_EXPERIENCES; k++)
+			total += d.shift[k][i];
+		if (i == TEMPER)
+			total += d.fightRecent;
+		t.z[i] = std::clamp(born.z[i] + std::clamp(total, -TOTAL_CAP, TOTAL_CAP), -2.0f, 2.0f);
+	}
+	return t;
+}
+
+std::string driftLine(const TemperamentDrift& d) {
+	std::string s;
+	for (int k = 0; k < NUM_EXPERIENCES; k++)
+		for (int i = 0; i < NUM_TRAITS; i++)
+			s += fmt::format("{}{:.4f}", s.empty() ? "" : " ", d.shift[k][i]);
+	return s + fmt::format(" {:.4f}", d.fightRecent);
+}
+
+bool driftFromLine(const std::string& line, TemperamentDrift& d) {
+	std::istringstream l(line);
+	TemperamentDrift r;
+	for (int k = 0; k < NUM_EXPERIENCES; k++)
+		for (int i = 0; i < NUM_TRAITS; i++)
+			if (!(l >> r.shift[k][i]))
+				return false;
+	l >> r.fightRecent;
+	d = r;
+	return true;
+}
+
 } // namespace Temperaments
+
+bool TemperamentDrift::any() const {
+	for (auto& k : shift)
+		for (float f : k)
+			if (f != 0.0f)
+				return true;
+	return fightRecent != 0.0f;
+}
 
 namespace SeasonalRhythm {
 

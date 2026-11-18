@@ -799,6 +799,41 @@ void oldCreature::handleStimulus(const StimulusEvent& s) {
 		// and its feeling for whoever did it moves (Relationships.h)
 		Relationships::felt(parentagent, this, felt.source.get(), felt.feltChem, felt.feltAmount);
 	}
+	// what it does to a young creature's temperament (Temperament.h): hurt
+	// (pain, injury, punishment), comfort (reward, needs for pleasure and
+	// company and play eased), and a fight when another creature hurt it
+	// (both of them)
+	if (engine.version == 2) {
+		float harm = 0, help = 0;
+		for (size_t k = 0; k < 4; k++) {
+			int ch = felt.feltChem[k], am = felt.feltAmount[k];
+			if (am <= 0)
+				continue;
+			float f = am / 128.0f;
+			if (ch == 18 || ch == 31) // pain, injury
+				harm += f;
+			else if (ch == 53) // punishment
+				harm += 0.7f * f;
+			else if (ch == 52) // reward
+				help += f;
+			else if (ch == 36 || ch == 42 || ch == 45) // need for pleasure, loneliness, boredom eased
+				help += 0.7f * f;
+		}
+		if (harm > 0)
+			temperamentExperience(EXPERIENCE_HURT, harm);
+		// comfort and play come from the hand, other creatures and toys, not
+		// from a meal (eating rewards too)
+		Agent* from = felt.source.get();
+		bool caring = from && from != parentagent && (from == (Agent*)world.hand() || dynamic_cast<CreatureAgent*>(from) || from->category == 13);
+		if (help > 0 && caring)
+			temperamentExperience(EXPERIENCE_COMFORT, help);
+		if (harm > 0 && felt.source && felt.source.get() != parentagent)
+			if (auto* other = dynamic_cast<CreatureAgent*>(felt.source.get()))
+				if (auto* oc = dynamic_cast<oldCreature*>(other->getCreature())) {
+					temperamentExperience(EXPERIENCE_FIGHT, harm);
+					oc->temperamentExperience(EXPERIENCE_FIGHT, 0.5f * harm);
+				}
+	}
 	// the sense cell it names (a pat lights "patted", a slap "slapped" ...)
 	if (felt.feltSense >= 0 && felt.feltSense < 32 && felt.feltSenseIntensity > 0)
 		senseFromStimuli[felt.feltSense] = std::max(senseFromStimuli[felt.feltSense], (float)std::min(felt.feltSenseIntensity, 255));
@@ -1253,6 +1288,28 @@ MindPerception oldCreature::buildPerception() {
 	return p;
 }
 
+// Temperament drift (Temperament.h): an experience of a kind and size, at
+// this creature's life stage. Its temperament is its inborn one plus the
+// drift; the mind takes it up on its next tick. A shift of another 0.1 in
+// any trait is logged.
+void oldCreature::temperamentExperience(int kind, float size) {
+	static const bool off = getenv("OPENC2E_NO_TEMPERAMENT_DRIFT") != nullptr; // (A/B testing)
+	if (off || engine.version != 2 || size == 0.0f)
+		return;
+	if (!Temperaments::experience(temperamentDrift, kind, size, (int)stage))
+		return;
+	temperament = Temperaments::withDrift(temperamentBorn, temperamentDrift);
+	for (int i = 0; i < NUM_TRAITS; i++) {
+		float moved = temperament.z[i] - temperamentBorn.z[i];
+		if (std::fabs(moved - driftLogged[i]) >= 0.1f) {
+			driftLogged[i] = moved;
+			std::string who = world.history ? world.history->findMoniker(genome) : std::string();
+			fmt::print("* {}'s temperament: {} {:+.2f} since it hatched ({})\n", who, Temperaments::traitName(i), moved,
+				moved > 0 ? Temperaments::highWord(i) : Temperaments::lowWord(i));
+		}
+	}
+}
+
 // C2 under a mind: the genome's emitters that read the replaced brain's
 // cells keep working, as their authors wired them, because those cells are
 // set here from what the creature perceives and does (the brain itself does
@@ -1297,6 +1354,16 @@ void oldCreature::updateBrainCells(MindPerception& p) {
 		}
 	}
 	p.brainSettings = &brainSettings;
+	// a bad fall, or nearly drowning, shapes a young temperament too
+	if (p.fellHurt > 0)
+		temperamentExperience(EXPERIENCE_HURT, 2.0f * p.fellHurt);
+	if (p.inWater && !p.breathesWater && p.breath < 0.3f)
+		temperamentExperience(EXPERIENCE_HURT, 0.05f);
+	if (temperamentDrift.fightRecent != 0.0f) {
+		Temperaments::fadeFights(temperamentDrift);
+		if (ticks % 200 == 0)
+			temperament = Temperaments::withDrift(temperamentBorn, temperamentDrift);
+	}
 
 	std::array<float, 32> s{};
 	for (int i = 0; i < 32; i++) {
@@ -1479,6 +1546,8 @@ void oldCreature::tickMind() {
 	}
 	wasriding = p.riding;
 	MindOutput out = [&] { PROFILE_SCOPE("creature: mind"); return mind->tick(p); }();
+	if (out.noveltyOutcome != 0)
+		temperamentExperience(EXPERIENCE_EXPLORE, (float)out.noveltyOutcome);
 	if (out.passOver) {
 		passedover.erase(std::remove_if(passedover.begin(), passedover.end(), [&](auto& po) { return !po.first || ticks >= po.second || po.first == out.passOver; }), passedover.end());
 		passedover.push_back({out.passOver, ticks + 2000}); // about 3 minutes

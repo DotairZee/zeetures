@@ -1505,6 +1505,24 @@ static void TemperamentPage() {
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s ... %s", Temperaments::lowWord(i), Temperaments::highWord(i));
 	}
+	// how life has shifted it since it hatched (Temperament.h, drift while
+	// young; owner, 2026-11-17)
+	{
+		std::string shifts;
+		int n = 0;
+		for (int i = 0; i < NUM_TRAITS; i++) {
+			float moved = t.z[i] - c->temperamentBorn.z[i];
+			if (std::fabs(moved) < 0.05f)
+				continue;
+			shifts += fmt::format("{}{} ({:+.2f})", n++ ? ", " : "", moved > 0 ? Temperaments::highWord(i) : Temperaments::lowWord(i), moved);
+		}
+		ImGui::Spacing();
+		if (n)
+			KitNote("Since it hatched, life has made %s more: %s. Young creatures are shaped by being hurt or frightened, comforted and played with, fights, and how trying new things turns out; from youth on their temperament is settled.",
+				name.c_str(), shifts.c_str());
+		else
+			KitNote("Its temperament is still the one it hatched with. Young creatures are shaped by being hurt or frightened, comforted and played with, fights, and how trying new things turns out; from youth on it is settled.");
+	}
 	// the seasonal rhythm (Temperament.h, SeasonalRhythm): inherited, unlike
 	// the traits above (owner, 2026-11-16)
 	ImGui::Spacing();
