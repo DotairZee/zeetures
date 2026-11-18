@@ -77,7 +77,7 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 
 	std::string dataString(unsigned int _stage, bool sprite, unsigned int dataspecies, unsigned int databreed);
 
-	unsigned int gaiti;
+	unsigned int gaiti = 0; // (was left unset: a fresh or loaded creature read its gait gene past its 8 poses once)
 	float paceCredit = 0; // C2: walking pace by life stage (stagePace)
 	static float stagePace(int stage);
 	void stepTiredness();

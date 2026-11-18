@@ -1518,6 +1518,22 @@ void SkeletalCreature::tick() {
 		if (watchwalk && (walking || approaching) && world.tickcount % 20 == 0)
 			fmt::print("* WATCH WALK t{} unid {} walking {} approaching {} edgeStop {} falling {} at {:.0f},{:.0f}\n", world.tickcount, unid,
 				walking, approaching, edgeStop, (bool)falling, x, y);
+		// C2: a creature walking (WALK) goes the way it faces. The world's
+		// walk scripts face it first (POSE 59 east, 60 west), and the walk's
+		// poses face "towards IT", which reads its direction; that was set
+		// only by approaching something (or DIRN) and not saved, so after a
+		// load it was north, every walk pose became the facing-out pose and
+		// the creature walked in place (6KBY, starving and drowning in the
+		// west sea airlock's pool, 2026-11-17), and later each walk went the
+		// way of whatever it had last approached, not the way chosen. 153 of
+		// Home's 155 creatures walk by gait (HomeostatMind's gaitWalk).
+		static const bool oldWalkDirection = getenv("OPENC2E_OLD_WALK_DIRECTION") != nullptr; // (A/B testing)
+		if (engine.version == 2 && walking && !approaching && !oldWalkDirection) {
+			if (posedirection == 0)
+				direction = 2; // east
+			else if (posedirection == 1)
+				direction = 3; // west
+		}
 		if ((walking || approaching) && !edgeStop) {
 			// TODO: we shouldn't bother with this unless it changed?
 			setGaitGene(creature->getGait());
