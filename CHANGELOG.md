@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 436 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 437 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 4 commits, 17 November 2026
+- [Unreleased](#unreleased): 5 commits, 17 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
@@ -23,6 +23,10 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 17 November 2026
+
+#### Citations: Bleidorn 2022 listed once, noting it also informed temperament drift
+
+[`29cac0fb`](https://github.com/DotairZee/zeetures/commit/29cac0fb8ac6d746078bdd837a925f9ebce86c36)
 
 #### Temperament drifts with experience while young
 
