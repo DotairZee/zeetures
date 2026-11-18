@@ -137,11 +137,25 @@ Result read(const genomeFile& genome) {
 	Result r;
 	std::vector<oldBrainLobeGene*> lobes;
 	std::vector<bioReceptorGene*> brainReceptors;
+	// chemicals made as needs change: products of reactions that use a drive
+	// chemical or its increase or decrease chemical (C2: drives 1-17, their
+	// increases 18-34, decreases 35-51), and what emitters reading the drive
+	// levels make (Canny's echo chemicals 200-216 are made each from a
+	// drive and its decrease, as the drive eases)
+	std::set<int> driveMade;
+	auto isDriveChem = [](int c) { return c >= 1 && c <= 51; };
 	for (auto& g : genome.genes) {
 		if (auto* l = dynamic_cast<oldBrainLobeGene*>(g.get()))
 			lobes.push_back(l);
 		else if (auto* rc = dynamic_cast<bioReceptorGene*>(g.get()); rc && rc->organ == 0)
 			brainReceptors.push_back(rc);
+		else if (auto* re = dynamic_cast<bioReactionGene*>(g.get())) {
+			if (isDriveChem(re->reactant[0]) || isDriveChem(re->reactant[1]))
+				for (int k = 2; k < 4; k++)
+					if (re->reactant[k] != 0 && !isDriveChem(re->reactant[k]))
+						driveMade.insert(re->reactant[k]);
+		} else if (auto* em = dynamic_cast<bioEmitterGene*>(g.get()); em && em->organ == 1 && em->tissue == 5)
+			driveMade.insert(em->chemical);
 	}
 	if (lobes.size() > (size_t)CONCEPT_LOBE)
 		r.memory = std::max(1.0f, lobes[CONCEPT_LOBE]->width * lobes[CONCEPT_LOBE]->height / GAME_CONCEPT_CELLS);
@@ -198,7 +212,7 @@ Result read(const genomeFile& genome) {
 		if (a.role.empty()) {
 			// from its wiring
 			int slot0 = -1, slot1 = -1;
-			bool chemFed = false;
+			std::set<int> feeding; // chemicals its cells take in
 			for (auto* rc : brainReceptors) {
 				if (rc->tissue != i)
 					continue;
@@ -207,10 +221,17 @@ Result read(const genomeFile& genome) {
 				else if (rc->locus == 14)
 					slot1 = rc->chemical;
 				else if (rc->locus >= 19)
-					chemFed = true;
+					feeding.insert(rc->chemical);
 			}
+			size_t fromDrives = std::count_if(feeding.begin(), feeding.end(), [&](int c) { return driveMade.count(c) > 0; });
 			bool toAttention = reaches(i, ATTENTION_LOBE, 0), toDecision = reaches(i, DECISION_LOBE, 0);
-			if (toAttention) {
+			// (its output also reaches the brain through the perception lobe
+			// when its gene's perception flag is set)
+			bool toPerception = l->perceptflag != 0;
+			if (toAttention && reads(i, DRIVE_LOBE)) {
+				a.role = "search";
+				a.why = "reads the drives and feeds attention: what it needs, then what to look for";
+			} else if (toAttention) {
 				bool punished = slot1 >= 0 && slot0 < 0;
 				a.role = punished ? "object-bad" : "object-good";
 				a.why = punished ? "feeds attention, taught by punishment" : "feeds attention";
@@ -220,8 +241,13 @@ Result read(const genomeFile& genome) {
 			} else if (readsDrives(i, 0)) {
 				a.role = "drive-change";
 				a.why = "reads the drives";
-			} else
-				a.why = chemFed ? "a chemical relay that nothing reads" : "nothing reads it";
+			} else if (!feeding.empty() && fromDrives * 2 >= feeding.size()) {
+				a.role = "drive-change";
+				a.why = fmt::format("fed by chemicals made as its needs change ({} of {}){}", fromDrives, feeding.size(), toPerception ? ", into perception" : "");
+			} else if (!feeding.empty())
+				a.why = toPerception ? "fed by chemicals, into perception" : "a chemical relay that nothing reads";
+			else
+				a.why = toPerception ? "goes into perception only" : "nothing reads it";
 		}
 		if (!a.role.empty()) {
 			auto it = t.roles.find(a.role);

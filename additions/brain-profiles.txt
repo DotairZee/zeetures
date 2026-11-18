@@ -12,11 +12,19 @@
 #   genome NAME | BY | x y w h ROLE ; x y w h ROLE ... | setting factor ...
 #
 # A genome's lobes are matched by their place and size in the brain (the
-# Genetics Kit's x, y, width, height). A lobe no genome names gets a role
-# from its wiring: one whose output reaches the attention lobe learns what
-# to attend to (taught by punishment only: what to avoid), one that reaches
-# the decision lobe weighs actions, one that reads the drives notices them
-# change. The settings are the homeostat mind's Params (HomeostatMind.cpp).
+# Genetics Kit's x, y, width, height). Most genomes need no entry here: a
+# lobe no genome names gets a role from its wiring, in this order:
+#   reads the drive lobe and its output reaches attention: search
+#   its output reaches the attention lobe (directly or through other added
+#     lobes): object-good, or object-bad when only punishment teaches it
+#   its output reaches the decision lobe: choice
+#   reads the drives (directly or through other added lobes): drive-change
+#   its cells are fed mostly by chemicals made as needs change (reactions
+#     using a drive or its increase or decrease chemical): drive-change
+# From wiring alone Nova Subterra and Canny Norns get the roles below. An
+# entry here is for what wiring cannot show (an author's stated extras, like
+# Canny's curiosity) or to override a guess. The settings are the homeostat
+# mind's Params (HomeostatMind.cpp).
 
 role object-good | learns which things are worth attending to | betterLearning 1.2 curiosity 1.1
 role object-bad | learns which things to stay clear of | worseLearning 1.2
