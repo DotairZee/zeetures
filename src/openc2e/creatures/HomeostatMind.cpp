@@ -430,7 +430,7 @@ struct Params {
 	// devices worth trying to get out (C2 categories are genus numbers):
 	// call buttons (2), machines such as the airlock pump (3), doors such as
 	// the airlock's (9), lifts (27)
-	std::vector<int> escapeDevices{2, 3, 9, 27, 33}; // (33 teleporters: see starveLeave)
+	std::vector<int> escapeDevices{2, 3, 9, 13, 27, 33}; // (33 teleporters: see starveLeave; 13 toys: the sea jump pads throw onto a shore, sea-pads.cos)
 
 	// Boats (owner request): walking a trip into water is avoided; with a boat
 	// in view, rowing that way is worth the trip. C2 boats (category 31): the

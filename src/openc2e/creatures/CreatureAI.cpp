@@ -1243,14 +1243,32 @@ MindPerception oldCreature::buildPerception() {
 				};
 				std::vector<Step> queue;
 				std::vector<Room*> seen{here.get()};
+				// sideways only to a room whose floor is within a step of the
+				// floor walked from (40 px, as steps up are walked): the
+				// submarine's berth (room 149, floor 906) lies east of the
+				// east sea's middle (151) and west of its east end (150), 270
+				// px above the seabed, so a norn there was sent east from one
+				// and west from the other, back and forth along the seabed for
+				// good, and never tried the jump pad beside it (2026-11-18)
+				static const bool oldDryWay = getenv("OPENC2E_OLD_DRY_WAY") != nullptr; // (to compare)
+				// (floors as walked: a water room's bed may slope up to its
+				// exit, as the pond's ramp does; at the edge the two share)
+				auto withinStep = [&](Room& n, Room& from, float fromFloor) {
+					if (oldDryWay)
+						return true;
+					bool west = n.x_right <= from.x_left + 2;
+					float edge = west ? (float)n.x_right - 1.0f : (float)n.x_left + 1.0f;
+					return n.floorYatX(edge) + 40.0f >= fromFloor;
+				};
+				float feet = parentagent->y + parentagent->getHeight();
 				for (auto& [n, door] : here->getDoors()) {
 					if (door.perm < fit)
 						continue;
 					int way = 0;
 					if (westOf(*n))
-						way = 10;
+						way = withinStep(*n, *here, feet) ? 10 : 0;
 					else if (eastOf(*n))
-						way = 11;
+						way = withinStep(*n, *here, feet) ? 11 : 0;
 					else if (std::max(n->y_left_floor, n->y_right_floor) <= ceiling + 2)
 						way = 0; // up: not on foot (lifts are handled by the mind)
 					else if (std::min(n->y_left_ceiling, n->y_right_ceiling) + 2 >= floor)
@@ -1279,6 +1297,14 @@ MindPerception oldCreature::buildPerception() {
 						unsigned int rceiling = std::min(st.room->y_left_ceiling, st.room->y_right_ceiling);
 						if (nfloor <= rceiling + 2)
 							continue;
+						// (sideways only: a room below is reached by going down)
+						bool side = n->x_right <= st.room->x_left + 2 || n->x_left + 2 >= st.room->x_right;
+						if (side) {
+							bool west = n->x_right <= st.room->x_left + 2;
+							float edge = west ? (float)st.room->x_left + 1.0f : (float)st.room->x_right - 1.0f;
+							if (!withinStep(*n, *st.room, st.room->floorYatX(edge)))
+								continue;
+						}
 						queue.push_back({n, st.way, st.depth + 1});
 					}
 				}
