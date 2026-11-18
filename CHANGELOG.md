@@ -1,12 +1,13 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 431 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 433 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 6 commits, 16 November 2026 to 17 November 2026
+- [Unreleased](#unreleased): 1 commits, 17 November 2026
+- [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
@@ -22,6 +23,26 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 17 November 2026
+
+#### Changelog: version 0.10.0 in the version list
+
+[`c964646f`](https://github.com/DotairZee/zeetures/commit/c964646f32b5cfe0bee4fbb63ec08b5f2bbd290d)
+
+## Version 0.10.0
+
+Temperament partly passed on from the parents. Old custom genomes work: eggs with an author's description read and hatchable (and Import Genome takes eggs); the genomes' sense, drive, decision and attention cells set from what the creature does, so their emitters work (the norns' kin pheromones among them); instincts naming senses or no drive become inborn nudges judged by the genome's reward and punishment chemicals; lobe 7 read as attention (Canny Norns' eating instincts); brain profiles giving added lobes roles in the mind (Nova Subterra and Canny Norns known, others read from their wiring), shown in the Breeder's Kit.
+
+### 17 November 2026
+
+#### Version 0.10.0
+
+[`6e872d9a`](https://github.com/DotairZee/zeetures/commit/6e872d9adecdd85bab83e937c5fc40b39bef546e)
+
+Help &gt; About and the README's Status now say 0.10.0 (owner, 2026-11-17).
+The README also mentions temperament passed on from the parents and old
+custom genome packs working: their chemistry and instincts, including
+those tied to the original brain's cells, and roles for the brain lobes
+they add.
 
 #### Brain profiles for custom genomes; lobe 7 read as attention
 
