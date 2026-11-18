@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 450 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 451 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 4 commits, 18 November 2026
+- [Unreleased](#unreleased): 5 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
@@ -24,6 +24,41 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Creatures fall to far floors instead of jumping there
+
+[`a4177aea`](https://github.com/DotairZee/zeetures/commit/a4177aeaa3900d56edc7b8cf1757dc4fdec6acf5)
+
+Found from BIG MOVE logs (the TODO's engine-moved creatures): resolving
+each engine move's stack in a 19-minute copy of Home showed
+SkeletalCreature::snapDownFoot setting creatures on a floor far from
+their foot in one step, two ways:
+
+- Up 243-301 px at the desert lift's shaft (room 12, x 5735-5870, a
+  passable floor line near its top): a foot placed afresh (let out, or
+  moved by a script) below the floor line skipped the walk-beneath rule,
+  which needed a previous foot room, and was set on the line above. The
+  rule now applies to a fresh foot too (OPENC2E_OLD_SHAFT_PLACE for the
+  old way).
+- Down 300-620 px where a tall room stays the foot's room while the foot
+  is past its edge (the east end of the treehouse's upper platform, room
+  51 ending at x 3917 with room 52 running down to the cave floor; the
+  open lift shaft at x 4183-4300 under its upper stop): no guard turned
+  this into a fall, as one does for a new room or a fresh foot. A drop
+  of more than 20 px in the same room is now a fall
+  (OPENC2E_OLD_SAME_ROOM_SNAP for the old way), so it is seen, hurts by
+  height and is learned like any other drop.
+
+Tests: a norn placed in the desert shaft now stays on its floor (875)
+instead of rising to 580; one placed at the platform's end falls to the
+cave floor over several ticks instead of in one step. Two matched pairs
+of Home copies (5 and 8 min, new vs old): engine snaps 0/0 vs 1/3,
+sealed-pocket rescues 1/3 vs 3/15, hungry 12/10 vs 10/10, dead 0/2 vs
+1/1, meals 2445/3278 vs 2349/3608 (mixed, within copy noise); falls of
+200 px or more 240/139 vs 150/132, the snaps that are falls now.
+
+The other engine moves seen were the sea launchers (2 13 1), left for
+the owner to choose (TODO).
 
 #### Submarine scoops up swimmers along its path
 
