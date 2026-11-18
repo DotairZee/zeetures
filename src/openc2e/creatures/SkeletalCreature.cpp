@@ -1200,7 +1200,11 @@ void SkeletalCreature::snapDownFoot() {
 
 	bool belowfloor = false;
 	float newy = downfootroom->floorYatX(footx);
-	if (engine.version == 2 && hadroom && y > newy && downfootroom->floorvalue > 0) {
+	// (also for a foot placed afresh: a norn let out or moved by a script
+	// into the desert lift's shaft, room 12, below its floor line, was set
+	// up on that line, 243-301 px above; 2026-11-18, found from BIG MOVE)
+	static const bool oldShaftPlace = getenv("OPENC2E_OLD_SHAFT_PLACE") != nullptr; // (to compare)
+	if (engine.version == 2 && (hadroom || !oldShaftPlace) && y > newy && downfootroom->floorvalue > 0) {
 		// TODO: hilar hack: cope with walking below floors.
 		// C2 rooms with floor points have a ground line inside the room. Where that
 		// ground is passable (a floor value above 0, e.g. a lift shaft whose bottom
@@ -1231,6 +1235,17 @@ void SkeletalCreature::snapDownFoot() {
 		// floor at the far east was moved 313 px down in one step
 		// (2026-11-12). Not at a world's start (the save's places stand).
 		if (engine.version == 2 && !hadroom && engine.worldready && !carriedby && !invehicle && (newy - (footy - y)) - y > 20) {
+			falling = true;
+			return;
+		}
+		// and one whose foot room is the same but whose floor there is far
+		// below (a tall room kept as the foot's room while the foot is
+		// past its edge, the "forcing" above): norns at the east end of the
+		// treehouse's upper platform (room 51 ends at x 3917; room 52
+		// beside it runs down to the cave floor) were set 470 px down in
+		// one step, no fall (2026-11-18, found from BIG MOVE)
+		static const bool oldSameRoomSnap = getenv("OPENC2E_OLD_SAME_ROOM_SNAP") != nullptr; // (to compare)
+		if (engine.version == 2 && !oldSameRoomSnap && hadroom && engine.worldready && !carriedby && !invehicle && (newy - (footy - y)) - y > 20) {
 			falling = true;
 			return;
 		}
