@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 446 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 448 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [Unreleased](#unreleased): 2 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
@@ -17,6 +18,33 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Unreleased
+
+Changes since the last version.
+
+### 18 November 2026
+
+#### Fruit bushes: none on the water's surface
+
+[`a1028535`](https://github.com/DotairZee/zeetures/commit/a1028535c8d919a7a093815f30c8e9bf39906bf6)
+
+The owner (2026-11-17) found a seasonal fruit bush standing on the sea
+by the boats. A fruit that rots where a sea room's top is near its base
+(from 45 px above to 12 below; the sea's rooms start about 30 px above
+the waterline drawn) no longer sprouts: floating at the surface, or on
+a boat that later sails off, which is the likeliest way the first one
+got there (fruit dropped into the sea sinks to the floor and becomes
+kelp, as before). At load, any bush that is not potted standing at the
+surface is removed; the potted bush on the dock planks stays.
+
+Test (fruit held at the surface, 24 per copy, two copies each): bushes
+on the surface afterwards 0 and 0 with the rule, 2 and 2 without (the
+old bush and a kelp at the surface).
+
+#### Changelog
+
+[`d5c33dda`](https://github.com/DotairZee/zeetures/commit/d5c33ddaf0a71a9aeeac6f9b868efaf8e6232789)
 
 ## Version 0.11.0
 
