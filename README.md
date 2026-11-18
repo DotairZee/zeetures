@@ -27,7 +27,7 @@ Unpack it and start the program (still called `openc2e`) with the path to your C
 * **Windows:** `openc2e.exe -d "C:\Program Files (x86)\Steam\steamapps\common\Creatures The Albian Years\Creatures 2"`
 * **macOS:** `./openc2e -d "$HOME/Games/Creatures The Albian Years/Creatures 2"`. Steam for Mac won't install the game, but it will download its files: see [On a Mac](#on-a-mac) below.
 
-The creatures use Zeetures's own mind (`--mind original` gives them openc2e's unfinished copy of the original brain, which does very little). Zeetures's world additions (map fixes, script fixes and new objects) are built into the program and applied to every Creatures 2 world as it loads. All 39 run on a fresh install. Their pictures that Zeetures draws itself (walkways, lifts, bushes, the memorial stone and more) come with the download, in its `zeetures-art` folder: keep it beside the program. The pictures that are cut from the game's own (the waterwheel stream, the west sea airlock's rock, the volcano passage and trunk, the treehouse lift, the waterfall path, a pillar's foot) are made by Zeetures on your machine, from your own copy of the game, when it starts.
+The creatures use Zeetures's own mind (`--mind original` gives them openc2e's unfinished copy of the original brain, which does very little). Zeetures's world additions (map fixes, script fixes and new objects) are built into the program and applied to every Creatures 2 world as it loads. All 42 run on a fresh install. Their pictures that Zeetures draws itself (walkways, lifts, bushes, the memorial stone and more) come with the download, in its `zeetures-art` folder: keep it beside the program. The pictures that are cut from the game's own (the waterwheel stream, the west sea airlock's rock, the volcano passage and trunk, the treehouse lift, the waterfall path, a pillar's foot) are made by Zeetures on your machine, from your own copy of the game, when it starts.
 
 Your worlds, saves and settings are kept in the user folder, never in the game's folder:
 
@@ -64,7 +64,7 @@ Linux is where Zeetures is played and tested every day; the Windows and macOS bu
 
 ## Status
 
-Zeetures is at version 0.11.0 (shown in Help > About). It is a work in progress, but Creatures 2 is playable from start to finish: creatures hatch, eat, learn, talk, breed, grow old and die, and worlds are saved. The published research behind the creatures' mind and behaviors is listed in [CITATIONS.md](CITATIONS.md) (also in Help > About).
+Zeetures is at version 0.12.0 (shown in Help > About). It is a work in progress, but Creatures 2 is playable from start to finish: creatures hatch, eat, learn, talk, breed, grow old and die, and worlds are saved. The published research behind the creatures' mind and behaviors is listed in [CITATIONS.md](CITATIONS.md) (also in Help > About).
 
 ### What works
 
@@ -74,7 +74,7 @@ Zeetures is at version 0.11.0 (shown in Help > About). It is a work in progress,
 * **Old custom genomes.** Genome packs made for the original game (genomes, eggs, exported creatures) hatch and work: their chemistry and instincts run as written, including those tied to the original brain's cells, and lobes they add to the brain (Nova Subterra's, Canny Norns', and others read from their wiring) get matching roles in the new mind, listed in `brain-profiles.txt`.
 * **Saving.** Multiple worlds with a chooser and autosave. Creatures, their minds, eggs, family records and every object in the world are saved.
 * **The interface.** Every C2 kit rebuilt inside the game window (Health, Science, Breeder's, Owner's, Observation, Mind, Graveyard, Chronicles, Ecology, the Agent Injector and the Hatchery), status-bar notices, a Creature's View seen through the creature's own eye (its pupil, lids and coloring, centered on what it is looking at), a speed control, zoom from 50% to 300%, pinch to zoom, scroll bars and full screen.
-* **The world.** Dozens of map fixes, new routes and objects (seasonal fruit bushes, airlocks, walkways, a lab lift), scents that drift between rooms, a nutrient cycle in the soil (the dead feed it, and it seeps downhill), outdoor light that follows day and night, and seasons that change creatures' appetite and metabolism, breeding, bonds, rest and play, shaped by their life stage.
+* **The world.** Dozens of map fixes, new routes and objects (seasonal fruit bushes, airlocks, walkways, a lab lift), ways out of the seas for swimmers (the submarine picks them up, the west sea's airlock draws in everyone near it, the sea jump pads throw them onto the shore), scents that drift between rooms, a nutrient cycle in the soil (the dead feed it, and it seeps downhill), outdoor light that follows day and night, and seasons that change creatures' appetite and metabolism, breeding, bonds, rest and play, shaped by their life stage.
 * **Stability.** Fixes for an audio deadlock, several crashes and hangs, a game tick about seven times faster in a crowded world, and about half the CPU use of 0.8.0.
 
 ### Not done yet

@@ -65,7 +65,7 @@ skip this, put the line "breed-packs off" in your user folder's
 settings.txt.
 
 Zeetures's world additions are built in and applied to every Creatures 2
-world: all 39 of them. The pictures Zeetures draws itself are in the
+world: all 42 of them. The pictures Zeetures draws itself are in the
 zeetures-art folder (keep it beside the program); the ones cut from the
 game's own pictures (the waterwheel stream, the west sea airlock's rock,
 the volcano passage and trunk, the treehouse lift, the waterfall path, a
