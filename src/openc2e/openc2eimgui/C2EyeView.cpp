@@ -275,10 +275,14 @@ static void drawThroughEye(ImTextureID view, ImVec2 o, Agent* c, Creature* cr) {
 	}
 	const EyeLook& L = e.look;
 	const float mx = W / 2.0f, my = H / 2.0f;
-	const float irisR = H * 0.47f;
-	const float pupilR = irisR * (0.5f + 0.42f * e.pupil); // round pupils (at their smallest still half the iris, to see by)
-	const float slitW = irisR * (0.10f + 0.80f * e.pupil); // a grendel's slit, half width at its middle
-	const float eyeW = W * 0.5f, eyeH = H * 0.5f * e.open;
+	// (owner, 2026-11-18: less eye, more view: the opening reaches past
+	// the view's sides so the lids only take its corners, the pupil is
+	// large, and the white, the iris and the lids' inner edge are a
+	// checkered screen the world shows through, in C2's way)
+	const float irisR = H * 0.55f;
+	const float pupilR = irisR * (0.72f + 0.25f * e.pupil); // round pupils (at their smallest still most of the iris)
+	const float slitW = irisR * (0.30f + 0.65f * e.pupil); // a grendel's slit, half width at its middle
+	const float eyeW = W * 0.68f, eyeH = H * 0.82f * e.open;
 	uint8_t* px = e.img.data.data();
 	for (int y = 0; y < H; y++)
 		for (int x = 0; x < W; x++) {
@@ -289,11 +293,16 @@ static void drawThroughEye(ImTextureID view, ImVec2 o, Agent* c, Creature* cr) {
 			float across = std::clamp(dx / eyeW, -1.0f, 1.0f);
 			float half = eyeH * std::sqrt(std::max(0.0f, 1.0f - across * across));
 			float lidEdge = std::fabs(dy) - half;
+			bool checker = ((x + y) & 1) == 0; // every other pixel, as C2 drew see-through
 			if (lidEdge > 0 || std::fabs(dx) >= eyeW) {
 				float shade = std::clamp(1.0f - lidEdge / 120.0f, 0.55f, 1.0f) * (0.92f + 0.08f * noise2(x / 2, y / 2));
-				if (lidEdge < 5 && std::fabs(dx) < eyeW)
+				if (lidEdge < 4 && std::fabs(dx) < eyeW)
 					shade *= 0.35f; // the lash line
 				R = L.lid[0] * shade, G = L.lid[1] * shade, B = L.lid[2] * shade, A = 255;
+				// the lids' inner edge: checkered, solid further out (and
+				// solid when shut, so sleep is dark)
+				if (e.open > 0.2f && lidEdge >= 4 && lidEdge < 40 && checker)
+					A = 0;
 			} else {
 				bool inPupil;
 				if (L.kind == 1) {
@@ -317,10 +326,13 @@ static void drawThroughEye(ImTextureID view, ImVec2 o, Agent* c, Creature* cr) {
 					float rim = std::clamp((r - irisR * 0.85f) / (irisR * 0.15f), 0.0f, 1.0f);
 					float k = fib * (1.0f - 0.55f * rim);
 					R = L.iris[0] * k, G = L.iris[1] * k, B = L.iris[2] * k, A = 255;
+					// a screen over the iris: half clear, solid at its dark rim
+					if (rim < 0.6f && checker)
+						A = 0;
 				} else {
-					// the white, shaded toward the lids
+					// the white, shaded toward the lids: half see-through
 					float s = std::clamp(1.0f - (std::fabs(dy) / std::max(1.0f, half)) * 0.25f - (std::fabs(dx) / eyeW) * 0.2f, 0.6f, 1.0f);
-					R = 245 * s, G = 238 * s, B = 230 * s, A = 255;
+					R = 245 * s, G = 238 * s, B = 230 * s, A = checker ? 0 : 255;
 				}
 			}
 			// a glint, up and to the left of the pupil
