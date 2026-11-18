@@ -559,6 +559,23 @@ std::vector<uint8_t> C2EggWithGenomes(const std::vector<uint8_t>& egg, const std
 	return out;
 }
 
+std::vector<uint8_t> GenomeFromExport(const std::vector<uint8_t>& exp) {
+	static const char tag[] = "CGenome";
+	auto at = std::search(exp.begin(), exp.end(), tag, tag + 7);
+	if (at == exp.end())
+		return {};
+	static const char gene[] = "gene", gend[] = "gend";
+	auto first = std::search(at, exp.end(), gene, gene + 4);
+	if (first == exp.end())
+		return {};
+	auto end = std::search(first, exp.end(), gend, gend + 4);
+	if (end == exp.end())
+		return {};
+	std::vector<uint8_t> g = {'d', 'n', 'a', '2'};
+	g.insert(g.end(), first, end + 4);
+	return g;
+}
+
 std::vector<uint8_t> BreedBaseGenome(const BreedInfo& b) {
 	std::vector<std::string> tries;
 	if (!b.genome.empty())

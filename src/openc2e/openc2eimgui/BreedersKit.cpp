@@ -416,22 +416,6 @@ bool KitReadInstaller(const std::vector<uint8_t>& exe, std::vector<std::pair<std
 // genes, without the genome file's "dna2" header, ending in "gend". Breeds
 // that come without a genome file (goat norns, Kai norns) still have their
 // sample creatures' genomes here; this makes a genome file of the first.
-static std::vector<uint8_t> genomeFromExport(const std::vector<uint8_t>& exp) {
-	static const char tag[] = "CGenome";
-	auto at = std::search(exp.begin(), exp.end(), tag, tag + 7);
-	if (at == exp.end())
-		return {};
-	static const char gene[] = "gene", gend[] = "gend";
-	auto first = std::search(at, exp.end(), gene, gene + 4);
-	if (first == exp.end())
-		return {};
-	auto end = std::search(first, exp.end(), gend, gend + 4);
-	if (end == exp.end())
-		return {};
-	std::vector<uint8_t> g = {'d', 'n', 'a', '2'};
-	g.insert(g.end(), first, end + 4);
-	return g;
-}
 
 static void gather(const fs::path& path, ImportPlan& plan) {
 	std::error_code ec;
@@ -621,7 +605,7 @@ static void planImport(const std::vector<std::string>& picked) {
 			plan->cobs.push_back(i); // an object that comes with the breed (an update, a toy)
 		} else if (ext == ".exp") {
 			// a sample creature: its genome, for the breed's eggs
-			auto g = genomeFromExport(f.data);
+			auto g = GenomeFromExport(f.data);
 			if (g.empty()) {
 				plan->skipped.push_back(i);
 				continue;

@@ -209,8 +209,14 @@ static void ImportGenome(const std::string& path) {
 		s_import_message = fmt::format("Made an egg from {}.", name);
 		return;
 	}
+	// an exported creature (.exp): its genome
+	if (d.size() >= 4 && std::memcmp(d.data(), "dna2", 4) != 0) {
+		auto g = GenomeFromExport(d);
+		if (!g.empty())
+			d = std::move(g);
+	}
 	if (d.size() < 8 || std::memcmp(d.data(), "dna2", 4) != 0) {
-		s_import_message = fmt::format("{} is not a Creatures 2 genome or egg.", name);
+		s_import_message = fmt::format("{} is not a Creatures 2 genome, egg or exported creature.", name);
 		return;
 	}
 	C2EggInfo egg;
@@ -1293,11 +1299,11 @@ static void DrawNursery() {
 			ImGui::SetTooltip("Each click goes to the next creature's egg in the world that has not hatched\n(laid or taken from here; not the world's own grendel and ettin eggs).");
 		ImGui::SameLine();
 		if (ImGui::Button(import)) {
-			static const SDL_DialogFileFilter filters[] = {{"Creatures 2 genomes and eggs", "gen;egg"}, {"All files", "*"}};
+			static const SDL_DialogFileFilter filters[] = {{"Creatures 2 genomes, eggs and exported creatures", "gen;egg;exp"}, {"All files", "*"}};
 			SDL_ShowOpenFileDialog(ImportGenomeChosen, nullptr, nullptr, filters, 2, nullptr, true);
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Make an egg from a genome file (.gen) or a Creatures 2 egg file (.egg) anywhere on disk.");
+			ImGui::SetTooltip("Make an egg from a genome file (.gen), a Creatures 2 egg file (.egg) or an exported creature (.exp) anywhere on disk.");
 	}
 	ImGui::Dummy(ImVec2(1, 2));
 

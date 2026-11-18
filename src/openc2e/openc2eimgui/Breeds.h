@@ -113,6 +113,11 @@ bool ReadC2Egg(const std::vector<uint8_t>& data, C2EggFile& out);
 // anything after the genomes kept); unchanged if it is not a C2 egg
 std::vector<uint8_t> C2EggWithGenomes(const std::vector<uint8_t>& egg, const std::function<std::vector<uint8_t>(const std::vector<uint8_t>&)>& fn);
 
+// The genome of an exported creature (.exp: the creature as the game saved
+// it, its genome after "CGenome"), as a genome file ("dna2..."); empty if
+// none
+std::vector<uint8_t> GenomeFromExport(const std::vector<uint8_t>& exp);
+
 // The genome a breed's eggs start from: its own (imported) or the species'
 // standard one from Genetics (norn.gen, gren.gen, ettn.gen).
 std::vector<uint8_t> BreedBaseGenome(const BreedInfo& b);
