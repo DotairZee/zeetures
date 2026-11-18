@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 434 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 435 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 2 commits, 17 November 2026
+- [Unreleased](#unreleased): 3 commits, 17 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
@@ -23,6 +23,39 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 17 November 2026
+
+#### Walking goes the way the creature faces
+
+[`a49699ee`](https://github.com/DotairZee/zeetures/commit/a49699eed6228769c13214348f627051a2c5900b)
+
+A C2 creature asked to walk (WALK, the world's walk scripts, events
+42/43) is faced first (POSE 59 east, 60 west), then takes the gait's
+poses, which face "towards IT": that reads its direction, set only by
+approaching something (or DIRN) and not saved. After a load it was
+north, so every walk pose became the facing-out pose (9 for every part)
+and the legs never strode: a creature walked in place until it next
+approached something, and afterwards each walk went the way of whatever
+it had last approached, not the way its mind chose. 153 of Home's 155
+creatures walk this way (HomeostatMind's gaitWalk, taken up after one
+plain step gets nowhere).
+
+Found through 6KBY in Home's save: let out by the west sea airlock into
+the pool under the west rock ledge, it walked in place there until it
+starved and drowned, in every test copy (seven "drownings" counted
+across the day's copies were this one creature). A copy made from its
+genome walked; moved onto dry land, it froze again.
+
+While walking (not approaching), its direction now follows the way it
+faces (east or west). With the fix 6KBY walked out of the pool by tick
+\71. OPENC2E_OLD_WALK_DIRECTION restores the old behavior (A/B testing).
+Also: the gait's pose counter (gaiti) started unset, so a fresh or
+loaded creature read its gait gene past its 8 poses once.
+
+Three matched 9-minute copies of Home, fixed vs not: hungry 43.0 / 46.0
+/ 48.8 vs 43.4 / 45.9 / 46.5, starving 24.7 / 25.7 / 27.6 vs 26.2 / 28.4
+/ 26.2; walks ending blocked 5,028 / 4,673 / 4,036 vs 5,460 / 5,123 /
+4,984; meals about 10% fewer (3,855 / 3,552 / 3,384 vs 4,248 / 3,840 /
+3,847) with hunger the same; no starvation or drowning deaths.
 
 #### Brain profiles: read search lobes and chemical-fed lobes from wiring
 
