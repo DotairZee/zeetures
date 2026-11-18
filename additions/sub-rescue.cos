@@ -1,0 +1,89 @@
+* The submarine rescues swimmers (openc2e Creatures 2 project, our own
+* script). Run by openc2e after the world loads (Additions folder); safe to
+* repeat.
+*
+* Owner, 2026-11-17 (picture submarine-rescue-path.webp): while the
+* submarine is moving along its path, it should scoop up any creature that
+* is under water anywhere near it and deliver it safely out of the water.
+*
+* The submarine (vehicle 3 1 2) runs between its docks: from the east dock
+* (x 7150-7160, top 810-820) down to a top of 935, west along the sea
+* above the seabed to x 6065, and up to the west dock (top 790); from
+* there down the shaft and east through the tunnel under the seabed (top
+* 1255) to its dock below (x 6465, the airlock, drained as it docks); and
+* back. It moves 5-10 px a tick and its box is 222 x 166. It lets its
+* passengers out at each dock, onto dry floor (NOTES: "Submarine").
+*
+* A watcher (2 1 162, every 2 ticks) looks at the submarine. While it is
+* moving (any speed), every live creature wholly under the waterline (top
+* below y 710: not one in a boat or on a dock, though the sea's rooms
+* start about 30 px above the waterline drawn) in a water room with its
+* middle within 200 px of the submarine's box is drawn toward the
+* submarine's middle, 16-24 px a step in each direction (moved by script,
+* so no fall to learn from), and once its middle is inside the box the
+* submarine takes it aboard (GPAS: the engine puts it in the cabin). It
+* rides to the next dock and is let out there with everyone else.
+enum 2 1 162 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 162 setv attr 16 mvto 5000 1350 tick 2 slow
+scrp 2 1 162 9
+  inst
+* var0 the submarine (var5 1 once found moving), var1-var4 its box
+  setv var5 0
+  enum 3 1 2
+    doif velx ne 0 or vely ne 0
+      setv var0 targ
+      setv var1 posl setv var2 post setv var3 posr setv var4 posb
+      setv var5 1
+    endi
+  next
+  doif var5 eq 0 stop endi
+* var5 2 when someone is ready to board; var6, var7 a creature's middle
+  enum 4 0 0
+    doif dead eq 0 and rtyp eq 2 and post ge 710
+      setv var6 posl addv var6 posr divv var6 2
+      setv var7 post addv var7 posb divv var7 2
+      setv var8 var1 subv var8 200
+      setv var9 var3 addv var9 200
+      doif var6 ge var8 and var6 le var9
+        setv var8 var2 subv var8 200
+        setv var9 var4 addv var9 200
+        doif var7 ge var8 and var7 le var9
+          doif var6 ge var1 and var6 le var3 and var7 ge var2 and var7 le var4
+            setv var5 2
+          else
+*           (never through the seabed: east of the shaft, x 6391, the sand
+*           at y 1175 parts the open sea from the tunnel under it, which
+*           the submarine also runs along to its dock below)
+            setv var8 0
+            doif var6 gt 6391
+              setv var9 var2 addv var9 var4 divv var9 2
+              doif var9 lt 1175 and var7 gt 1175 setv var8 1 endi
+              doif var9 gt 1175 and var7 lt 1175 setv var8 1 endi
+            endi
+            doif var8 eq 0
+            rndv var9 16 24
+*           across, toward the submarine's middle
+            setv var8 var1 addv var8 var3 divv var8 2 subv var8 var6
+            doif var8 gt var9 setv var8 var9 endi
+            negv var9
+            doif var8 lt var9 setv var8 var9 endi
+            negv var9
+            mvby var8 0
+*           and up or down
+            setv var8 var2 addv var8 var4 divv var8 2 subv var8 var7
+            doif var8 gt var9 setv var8 var9 endi
+            negv var9
+            doif var8 lt var9 setv var8 var9 endi
+            mvby 0 var8
+            setv velx 0 setv vely 0
+            endi
+          endi
+        endi
+      endi
+    endi
+  next
+  doif var5 eq 2
+    targ var0
+    gpas
+  endi
+endm
