@@ -10,8 +10,9 @@
 //     the time of day.
 //   Census: what is in the world now, by the game's own kinds of thing, and
 //     how the food is spread from west to east.
-// In this engine only temperature changes by itself (World::tickClimate);
-// the other measures keep the world file's values unless a script sets them.
+// In this engine temperature (World::tickClimate) and the nutrients
+// (World::tickNutrients) change by themselves; the other measures keep the
+// world file's values unless a script sets them. Scents include food smell.
 
 #include "C2Kits.h"
 #include "C2ToolBar.h"
@@ -62,8 +63,8 @@ const char* const MEASURE_TIP[MEASURES] = {
 	"How warm each room is (this changes: heat spreads through doorways\nand comes from fires, the volcano and heaters)",
 	"The air pressure in each room",
 	"How much radiation there is in each room",
-	"Organic nutrients in each room's soil (what plants feed on)",
-	"Inorganic nutrients in each room's soil (minerals)",
+	"Organic nutrients in each room's soil: rotting food and the dead add them,\nthey break down into minerals (faster where warm) and seep downhill",
+	"Inorganic nutrients in each room's soil (minerals): fruit bushes grow\nfaster where there are more, and draw them up",
 	"How hard the wind blows in each room",
 };
 
@@ -199,8 +200,15 @@ bool s_showCreatures = true, s_showFood = false;
 int s_scent = -1;
 bool s_scentOnWorld = false;
 
+// a scent's level in a room (0-1); one past the last pheromones.txt
+// channel is food smell (World::tickFoodScent)
 float scentOf(const Room& r, int ch) {
+	if (ch == Pheromones::channelCount())
+		return std::clamp(r.foodscent, 0.0f, 1.0f);
 	return ch >= 0 && (size_t)ch < r.scent.size() ? r.scent[ch] : 0.0f;
+}
+std::string scentName(int ch) {
+	return ch == Pheromones::channelCount() ? std::string("Food smell") : Pheromones::channelName(ch);
 }
 
 std::array<float, MEASURES> readings(const Room& r) {
@@ -366,9 +374,9 @@ void measureChooser(bool wind) {
 // the world's measures, then the scents (pheromones.txt)
 void showChooser(bool wind) {
 	int n = Pheromones::channelCount();
-	if (s_scent >= n)
+	if (s_scent > n)
 		s_scent = -1;
-	std::string current = s_scent >= 0 ? "Scent: " + Pheromones::channelName(s_scent) : MEASURE_NAME[s_measure];
+	std::string current = s_scent >= 0 ? "Scent: " + scentName(s_scent) : MEASURE_NAME[s_measure];
 	ImGui::SetNextItemWidth(230);
 	if (ImGui::BeginCombo("##show", current.c_str(), ImGuiComboFlags_HeightLarge)) {
 		for (int m = 0; m < MEASURES; m++) {
@@ -379,8 +387,12 @@ void showChooser(bool wind) {
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", MEASURE_TIP[m]);
 		}
+		ImGui::SeparatorText("Scents");
+		if (ImGui::Selectable("Food smell##scent", s_scent == n))
+			s_scent = n;
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("How strongly each room smells of food: food lying within reach gives it off, it spreads\nthrough doorways and fades, and hungry creatures follow it toward food out of sight");
 		if (n > 0) {
-			ImGui::SeparatorText("Scents");
 			for (int ch = 0; ch < n; ch++) {
 				std::string name = Pheromones::channelName(ch);
 				if (ImGui::Selectable((name + "##scent").c_str(), s_scent == ch))
@@ -513,9 +525,9 @@ void MapPage() {
 			tip += fmt::format("\n{}: {}", MEASURE_NAME[k], valueText(v, k));
 		}
 		std::string scents;
-		for (int ch = 0; ch < Pheromones::channelCount(); ch++)
+		for (int ch = 0; ch <= Pheromones::channelCount(); ch++)
 			if (float sv = scentOf(*under, ch); sv >= 0.01f)
-				scents += fmt::format("\n  {}: {:.0f}", Pheromones::channelName(ch), sv * 100.0f);
+				scents += fmt::format("\n  {}: {:.0f}", scentName(ch), sv * 100.0f);
 		if (!scents.empty())
 			tip += "\nScents (out of 100):" + scents;
 		Pin* p = pinOf(under);
@@ -533,7 +545,11 @@ void MapPage() {
 	ImGui::SameLine(0, 24);
 	ImGui::BeginGroup();
 	ImGui::TextDisabled(s_scent >= 0 ? "none to the strongest room (out of 100)" : "lowest room to highest");
-	ImGui::TextDisabled(s_scent >= 0 ? "changes as creatures give it off" : s_measure == TEMPERATURE ? "changes as heat spreads" : "stays as the world began");
+	ImGui::TextDisabled(s_scent == Pheromones::channelCount() ? "changes as food comes and goes"
+			: s_scent >= 0 ? "changes as creatures give it off"
+			: s_measure == TEMPERATURE ? "changes as heat spreads"
+			: (s_measure == ORGANIC || s_measure == INORGANIC) ? "changes as things rot, break down and grow"
+			: "stays as the world began");
 	ImGui::EndGroup();
 	ImGui::EndGroup();
 }
@@ -852,8 +868,8 @@ void DrawEcologyKit() {
 		s_showFood = getenv("OPENC2E_ECO_FOOD") != nullptr;
 		// OPENC2E_ECO_SCENT=name shows that scent (and tints the world)
 		if (const char* sc = getenv("OPENC2E_ECO_SCENT"))
-			for (int ch = 0; ch < Pheromones::channelCount(); ch++)
-				if (Pheromones::channelName(ch) == sc)
+			for (int ch = 0; ch <= Pheromones::channelCount(); ch++)
+				if (scentName(ch) == sc)
 					s_scent = ch, s_scentOnWorld = true;
 	}
 	if (!world.map) {

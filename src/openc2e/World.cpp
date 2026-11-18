@@ -903,9 +903,12 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 	// 2026-11-15): each room in view tinted by how much of the chosen scent
 	// it holds, faint to strong, so trails can be watched forming. Filled
 	// with vertical lines (the renderer draws lines only); a scent runs 0-1.
-	if (showScent >= 0 && showScent < Pheromones::channelCount()) {
+	// (one past the last channel is food smell, World::tickFoodScent)
+	if (showScent >= 0 && showScent <= Pheromones::channelCount()) {
 		static const Color palette[6] = {{255, 80, 200, 0}, {80, 200, 255, 0}, {255, 180, 40, 0}, {120, 255, 120, 0}, {200, 120, 255, 0}, {255, 90, 90, 0}};
-		Color base = palette[showScent % 6];
+		const bool food = showScent == Pheromones::channelCount();
+		Color base = food ? Color{150, 230, 60, 0} : palette[showScent % 6];
+		auto levelOf = [&](const Room& r) { return food ? r.foodscent : (size_t)showScent < r.scent.size() ? r.scent[showScent] : 0.0f; };
 		float vx0 = cam->getX(), vx1 = vx0 + cam->getWidth(), vy0 = cam->getY(), vy1 = vy0 + cam->getHeight();
 		// scaled to the strongest room in view, so the way toward a source
 		// shows wherever the scent has spread (a scent everywhere tinted
@@ -913,11 +916,11 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 		MetaRoom* mr = cam->getMetaRoom();
 		float peak = 0.0f;
 		for (const auto& r : mr->rooms)
-			if ((size_t)showScent < r->scent.size() && r->x_right >= vx0 - mr->width() && r->x_left <= vx1 + mr->width() &&
+			if (r->x_right >= vx0 - mr->width() && r->x_left <= vx1 + mr->width() &&
 				std::max(r->y_left_floor, r->y_right_floor) >= vy0 && std::min(r->y_left_ceiling, r->y_right_ceiling) <= vy1)
-				peak = std::max(peak, r->scent[showScent]);
+				peak = std::max(peak, levelOf(*r));
 		auto fill = [&](const std::shared_ptr<Room>& r, float shift) {
-			float level = (size_t)showScent < r->scent.size() ? r->scent[showScent] : 0.0f;
+			float level = levelOf(*r);
 			if (peak < 0.005f || level < 0.1f * peak)
 				return;
 			float l = std::clamp(level / peak, 0.0f, 1.0f);
