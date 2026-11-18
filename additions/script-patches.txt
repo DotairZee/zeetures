@@ -175,3 +175,18 @@ replace setv var8 targ doif ov95 eq 0 setv ov95 1 new: simp blnk 1 0 0 0 setv cl
 scrp 2 13 1 1
 find setv velx 270 setv vely -1200
 replace setv var8 targ doif ov95 eq 0 setv ov95 1 new: simp blnk 1 0 0 0 setv cls2 2 1 163 setv attr 16 setv ov00 var8 setv ov01 ownr setv ov02 270 setv ov03 -1200 mvto 5000 1360 tick 1 targ var8 endi
+
+* A norn egg's baby stands where the egg lay (2026-11-18). The norn egg's
+* timer (2 5 2 9) set the new creature's top at the egg's middle (POSY),
+* so its feet were some 30 px under the floor the egg lay on, in the room
+* below: an egg on the floor west of the pipe room (room 158, x 5901)
+* hatched its baby into the sealed rock under it (room 160), 13 times in
+* a day's test copies. Now its feet are at the egg's bottom (the grendel
+* and ettin eggs, grendels.cos, likewise).
+scrp 2 5 2 9
+find setv var1 posy over inst
+replace setv var1 posb over inst
+
+scrp 2 5 2 9
+find drea 1 mvto var0 var1 slim
+replace drea 1 setv var2 posb subv var2 post subv var1 var2 mvto var0 var1 slim

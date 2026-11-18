@@ -44,8 +44,11 @@ scrp 2 5 4 9
   anim [34563456345634563456] over
   wait 20
   anim [3456778899] over
-  setv var0 posl setv var1 posy
-  inst new: crea var4 var3 drea 1 mvto var0 var1 slim setv grav 1
+* (the baby stands where the egg lay: its feet at the egg's bottom. The
+* game's eggs set its top at the egg's middle, its feet some 30 px under
+* the floor, in the room below; 2026-11-18)
+  setv var0 posl setv var1 posb
+  inst new: crea var4 var3 drea 1 setv var2 posb subv var2 post subv var1 var2 mvto var0 var1 slim setv grav 1
   targ ownr pose 10 tick 200
 endm
 *
@@ -73,7 +76,7 @@ scrp 2 5 3 9
   snde crak
   anim [345634563456] over
   pose 7
-  setv var1 posx setv var2 post addv var2 10
-  inst new: crea ov00 ov01 drea 1 mvto var1 var2 slim setv grav 1
+  setv var1 posx setv var2 posb
+  inst new: crea ov00 ov01 drea 1 setv var3 posb subv var3 post subv var2 var3 mvto var1 var2 slim setv grav 1
   targ ownr tick 200
 endm
