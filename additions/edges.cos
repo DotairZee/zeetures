@@ -19,3 +19,13 @@ enum 2 10 2
   doif var0 eq 0 addv attr 16 endi
   pose 2
 next
+*
+* The far-east lift's balcony (room 174, x 8040-8240, floor 1845; the cage
+* lift 3 2 3 stops at it) has a railing along its west end, but the
+* doorway west, into the open air over the volcano floor (room 173), was
+* open (255): creatures walked through the railing and fell 310 px to the
+* floor below (room 170, y ~2160), about 21 hard falls in every 5-minute
+* copy of Home (2026-11-18), the most of any drop. The doorway is now 150:
+* too small for a creature (224), as the railing shows, and still open to
+* thrown objects and flying critters.
+setv door 0 174 173 150
