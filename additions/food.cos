@@ -188,6 +188,25 @@ scrp 2 25 141 9
                 endi
               endi
             endi
+            * (nor on the water's surface: a fruit floating on the sea, with
+            * a sea room's top near its base (the room starts about 30 px
+            * above the waterline drawn), sprouts nothing; owner,
+            * 2026-11-18, a bush had grown on the sea by the boats)
+            setv var7 posl addv var7 posr divv var7 2
+            setv var6 0
+            reps 400
+              doif room var6 4 eq 2
+                doif room var6 0 le var7
+                  doif room var6 2 ge var7
+                    setv var8 room var6 1 subv var8 posb
+                    doif var8 gt -45
+                      doif var8 lt 12 setv var2 1 endi
+                    endi
+                  endi
+                endi
+              endi
+              addv var6 1
+            repe
             doif var2 eq 0
               setv var3 posl subv var3 70 setv var4 posb subv var4 107
               setv var5 ov02
@@ -292,6 +311,25 @@ scrp 2 25 142 9
                 endi
               endi
             endi
+            * (nor on the water's surface: a fruit floating on the sea, with
+            * a sea room's top near its base (the room starts about 30 px
+            * above the waterline drawn), sprouts nothing; owner,
+            * 2026-11-18, a bush had grown on the sea by the boats)
+            setv var7 posl addv var7 posr divv var7 2
+            setv var6 0
+            reps 400
+              doif room var6 4 eq 2
+                doif room var6 0 le var7
+                  doif room var6 2 ge var7
+                    setv var8 room var6 1 subv var8 posb
+                    doif var8 gt -45
+                      doif var8 lt 12 setv var2 1 endi
+                    endi
+                  endi
+                endi
+              endi
+              addv var6 1
+            repe
             doif var2 eq 0
               setv var3 posl subv var3 70 setv var4 posb subv var4 107
               setv var5 ov02
@@ -396,6 +434,25 @@ scrp 2 25 143 9
                 endi
               endi
             endi
+            * (nor on the water's surface: a fruit floating on the sea, with
+            * a sea room's top near its base (the room starts about 30 px
+            * above the waterline drawn), sprouts nothing; owner,
+            * 2026-11-18, a bush had grown on the sea by the boats)
+            setv var7 posl addv var7 posr divv var7 2
+            setv var6 0
+            reps 400
+              doif room var6 4 eq 2
+                doif room var6 0 le var7
+                  doif room var6 2 ge var7
+                    setv var8 room var6 1 subv var8 posb
+                    doif var8 gt -45
+                      doif var8 lt 12 setv var2 1 endi
+                    endi
+                  endi
+                endi
+              endi
+              addv var6 1
+            repe
             doif var2 eq 0
               setv var3 posl subv var3 70 setv var4 posb subv var4 107
               setv var5 ov02
@@ -500,6 +557,25 @@ scrp 2 25 144 9
                 endi
               endi
             endi
+            * (nor on the water's surface: a fruit floating on the sea, with
+            * a sea room's top near its base (the room starts about 30 px
+            * above the waterline drawn), sprouts nothing; owner,
+            * 2026-11-18, a bush had grown on the sea by the boats)
+            setv var7 posl addv var7 posr divv var7 2
+            setv var6 0
+            reps 400
+              doif room var6 4 eq 2
+                doif room var6 0 le var7
+                  doif room var6 2 ge var7
+                    setv var8 room var6 1 subv var8 posb
+                    doif var8 gt -45
+                      doif var8 lt 12 setv var2 1 endi
+                    endi
+                  endi
+                endi
+              endi
+              addv var6 1
+            repe
             doif var2 eq 0
               setv var3 posl subv var3 70 setv var4 posb subv var4 107
               setv var5 ov02
@@ -655,6 +731,31 @@ enum 2 25 141 kill targ next
 enum 2 25 142 kill targ next
 enum 2 25 143 kill targ next
 enum 2 25 144 kill targ next
+
+* No bush on the water's surface (owner, 2026-11-18: a bush had sprouted
+* from a fruit floating on the sea by the boats). A bush, not potted, whose
+* base has a sea room's top near it (from 45 px above to 12 below) is
+* removed; the sprouting rule above keeps new ones from taking root there.
+enum 2 4 141
+  doif ov05 ne 1
+    setv var7 posl addv var7 posr divv var7 2
+    setv var6 0 setv var5 0
+    reps 400
+      doif room var6 4 eq 2
+        doif room var6 0 le var7
+          doif room var6 2 ge var7
+            setv var8 room var6 1 subv var8 posb
+            doif var8 gt -45
+              doif var8 lt 12 setv var5 1 endi
+            endi
+          endi
+        endi
+      endi
+      addv var6 1
+    repe
+    doif var5 eq 1 kill targ endi
+  endi
+next
 
 * Sea plants (owner, 2026-11-11). A bush standing in water is made again
 * as kelp (the sea look), in place, its stage, age and picture kept; one
