@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 442 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 443 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 10 commits, 17 November 2026
+- [Unreleased](#unreleased): 11 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
@@ -21,6 +21,38 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 ## Unreleased
 
 Changes since the last version.
+
+### 18 November 2026
+
+#### Creature's View: seen through a living eye, centred on what it looks at
+
+[`e90e46e4`](https://github.com/DotairZee/zeetures/commit/e90e46e4c4403f10e5726a229e1843ca935d258f)
+
+Owner, 2026-11-18, after seeing real C2's Creature's View (its eye masks,
+bubb.s16: a norn's round pupil in a blue iris, a grendel's slit, an
+ettin's dotted sight; not used, our own art): the view through an eye,
+centred on what the creature attends to, and the eye alive.
+
+- The view glides to centre the object the creature attends to; the
+  corner brackets are gone. With nothing in mind it shows where the
+  creature is (itself left out).
+- Over it, an eye drawn here each frame (no game art): an almond
+  opening between lids, the white, an iris with fibres darkening to its
+  rim, a glint, and the pupil the view shows through. Norns have a round
+  pupil, grendels a vertical slit, ettins a round pupil seen through a
+  coarse dotted screen, denser toward its rim. Iris colours: a norn's
+  blue, a grendel's amber, an ettin's deep red, each tinted by the
+  creature's own pigment genes (red, green, blue, 128 neutral); lids in
+  each kind's skin tone.
+- The pupil narrows in bright rooms (room light, which now follows day
+  and night) and widens in the dark and with fear, easing between; a
+  round pupil is never under half the iris, to see by.
+- The lids blink every few seconds, droop as Tiredness or Sleepiness
+  passes half, and close in sleep and death.
+- Hurt or ill (Pain or Injury past 0.4): the view doubles and reddens,
+  more the worse. With its head under water: the view ripples, tinted.
+
+OPENC2E_OPEN_EYE_VIEW=2 or 3 opens it on a grendel or an ettin.
 
 ### 17 November 2026
 
