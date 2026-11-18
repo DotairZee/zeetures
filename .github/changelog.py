@@ -71,6 +71,13 @@ VERSIONS = [
      "a creature is; the research behind Zeetures listed in Help > About, with newer work beside each older "
      "source; about half the CPU use (a room lookup grid, cached record and kinship lookups, lighter status-bar "
      "and drawing work) and a built-in sampling profiler."),
+    ("0.10.0", "6e872d9a",
+     "Temperament partly passed on from the parents. Old custom genomes work: eggs with an author's description "
+     "read and hatchable (and Import Genome takes eggs); the genomes' sense, drive, decision and attention cells "
+     "set from what the creature does, so their emitters work (the norns' kin pheromones among them); instincts "
+     "naming senses or no drive become inborn nudges judged by the genome's reward and punishment chemicals; lobe "
+     "7 read as attention (Canny Norns' eating instincts); brain profiles giving added lobes roles in the mind "
+     "(Nova Subterra and Canny Norns known, others read from their wiring), shown in the Breeder's Kit."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
