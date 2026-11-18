@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 452 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 453 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 6 commits, 18 November 2026
+- [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
@@ -19,11 +19,21 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.12.0
 
-Changes since the last version.
+Ways out of the seas: the submarine picks up swimmers along its path and lets them out dry at its next dock, the west sea's airlock draws in every creature down in the sea near it, and the three jump pads in the seas throw creatures in an arc onto the shore instead of into the sky; creatures fall to far floors instead of jumping there in one step (at the desert lift's shaft and the treehouse platform's end); no fruit bushes on the water's surface.
 
 ### 18 November 2026
+
+#### Version 0.12.0
+
+[`46e2d6ae`](https://github.com/DotairZee/zeetures/commit/46e2d6aec7bb310cbdbea40eda26fff1a79d5467)
+
+Help &gt; About and the README's Status now say 0.12.0 (owner, 2026-11-18,
+after the sea jump pads). The README mentions the ways out of the seas
+(the submarine, the west airlock, the sea jump pads), and both READMEs
+now count 42 world additions; a fresh install (empty user folder) runs
+all 42, with no script errors.
 
 #### Sea jump pads throw creatures onto a shore
 

@@ -87,6 +87,12 @@ VERSIONS = [
      "seen through the creature's own eye (pupil by light and fear, blinking and drooping lids, iris tinted by its "
      "pigment genes, sight doubled when hurt and rippling underwater), centered on what it looks at, the world "
      "showing through a checkered screen."),
+    ("0.12.0", "46e2d6ae",
+     "Ways out of the seas: the submarine picks up swimmers along its path and lets them out dry at its next "
+     "dock, the west sea's airlock draws in every creature down in the sea near it, and the three jump pads in "
+     "the seas throw creatures in an arc onto the shore instead of into the sky; creatures fall to far floors "
+     "instead of jumping there in one step (at the desert lift's shaft and the treehouse platform's end); no "
+     "fruit bushes on the water's surface."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
