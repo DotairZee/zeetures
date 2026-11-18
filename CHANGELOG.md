@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 439 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 442 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 7 commits, 17 November 2026
+- [Unreleased](#unreleased): 10 commits, 17 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
@@ -23,6 +23,60 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 17 November 2026
+
+#### Hatchery: Import Genome takes exported creatures (.exp)
+
+[`79522a71`](https://github.com/DotairZee/zeetures/commit/79522a7188538ff4450f811730aca24039b6adaf)
+
+Packs such as Canny Norns v1.2 and the Akamai Canny pack ship their
+genomes inside exported creatures (.exp). The Breeder's Kit read those;
+the Hatchery's Import Genome took only .gen and .egg. The export reader
+moves to Breeds.h (GenomeFromExport: the genome after "CGenome", as a
+"dna2" genome file) and Import Genome uses it, so an .exp makes an egg
+of that creature's genome. The file chooser offers .gen, .egg and .exp.
+
+#### Creature's View: not the viewer's own speech or thought bubbles
+
+[`aeccba9b`](https://github.com/DotairZee/zeetures/commit/aeccba9b9dd13502f240c3103895bbbbaa7a0514)
+
+Owner, 2026-11-17: in Creature's View, don't show the selected
+creature's word or thought bubbles. The view already left the creature
+itself out (it does not see itself); now World::drawWorld also leaves
+out speech bubbles floating on it (Bubble, floatingagent), and
+Thoughts::draw takes a creature to skip, the one whose eyes the view
+looks through. Other creatures' bubbles still show, and the main view
+is unchanged.
+
+#### Daylight: outdoor rooms' light follows day and night
+
+[`d2314507`](https://github.com/DotairZee/zeetures/commit/d2314507f8ba91059c597ef1b7058474f6c4aa47)
+
+Every norn, grendel and ettin has a gene that raises Sleepiness in the
+dark (an emitter on the light sense, inverted). Rooms kept the world
+file's light day and night, so a cave always made a creature sleepy and
+the open air never did. Owner's choices (2026-11-17, from mockups of the
+Ecology Kit's Light map: light-mockup-which-rooms.png,
+light-mockup-how-dark.png): outdoors as the sky, night at a quarter of
+daylight.
+
+World::tickDaylight, every 50 ticks: each room's light is its own (the
+world file's, or what a script last set) times a daylight factor in
+proportion to how far outdoors it is: full by day, 0.7 at dawn, 0.6 at
+dusk, a quarter at night, fading over about 30 seconds as the sky tint
+does. How far outdoors a room is comes from SkyTint's outdoors map,
+traced from the painted sky (new SkyTint::outdoors: 0 caves and indoors
+to 1 under the sky; -1 until the background has been drawn once). Caves
+and indoor rooms keep their light, and so do rooms with a light source
+(lamps). OPENC2E_NO_DAYLIGHT turns it off (A/B testing).
+
+The Ecology Kit's Light choice says it changes with day and night
+outdoors.
+
+Three matched 9-minute copies of Home (each about one game day): total
+room light fell from 28,283 by day to 14,637 at night and came back;
+hungry 27.7 / 29.9 / 28.6 vs 24.4 / 30.1 / 28.9, starving 16.2 / 17.3 /
+17.1 vs 14.3 / 16.6 / 17.6, sleep choices 6.1-6.2% vs 5.9-7.0%; no
+starvation deaths.
 
 #### Ecology Kit: food smell as a scent; nutrient texts brought up to date
 
