@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 455 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 456 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 2 commits, 18 November 2026
+- [Unreleased](#unreleased): 3 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
@@ -25,6 +25,20 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Room 108 reaches down over the rock under its floor
+
+[`b348c346`](https://github.com/DotairZee/zeetures/commit/b348c34690462f81542eda12b4432d7d866d756b)
+
+Room 108's floor (x 1342-1473, y 1300) has 140 px of rock under it
+that was in no room. A wide creature on the boardwalk's slope just west
+(room 113, about y 1306 there) had its box's bottom corner reach east
+into that rock, outside the room map: "out of room system" exceptions
+in about a third of 5-minute copies of Home. Room 108 now reaches down
+to room 112 (1440) with its floor a line at 1300 and solid ground under
+it, as room 113 does. Test (eight creatures stood there 15 times): 32
+exceptions with the old room, none with the new. Three copies of Home:
+none; meals per 1000 ticks 459/439/465 vs 444/444/448.
 
 #### Cage lift shaft: the tunnel at its middle stop is level with the stop
 
