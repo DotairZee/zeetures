@@ -64,6 +64,16 @@ next
 *    the corridor of 1. (two of three test creatures dropped there, 2026-11-16).
 *    Creatures let out into the pool (3.) walk out over this floor, so it is
 *    closed.
+*    The rock itself is in no room, so a creature standing on that floor
+*    with the bottom of its box a few pixels under the line (walking feet
+*    and boxes sit 1-9 px low) had a corner outside the room map: "out of
+*    room system" exceptions at x 1342-1473, y 1301-1310, in about a third
+*    of 5-minute copies of Home (2026-11-18). Room 108 now reaches down to
+*    112 (1440), its floor a line at 1300 with solid ground under it, as
+*    the boardwalk's east part beside it (113, pool.cos) does.
+setv door 0 108 112 0
+room 108 1342 1140 1473 1440 room 108 4 room 108 5 room 108 6 room 108 7 room 108 8 room 108 9 room 108 12 room 108 13 room 108 14 room 108 15 room 108 16 room 108 17 room 108 19
+ssfc 108 2 0 140 131 140
 setv door 0 108 112 0
 *
 * 2. The doors (the sea door behind creatures, plane 1400; the land door
