@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 451 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 452 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 5 commits, 18 November 2026
+- [Unreleased](#unreleased): 6 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
@@ -24,6 +24,19 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Sea jump pads throw creatures onto a shore
+
+[`1fa574e6`](https://github.com/DotairZee/zeetures/commit/1fa574e650ac933d04f2cdee3fe43db5b376fd1e)
+
+The three jump pads in the seas launched creatures with a velocity
+openc2e moved in one tick: to the top of the world and straight back
+into the sea. A patch to the pad's activate script now hands each
+creature it launches (modes 1 and 2) to a carrier that throws it in an
+arc onto the dry shore the pad points at: the east dock planks, the
+west sea's east shore sand and its west beach. OV95 marks a creature in
+the air; the airlock, shelf current, submarine and boat catcher leave
+it alone.
 
 #### Creatures fall to far floors instead of jumping there
 
