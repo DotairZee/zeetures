@@ -38,6 +38,23 @@ scrp 2 4 141 9
     doif ov01 ge 150 setv ov00 2 endi
   endi
   setv var8 ov00 mulv var8 4 addv var8 sean pose var8
+  * the soil (the nutrient cycle; owner, 2026-11-17: "modestly"): each
+  * step the bush earns 75 to 125 growth (OV06) by the room's inorganic
+  * nutrient (0 to 50 and up), and a bud for each 100, so bare soil grows
+  * a quarter slower and rich soil a quarter faster; each bud draws one
+  * unit of inorganic nutrient up. A potted bush (OV05 = 1, on decks and
+  * ledges) grows in its pot's soil at the usual pace.
+  setv var1 intr
+  doif var1 gt 50 setv var1 50 endi
+  doif var1 lt 0 setv var1 0 endi
+  doif ov05 eq 1 setv var1 25 endi
+  addv ov06 75 addv ov06 var1
+  doif ov06 ge 100 subv ov06 100 gsub bud endi
+  targ ownr
+  doif ov06 ge 100 subv ov06 100 gsub bud endi
+  stop
+subr bud
+  targ ownr
   setv var9 ov00 mulv var9 3
   setv var0 0
   esee 2 25 141 addv var0 1 next
@@ -89,8 +106,13 @@ scrp 2 4 141 9
       mvto var2 var4
       tick 600
       slow
+      targ ownr
+      doif ov05 ne 1
+        doif intr gt 0 subv intr 1 endi
+      endi
     endi
   endi
+  retn
 endm
 
 * A fruit's life (pictures: 0 bud, 1 half-grown, 2 ripe, 3 overripe; 4

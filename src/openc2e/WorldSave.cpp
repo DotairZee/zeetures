@@ -36,6 +36,8 @@
 #include "Engine.h"
 #include "SpritePart.h"
 #include "World.h"
+#include "Map.h"
+#include "Room.h"
 #include "caosValue.h"
 #include "caosVM.h"
 #include "caosScript.h"
@@ -628,6 +630,12 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	// the Ecology Kit's pinned rooms
 	for (auto& [room, color] : world.history->ecologypins)
 		out << "ecology-pin " << room << " " << color << "\n";
+	// the nutrient cycle (World::tickNutrients): each room's organic and
+	// inorganic nutrients and the world file's levels they settle toward
+	if (world.map)
+		for (auto& r : world.map->getRooms())
+			if (r->ontr || r->intr || r->ontrBase > 0 || r->intrBase > 0)
+				out << fmt::format("nutrients {} {:.2f} {:.2f} {} {}\n", r->id, r->ontrf >= 0 ? r->ontrf : (float)r->ontr, r->intrf >= 0 ? r->intrf : (float)r->intr, r->ontrBase, r->intrBase);
 	// the life log (Owner's Kit): kind, tick, genus, female, stage, age, age
 	// known, old age, moniker, then the name
 	auto entry = [&](const char* key, const lifeLogEntry& e) {
@@ -1079,6 +1087,12 @@ bool LoadWorldState(const fs::path& worlddir) {
 	std::map<int, unsigned int> namecount;
 	bool namesgiven = false;
 	std::vector<std::pair<unsigned int, int>> ecologypins;
+	struct SavedNutrients {
+		unsigned int room;
+		float ontr, intr;
+		int ontrBase, intrBase;
+	};
+	std::vector<SavedNutrients> nutrients;
 	int camx = -1, camy = -1;
 	float camzoom = 1.0f;
 	bool relays_saved = false;
@@ -1148,6 +1162,10 @@ bool LoadWorldState(const fs::path& worlddir) {
 				namecount[genus] = n;
 		} else if (key == "names-given") {
 			l >> namesgiven;
+		} else if (key == "nutrients") {
+			SavedNutrients n;
+			if (l >> n.room >> n.ontr >> n.intr >> n.ontrBase >> n.intrBase)
+				nutrients.push_back(n);
 		} else if (key == "ecology-pin") {
 			unsigned int room;
 			int color;
@@ -1330,6 +1348,27 @@ bool LoadWorldState(const fs::path& worlddir) {
 	world.history->namecount = namecount;
 	world.history->namesgiven = namesgiven;
 	world.history->ecologypins = ecologypins;
+	// the nutrient cycle: the world file's levels are the rooms' own (taken
+	// before the saved ones are put back, for saves from before 2026-11-17)
+	if (world.map) {
+		for (auto& r : world.map->getRooms()) {
+			if (r->ontrBase < 0)
+				r->ontrBase = r->ontr;
+			if (r->intrBase < 0)
+				r->intrBase = r->intr;
+		}
+		for (auto& n : nutrients)
+			if (auto r = world.map->getRoom(n.room)) {
+				r->ontrf = std::clamp(n.ontr, 0.0f, 255.0f);
+				r->intrf = std::clamp(n.intr, 0.0f, 255.0f);
+				r->ontr = (int)std::lround(r->ontrf);
+				r->intr = (int)std::lround(r->intrf);
+				if (n.ontrBase >= 0)
+					r->ontrBase = n.ontrBase;
+				if (n.intrBase >= 0)
+					r->intrBase = n.intrBase;
+			}
+	}
 	for (auto& s : creatures) {
 		try {
 			restoreCreature(savedir, s, !relays_saved);

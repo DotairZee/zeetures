@@ -276,6 +276,20 @@ void Creature::die() {
 			m.died = true;
 			m.diedtick = world.worldtickcount;
 			m.diedstage = (int)stage;
+			// C2's nutrient cycle (World::tickNutrients; owner, 2026-11-17: the
+			// dead feed the soil): organic nutrient in the room where it died,
+			// more from a grown body (a baby 15, a child 25, an adolescent 35,
+			// older 50)
+			if (engine.version == 2 && world.map && parentagent && !getenv("OPENC2E_NO_NUTRIENT_CYCLE")) {
+				static const int amount[7] = {15, 25, 35, 50, 50, 50, 50};
+				float cx = parentagent->x + parentagent->getWidth() / 2.0f, cy = parentagent->y + parentagent->getHeight() / 2.0f;
+				if (auto r = world.map->roomAt(cx, cy)) {
+					int add = amount[std::clamp((int)stage, 0, 6)];
+					r->ontr = std::min(255, r->ontr + add);
+					if (r->ontrf >= 0.0f)
+						r->ontrf = std::min(255.0f, r->ontrf + add);
+				}
+			}
 			std::string cause = diedofoldage ? "old age" : !diedof.empty() ? diedof : "unknown causes";
 			censusDeaths()[cause]++;
 			size_t before = world.history->notices.size();

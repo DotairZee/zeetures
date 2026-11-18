@@ -123,3 +123,7 @@ Researched on 2026-11-11 for bonds between creatures (familiarity, liking, fear,
 - Play in juvenile Belding's ground squirrels and later boldness. *Journal of Mammalogy, 98*(4). [Link](https://bioone.org/journals/journal-of-mammalogy/volume-98/issue-4/gyx049/Play-behavior-and-responses-to-novel-situations-in-juvenile-ground/10.1093/jmammal/gyx049.full) Informed summer play, strongest in the young.
 - Nelson, R. J., & Demas, G. E. (1996). Seasonal changes in immune function. *Quarterly Review of Biology, 71*(4), 511-548. [PubMed](https://pubmed.ncbi.nlm.nih.gov/8987173/) Immunity and breeding traded off by season (not built).
 - Weil, Z. M., Borniger, J. C., Cisse, Y. M., Abi Salloum, B. A., & Nelson, R. J. (2015). Neuroendocrine control of photoperiodic changes in immune function. *Frontiers in Neuroendocrinology, 37*, 108-118. [PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC4402123) The same.
+
+## The world
+
+- Davidson, E. A., & Janssens, I. A. (2006). Temperature sensitivity of soil carbon decomposition and feedbacks to climate change. *Nature, 440*, 165-173. Decomposition speeding up with warmth, roughly doubling for each step of warming (from memory, not looked up again). Informed organic nutrient breaking down faster in warm rooms.

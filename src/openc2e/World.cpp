@@ -446,6 +446,10 @@ void World::tick() {
 			PROFILE_SCOPE("world: climate");
 			tickClimate();
 		}
+		{
+			PROFILE_SCOPE("world: nutrients");
+			tickNutrients();
+		}
 	}
 	if (engine.version < 3)
 		WorldSave::TickLifeStageChanges();
@@ -1220,6 +1224,95 @@ void World::tickClimate() {
 	for (size_t i = 0; i < rooms.size(); i++) {
 		rooms[i]->tempf = next[i];
 		rooms[i]->temp = (int)std::lround(next[i]);
+	}
+}
+
+// C2's nutrient cycle (owner's choices, 2026-11-17: a full cycle, the dead
+// feeding the soil, nutrients seeping downhill with water, saved with the
+// world). The game's own scripts add organic nutrient (ONTR) to a room as
+// things rot there and let some plants and fungi feed on it; some plants
+// need inorganic nutrient (INTR) within a range to live. Every 50 ticks:
+// - organic nutrient above the room's own level (the world file's) breaks
+//   down into inorganic, about half in one game season at the comfortable
+//   105, twice as fast for each 50 warmer (a quarter to four times);
+// - both seep through open doorways: downhill (a room whose floor is lower)
+//   a little each step, level rooms even out slowly, water rooms mix;
+// - each room settles slowly back toward its own levels (surplus leaches
+//   away, a shortfall is made good), so the game's plant habitats hold.
+// Scripts' changes are taken up as they come. Kept 0-255.
+void World::tickNutrients() {
+	static unsigned int counter = 0;
+	static const bool off = getenv("OPENC2E_NO_NUTRIENT_CYCLE") != nullptr; // (A/B testing)
+	if (off || ++counter % 50 != 0 || !map || engine.version != 2)
+		return;
+	const float breakdown = 0.0005f, settle = 0.0005f, seepDown = 0.002f, seepLevel = 0.001f, mixWater = 0.003f;
+	const auto& rooms = map->getRooms();
+	for (auto& r : rooms) {
+		if (r->ontrBase < 0)
+			r->ontrBase = r->ontr;
+		if (r->intrBase < 0)
+			r->intrBase = r->intr;
+		if (r->ontrf < 0.0f || (int)std::lround(r->ontrf) != r->ontr)
+			r->ontrf = (float)std::clamp(r->ontr, 0, 255);
+		if (r->intrf < 0.0f || (int)std::lround(r->intrf) != r->intr)
+			r->intrf = (float)std::clamp(r->intr, 0, 255);
+	}
+	std::vector<float> o(rooms.size()), in(rooms.size());
+	std::map<Room*, size_t> index;
+	for (size_t i = 0; i < rooms.size(); i++) {
+		index[rooms[i].get()] = i;
+		o[i] = rooms[i]->ontrf;
+		in[i] = rooms[i]->intrf;
+	}
+	auto floorOf = [](const Room& r) { return (float)std::max(r.y_left_floor, r.y_right_floor); };
+	for (size_t i = 0; i < rooms.size(); i++) {
+		Room& r = *rooms[i];
+		// breakdown of the surplus, faster where warm
+		float warm = std::clamp(std::pow(2.0f, ((float)r.temp - 105.0f) / 50.0f), 0.25f, 4.0f);
+		float surplus = std::max(0.0f, r.ontrf - (float)r.ontrBase);
+		float made = breakdown * warm * surplus;
+		o[i] -= made;
+		in[i] += made;
+		// settling back toward the room's own levels
+		o[i] += settle * ((float)r.ontrBase - r.ontrf) * (r.ontrf < r.ontrBase ? 1.0f : 0.0f);
+		in[i] += settle * ((float)r.intrBase - r.intrf);
+		// seeping through open doorways
+		for (auto& [n, door] : r.getDoors()) {
+			if (!n || door.perm <= 0 || n.get() == &r)
+				continue;
+			auto it = index.find(n.get());
+			if (it == index.end())
+				continue;
+			size_t j = it->second;
+			float open = std::min(door.perm, 255) / 255.0f;
+			float rate;
+			if (r.type == 2 && n->type == 2)
+				rate = mixWater; // water mixes: half each way
+			else if (floorOf(*n) > floorOf(r) + 20.0f)
+				rate = seepDown; // downhill, one way
+			else if (std::fabs(floorOf(*n) - floorOf(r)) <= 20.0f)
+				rate = seepLevel;
+			else
+				continue; // uphill: nothing
+			bool oneWay = !(r.type == 2 && n->type == 2) && floorOf(*n) > floorOf(r) + 20.0f;
+			float dO = rate * open * (oneWay ? r.ontrf : 0.5f * (r.ontrf - n->ontrf));
+			float dI = rate * open * (oneWay ? r.intrf : 0.5f * (r.intrf - n->intrf));
+			if (dO > 0) {
+				o[i] -= dO;
+				o[j] += dO;
+			}
+			if (dI > 0) {
+				in[i] -= dI;
+				in[j] += dI;
+			}
+		}
+	}
+	for (size_t i = 0; i < rooms.size(); i++) {
+		Room& r = *rooms[i];
+		r.ontrf = std::clamp(o[i], 0.0f, 255.0f);
+		r.intrf = std::clamp(in[i], 0.0f, 255.0f);
+		r.ontr = (int)std::lround(r.ontrf);
+		r.intr = (int)std::lround(r.intrf);
 	}
 }
 
