@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 459 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 460 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 6 commits, 18 November 2026
+- [Unreleased](#unreleased): 7 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
@@ -25,6 +25,20 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Far-east lift balcony: its railing keeps creatures in
+
+[`ea0b0896`](https://github.com/DotairZee/zeetures/commit/ea0b08966750914ab87441d465c1f5285bd3c1f8)
+
+The balcony at the far-east cage lift's stop (room 174, x 8040-8240,
+floor 1845) has a railing along its west end, but its doorway west into
+the open air over the volcano floor (room 173) was open (255): creatures
+walked through the railing and fell 310 px, the most common hard fall
+left (about 21 per 5-minute copy of Home). The doorway is now 150, too
+small for a creature (224) and still open to thrown objects and flying
+critters. Three matched pairs: balcony falls 1/0/0 vs 16/33/24, falls
+of 300 px or more 38/12/30 vs 44/90/58, deaths 1/0/1 vs 1/0/1, meals
+per 1000 ticks 446/422/490 vs 417/486/435.
 
 #### Hatchlings stand where their egg lay
 
