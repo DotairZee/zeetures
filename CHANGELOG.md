@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 448 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 449 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 2 commits, 18 November 2026
+- [Unreleased](#unreleased): 3 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
@@ -24,6 +24,27 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### West sea airlock: draws in everyone down in the sea
+
+[`422627db`](https://github.com/DotairZee/zeetures/commit/422627db4820ba5e217b7c79a2d5bdcdce00b9b6)
+
+The owner (2026-11-17) asked that when the west sea's seabed airlock is
+triggered it pull all creatures near it under the sea through with it,
+not only the one that set it off. When the sea door opens, every live
+creature in the west sea's water rooms (x 164-975) below y 1000 (clear
+of the band under the surface where swimmers climb out), not in the pool
+east of the rock and not already being carried by the shelf current or
+just let out, is marked (OV91) and moved to the pickup point at 16-24 px
+a tick, across at its own height and then down (the seabed falls toward
+the hatch, so the path stays in open water). The door waits for the last
+of them (up to about 9 s) before the car takes them all in together.
+
+Test (Home copy, four norns placed in the sea, one at the hatch): the
+three away from the shelf went through together into the pool and
+walked out east; the one on the shelf was carried down by the shelf
+current and went through on the next cycle. Pictures:
+west-airlock-pull.png in the project folder.
 
 #### Fruit bushes: none on the water's surface
 
