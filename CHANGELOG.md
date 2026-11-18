@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 437 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 438 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 5 commits, 17 November 2026
+- [Unreleased](#unreleased): 6 commits, 17 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
@@ -23,6 +23,49 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 17 November 2026
+
+#### The nutrient cycle: breakdown, seeping downhill, the dead feeding the soil
+
+[`cabefec1`](https://github.com/DotairZee/zeetures/commit/cabefec1deb3d1c8d14fcdf32a417c820842a4ba)
+
+C2's rooms hold organic and inorganic nutrients (ONTR, INTR). The game's
+own scripts add organic nutrient where things rot and let some plants
+and fungi feed on it; some plants live only within a range of inorganic
+nutrient. Nothing broke organic matter down, nothing moved, nothing was
+saved: organic piled up slowly, inorganic stayed as the world file set
+it, and every load reset both. Owner's choices (2026-11-17): a full
+cycle, the dead feeding the soil, nutrients seeping downhill with water,
+a modest effect on our fruit bushes.
+
+World::tickNutrients, every 50 ticks:
+- organic nutrient above a room's own level (the world file's) breaks
+  down into inorganic, about half in one game season at the comfortable
+  105, twice as fast for each 50 warmer (a quarter to four times);
+- both seep through open doorways: down to a lower floor a little each
+  step, level rooms even out slowly, water rooms mix;
+- each room settles slowly back toward its own levels (surplus leaches
+  away, a shortfall is made good), so the game's plant habitats hold.
+Scripts' changes are taken up as they come; values stay 0-255. Saved
+with the world ("nutrients ROOM organic inorganic base-organic
+base-inorganic"); saves from before take the world file's levels as the
+rooms' own.
+
+A death leaves organic nutrient in the room (a baby 15, a child 25, an
+adolescent 35, older 50).
+
+The seasonal fruit bush (food.cos) earns 75 to 125 growth a step by its
+room's inorganic nutrient (0 to 50 and up), a bud for each 100, so bare
+soil grows a quarter slower and rich soil a quarter faster, and each
+bud draws one unit up. Potted bushes on decks and ledges (OV05 = 1)
+grow at the usual pace. Fallen fruit rotting under a bush enriches its
+own soil: in a copy, inorganic nutrient under several bushes rose from 0
+to 20-75 in six minutes.
+
+OPENC2E_NO_NUTRIENT_CYCLE turns the engine part off (A/B testing).
+Three matched 9-minute copies of Home, cycle and new bushes vs neither:
+hungry 41.0 / 43.7 / 40.4 vs 42.5 / 48.2 / 43.5, starving 22.3 / 24.5 /
+24.9 vs 24.7 / 28.7 / 24.8, meals 3,484 / 3,297 / 3,695 vs 3,712 /
+4,038 / 3,357; no starvation or drowning deaths; no script errors.
 
 #### Citations: Bleidorn 2022 listed once, noting it also informed temperament drift
 
