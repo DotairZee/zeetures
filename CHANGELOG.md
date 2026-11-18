@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 458 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 459 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 5 commits, 18 November 2026
+- [Unreleased](#unreleased): 6 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
@@ -25,6 +25,21 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Hatchlings stand where their egg lay
+
+[`c37e26e1`](https://github.com/DotairZee/zeetures/commit/c37e26e15348d6efc2d0e3a2bef863a6ed8ef20a)
+
+The eggs' timers set a new creature's top at the egg's middle (POSY;
+the machine's eggs at its top plus 10), so the baby's feet were some
+30 px under the floor the egg lay on, in the room below. An egg on the
+floor west of the pipe room (room 158, x 5901) hatched its babies into
+the sealed rock under it (room 160): 13 of the day's 16 sealed-pocket
+rescues in test copies of Home. The norn egg (2 5 2 9, a script patch)
+and the grendel and ettin eggs (grendels.cos) now set the baby's feet
+at the egg's bottom. Test: the egg at x 5901 and one moved onto room
+42's floor hatched babies standing on those floors (feet 1659 and
+1858), no sealed pocket.
 
 #### Way out of water: no unreachable floors; sea jump pads are devices
 
