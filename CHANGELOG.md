@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 453 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 455 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [Unreleased](#unreleased): 2 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
@@ -18,6 +19,32 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Unreleased
+
+Changes since the last version.
+
+### 18 November 2026
+
+#### Cage lift shaft: the tunnel at its middle stop is level with the stop
+
+[`f7d80077`](https://github.com/DotairZee/zeetures/commit/f7d8007788e8bafe42576f7ceeaa8454f7402295)
+
+Creatures walking east off the cage lift's middle stop (foot at 842-847)
+met the tunnel's floor 33 px lower (879). A step down of over 20 px is
+a fall, and with the creature's body still over the open shaft, the
+fall took it down the shaft, 330 px to the bottom: 23 such falls in a
+traced 5-minute copy of Home. The tunnel's floor (room 20, ours, behind
+the rock picture) now starts level with the stop (846, 848 20 px on)
+and falls to the pond (888) at its east end. Three matched pairs:
+shaft falls 6/5/0 vs 19/15/12, falls over 200 px 132/118/136 vs
+210/166/166. A few remain (big creatures' long strides onto the steep
+east end); walking steps down of up to 40 px did not help in three more
+pairs and was not kept.
+
+#### Changelog
+
+[`ca26033e`](https://github.com/DotairZee/zeetures/commit/ca26033e80159af1884d8af66bce916e6e90a414)
 
 ## Version 0.12.0
 
