@@ -128,14 +128,71 @@ scrp 3 2 151 9
     doif var0 eq 1
       enum 2 3 247 pose 1 next
       setv ov00 1
+      * everyone else down in the sea is drawn in with it (owner,
+      * 2026-11-17: "force all creatures near that area and under the sea
+      * to be pulled through it"): every live creature in the west sea's
+      * water rooms (x 164-975) below y 1000, clear of the band under the
+      * surface where swimmers are climbing out, and not in the pool east
+      * of the rock (room 110), nor one the shelf current is carrying
+      * (OV93), nor one just let out (OV94). OV91 marks those drawn in.
+      enum 4 0 0
+        setv ov91 0
+        doif dead eq 0 and ov93 eq 0 and ov94 eq 0 and rtyp eq 2
+          setv var1 posl addv var1 posr divv var1 2
+          doif var1 ge 164 and var1 le 975 and posb ge 1000 and posb le 1400
+            setv var2 1
+            doif var1 gt 669 and posb gt 1300 setv var2 0 endi
+            doif var2 eq 1 setv ov91 1 endi
+          endi
+        endi
+      next
     endi
     stop
   endi
   * the sea door opens; the creature is taken in
   doif ov00 eq 1
     doif ov01 eq 2 enum 2 3 247 snde dor1 anim [2345] next endi
+    * those drawn in move to the pickup point (middle x 628, feet 1365),
+    * fast and not quite smoothly, as the rides do: across at their own
+    * height first (the seabed falls toward the hatch, so that stays in
+    * open water), then down; moved by script, so no fall to learn from
+    setv var0 0
+    enum 4 0 0
+      doif ov91 eq 1
+        doif dead ne 0
+          setv ov91 0
+        else
+          setv var1 posl addv var1 posr divv var1 2
+          setv var2 posr subv var2 posl divv var2 2
+          setv var3 posb subv var3 post
+          setv var5 posb
+          rndv var9 16 24
+          doif var1 ne 628
+            doif var1 lt 628
+              addv var1 var9 doif var1 gt 628 setv var1 628 endi
+            else
+              subv var1 var9 doif var1 lt 628 setv var1 628 endi
+            endi
+          else
+            doif var5 lt 1365
+              addv var5 var9 doif var5 gt 1365 setv var5 1365 endi
+            else
+              setv var5 1365
+            endi
+          endi
+          setv var4 var1 subv var4 var2
+          setv var6 var5 subv var6 var3
+          mvto var4 var6
+          setv velx 0 setv vely 0
+          doif var1 ne 628 or var5 ne 1365 setv var0 1 endi
+        endi
+      endi
+    next
     doif ov01 lt 14 stop endi
+    * (the door waits for the last of them, up to about 9 s)
+    doif var0 eq 1 and ov01 lt 90 stop endi
     gpas
+    enum 4 0 0 setv ov91 0 next
     setv ov00 2 setv ov01 0
     stop
   endi
@@ -321,5 +378,6 @@ scrp 2 1 161 9
   targ ownr
   kill ownr
 endm
-* (after a load, no currents are left and no creature counts as carried)
-enum 4 0 0 setv ov93 0 setv ov92 0 next
+* (after a load, no currents are left and no creature counts as carried
+* or drawn in)
+enum 4 0 0 setv ov93 0 setv ov92 0 setv ov91 0 next
