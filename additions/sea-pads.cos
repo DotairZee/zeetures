@@ -1,0 +1,109 @@
+* The jump pads in the seas throw creatures out onto a shore (openc2e
+* Creatures 2 project, our own script). Run by openc2e after the world loads
+* (Additions folder); safe to repeat.
+*
+* Owner, 2026-11-18 (picture sea-launcher-east.png): of the options for the
+* sea jump pads, "arc to a shore". The game has three jump pads (2 13 1) in
+* the seas set to launch: the east seabed (6820, 1048; mode 1, velocity
+* -250, -900), the west seabed (461, 1254; mode 2, +270, -1200) and the
+* west sea (830, 938; mode 1). openc2e moved a launched creature by that
+* velocity in a single tick, to the top of the world, and it fell straight
+* back into the sea where it started (one norn was flung 11 times in 8
+* minutes). A patch to the pad's own script (script-patches.txt) now hands
+* each creature it launches (modes 1 and 2) to a carrier (2 1 163) instead,
+* which throws it in an arc onto the nearest dry shore the pad points at:
+*   east seabed pad, thrown west: the dock planks above the east sea's
+*     west end (middle x 6440, feet 654; room 13, over the sealed water
+*     under the dock: west of x 6320 the planks are open to the cave below)
+*   west seabed pad, thrown east: the sand at the west sea's east shore
+*     (middle x 1090, feet 628; room 3)
+*   west sea pad, thrown west: the beach at the west sea's west shore
+*     (middle x 140, feet 633; room 128)
+* The arc takes 28 ticks: straight from where the creature stood to where it
+* lands, lifted by a parabola (its height h in the middle, enough to clear
+* the rocks between). Moved by script (MVTO with WAIT 1), so it is no fall
+* to learn from or be hurt by. OV95 marks a creature in the air (the pads,
+* the airlock, the shelf current and the submarine leave it alone). A pad
+* that has been carried out of the water throws as the game's script did.
+* The pads on land (mode 0) and mode 3 are unchanged.
+enum 2 1 163 kill targ next
+scrp 2 1 163 9
+  tick 0
+  inst
+* var0, var1 where the creature starts (its left edge and top); var2, var3
+* where it lands (likewise); var4 the arc's height; var5 the step (0-28)
+  targ ov01
+  setv var0 posl
+  setv var9 rtyp
+  targ ownr
+  doif var9 ne 2
+*   (a pad out of the water: the game's own throw)
+    setv var2 ov02
+    setv var3 ov03
+    targ ov00
+    setv velx var2
+    setv vely var3
+    setv ov95 0
+    targ ownr
+    kill ownr
+    stop
+  endi
+  doif var0 gt 5000
+    setv var2 6440
+    setv var3 654
+    setv var4 250
+  else
+    doif var0 lt 640
+      setv var2 1090
+      setv var3 628
+      setv var4 300
+    else
+      setv var2 140
+      setv var3 633
+      setv var4 250
+    endi
+  endi
+  targ ov00
+  setv var0 posl
+  setv var1 post
+  setv var9 posr
+  subv var9 posl
+  divv var9 2
+  subv var2 var9
+  setv var9 posb
+  subv var9 post
+  subv var3 var9
+  setv var5 0
+  loop
+    addv var5 1
+*   across: var0 + (var2 - var0) * step / 28
+    setv var8 var2
+    subv var8 var0
+    mulv var8 var5
+    divv var8 28
+    addv var8 var0
+*   and up: var1 + (var3 - var1) * step / 28 - 4 h step (28 - step) / 784
+    setv var9 28
+    subv var9 var5
+    mulv var9 var5
+    mulv var9 var4
+    divv var9 196
+    setv var7 var3
+    subv var7 var1
+    mulv var7 var5
+    divv var7 28
+    addv var7 var1
+    subv var7 var9
+    mvto var8 var7
+    setv velx 0
+    setv vely 0
+    wait 1
+    inst
+  untl var5 ge 28
+  setv vely 1
+  setv ov95 0
+  targ ownr
+  kill ownr
+endm
+* (after a load, no carriers are left and no creature is in the air)
+enum 4 0 0 setv ov95 0 next

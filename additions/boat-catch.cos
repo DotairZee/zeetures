@@ -17,7 +17,8 @@
 * only every 1200 ticks (2 minutes), so a creature caught this way sat in
 * the moored boat that long, with nothing to do: a passenger's mind waits
 * for the ride to end (owner's screencast 2026-11-13 15:55, the west boat).
-* The transit pod (3 6 3) is not a boat and is left out.
+* The transit pod (3 6 3) is not a boat and is left out, and so is a
+* creature flying over a boat from a sea jump pad (OV95, sea-pads.cos).
 * A creature is caught up to 40 px short of the boat's near end too: one
 * stepping off the east dock's end (x 6565) has its middle about 20 px west
 * of the moored boat's edge (6560-6600), so it fell past the boat into the
@@ -63,12 +64,12 @@ scrp 2 1 155 9
       setv var8 var0 subv var8 40
       enum 4 0 0
         setv var5 posl addv var5 posr divv var5 2
-        doif var5 gt var8 doif var5 lt var1
+        doif var5 gt var8 doif var5 lt var1 doif ov95 eq 0
           setv var6 var2 addv var6 6
           doif posb gt var6 doif posb lt var3
             setv var4 1
           endi endi
-        endi endi
+        endi endi endi
       next
       doif var4 eq 1
         enum 3 6 0 doif posl eq var0 doif post eq var2

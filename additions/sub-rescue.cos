@@ -18,11 +18,12 @@
 * moving (any speed), every live creature wholly under the waterline (top
 * below y 710: not one in a boat or on a dock, though the sea's rooms
 * start about 30 px above the waterline drawn) in a water room with its
-* middle within 200 px of the submarine's box is drawn toward the
-* submarine's middle, 16-24 px a step in each direction (moved by script,
-* so no fall to learn from), and once its middle is inside the box the
-* submarine takes it aboard (GPAS: the engine puts it in the cabin). It
-* rides to the next dock and is let out there with everyone else.
+* middle within 200 px of the submarine's box (and not in the air from a
+* sea jump pad, OV95) is drawn toward the submarine's middle, 16-24 px a
+* step in each direction (moved by script, so no fall to learn from), and
+* once its middle is inside the box the submarine takes it aboard (GPAS:
+* the engine puts it in the cabin). It rides to the next dock and is let
+* out there with everyone else.
 enum 2 1 162 kill targ next
 inst new: simp blnk 1 0 0 0 setv cls2 2 1 162 setv attr 16 mvto 5000 1350 tick 2 slow
 scrp 2 1 162 9
@@ -39,7 +40,7 @@ scrp 2 1 162 9
   doif var5 eq 0 stop endi
 * var5 2 when someone is ready to board; var6, var7 a creature's middle
   enum 4 0 0
-    doif dead eq 0 and rtyp eq 2 and post ge 710
+    doif dead eq 0 and ov95 eq 0 and rtyp eq 2 and post ge 710
       setv var6 posl addv var6 posr divv var6 2
       setv var7 post addv var7 posb divv var7 2
       setv var8 var1 subv var8 200

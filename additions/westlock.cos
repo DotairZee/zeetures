@@ -134,10 +134,11 @@ scrp 3 2 151 9
       * water rooms (x 164-975) below y 1000, clear of the band under the
       * surface where swimmers are climbing out, and not in the pool east
       * of the rock (room 110), nor one the shelf current is carrying
-      * (OV93), nor one just let out (OV94). OV91 marks those drawn in.
+      * (OV93), nor one just let out (OV94), nor one a sea jump pad has
+      * thrown (OV95, sea-pads.cos). OV91 marks those drawn in.
       enum 4 0 0
         setv ov91 0
-        doif dead eq 0 and ov93 eq 0 and ov94 eq 0 and rtyp eq 2
+        doif dead eq 0 and ov93 eq 0 and ov94 eq 0 and ov95 eq 0 and rtyp eq 2
           setv var1 posl addv var1 posr divv var1 2
           doif var1 ge 164 and var1 le 975 and posb ge 1000 and posb le 1400
             setv var2 1
@@ -281,7 +282,7 @@ inst new: simp blnk 1 0 0 0 setv cls2 2 1 160 setv attr 16 mvto 5000 1350 tick 2
 scrp 2 1 160 9
   inst
   enum 4 0 0
-    doif dead eq 0 and ov93 eq 0
+    doif dead eq 0 and ov93 eq 0 and ov95 eq 0
       setv var0 posl
       addv var0 posr
       divv var0 2

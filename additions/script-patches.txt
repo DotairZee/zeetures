@@ -160,3 +160,18 @@ replace setv ov00 0
 scrp 2 10 2 1
 find pose 1 setv ov00 1
 replace setv ov00 1
+
+* The jump pads in the seas throw creatures onto a shore (owner, 2026-11-18:
+* "arc to a shore"; sea-pads.cos). The jump pad's activate script (2 13 1)
+* gives each creature touching it a launch velocity by the pad's mode; for
+* modes 1 and 2 (the three pads in the seas) a carrier (2 1 163) now throws
+* the creature in an arc instead. OV95 marks one in the air, so it is not
+* thrown twice. The carrier keeps the game's velocity (OV02, OV03) for a pad
+* that is not in water.
+scrp 2 13 1 1
+find setv velx -250 setv vely -900
+replace setv var8 targ doif ov95 eq 0 setv ov95 1 new: simp blnk 1 0 0 0 setv cls2 2 1 163 setv attr 16 setv ov00 var8 setv ov01 ownr setv ov02 -250 setv ov03 -900 mvto 5000 1360 tick 1 targ var8 endi
+
+scrp 2 13 1 1
+find setv velx 270 setv vely -1200
+replace setv var8 targ doif ov95 eq 0 setv ov95 1 new: simp blnk 1 0 0 0 setv cls2 2 1 163 setv attr 16 setv ov00 var8 setv ov01 ownr setv ov02 270 setv ov03 -1200 mvto 5000 1360 tick 1 targ var8 endi
