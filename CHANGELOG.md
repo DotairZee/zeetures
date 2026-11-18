@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 438 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 439 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 6 commits, 17 November 2026
+- [Unreleased](#unreleased): 7 commits, 17 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
@@ -23,6 +23,23 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 17 November 2026
+
+#### Ecology Kit: food smell as a scent; nutrient texts brought up to date
+
+[`5f9d4fab`](https://github.com/DotairZee/zeetures/commit/5f9d4fab6c4aa7c2a0b242ac36281be873fa3020)
+
+The Ecology Kit's Map already showed each pheromones.txt scent and could
+tint the world by one; food smell (World::tickFoodScent), the smell
+hungry creatures forage by, was not among them. It is now the first
+scent under Show (one past the last pheromone channel), on the map, in
+a room's hover readings, and as the world tint (green), and
+OPENC2E_ECO_SCENT="Food smell" picks it for snapshots.
+
+With the nutrient cycle running, the organic and inorganic nutrient
+choices say what moves them (rotting food and the dead, breaking down
+faster where warm, seeping downhill; bushes growing faster on minerals
+and drawing them up), and their legend says they change, no longer
+"stays as the world began".
 
 #### The nutrient cycle: breakdown, seeping downhill, the dead feeding the soil
 
