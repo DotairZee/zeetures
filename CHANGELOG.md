@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 433 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 434 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 1 commits, 17 November 2026
+- [Unreleased](#unreleased): 2 commits, 17 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
@@ -23,6 +23,31 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 17 November 2026
+
+#### Brain profiles: read search lobes and chemical-fed lobes from wiring
+
+[`0933c8c7`](https://github.com/DotairZee/zeetures/commit/0933c8c74f613695f859f91dec1110b83f86d4b7)
+
+Two rules so genomes like Canny Norns get their roles without an entry
+in brain-profiles.txt (owner, 2026-11-17: the game should work these
+out, not need a translation per genome):
+- a lobe that reads the drive lobe and whose output reaches attention
+  links needs to what to look for: search (Canny's search lobe, which
+  the rules read as an attention learner);
+- a lobe fed by chemicals, most of them made as needs change (products
+  of reactions using a drive chemical or its increase or decrease
+  chemical, 1-51, or of emitters on the drive levels): drive-change.
+  Canny's echo lobe takes 17 such chemicals, each made from a drive and
+  its decrease as the drive eases; it was read as having no counterpart.
+The reasons now also say when a lobe's output goes into perception (its
+gene's perception flag), the way Canny's echo lobe reaches the rest.
+
+Checked with a profiles file that names no genomes: Nova Subterra, Canny
+Norns v1.2 and the Akamai Canny pack all get from wiring alone the roles
+their authors describe; in a copy of Home the creatures of the Kai,
+Scorpio and other lines with added lobes get roles from theirs. The
+known-genome entries stay for what wiring cannot show (Canny's
+curiosity).
 
 #### Changelog: version 0.10.0 in the version list
 
