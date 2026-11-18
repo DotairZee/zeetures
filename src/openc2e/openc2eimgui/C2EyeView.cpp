@@ -312,11 +312,12 @@ static void drawThroughEye(ImTextureID view, ImVec2 o, Agent* c, Creature* cr) {
 					inPupil = r < pupilR;
 				if (inPupil) {
 					A = 0;
-					// an ettin's coarse sight: a dotted screen over the pupil,
-					// denser toward its rim
+					// an ettin's coarse sight: a dotted fringe at the pupil's
+					// edge, its middle clear (owner, 2026-11-18: still see
+					// clearly what it is focused on)
 					if (L.kind == 2) {
 						float rim = r / pupilR;
-						if (((x / 2 + y / 2) & 1) == 0 && noise2(x / 2, y / 2) < 0.25f + 0.55f * rim)
+						if (rim > 0.78f && ((x / 2 + y / 2) & 1) == 0 && noise2(x / 2, y / 2) < (rim - 0.78f) * 3.0f)
 							R = L.iris[0] * 0.5f, G = L.iris[1] * 0.5f, B = L.iris[2] * 0.5f, A = 200;
 					}
 				} else if (r < irisR) {
