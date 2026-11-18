@@ -820,7 +820,7 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 			Agent* owner = p ? p->getParent() : nullptr;
 			if (owner && (owner == (Agent*)world.hand() || dynamic_cast<Bubble*>(owner))) {
 				SkyTint::draw(surface, m, destx, desty);
-				Thoughts::draw(surface, adjustx, adjusty, m->wraparound() ? (int)m->width() : 0);
+				Thoughts::draw(surface, adjustx, adjusty, m->wraparound() ? (int)m->width() : 0, skip_agent);
 				lit = true;
 			}
 		}
@@ -829,8 +829,11 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 			Agent* owner = p ? p->getParent() : nullptr;
 			if (skip_hand && owner && owner == (Agent*)world.hand())
 				continue;
-			// (the Creature's View: the creature does not see itself)
+			// (the Creature's View: the creature does not see itself, nor its
+			// own speech bubbles, which float on it; owner, 2026-11-17)
 			if (skip_agent && owner == skip_agent)
+				continue;
+			if (skip_agent && owner && dynamic_cast<Bubble*>(owner) && owner->floatingagent.get() == skip_agent)
 				continue;
 			if (bare && only_creature && owner != only_creature)
 				continue;
@@ -861,7 +864,7 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 	if (!lit) {
 		SkyTint::draw(surface, m, destx, desty);
 		if (!only_creature) // (not in a photo)
-			Thoughts::draw(surface, adjustx, adjusty, m->wraparound() ? (int)m->width() : 0);
+			Thoughts::draw(surface, adjustx, adjusty, m->wraparound() ? (int)m->width() : 0, skip_agent);
 	}
 
 	// render port connection lines. TODO: these should be rendered as some kind

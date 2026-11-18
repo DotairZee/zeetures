@@ -231,7 +231,7 @@ static void drawStars(RenderTarget* surface, int adjustx, int adjusty, int wrapW
 	}
 }
 
-void draw(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth) {
+void draw(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth, Agent* skip) {
 	if (engine.version == 2)
 		drawStars(surface, adjustx, adjusty, wrapWidth);
 	// developer aid: OPENC2E_TEST_THOUGHT="hungry,east" (symbol names) makes
@@ -274,7 +274,7 @@ void draw(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth) {
 		}
 		++it;
 		// one bubble at a time: while it speaks, its thought is not shown
-		if (m == OFF || (m == SELECTED && world.selectedcreature.get() != c) || Bubble::hiddenRider(c) || speechBubbleShowing(c))
+		if (m == OFF || (m == SELECTED && world.selectedcreature.get() != c) || Bubble::hiddenRider(c) || speechBubbleShowing(c) || c == skip)
 			continue;
 		if (!syst || syst->numframes() < 30)
 			continue;

@@ -19,7 +19,9 @@ namespace Thoughts {
 // thought with the same key as the one it had lately is not shown again
 void think(Agent* creature, const std::vector<std::string>& items, const std::string& key);
 // draw the bubbles of the moment over the world (after the agents)
-void draw(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth);
+// (skip: a creature whose thoughts are not drawn, the one whose eyes the
+// Creature's View looks through)
+void draw(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth, Agent* skip = nullptr);
 
 enum Mode { OFF = 0,
 	SELECTED = 1,
