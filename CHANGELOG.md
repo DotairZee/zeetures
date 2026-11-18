@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 457 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 458 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 4 commits, 18 November 2026
+- [Unreleased](#unreleased): 5 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
@@ -25,6 +25,28 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Way out of water: no unreachable floors; sea jump pads are devices
+
+[`f50e3598`](https://github.com/DotairZee/zeetures/commit/f50e359875d1ad966e2471e4a21520670943986b)
+
+The way out of water (the nearest dry room through open doors, on
+foot) took any room to the side as walkable. The submarine's berth
+(room 149, floor 906) lies east of the east sea's middle (151) and west
+of its east end (150), 270 px above the seabed: a norn on the seabed
+(5XJM in Home) was sent east from one and west from the other, back
+and forth for the whole of a 5-minute copy, and never tried a device;
+it drowned in two of nine copies. A room to the side now counts only if
+its floor at the shared edge is within a 40 px step of the floor walked
+from (OPENC2E_OLD_DRY_WAY to compare). With no way on foot the mind
+tries the devices in view, and the sea jump pads (toys, category 13,
+which now throw onto a shore) are among them.
+
+Three matched pairs: 5XJM escapes 1/1/2 times (its first choice was
+the jump pad beside it, which put it on the east dock) vs 16-18 times
+of pacing; nine creatures used the pads to leave the sea in one copy;
+no drownings either side; meals per 1000 ticks 462/392/438 vs
+447/420/399.
 
 #### Developer aid: OPENC2E_WATCH_FUEL prints creatures' fuel chemicals
 
