@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 449 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 450 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 3 commits, 18 November 2026
+- [Unreleased](#unreleased): 4 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
@@ -24,6 +24,31 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Submarine scoops up swimmers along its path
+
+[`4e5890be`](https://github.com/DotairZee/zeetures/commit/4e5890be4f1638813ca12ae2a96d94cdb079245f)
+
+The owner (2026-11-17) asked that while the submarine is moving along its
+path it scoop up any creature under water near it and deliver it safely
+out of the water. A new addition, sub-rescue.cos: a watcher (2 1 162,
+every 2 ticks) finds the submarine (3 1 2) while it has any speed, and
+draws every live creature wholly under the waterline (top below 710, so
+not one in a boat or on a dock) in a water room, with its middle within
+200 px of the submarine's box, toward the submarine at 16-24 px a step;
+once its middle is inside the box, GPAS takes it aboard and the engine
+puts it in the cabin. It rides to the next dock, where the submarine
+lets everyone out onto dry floor as before. Never across the seabed:
+east of the shaft (x 6391) the sand at y 1175 parts the open sea from
+the tunnel the submarine runs along to its dock below.
+
+Route traced: east dock (7150, 820) down to 935, west to 6065, up to the
+west dock (790); then down the shaft and east through the tunnel (1255)
+to the airlock dock at 6465; and back. Tests (Home copies): norns on the
+seabed and mid-water were taken in within about a second and let out dry
+at the west dock (twice); one 300 px down the shaft, and one in the
+tunnel under the sand while the submarine passed above, were left alone.
+Pictures: submarine-rescue.png in the project folder.
 
 #### West sea airlock: draws in everyone down in the sea
 
