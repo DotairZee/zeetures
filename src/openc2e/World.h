@@ -151,6 +151,7 @@ class World {
 	void tickBreathBubbles(); // C2: creatures' breath bubbles rise and pop at the surface
 	void tickClimate(); // C2: room temperatures (heat spreading, heat sources)
 	void tickNutrients(); // C2: the nutrient cycle (breakdown, seeping downhill, settling)
+	void tickDaylight(); // C2: outdoor rooms' light following day and night
 	// only_creature: draw no creature but this one, nor anything another
 	// creature carries (the Owner's Kit camera)
 	// bare (with only_creature): that creature alone on the background, no

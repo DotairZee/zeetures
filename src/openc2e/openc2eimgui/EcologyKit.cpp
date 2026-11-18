@@ -10,8 +10,9 @@
 //     the time of day.
 //   Census: what is in the world now, by the game's own kinds of thing, and
 //     how the food is spread from west to east.
-// In this engine temperature (World::tickClimate) and the nutrients
-// (World::tickNutrients) change by themselves; the other measures keep the
+// In this engine temperature (World::tickClimate), the nutrients
+// (World::tickNutrients) and outdoor light (World::tickDaylight) change by
+// themselves; the other measures keep the
 // world file's values unless a script sets them. Scents include food smell.
 
 #include "C2Kits.h"
@@ -59,7 +60,7 @@ enum Measure { LIGHT,
 
 const char* const MEASURE_NAME[MEASURES] = {"Light", "Temperature", "Air pressure", "Radiation", "Organic nutrients", "Inorganic nutrients", "Wind"};
 const char* const MEASURE_TIP[MEASURES] = {
-	"How bright each room is",
+	"How bright each room is: outdoors it follows day and night (lamp-lit rooms,\ncaves and indoor rooms keep their light); the dark makes creatures sleepy",
 	"How warm each room is (this changes: heat spreads through doorways\nand comes from fires, the volcano and heaters)",
 	"The air pressure in each room",
 	"How much radiation there is in each room",
@@ -548,6 +549,7 @@ void MapPage() {
 	ImGui::TextDisabled(s_scent == Pheromones::channelCount() ? "changes as food comes and goes"
 			: s_scent >= 0 ? "changes as creatures give it off"
 			: s_measure == TEMPERATURE ? "changes as heat spreads"
+			: s_measure == LIGHT ? "changes with day and night outdoors"
 			: (s_measure == ORGANIC || s_measure == INORGANIC) ? "changes as things rot, break down and grow"
 			: "stays as the world began");
 	ImGui::EndGroup();

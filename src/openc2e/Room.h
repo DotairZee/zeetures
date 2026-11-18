@@ -81,6 +81,11 @@ class Room {
 	// known)
 	float ontrf = -1.0f, intrf = -1.0f;
 	int ontrBase = -1, intrBase = -1;
+	// day and night (World::tickDaylight): the room's own light (the world
+	// file's, or what a script last set), how far outdoors it is (0-1, -1
+	// not yet known) and the light last given it
+	int liteBase = -1, liteShown = -1;
+	float outdoors = -1.0f;
 	int floorvalue = 0, dropstatus = 0;
 	int windx, windy;
 

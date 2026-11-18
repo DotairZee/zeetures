@@ -17,4 +17,10 @@ namespace SkyTint {
 // in a wrapping metaroom).
 void draw(RenderTarget* surface, MetaRoom* m, int destx, int desty);
 
+// How far outdoors a rectangle of the metaroom is, 0 (caves, indoors) to 1
+// (under the painted sky), averaged from the outdoors map traced from its
+// background's sky; -1 while that map is not built yet (it is built the
+// first time the background is drawn).
+float outdoors(MetaRoom* m, int x0, int y0, int x1, int y1);
+
 } // namespace SkyTint

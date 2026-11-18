@@ -450,6 +450,10 @@ void World::tick() {
 			PROFILE_SCOPE("world: nutrients");
 			tickNutrients();
 		}
+		{
+			PROFILE_SCOPE("world: daylight");
+			tickDaylight();
+		}
 	}
 	if (engine.version < 3)
 		WorldSave::TickLifeStageChanges();
@@ -1316,6 +1320,44 @@ void World::tickNutrients() {
 		r.intrf = std::clamp(in[i], 0.0f, 255.0f);
 		r.ontr = (int)std::lround(r.ontrf);
 		r.intr = (int)std::lround(r.intrf);
+	}
+}
+
+// Day and night in the rooms' light (owner's choices, 2026-11-17, from
+// mockups: outdoors as the sky, night at a quarter of daylight). Every
+// norn, grendel and ettin has a gene that raises Sleepiness in the dark;
+// rooms kept the world file's light day and night, so a cave always made a
+// creature sleepy and the open air never did. Now each room's light is its
+// own (the world file's, or what a script last set) times a daylight
+// factor in proportion to how far outdoors it is (SkyTint's outdoors map,
+// traced from the painted sky): full by day, 0.7 at dawn, 0.6 at dusk, a
+// quarter at night, fading over about 30 seconds as the sky does. Caves
+// and indoor rooms keep their light, and so do rooms with a light source
+// (lamps). Every 50 ticks.
+void World::tickDaylight() {
+	static unsigned int counter = 0;
+	static const bool off = getenv("OPENC2E_NO_DAYLIGHT") != nullptr; // (A/B testing)
+	if (off || ++counter % 50 != 0 || !map || engine.version != 2)
+		return;
+	auto factorFor = [](int tod) { return tod == 0 ? 0.7f : tod == 3 ? 0.6f : tod == 4 ? 0.25f : 1.0f; };
+	static int from = -2, to = -2;
+	static unsigned int changed = 0;
+	int want = (int)timeofday;
+	if (to == -2)
+		from = to = want, changed = worldtickcount;
+	else if (want != to)
+		from = to, to = want, changed = worldtickcount;
+	float t = std::clamp((worldtickcount - changed) / 300.0f, 0.0f, 1.0f);
+	float day = factorFor(from) + (factorFor(to) - factorFor(from)) * t;
+	for (auto& r : map->getRooms()) {
+		if (r->liteBase < 0 || r->lite != r->liteShown)
+			r->liteBase = r->lite; // first sight, or a script set it
+		if (r->outdoors < 0.0f)
+			if (MetaRoom* m = map->metaRoomAt((r->x_left + r->x_right) / 2, (r->y_left_ceiling + r->y_left_floor) / 2))
+				r->outdoors = SkyTint::outdoors(m, r->x_left, std::min(r->y_left_ceiling, r->y_right_ceiling), r->x_right, std::max(r->y_left_floor, r->y_right_floor));
+		float out = r->lsrc > 0 ? 0.0f : std::max(0.0f, r->outdoors);
+		r->lite = (int)std::lround(r->liteBase * (1.0f - out * (1.0f - day)));
+		r->liteShown = r->lite;
 	}
 }
 

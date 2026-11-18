@@ -362,6 +362,33 @@ void makeFilter(Sky& sky, const std::array<float, 3>& c) {
 
 } // namespace
 
+float outdoors(MetaRoom* m, int x0, int y0, int x1, int y1) {
+	if (engine.version != 2 || !m)
+		return -1.0f;
+	auto bkgd = m->getCurrentBackground();
+	if (!bkgd)
+		return -1.0f;
+	auto it = s_skies.find(bkgd->getName());
+	if (it == s_skies.end() || !it->second.built)
+		return -1.0f;
+	const Sky& sky = it->second;
+	if (!sky.any)
+		return 0.0f;
+	// (the map's cells are in the background's terms, from the metaroom's corner)
+	int cx0 = std::max(0, (x0 - (int)m->x()) / CELL), cy0 = std::max(0, (y0 - (int)m->y()) / CELL);
+	int cx1 = std::min(sky.mw - 1, (x1 - (int)m->x()) / CELL), cy1 = std::min(sky.mh - 1, (y1 - (int)m->y()) / CELL);
+	float sum = 0.0f;
+	int n = 0;
+	for (int cy = cy0; cy <= cy1; cy++)
+		for (int cx = cx0; cx <= cx1; cx++) {
+			sum += sky.share[size_t(cy) * sky.mw + cx];
+			n++;
+		}
+	if (!n)
+		return 0.0f;
+	return std::clamp((sum / n - 0.5f) * 2.0f, 0.0f, 1.0f); // the share runs 0.5 (caves) to 1
+}
+
 void draw(RenderTarget* surface, MetaRoom* m, int destx, int desty) {
 	if (engine.version != 2 || !m)
 		return;
