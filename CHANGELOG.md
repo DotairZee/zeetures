@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 435 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 436 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 3 commits, 17 November 2026
+- [Unreleased](#unreleased): 4 commits, 17 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
@@ -23,6 +23,43 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 17 November 2026
+
+#### Temperament drifts with experience while young
+
+[`b178ad5d`](https://github.com/DotairZee/zeetures/commit/b178ad5d049a04898e01018c00e2b9f57b4eea21)
+
+A young creature's temperament now shifts with what happens to it
+(owner's choices, 2026-11-17: young and tapering; up to half a step for
+each kind of experience, about a full step for several together;
+weighted by the evidence; children inherit the temperament life gave
+their parents). Each kind keeps its own shift of each trait:
+- hurt or frightened (pain, injury, punishment felt; a bad fall; nearly
+  drowning): more reactive, less bold, less sociable;
+- comforted or played with (reward, or the needs for pleasure, company
+  and play eased, by the hand, another creature or a toy; not a meal):
+  calmer, bolder, more sociable;
+- in a fight (hurt by another creature; both get it, the one who hurt at
+  half): quicker to anger, counting half, with 70% fading back over a
+  few thousand mind ticks;
+- something tried mostly for its novelty turning out well or badly
+  (MindOutput::noveltyOutcome): more or less curious, counting least.
+Stage scales it: 1 as a baby, 0.6 a child, 0.25 an adolescent, settled
+from youth on. Each experience moves a trait less the further that kind
+has already moved it (at most 0.5 a kind, 1 in all). The creature's
+temperament is its inborn one plus the shifts; the mind takes it up on
+its next tick, and a shift of another 0.1 in a trait is logged. Breeding
+already passes on the parents' current temperament, so children inherit
+what life made of them.
+
+Saved with the world: "temperament-born" and "temperament-drift" beside
+"temperament" (older saves: born is the temperament). The Owner's Kit's
+Temperament page says what life has made a creature more of since it
+hatched. OPENC2E_NO_TEMPERAMENT_DRIFT turns it off (A/B testing).
+
+Paced in copies of Home: a first rate moved babies near the cap within
+minutes (and counted meals as comfort), so a step is 0.003 and comfort
+needs a carer; then in 9 minutes two youngsters had moved a trait 0.1,
+the rest less. A test save held the born and drifted lines.
 
 #### Walking goes the way the creature faces
 
