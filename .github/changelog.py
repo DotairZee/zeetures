@@ -78,6 +78,15 @@ VERSIONS = [
      "naming senses or no drive become inborn nudges judged by the genome's reward and punishment chemicals; lobe "
      "7 read as attention (Canny Norns' eating instincts); brain profiles giving added lobes roles in the mind "
      "(Nova Subterra and Canny Norns known, others read from their wiring), shown in the Breeder's Kit."),
+    ("0.11.0", "f5e5ae6f",
+     "Temperament that shifts with experience while young (hurt, comfort, fights, exploring), tapering as a "
+     "creature grows up; the soil's nutrient cycle (breakdown, seeping downhill, the dead feeding it, bushes "
+     "growing by it), shown in the Ecology Kit with food smell as a scent; outdoor light following day and night; "
+     "walking the way the creature faces (a cause of drownings); brain profiles reading search and chemical-fed "
+     "lobes from wiring; Import Genome takes exported creatures; Creature's View without the viewer's own bubbles, "
+     "seen through the creature's own eye (pupil by light and fear, blinking and drooping lids, iris tinted by its "
+     "pigment genes, sight doubled when hurt and rippling underwater), centered on what it looks at, the world "
+     "showing through a checkered screen."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

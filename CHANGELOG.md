@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 445 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 446 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 13 commits, 17 November 2026 to 18 November 2026
+- [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
 - [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
 - [0.9.0](#version-090): 14 commits, 16 November 2026
 - [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
@@ -18,11 +18,21 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.11.0
 
-Changes since the last version.
+Temperament that shifts with experience while young (hurt, comfort, fights, exploring), tapering as a creature grows up; the soil's nutrient cycle (breakdown, seeping downhill, the dead feeding it, bushes growing by it), shown in the Ecology Kit with food smell as a scent; outdoor light following day and night; walking the way the creature faces (a cause of drownings); brain profiles reading search and chemical-fed lobes from wiring; Import Genome takes exported creatures; Creature's View without the viewer's own bubbles, seen through the creature's own eye (pupil by light and fear, blinking and drooping lids, iris tinted by its pigment genes, sight doubled when hurt and rippling underwater), centered on what it looks at, the world showing through a checkered screen.
 
 ### 18 November 2026
+
+#### Version 0.11.0
+
+[`f5e5ae6f`](https://github.com/DotairZee/zeetures/commit/f5e5ae6f30a7c14bb63ba66d3d41f6f539ea3b88)
+
+Help &gt; About and the README's Status now say 0.11.0 (owner, 2026-11-18,
+after the Creature's View eyes). The README also mentions temperament
+shifting with experience while young, the soil's nutrient cycle, outdoor
+light following day and night, and Creature's View through the
+creature's own eye.
 
 #### Creature's View: an ettin's pupil is clear in the middle
 
