@@ -107,6 +107,12 @@ VERSIONS = [
      "land creatures by their size; pocket rescues fixed: the incubator's glass terrarium is a room behind a "
      "door, creatures at the gene lab's west wall step back onto its floor, and a rescued creature goes back "
      "to the side it came from; developer aids for the energy chain and for cutting a creature's air."),
+    ("0.14.0", "2947236d",
+     "Creatures look after their friends: food a creature carries over and drops counts as its gift, a well-fed "
+     "creature brings food to a hungry friend, and creatures may go after one that just hurt a friend; foragers "
+     "no longer row straight back to a shore they just searched; railings close the treehouse platform's and the "
+     "scaffold's open ends; creatures no longer step off into the cage lift's shaft when a nearer floor is beside them; a fall that starts just under a floor line begins on it; lifts rest half as long "
+     "between rides; no fruit bushes in lift shafts."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
