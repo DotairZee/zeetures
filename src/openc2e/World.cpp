@@ -525,8 +525,6 @@ void World::tick() {
 	static bool organsDumped = false;
 	if (static const char* dmEnv = getenv("OPENC2E_DUMP_ORGANS"); dmEnv && !organsDumped && tickcount % 100 == 70) {
 		bool byMark = std::string(dmEnv) == "OV97";
-		if (!byMark)
-			organsDumped = true;
 		for (auto& a : agents) {
 			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
 			auto* c2 = ca ? dynamic_cast<c2Creature*>(ca->getCreature()) : nullptr;
