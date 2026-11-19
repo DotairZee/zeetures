@@ -23,3 +23,6 @@ Bony Grendel Update
 # the Stone of Knowledge: kissed by a norn, teaches it every word (Instant
 # Vocabulary, SYS: CMND 32777; owner, 2026-11-11: in every world by default)
 Stone of Ancient Knowledge
+# the Metamorph Device (Life Kit), in the gene splicer room as one device
+# with a switch for its two versions (owner, 2026-11-19; metamorph.cos)
+Metamorph Device

@@ -1,0 +1,86 @@
+* The Metamorph Device in the gene splicer room (openc2e Creatures 2 project,
+* our own script). Run by openc2e after the world loads (Additions folder);
+* safe to repeat.
+*
+* The device (3 10 13, from the C2 Life Kit's "Metamorphosis device.cob")
+* is built into every world from the player's own COB (builtin-cobs.txt),
+* which makes it at its own spot east of the lab (7238,1982). The owner
+* (2026-11-19) wanted it in another place, and its two versions as one
+* device: this moves it to the gene splicer room's floor, between the
+* teleporter (x 6145-6229) and the tall pillar with the threaded rod (x
+* 6464): 216 px wide, its base on the floor at y 1788 (picture:
+* metamorph-lab-mockup.png in the project folder). Built-in objects are made
+* anew at each load, so this runs each time; a second device (from the
+* Agent Injector) is removed, keeping one.
+*
+* What it does: a creature in its cabin is replaced by a newly hatched copy
+* of the opposite sex, from its own genome with the usual small mutations
+* (NEW: GENE of one creature). The two versions in the COB differ only in
+* how the creature put in ends: one fills it with five poisons (heavy
+* metals, cyanide, belladonna, geddonase and glycotoxin; it is let out and
+* dies of them), the other ends it at once. Here OV10 picks: 0 at once
+* (the default), 1 the poisons.
+*
+* Only the hand runs it (2026-11-19): it ends the creature inside, and
+* creatures press things often, so a creature's press does nothing.
+enum 3 10 13
+  doif va00 eq 0
+    setv va00 targ
+  else
+    dpas
+    kill targ
+  endi
+next
+doif va00 ne 0
+  targ va00
+  mvto 6244 1601
+endi
+
+scrp 3 10 13 1
+  doif from ne pntr
+    setv actv 0
+    stop
+  endi
+* (not to be cut off midway: the creature would be ended with no copy)
+  lock
+  sndc bt1_
+  gpas
+  part 1
+  anim [0123456] over
+  anim [56R]
+  setv var0 0
+  etch 4 0 0
+    doif movs eq 3 setv var0 targ endi
+  next
+  doif var0 ne 0
+    setv var5 ov10
+    targ var0
+    aslp 1
+* (the copy is the other sex: SPCS 1 male, 2 female)
+    setv var1 spcs
+    doif var1 eq 1 setv var1 2 else setv var1 1 endi
+    setv var2 monk
+    setv var3 posx
+    setv var4 posy
+    doif var5 eq 1
+      chem 140 255 chem 141 255 chem 143 255 chem 144 255 chem 145 255
+    else
+      kill targ
+    endi
+    wait 30
+    inst
+    new: gene var2 var2 var9
+    new: crea var9 var1
+    drea 1
+    mvto var3 var4
+    slim
+    setv grav 1
+    targ ownr
+    slow
+  endi
+  part 1
+  anim [6543210] over
+  wait 5
+  dpas
+  setv actv 0
+endm
