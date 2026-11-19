@@ -56,6 +56,7 @@
 #include "common/throw_ifnot.h"
 #include "creatures/CreatureAgent.h"
 #include "creatures/oldCreature.h"
+#include "creatures/oldBrain.h"
 #include "fileformats/genomeFile.h"
 #include "historyManager.h"
 #include "imageManager.h"
@@ -532,7 +533,7 @@ void World::tick() {
 				std::string rx;
 				for (auto& r : o->getReactions()) {
 					auto* g = r->data;
-					bool atp = false;
+					bool atp = getenv("OPENC2E_DUMP_ORGANS_ALL") != nullptr; // (every reaction, not only those on ATP/ADP)
 					for (int i = 0; i < 4; i++)
 						if (g->reactant[i] == 99 || g->reactant[i] == 100)
 							atp = true;
@@ -540,8 +541,36 @@ void World::tick() {
 						rx += fmt::format(" [{}x{} + {}x{} -> {}x{} + {}x{} rate {}]", (int)g->quantity[0], (int)g->reactant[0], (int)g->quantity[1], (int)g->reactant[1],
 							(int)g->quantity[2], (int)g->reactant[2], (int)g->quantity[3], (int)g->reactant[3], (int)g->rate);
 				}
+				for (gene* og : o->genes)
+					if (auto* rc = dynamic_cast<bioReceptorGene*>(og); rc && rc->organ == 0 && rc->tissue == 9)
+						rx += fmt::format(" <receptor {} -> 0,9,{}>", (int)rc->chemical, (int)rc->locus);
+					else if (auto* e = dynamic_cast<bioEmitterGene*>(og))
+						rx += fmt::format(" {{emits {} from {},{},{} rate {} gain {}}}", (int)e->chemical, (int)e->organ, (int)e->tissue, (int)e->locus, (int)e->rate, (int)e->gain);
 				fmt::print("* ORGAN {} #{} cost {} clock {} life {:.0f}/{:.0f} reactions {}{}\n", dm, k++, (int)o->getEnergyCost(), (int)o->getClockRate(),
 					o->getLongTermLifeforce(), o->getInitialLifeforce(), o->getReactionCount(), rx);
+			}
+			if (oldBrain* b = c2->getBrain())
+				if (oldLobe* l9 = b->getLobeByTissue(9))
+					fmt::print("* LOBE {} tissue 9: neurons {} threshold {} leakage {} gain {} rest {}\n", dm, l9->getNoNeurons(), (int)*l9->getThresholdPointer(),
+						(int)*l9->getLeakageRatePointer(), (int)*l9->getInputGainPointer(), (int)l9->getGene()->reststate);
+			// and the genes that make or set the energy chain's chemicals
+			// (glucose 70, pyruvate 69, energy 98, ATP 99, ADP 100, the
+			// glycolysis enzyme phosphoglycerokinase 179)
+			auto chainChem = [](int c) { return c == 70 || c == 69 || c == 98 || c == 99 || c == 100 || c == 179; };
+			for (auto& gn : c2->getGenome()->genes) {
+				if (auto* e = dynamic_cast<bioEmitterGene*>(gn.get()); e && chainChem(e->chemical))
+					fmt::print("* GENE {} emitter: chemical {} from organ {} tissue {} locus {} threshold {} rate {} gain {}{}{}{}\n", dm, (int)e->chemical,
+						(int)e->organ, (int)e->tissue, (int)e->locus, (int)e->threshold, (int)e->rate, (int)e->gain, e->clear ? " clear" : "", e->digital ? " digital" : "", e->invert ? " invert" : "");
+				if (auto* ic = dynamic_cast<bioInitialConcentrationGene*>(gn.get()); ic && chainChem(ic->chemical))
+					fmt::print("* GENE {} initial: chemical {} quantity {}\n", dm, (int)ic->chemical, (int)ic->quantity);
+				// what feeds the brain's relay lobe 9 (whose cell 13 the
+				// phosphoglycerokinase emitter reads)
+				if (auto* rc = dynamic_cast<bioReceptorGene*>(gn.get()); rc && rc->organ == 0 && rc->tissue == 9)
+					fmt::print("* GENE {} receptor: chemical {} into organ 0 tissue 9 locus {} threshold {} nominal {} gain {}{}{}\n", dm, (int)rc->chemical,
+						(int)rc->locus, (int)rc->threshold, (int)rc->nominal, (int)rc->gain, rc->inverted ? " inverted" : "", rc->digital ? " digital" : "");
+				if (auto* hl = dynamic_cast<bioHalfLivesGene*>(gn.get()))
+					fmt::print("* GENE {} half-lives: glucose {} pyruvate {} energy {} ATP {} ADP {} PGK {}\n", dm, (int)hl->halflives[70], (int)hl->halflives[69],
+						(int)hl->halflives[98], (int)hl->halflives[99], (int)hl->halflives[100], (int)hl->halflives[179]);
 			}
 		}
 	}
