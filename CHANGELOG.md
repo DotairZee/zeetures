@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 472 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 473 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 11 commits, 18 November 2026
+- [Unreleased](#unreleased): 12 commits, 18 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,28 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### C2: brain relay cells pass on their whole state, not state - threshold
+
+[`b74ca45c`](https://github.com/DotairZee/zeetures/commit/b74ca45c8b8d3451cea03610d1e0279b124996f4)
+
+Creatures here ran their Energy reserve down within minutes and lived
+on 8-55, crashing now and then with fuel in store, while the same
+genome's creatures in the real game (read over DDE) keep it near 250.
+The real body even spends more (it also runs a brain organ, cost 22),
+so its production is at least half again ours. Glycolysis per unit of
+phosphoglycerokinase (PGK) matched; the PGK supply did not. PGK is made
+by an emitter reading the brain relay lobe's ADP cell (norn lobe 9,
+cell 13), and our relay cell passed on its state minus the lobe's
+threshold (10), cutting PGK by about a third at usual ADP levels.
+
+A relay cell at or above its threshold now passes on its whole state. A
+norn made from norn.gen keeps Energy at 250-255 (was 237 -&gt; 12), as in
+the real game, and its hunger rises exactly as before (the lobe's other
+cells are on/off: 255 instead of 245). Across Home the Energy median
+goes from 25 to 255 within 3000 ticks (with the old rule it stays near
+25). Three matched pairs: no deaths in either, faints alike, restarts
+now newborns and ettins only. OPENC2E_OLD_RELAY_OUTPUT compares.
 
 #### Organ dump: each receptor's switch-on stage
 
