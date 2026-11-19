@@ -1139,6 +1139,35 @@ MindPerception oldCreature::buildPerception() {
 				if (!west && !east)
 					continue;
 				float bx = west ? (float)here->x_left : (float)here->x_right;
+				// the room a step that way goes into, as the foot takes it
+				// (SkeletalCreature::snapDownFoot): of the rooms on that side,
+				// the one whose floor is nearest the floor here, none far above.
+				// The desert lift's shaft (room 12, its walk-over floor at y
+				// 573-598) borders rooms below that line too (15 to the west,
+				// 14 to the east), reached only by falling down the shaft; their
+				// floors read as ~300 px drops both ways, so starving norns there
+				// were offered no walk to food (2026-11-19). A real drop beyond
+				// the side is still followed down from the room stepped into.
+				static const bool oldSideDrops = getenv("OPENC2E_OLD_SIDE_DROPS") != nullptr; // (to compare)
+				if (!oldSideDrops) {
+					float herefloor = here->floorYatX(bx);
+					float mine = std::fabs(n->floorYatX(bx - seamShift(*n, hc, w) + (west ? -2.0f : 2.0f)) - herefloor);
+					bool nearer = false;
+					for (auto& [o, d3] : here->getDoors()) {
+						if (o == n || d3.perm < fit || o->type == 2 || (west ? !westOf(*o) : !eastOf(*o)))
+							continue;
+						float ox = bx - seamShift(*o, hc, w) + (west ? -2.0f : 2.0f);
+						if (ox < o->x_left || ox > o->x_right)
+							continue;
+						float of = o->floorYatX(ox);
+						if (of < herefloor - 40.0f)
+							continue; // (a floor far above is a wall, not a step)
+						if (std::fabs(of - herefloor) < mine)
+							nearer = true;
+					}
+					if (nearer)
+						continue;
+				}
 				// where would the step end? follow open floors down a few
 				// rooms, a little way past the side (where a creature
 				// stepping off comes down): the drop is to the floor it would
