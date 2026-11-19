@@ -17,5 +17,3 @@
 * {date}; lifeLogEntry::together).
 40 The four who grew old together||Sad news, though I don't think it's a bug. While checking the save I found that four norns died of old age at the same moment this evening. They all hatched within a few seconds of each other yesterday and were each about 9.5 hours of play old, which is the lifespan their genomes give norns. They grew old together and reached the end together.
 41 In this world too, {names} hatched together, grew old together and reached the end together. {date}.
-42 The Metamorph Device is set to end the creature inside at once.|A copy of the other sex hatches in its place.
-43 The Metamorph Device is set to poison the creature inside and let it out to die.|A copy of the other sex hatches in its place.

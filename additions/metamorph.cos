@@ -29,8 +29,9 @@
 * a small riveted plate on the front of the device's left end block, a
 * lightning bolt above (at once) and a skull below (poisons), the lever
 * pointing at the one in use (picture 0 up, 1 down). A click from the hand
-* flips it, sets the device's OV10 and opens a note saying what the device
-* will now do (announcements.txt 42 and 43). Creatures do not see it. It is
+* flips it and sets the device's OV10, with a click sound and no window (the
+* owner, 2026-11-19, tried a note window and did not want one). Creatures
+* do not see it. It is
 * kept with the world (OV99 7461), so its setting stays between launches.
 enum 3 10 13
   doif va00 eq 0
@@ -81,36 +82,6 @@ scrp 2 1 164 1
     setv ov10 var0
   next
   snde tick
-* a note at the top left of the view saying what the device now does (the
-* game's announcement window, as the gene lab's console opens; one at a time)
-  enum 3 5 6 kill targ next
-  setv var1 42
-  addv var1 var0
-  setv var8 cmrx
-  setv var9 cmry
-  new: cbub anou 16 0 var1
-  setv cls2 3 5 6
-  setv attr 36
-  new: part 0 0 0 0 9004
-  new: part 1 15 13 1 9005
-  spot 0 0 0 340 148
-  spot 1 -1 -1 -1 -1
-  spot 2 -1 -1 -1 -1
-  spot 3 -1 -1 -1 -1
-  spot 4 -1 -1 -1 -1
-  spot 5 -1 -1 -1 -1
-  knob 0 -1
-  knob 1 -1
-  knob 2 -1
-  knob 3 0
-  knob 4 -1
-  knob 5 -1
-  new: bbtx 0 185 75 140
-  mvto var8 var9
-  part 1
-  anim [012345]
-  tick 10
-  slow
   targ ownr
   setv actv 0
 endm
