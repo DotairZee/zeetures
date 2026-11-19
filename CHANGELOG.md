@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 473 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 474 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 12 commits, 18 November 2026
+- [Unreleased](#unreleased): 13 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -24,6 +24,16 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 ## Unreleased
 
 Changes since the last version.
+
+### 19 November 2026
+
+#### Organ dump: wait until the named creature exists
+
+[`2bbc19cb`](https://github.com/DotairZee/zeetures/commit/2bbc19cbda06b9c8789dcb6c771e77b98ae22090)
+
+OPENC2E_DUMP_ORGANS=MONIKER used to look once, early, and missed a
+creature born later (a newborn hatched in a test copy). It now keeps
+looking until it finds the creature, as the OV97 form does.
 
 ### 18 November 2026
 
