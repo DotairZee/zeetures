@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 487 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 488 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 6 commits, 19 November 2026
+- [Unreleased](#unreleased): 7 commits, 19 November 2026
 - [0.13.0](#version-0130): 20 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
@@ -27,6 +27,27 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 19 November 2026
+
+#### C2: a fall starting under a solid floor line begins on that line
+
+[`396d5dfe`](https://github.com/DotairZee/zeetures/commit/396d5dfef631cddf5b415a777b6a140d4c25f9a7)
+
+A walking foot's point lies a few px under its floor line. Creatures
+walking east off the cage lift's middle stop (room 21, floor 840, its way
+down 120 wide, solid for them) stepped with the front foot onto the tunnel
+beside (room 20, its floor about 25 px lower); the step started a fall
+with the body's bottom already a few px under 840, so the floor did not
+hold it and they fell 320-345 px down the empty shaft, badly hurt (0-6 a
+5-minute copy). Now, as snapDownFoot is about to set a creature falling,
+if its bottom is up to 12 px under a floor solid at its size under its
+middle, it is set back on that floor first, and the fall starts there.
+
+A first version held the body on the middle's floor at every step down
+into a new room until the middle passed: six pairs of 5-minute Home
+copies cut big falls (142 vs 171) and shaft falls (3 vs 14) but cost 8%
+of meals. This one, three pairs: shaft falls 2 vs 8, meals per thousand
+558/464/489 vs 498/474/481, falls of 150 px or more 119 vs 124.
+OPENC2E_OLD_STEP_HOLD turns it off.
 
 #### Rail ends: close the treehouse platform's and the scaffold's open ends
 
