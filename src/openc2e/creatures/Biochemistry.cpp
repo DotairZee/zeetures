@@ -17,11 +17,15 @@
  *
  */
 
+#include <array>
+#include <map>
 #include <set>
 #include "c2eBrain.h"
 #include "c2eCreature.h"
 #include "oldBrain.h"
 #include "oldCreature.h"
+#include "Agent.h"
+#include "caosValue.h"
 #include "World.h"
 #include "Temperament.h"
 
@@ -136,8 +140,44 @@ void c2Creature::tickBiochemistry() {
 	// tick organs (the reproductive switches summed over their receptors)
 	reproSum[0] = reproSum[1] = 0;
 	reproSet[0] = reproSet[1] = false;
+	// developer aid: OPENC2E_COUNT_ENERGY sums, for a creature a script has
+	// marked (OV97 = 1), how each organ changes Energy (98), ATP (99) and
+	// ADP (100), and what half-lives take, and prints the totals every 500
+	// steps: where an energy budget is made and spent
+	static const bool countEnergy = getenv("OPENC2E_COUNT_ENERGY") != nullptr;
+	bool counting = countEnergy && parentagent && parentagent->var[97].hasInt() && parentagent->var[97].getInt() == 1;
+	static std::map<int, std::array<long, 3>> energyByOrgan;
+	static long countedSteps = 0;
+	int oi = 0;
 	for (auto& organ : organs) {
+		int e0 = chemicals[98], a0 = chemicals[99], d0 = chemicals[100];
 		organ->tick();
+		if (counting) {
+			auto& t = energyByOrgan[oi];
+			t[0] += chemicals[98] - e0;
+			t[1] += chemicals[99] - a0;
+			t[2] += chemicals[100] - d0;
+		}
+		oi++;
+	}
+	if (counting) {
+		int e0 = chemicals[98], a0 = chemicals[99], d0 = chemicals[100];
+		oldCreature::tickBiochemistry();
+		auto& t = energyByOrgan[-1];
+		t[0] += chemicals[98] - e0;
+		t[1] += chemicals[99] - a0;
+		t[2] += chemicals[100] - d0;
+		if (++countedSteps % 500 == 0) {
+			std::string out;
+			for (auto& [k, v] : energyByOrgan)
+				if (v[0] || v[1] || v[2])
+					out += fmt::format(" {}:E{:+}/ATP{:+}/ADP{:+}", k < 0 ? std::string("decay") : fmt::format("#{}", k), v[0], v[1], v[2]);
+			fmt::print("* ENERGY COUNT {} steps:{}\n", countedSteps, out);
+		}
+		for (int i = 0; i < 2; i++)
+			if (reproSet[i])
+				*reproLocus(i) = (unsigned char)std::clamp(reproSum[i], 0, 255);
+		return;
 	}
 	for (int i = 0; i < 2; i++)
 		if (reproSet[i])

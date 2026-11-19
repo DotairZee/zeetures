@@ -520,14 +520,22 @@ void World::tick() {
 	// developer aid: OPENC2E_DUMP_ORGANS=MONIKER prints that creature's
 	// organs once (energy cost, clock rate, life force, and the reactions
 	// that make or use ATP and ADP)
+	// (OPENC2E_DUMP_ORGANS=OV97: the creature a script marks with OV97 = 1,
+	// once it exists, e.g. one just made from a genome file)
 	static bool organsDumped = false;
-	if (static const char* dm = getenv("OPENC2E_DUMP_ORGANS"); dm && !organsDumped && tickcount % 100 == 70) {
-		organsDumped = true;
+	if (static const char* dmEnv = getenv("OPENC2E_DUMP_ORGANS"); dmEnv && !organsDumped && tickcount % 100 == 70) {
+		bool byMark = std::string(dmEnv) == "OV97";
+		if (!byMark)
+			organsDumped = true;
 		for (auto& a : agents) {
 			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
 			auto* c2 = ca ? dynamic_cast<c2Creature*>(ca->getCreature()) : nullptr;
-			if (!c2 || history->findMoniker(c2->getGenome()) != dm)
+			if (!c2)
 				continue;
+			if (byMark ? !(a->var[97].hasInt() && a->var[97].getInt() == 1) : history->findMoniker(c2->getGenome()) != dmEnv)
+				continue;
+			organsDumped = true;
+			std::string dm = byMark ? history->findMoniker(c2->getGenome()) : std::string(dmEnv);
 			int k = 0;
 			for (auto& o : c2->getOrgans()) {
 				std::string rx;
@@ -544,6 +552,10 @@ void World::tick() {
 				for (gene* og : o->genes)
 					if (auto* rc = dynamic_cast<bioReceptorGene*>(og); rc && rc->organ == 0 && rc->tissue == 9)
 						rx += fmt::format(" <receptor {} -> 0,9,{}>", (int)rc->chemical, (int)rc->locus);
+					else if (rc && rc->organ == 2)
+						rx += fmt::format(" <organ receptor: chemical {} -> {} threshold {} nominal {} gain {}{}{}>", (int)rc->chemical,
+							rc->locus == 0 ? "clock rate" : rc->locus == 1 ? "repair rate" : "injury", (int)rc->threshold, (int)rc->nominal, (int)rc->gain,
+							rc->inverted ? " inverted" : "", rc->digital ? " digital" : "");
 					else if (auto* e = dynamic_cast<bioEmitterGene*>(og))
 						rx += fmt::format(" {{emits {} from {},{},{} rate {} gain {}}}", (int)e->chemical, (int)e->organ, (int)e->tissue, (int)e->locus, (int)e->rate, (int)e->gain);
 				fmt::print("* ORGAN {} #{} cost {} clock {} life {:.0f}/{:.0f} reactions {}{}\n", dm, k++, (int)o->getEnergyCost(), (int)o->getClockRate(),
