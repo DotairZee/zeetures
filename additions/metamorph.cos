@@ -23,6 +23,15 @@
 *
 * Only the hand runs it (2026-11-19): it ends the creature inside, and
 * creatures press things often, so a creature's press does nothing.
+*
+* The switch (2 1 164, sprite zmsw, our own art from
+* art/metamorph_lever.py; owner chose the design from mock-ups, 2026-11-19):
+* a small riveted plate on the front of the device's left end block, a
+* lightning bolt above (at once) and a skull below (poisons), the lever
+* pointing at the one in use (picture 0 up, 1 down). A click from the hand
+* flips it, sets the device's OV10 and opens a note saying what the device
+* will now do (announcements.txt 42 and 43). Creatures do not see it. It is
+* kept with the world (OV99 7461), so its setting stays between launches.
 enum 3 10 13
   doif va00 eq 0
     setv va00 targ
@@ -34,7 +43,77 @@ next
 doif va00 ne 0
   targ va00
   mvto 6244 1601
+  doif totl 2 1 164 eq 0
+    inst
+    new: simp zmsw 2 0 1200 0
+    setv cls2 2 1 164
+    setv attr 20
+    setv ov99 7461
+    pose 0
+    slow
+  endi
+* (on the left end block's front face; the device's setting from it)
+  setv va01 0
+  enum 2 1 164
+    mvto 6247 1740
+* (a click from the hand sends activate 1; set at each load, as a kept
+* object's click setting is not saved)
+    bhvr 1 0
+    setv va01 pose
+  next
+  targ va00
+  setv ov10 va01
 endi
+
+scrp 2 1 164 1
+  doif from ne pntr
+    setv actv 0
+    stop
+  endi
+  inst
+  doif pose eq 0
+    pose 1
+  else
+    pose 0
+  endi
+  setv var0 pose
+  enum 3 10 13
+    setv ov10 var0
+  next
+  snde tick
+* a note at the top left of the view saying what the device now does (the
+* game's announcement window, as the gene lab's console opens; one at a time)
+  enum 3 5 6 kill targ next
+  setv var1 42
+  addv var1 var0
+  setv var8 cmrx
+  setv var9 cmry
+  new: cbub anou 16 0 var1
+  setv cls2 3 5 6
+  setv attr 36
+  new: part 0 0 0 0 9004
+  new: part 1 15 13 1 9005
+  spot 0 0 0 340 148
+  spot 1 -1 -1 -1 -1
+  spot 2 -1 -1 -1 -1
+  spot 3 -1 -1 -1 -1
+  spot 4 -1 -1 -1 -1
+  spot 5 -1 -1 -1 -1
+  knob 0 -1
+  knob 1 -1
+  knob 2 -1
+  knob 3 0
+  knob 4 -1
+  knob 5 -1
+  new: bbtx 0 185 75 140
+  mvto var8 var9
+  part 1
+  anim [012345]
+  tick 10
+  slow
+  targ ownr
+  setv actv 0
+endm
 
 scrp 3 10 13 1
   doif from ne pntr
