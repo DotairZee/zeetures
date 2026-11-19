@@ -1276,6 +1276,15 @@ void oldCreature::keepInRoomSystem() {
 			};
 			if (stepOnto(32.0f, 40.0f))
 				return;
+			// then a floor beside a little higher: a norn turning at the
+			// gene lab's west wall (x 6113) had its 50 px box swing over the
+			// rock beyond (room 160, floor 100 px down), fell in it, and by
+			// the next check its feet were 57 px under the lab's floor; it
+			// was lifted 220 px onto the ledge above (room 158), a floor it
+			// could not walk back from (2026-11-19)
+			static const bool oldStepRise = getenv("OPENC2E_OLD_STEP_RISE") != nullptr; // (to compare)
+			if (!oldStepRise && stepOnto(32.0f, 80.0f))
+				return;
 			if (liftUp(150.0f))
 				return;
 			if (moveBeside(80.0f))
