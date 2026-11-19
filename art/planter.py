@@ -203,6 +203,22 @@ def pot(style, seed=5):
     return Image.fromarray(big, 'RGBA').resize((PW, PH), Image.BOX)
 
 
+class sized:
+    """Draw pots of another size for a while (the smaller bush forms get
+    narrower pots): with sized(w, h): pot(...), potted(...)."""
+    def __init__(self, w, h):
+        self.w, self.h = w, h
+
+    def __enter__(self):
+        global PW, PH
+        self.old = (PW, PH)
+        PW, PH = self.w, self.h
+
+    def __exit__(self, *exc):
+        global PW, PH
+        PW, PH = self.old
+
+
 def potted(bush, potimg, soil_y=100, drape=6):
     """Set a bush picture (156 x 108, standing on its bottom row) into a
     pot: the bush is lifted so its base sits in the pot's soil (bush row

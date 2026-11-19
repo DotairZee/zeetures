@@ -28,7 +28,11 @@
 * under water, where it is always kelp (owner, 2026-11-11: a bush had
 * seeded on the sea floor); a sea fruit that comes ashore grows a mossy
 * bush.
-* OV03 = 2 marks this version (full-grown 156 x 108).
+* OV03 = 2 marks this version (full-grown 156 x 108). OV07 is its form: 0
+* the full bush, 1 compact (108 x 80, zfc*, potted zfq*), 2 slender (56 x
+* 118, zfn*, potted zfo*), for places too small for the full one (fruit
+* places and how many it carries in the bud routine below).
+* OV05 = 1: standing in a pot (a built floor, not earth).
 scrp 2 4 141 9
   addv ov01 1
   doif ov00 eq 0
@@ -55,7 +59,12 @@ scrp 2 4 141 9
   stop
 subr bud
   targ ownr
+  * how many fruit it carries at once (OV07 is its form: 0 the full bush,
+  * 1 compact, 2 slender): full 3 young and 6 grown, compact 2 and 4,
+  * slender 1 and 3
   setv var9 ov00 mulv var9 3
+  doif ov07 eq 1 setv var9 ov00 mulv var9 2 endi
+  doif ov07 eq 2 setv var9 ov00 mulv var9 3 divv var9 2 endi
   setv var0 0
   esee 2 25 141 addv var0 1 next
   esee 2 25 142 addv var0 1 next
@@ -67,22 +76,58 @@ subr bud
       * somewhere in the crown, over the leaves (measured on the pictures
       * of all four looks in every season: the crown is a dome, so the
       * height range depends on how far across; young bushes are smaller
-      * and lower)
-      doif ov00 eq 2
-        rndv var3 20 116
-        doif var3 lt 40 rndv var5 47 55 endi
-        doif var3 ge 40
-          doif var3 lt 52 rndv var5 36 54 endi
+      * and lower; the smaller forms below)
+      setv var3 0 setv var5 0
+      doif ov07 eq 0
+        doif ov00 eq 2
+          rndv var3 20 116
+          doif var3 lt 40 rndv var5 47 55 endi
+          doif var3 ge 40
+            doif var3 lt 52 rndv var5 36 54 endi
+          endi
+          doif var3 ge 52
+            doif var3 lt 88 rndv var5 29 56 endi
+          endi
+          doif var3 ge 88
+            doif var3 lt 104 rndv var5 43 59 endi
+          endi
+          doif var3 ge 104 rndv var5 47 65 endi
+        else
+          rndv var3 68 76 rndv var5 52 72
         endi
-        doif var3 ge 52
-          doif var3 lt 88 rndv var5 29 56 endi
+      endi
+      * the compact bush (108 x 80; measured the same way on all its looks
+      * and seasons, plain and potted alike: a pot hangs below the picture)
+      doif ov07 eq 1
+        doif ov00 eq 2
+          rndv var3 11 76
+          doif var3 lt 23 rndv var5 30 39 endi
+          doif var3 ge 23
+            doif var3 lt 35 rndv var5 26 39 endi
+          endi
+          doif var3 ge 35
+            doif var3 lt 59 rndv var5 21 40 endi
+          endi
+          doif var3 ge 59
+            doif var3 lt 71 rndv var5 30 40 endi
+          endi
+          doif var3 ge 71 rndv var5 33 44 endi
+        else
+          rndv var3 38 50 rndv var5 34 50
         endi
-        doif var3 ge 88
-          doif var3 lt 104 rndv var5 43 59 endi
+      endi
+      * the slender bush (56 x 118): a narrow crown up its top half
+      doif ov07 eq 2
+        doif ov00 eq 2
+          rndv var3 5 24
+          doif var3 lt 13 rndv var5 8 40 endi
+          doif var3 ge 13
+            doif var3 lt 17 rndv var5 6 56 endi
+          endi
+          doif var3 ge 17 rndv var5 6 24 endi
+        else
+          rndv var3 17 20 rndv var5 78 90
         endi
-        doif var3 ge 104 rndv var5 47 65 endi
-      else
-        rndv var3 68 76 rndv var5 52 72
       endi
       setv var2 posl addv var2 var3
       setv var4 post addv var4 var5
@@ -1069,6 +1114,70 @@ enum 2 4 141
 next
 doif var0 eq 0
   inst new: simp zfpw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 4554 1731 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+
+* Five more where hungry creatures gathered with no food (owner chose all
+* five from the mock-ups, 2026-11-18: bush-spots-small.png; two copies of
+* Home sampled 28 times put about 3.5 very hungry creatures at a time on
+* the upper desert slope alone, with no fruit in reach). Three spots are too
+* small for the full bush, so two smaller forms (OV07: 1 compact, 108 x 80,
+* zfc*; 2 slender, 56 x 118, zfn*) were drawn for them, and on built
+* floors they stand in a pot (owner: "potted versions for places that
+* aren't on earth": zfq*, zfo*). Each foot is on
+* its room's floor: the upper desert slope east of the big tree (room 13,
+* floor 598 at x 5870 down to 654 at 6150; compact, desert); the east caves
+* between the rope lift's caller and the doghouse (room 47, floor 2255;
+* slender, mossy); the far-east balcony left of its lift's caller (room
+* 174, floor 1845; slender, potted, volcanic); the west machine room right
+* of the capsule (room 116, floor 1841; slender, machine cave); the gene
+* splicing room east of the egg lab, on its paved floor between the two
+* glass chambers (x 6615-6710 and 6785-6855) rather than in front of one
+* (room 159, floor 1768; slender, potted, machine cave; owner, first shown
+* there full-size). Planted full-grown wherever one is missing.
+setv var0 0
+enum 2 4 141
+  doif posl eq 5985
+    doif post eq 557 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfcd 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 5985 557 setv ov05 0 setv ov07 1 setv ov00 2 setv ov01 150 setv ov02 4 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 5866
+    doif post eq 2140 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfns 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 5866 2140 setv ov05 0 setv ov07 2 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 8042
+    doif post eq 1709 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfov 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 8042 1709 setv ov05 1 setv ov07 2 setv ov00 2 setv ov01 150 setv ov02 2 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 516
+    doif post eq 1724 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfnm 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 516 1724 setv ov05 0 setv ov07 2 setv ov00 2 setv ov01 150 setv ov02 1 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 6718
+    doif post eq 1635 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfom 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 6718 1635 setv ov05 1 setv ov07 2 setv ov00 2 setv ov01 150 setv ov02 1 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
 endi
 
 * the berry shrubs, standing on the floor (made again each load; the old

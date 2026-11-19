@@ -7,7 +7,7 @@ or COB pixels are read or copied), so the output can ship with the project.
 
     python3 fruitbush.py OUT_DIR
 
-writes, for each of the bush's four looks (to suit where it grows: zfbs
+writes, for each of the bush's looks (to suit where it grows: zfbs
 mossy green, zfbm machine-cave teal and rust, zfbv volcanic ember-red,
 zfbw warm-rock bronze, zfbd desert sage), OUT_DIR/<look>.s16 with 12 images (stage * 4 +
 season: seedling, young, full; spring, summer, autumn, winter), and
@@ -15,7 +15,9 @@ OUT_DIR/zfrt.s16, 24 images (kind * 6 + stage: dewberry, sunplum,
 emberpear, frostnut; bud, half-grown, ripe, overripe, then ripe and
 overripe lying on the ground: on their side except the round sunplum); and, for bushes standing on
 built platforms, each look in a copper planter (planter.py): OUT_DIR/zfps,
-zfpm, zfpv, zfpw.s16, 156 x 128, in the same picture order, with a PNG preview.
+zfpm, zfpv, zfpw.s16, 156 x 128, in the same picture order, with a PNG preview;
+and the two smaller forms for tight places (see FORMS): compact zfc* (108 x
+80) and slender zfn* (56 x 118), potted zfq* and zfo*, one per look.
 """
 import sys
 import os
@@ -87,7 +89,7 @@ def ramp(cols, t):
     return lerp(cols[i], cols[i + 1], t - i)
 
 
-def skeleton(rng, x, y, ang, length, width, depth, segs, tips):
+def skeleton(rng, x, y, ang, length, width, depth, segs, tips, spread_k=1.0):
     """A branching skeleton: tapering segments that split two or three ways."""
     pts = [(x, y)]
     for _ in range(4):
@@ -101,9 +103,9 @@ def skeleton(rng, x, y, ang, length, width, depth, segs, tips):
         return
     n = 2 if rng.random() < 0.6 else 3
     for k in range(n):
-        spread = (k - (n - 1) / 2) * rng.uniform(0.45, 0.75)
-        skeleton(rng, x, y, ang + spread + rng.normal(0, 0.15), length * rng.uniform(0.62, 0.78),
-                 width * 0.66, depth - 1, segs, tips)
+        spread = (k - (n - 1) / 2) * rng.uniform(0.45, 0.75) * spread_k
+        skeleton(rng, x, y, ang + spread + rng.normal(0, 0.15) * spread_k, length * rng.uniform(0.62, 0.78),
+                 width * 0.66, depth - 1, segs, tips, spread_k)
         if rng.random() < 0.35:   # a side twig part way along
             tips.append((x - np.cos(ang) * length * 0.3, y - np.sin(ang) * length * 0.3, ang + spread * 2))
 
@@ -123,11 +125,21 @@ def leaf(d, x, y, ang, L, Wd, lit_col, shade_col, rib_col):
     d.line([(px * SS, py * SS) for px, py in spine[:-2]], fill=rib_col + (255,), width=max(1, SS // 3))
 
 
+# the smaller forms: plain and potted file prefixes, picture size, stem
+# scale, slender or not, pot size
+FORMS = [('zfc', 'zfq', 108, 80, 0.68, False, 52, 24),
+         ('zfn', 'zfo', 56, 118, 1.5, True, 40, 24)]
+
 # growth stages: seedling, young, full (stems, stem length, branch depth)
 STAGES = [(1, 0.5, 2), (3, 0.72, 3), (5, 1.0, 4)]
 
 
-def bush(season, seed, stage=2, variant='moss'):
+def bush(season, seed, stage=2, variant='moss', BW=BW, BH=BH, size=1.0, column=False):
+    """size scales the stems (1 for the full bush; the compact bush, for
+    low rooms and slopes, is drawn smaller with size < 1 and the same size
+    leaves, so it reads as the same plant). column: the slender upright
+    form, for narrow gaps between machines and lifts: stems close together
+    and nearly upright, branching narrowly, the crown a tall oval."""
     V = VARIANTS[variant]
     cfg = V[season]
     BARK = V['bark']
@@ -142,13 +154,26 @@ def bush(season, seed, stage=2, variant='moss'):
     # the skeleton: two or three stems from the base, branching upward
     segs, tips = [], []
     angles = {1: (-1.57,), 3: (-2.1, -1.57, -1.05), 5: (-2.35, -1.9, -1.57, -1.25, -0.8)}[nstem]
+    if column:
+        angles = {1: (-1.57,), 3: (-1.72, -1.57, -1.42), 5: (-1.8, -1.68, -1.57, -1.46, -1.34)}[nstem]
     for k, a in enumerate(angles):
-        skeleton(rng, BW / 2 + (k - (nstem - 1) / 2) * 2.5, BH - 1, a + rng.normal(0, 0.08),
-                 rng.uniform(21, 27) * lscale, 3.6 * (0.6 + 0.4 * lscale), depth, segs, tips)
+        skeleton(rng, BW / 2 + (k - (nstem - 1) / 2) * (1.2 if column else 2.5), BH - 1, a + rng.normal(0, 0.08 * (0.4 if column else 1)),
+                 rng.uniform(21, 27) * lscale * size, 3.6 * (0.6 + 0.4 * lscale), depth, segs, tips, 0.42 if column else 1.0)
     # keep the crown inside a dome (smaller while young, standing on the ground)
     cy = BH - (BH - BH * 0.42) * lscale - 2
     rx, ry = BW * 0.47 * lscale, BH * 0.46 * lscale
-    tips = [t for t in tips if ((t[0] - cx) / rx) ** 2 + ((t[1] - cy) / ry) ** 2 < 1.15]
+    lim = 1.15
+    if column:   # leaves spill past the tips, so the tips keep well inside
+        cy = BH - (BH - BH * 0.5) * lscale - 2
+        rx, ry = BW * 0.2 * lscale, BH * 0.28 * lscale
+        lim = 1.4
+    inside = lambda x, y, m: ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 < m
+    all_tips = tips
+    tips = [t for t in tips if inside(t[0], t[1], lim)]
+    if len(tips) < 3:   # a small seedling: keep its highest tips leafy
+        tips = sorted(all_tips, key=lambda t: t[1])[:3]
+    if column:   # no bare twigs reaching out past the leaves
+        segs = [sg for sg in segs if sg[2] >= depth - 1 or inside(sg[0][-1][0], sg[0][-1][1], lim * 1.3)]
 
     def light_at(x, y):
         # sun from the upper left, plus soft patches of sun through the crown
@@ -379,6 +404,21 @@ if __name__ == '__main__':
         # (zfps, zfpm, zfpv, zfpw: 156 x 128, same picture order)
         tub = dim(planter.matte(planter.pot('copper')), k, sat=sat)
         s16.write(os.path.join(out, 'zfp' + V['file'][3] + '.s16'), [planter.potted(im, tub) for im in imgs])
+    # the smaller forms (owner, 2026-11-18: for places too small for the
+    # full bush): compact (zfc*, 108 x 80, for slopes and low rooms) and
+    # slender (zfn*, 56 x 118, for narrow gaps), each also in a pot for
+    # built floors (zfq*, zfo*), in the same picture order
+    for vname, V in VARIANTS.items():
+        k, sat = V['dim']
+        L = V['file'][3]
+        for (plain, pot_name, w, h, sz, col, pw, ph) in FORMS:
+            imgs = [dim(bush(s, 7 + i, st, vname, BW=w, BH=h, size=sz, column=col), k, sat=sat)
+                    for st in range(3) for i, s in enumerate(('spring', 'summer', 'autumn', 'winter'))]
+            s16.write(os.path.join(out, plain + L + '.s16'), imgs)
+            with planter.sized(pw, ph):
+                tub = dim(planter.matte(planter.pot('copper')), k, sat=sat)
+                s16.write(os.path.join(out, pot_name + L + '.s16'),
+                          [planter.potted(im, tub, soil_y=h - 8, drape=4) for im in imgs])
     bushes = sheets['moss']
     # zfrt: kind * 6 + stage (bud, half-grown, ripe, overripe, then ripe and
     # overripe lying on the ground)
