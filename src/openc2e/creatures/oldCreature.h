@@ -315,6 +315,7 @@ class c2Organ {
 	size_t getReceptorCount() { return receptors.size(); }
 	size_t getEmitterCount() { return emitters.size(); }
 	size_t getReactionCount() { return reactions.size(); }
+	const std::vector<std::shared_ptr<c2Reaction>>& getReactions() const { return reactions; }
 
 	void applyInjury(float);
 	void restoreLifeforce(float shortterm, float longterm) {

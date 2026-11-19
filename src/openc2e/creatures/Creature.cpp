@@ -800,13 +800,15 @@ void c2Creature::tick() {
 	if (watchChem)
 		watchChemistry();
 	// developer aid: OPENC2E_WATCH_FUEL=N prints each creature's hunger and
-	// fuel chemicals every N ticks (the CAOS CHEM reading has no way to tell
+	// fuel chemicals (and the breathing ones: pyruvate, lactate, oxygen,
+	// carbon dioxide, air) every N ticks (the CAOS CHEM reading has no way to tell
 	// creatures apart in C2: UNID is not readable there)
 	static const int watchFuel = getenv("OPENC2E_WATCH_FUEL") ? atoi(getenv("OPENC2E_WATCH_FUEL")) : 0;
 	if (watchFuel > 0 && world.tickcount % watchFuel == 0 && world.history)
-		fmt::print("* FUEL {} t{} hunger {} glucose {} glycogen {} starch {} fat {} adipose {} energy {} ATP {} ADP {}\n",
+		fmt::print("* FUEL {} t{} hunger {} glucose {} glycogen {} starch {} fat {} adipose {} energy {} ATP {} ADP {} pyruvate {} lactate {} oxygen {} CO2 {} air {}{}\n",
 			world.history->findMoniker(genome), world.tickcount, (int)chemicals[3], (int)chemicals[70], (int)chemicals[72],
-			(int)chemicals[73], (int)chemicals[74], (int)chemicals[75], (int)chemicals[98], (int)chemicals[99], (int)chemicals[100]);
+			(int)chemicals[73], (int)chemicals[74], (int)chemicals[75], (int)chemicals[98], (int)chemicals[99], (int)chemicals[100],
+			(int)chemicals[69], (int)chemicals[68], (int)chemicals[95], (int)chemicals[90], (int)chemicals[96], unconscious ? " (unconscious)" : "");
 
 	// C1/C2: the world's egg-laying script takes the baby's genome name from
 	// BABY and sets it to 0 as the egg is laid; that ends the pregnancy

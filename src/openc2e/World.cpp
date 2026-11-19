@@ -510,11 +510,58 @@ void World::tick() {
 	// fuel (glucose, glycogen, starch, fatty acid, fat), it gets its genome's
 	// starting ATP, as a creature from an older save does at load; every 100
 	// ticks at most.
+	// (stalled means less ATP than the cheapest working organ needs, not only
+	// none: 4OXL, with glycogen 187 and fat 214, had its ATP fall to 1 and
+	// every organ costs more than that, so nothing ran, its chemistry froze
+	// with glucose 95 in its blood, it fainted and died of "starvation" in
+	// two of a day's test copies, and 2SWL likewise; 2026-11-18)
+	static const bool oldStallCheck = getenv("OPENC2E_OLD_STALL_CHECK") != nullptr; // (to compare)
+	// developer aid: OPENC2E_DUMP_ORGANS=MONIKER prints that creature's
+	// organs once (energy cost, clock rate, life force, and the reactions
+	// that make or use ATP and ADP)
+	static bool organsDumped = false;
+	if (static const char* dm = getenv("OPENC2E_DUMP_ORGANS"); dm && !organsDumped && tickcount % 100 == 70) {
+		organsDumped = true;
+		for (auto& a : agents) {
+			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
+			auto* c2 = ca ? dynamic_cast<c2Creature*>(ca->getCreature()) : nullptr;
+			if (!c2 || history->findMoniker(c2->getGenome()) != dm)
+				continue;
+			int k = 0;
+			for (auto& o : c2->getOrgans()) {
+				std::string rx;
+				for (auto& r : o->getReactions()) {
+					auto* g = r->data;
+					bool atp = false;
+					for (int i = 0; i < 4; i++)
+						if (g->reactant[i] == 99 || g->reactant[i] == 100)
+							atp = true;
+					if (atp)
+						rx += fmt::format(" [{}x{} + {}x{} -> {}x{} + {}x{} rate {}]", (int)g->quantity[0], (int)g->reactant[0], (int)g->quantity[1], (int)g->reactant[1],
+							(int)g->quantity[2], (int)g->reactant[2], (int)g->quantity[3], (int)g->reactant[3], (int)g->rate);
+				}
+				fmt::print("* ORGAN {} #{} cost {} clock {} life {:.0f}/{:.0f} reactions {}{}\n", dm, k++, (int)o->getEnergyCost(), (int)o->getClockRate(),
+					o->getLongTermLifeforce(), o->getInitialLifeforce(), o->getReactionCount(), rx);
+			}
+		}
+	}
 	if (engine.version == 2 && tickcount % 100 == 61) {
 		for (auto& a : agents) {
 			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
 			auto* c = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
-			if (!c || !c->isAlive() || c->getChemical(99) != 0)
+			if (!c || !c->isAlive())
+				continue;
+			int need = 1; // the least ATP any working organ runs on
+			if (auto* c2 = dynamic_cast<c2Creature*>(c); c2 && !oldStallCheck) {
+				int least = 256;
+				for (auto& o : c2->getOrgans())
+					if (o->getLongTermLifeforce() > 0.5f && o->getEnergyCost() > 0)
+						least = std::min(least, (int)o->getEnergyCost());
+				if (least < 256)
+					need = least;
+			}
+			unsigned char was = c->getChemical(99);
+			if (was >= need)
 				continue;
 			int fuel = c->getChemical(70) + c->getChemical(71) + c->getChemical(72) + c->getChemical(73) + c->getChemical(74);
 			if (fuel < 20)
@@ -525,7 +572,7 @@ void World::tick() {
 					if (ic->chemical == 99)
 						atp = ic->quantity;
 			c->setChemicalLevel(99, atp);
-			fmt::print("* Restarted the metabolism of a {} (genus {}): ATP 0 -> {} with fuel {} in store\n", c->isFemale() ? "female" : "male", (int)a->genus, (int)atp, fuel);
+			fmt::print("* Restarted the metabolism of {} ({} genus {}): ATP {} (organs need {}) -> {} with fuel {} in store\n", history->findMoniker(c->getGenome()), c->isFemale() ? "female" : "male", (int)a->genus, (int)was, need, (int)atp, fuel);
 		}
 	}
 
