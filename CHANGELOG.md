@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 470 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 471 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 9 commits, 18 November 2026
+- [Unreleased](#unreleased): 10 commits, 18 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,19 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Developer aids: count any chemicals' flows; organ dump shows life stages
+
+[`8e47c870`](https://github.com/DotairZee/zeetures/commit/8e47c870176de267da1d0e9fad53b7031a62faae)
+
+OPENC2E_COUNT_ENERGY now takes a list of chemicals ("69,95,68,98,70,179")
+to sum by organ and half-life for the marked creature (default Energy,
+ATP, ADP). The organ dump also lists the receptors on the life-stage
+loci (which chemical ages the creature: Life, 76, in norn.gen).
+
+Used side by side with the real game over DDE: a real newborn from
+norn.gen deadlocks at ATP 0 with fuel in store just as ours do, while
+real babies past their first minutes keep a full Energy reserve.
 
 #### Developer aids: count a creature's energy flows, dump a marked creature
 
