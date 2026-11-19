@@ -1230,6 +1230,40 @@ void SkeletalCreature::snapDownFoot() {
 		newy = downfootroom->bottom.pointAtX(footx).y;
 	}
 
+	// C2: about to fall (the foot stepped onto a floor far below) with the
+	// body's bottom a few px under the floor that its middle stands on and
+	// that holds it (solid at its size): the body is first set back on that
+	// floor, so the fall starts on it and it holds. A walking foot's point
+	// lies a few px under the floor line, and creatures walking east off the
+	// cage lift's middle stop (room 21, floor 840, its way down 120 wide)
+	// into the tunnel beside (room 20, its floor 25 px lower) began their
+	// fall below 840 and dropped 320-345 px down the empty shaft, badly hurt
+	// (0-6 a 5-minute copy; 2026-11-19).
+	static const bool oldStepHold = getenv("OPENC2E_OLD_STEP_HOLD") != nullptr; // (to compare)
+	auto onMiddleFloor = [&]() {
+		if (engine.version != 2 || oldStepHold || carriedby || invehicle || !downfootroom)
+			return;
+		float midx = x + getWidth() / 2.0f, bottom = y + getHeight();
+		std::shared_ptr<Room> mid = m->roomAt(midx, bottom - 10);
+		if (!mid || mid == downfootroom || mid->type == 2)
+			return;
+		float mf = mid->floorYatX(midx);
+		if (mf > bottom - 0.5f || mf < bottom - 12.0f)
+			return; // (on the floor or above it: the fall starts on it anyway)
+		bool solid;
+		if (mid->floorpoints.size())
+			solid = size > mid->floorvalue;
+		else {
+			std::shared_ptr<Room> under = m->roomAt(midx, std::max(mid->y_left_floor, mid->y_right_floor) + 1);
+			solid = !under || !world.map->hasDoor(mid, under) || world.map->getDoorPerm(mid, under) < size;
+		}
+		if (!solid)
+			return;
+		if (getenv("OPENC2E_WATCH_ROOMS"))
+			fmt::print("* WATCH ROOM t{} unid {} falling from under room {}'s floor ({:.0f}, bottom {:.0f}): set on it\n", world.tickcount, unid, mid->id, mf, bottom);
+		moveTo(x, mf - getHeight() - 1);
+	};
+
 	if (engine.version > 1) {
 		// TODO: hilar hack: enable gravity if we're snapping by much
 		// (down only: a step up into the next room, up to the 40 px the door
@@ -1237,6 +1271,7 @@ void SkeletalCreature::snapDownFoot() {
 		// boardwalk pool's bank fell back each time from the 33 px step onto
 		// the planks, owner 2026-11-10)
 		if (newroomchosen && (newy - (footy - y)) - y > 20) {
+			onMiddleFloor();
 			falling = true;
 			return;
 		}
@@ -1246,6 +1281,7 @@ void SkeletalCreature::snapDownFoot() {
 		// floor at the far east was moved 313 px down in one step
 		// (2026-11-12). Not at a world's start (the save's places stand).
 		if (engine.version == 2 && !hadroom && engine.worldready && !carriedby && !invehicle && (newy - (footy - y)) - y > 20) {
+			onMiddleFloor();
 			falling = true;
 			return;
 		}
@@ -1257,6 +1293,7 @@ void SkeletalCreature::snapDownFoot() {
 		// one step, no fall (2026-11-18, found from BIG MOVE)
 		static const bool oldSameRoomSnap = getenv("OPENC2E_OLD_SAME_ROOM_SNAP") != nullptr; // (to compare)
 		if (engine.version == 2 && !oldSameRoomSnap && hadroom && engine.worldready && !carriedby && !invehicle && (newy - (footy - y)) - y > 20) {
+			onMiddleFloor();
 			falling = true;
 			return;
 		}
