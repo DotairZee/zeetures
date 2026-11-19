@@ -25,6 +25,7 @@
 #include "caosScript.h"
 #include "Engine.h"
 #include "World.h"
+#include "Lift.h"
 #include "historyManager.h"
 #include "Map.h"
 #include "MetaRoom.h"
@@ -1654,6 +1655,15 @@ void oldCreature::tickMind() {
 			fmt::print("* WATCH ACT unid {} decision {} on {} {} {} (category {}) dx {:.0f} dy {:.0f}\n", parentagent->getUNID(), decn,
 				(int)attention->family, (int)attention->genus, attention->species, attn, dx, dy);
 		}
+		// developer aid: OPENC2E_WATCH_LIFT_USE prints each action a creature
+		// starts on a lift: the lift's place, OBV0 (1 while it is moving: its
+		// activate scripts then do nothing) and YVEC
+		static const bool watchLift = getenv("OPENC2E_WATCH_LIFT_USE") != nullptr;
+		if (watchLift && attention)
+			if (Lift* lift = dynamic_cast<Lift*>(attention.get()))
+				fmt::print("* WATCH LIFT USE t{} unid {} decision {} on lift {} {} {} at {:.0f},{:.0f} obv0 {} yvec {} creature at {:.0f},{:.0f}\n", world.tickcount,
+					parentagent->getUNID(), decn, (int)lift->family, (int)lift->genus, lift->species, lift->x, lift->y, lift->var[0].hasInt() ? lift->var[0].getInt() : -1,
+					lift->yvec, parentagent->x, parentagent->y);
 		parentagent->queueScript(decn + 16);
 	}
 }
