@@ -1129,7 +1129,7 @@ endi
 * between the rope lift's caller and the doghouse (room 47, floor 2255;
 * slender, mossy); the far-east balcony left of its lift's caller (room
 * 174, floor 1845; slender, potted, volcanic); the west machine room right
-* of the capsule (room 116, floor 1841; slender, machine cave); the gene
+* of the capsule (room 116, floor 1841; slender, potted, machine cave); the gene
 * splicing room east of the egg lab, on its paved floor between the two
 * glass chambers (x 6615-6710 and 6785-6855) rather than in front of one
 * (room 159, floor 1768; slender, potted, machine cave; owner, first shown
@@ -1161,14 +1161,35 @@ next
 doif var0 eq 0
   inst new: simp zfov 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 8042 1709 setv ov05 1 setv ov07 2 setv ov00 2 setv ov01 150 setv ov02 2 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
 endi
+* (the machine room's goes into a pot, owner, 2026-11-18: first planted
+* in the ground at 516/1724; one already there is replaced, keeping its
+* stage, age and picture, and the fruit on it rise with it)
 setv var0 0
 enum 2 4 141
   doif posl eq 516
-    doif post eq 1724 addv var0 1 endi
+    doif post eq 1724
+      doif ov05 ne 1 setv var0 1 setv var3 ov00 setv var4 ov01 setv var6 pose kill targ endi
+    endi
+  endi
+next
+doif var0 eq 1
+  inst new: simp zfom 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 516 1708 setv ov05 1 setv ov07 2 setv ov00 var3 setv ov01 var4 setv ov02 1 setv ov03 2 setv ov04 -10 setv ov99 7461 pose var6 tick 250 slow
+  enum 2 25 0
+    doif attr eq 0
+      doif posx gt 516 doif posx lt 572 doif posy gt 1724 doif posy lt 1842
+        setv var1 posl setv var2 post subv var2 16 mvto var1 var2
+      endi endi endi endi
+    endi
+  next
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 516
+    doif post eq 1708 addv var0 1 endi
   endi
 next
 doif var0 eq 0
-  inst new: simp zfnm 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 516 1724 setv ov05 0 setv ov07 2 setv ov00 2 setv ov01 150 setv ov02 1 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+  inst new: simp zfom 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 516 1708 setv ov05 1 setv ov07 2 setv ov00 2 setv ov01 150 setv ov02 1 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
 endi
 setv var0 0
 enum 2 4 141
