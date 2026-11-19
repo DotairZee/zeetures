@@ -33,6 +33,8 @@
 #include "DullPart.h"
 #include "SimpleAgent.h"
 #include "Vehicle.h"
+#include "Lift.h"
+#include "CallButton.h"
 #include "Engine.h"
 #include "SpritePart.h"
 #include "World.h"
@@ -126,15 +128,28 @@ static bool isInjected(Agent* a) {
 // between relaunches"): plain and compound objects from the world file or
 // made during play (fallen fruit, critters, seeds), not scenery (family 1),
 // creatures, eggs, kept or injected objects, nor objects the Additions make
-// at each load. Lifts, boats and other vehicles, call buttons, bubbles and
-// the hand are other types and still start as in the world file.
+// at each load. Bubbles and the hand are other types and still start as in
+// the world file.
+// Lifts, boats, the submarine and other vehicles, and call buttons, from the
+// world file (2026-11-19, the rest of stage 3): kept as they were, with
+// their riders, a lift's stop and where it is going, but only updated in
+// place, never removed or made again (saves before this have none of them).
+static bool isMachine(Agent* a) {
+	const std::type_info& t = typeid(*a);
+	return t == typeid(Vehicle) || t == typeid(Lift) || t == typeid(CallButton);
+}
+
 static bool isWorldObject(Agent* a) {
 	if (engine.version != 2 || a->family == 1 || a->fromAddition || !a->injectedFrom.empty())
 		return false;
 	if (oldCreatureOf(a) || isEgg(a) || isKept(a))
 		return false;
 	const std::type_info& t = typeid(*a);
-	return t == typeid(SimpleAgent) || t == typeid(CompoundAgent);
+	if (t == typeid(SimpleAgent) || t == typeid(CompoundAgent))
+		return true;
+	// (developer aid: OPENC2E_NO_SAVED_MACHINES keeps them out, as before)
+	static const bool noMachines = getenv("OPENC2E_NO_SAVED_MACHINES") != nullptr;
+	return !noMachines && a->sfcIndex >= 0 && isMachine(a);
 }
 
 // in the middle of a script other than its timer when saved: its pictures
@@ -211,6 +226,19 @@ static void writeObjectBody(std::ostream& out, Agent* ag, std::map<Agent*, int>&
 		} else {
 			savePart(out, ag->part(0));
 		}
+		if (Lift* lift = dynamic_cast<Lift*>(ag))
+			out << "lift " << lift->currentbutton << " " << lift->newbutton << "\n";
+		// who rides it: creatures by moniker, objects by their id in this list
+		if (vhcl)
+			for (auto& p : vhcl->passengers) {
+				Agent* r = p.get();
+				if (!r || r->isDying())
+					continue;
+				if (oldCreatureOf(r) && world.history)
+					out << "rider c " << world.history->findMoniker(oldCreatureOf(r)->getGenome()) << "\n";
+				else if (ids.count(r))
+					out << "rider o " << ids[r] << "\n";
+			}
 		if (vhcl)
 			out << "cabin " << vhcl->cabinleft << " " << vhcl->cabintop << " " << vhcl->cabinright << " " << vhcl->cabinbottom << " " << vhcl->cabinplane << " "
 				<< vhcl->getCapacity() << " " << vhcl->getBump() << " " << vhcl->xvec << " " << vhcl->yvec << "\n";
@@ -304,6 +332,10 @@ struct SavedInjected {
 	int xvec = 0, yvec = 0;
 	int sfc = -1; // a world object's place in the world file's list
 	bool busy = false;
+	bool hasLift = false;
+	unsigned int liftcur = 0, liftnew = 0;
+	std::vector<std::string> riderCreatures; // monikers
+	std::vector<int> riderObjects; // ids
 };
 
 static void readInjectedLine(SavedInjected& o, const std::string& key, std::istringstream& l, const std::function<std::string()>& rest) {
@@ -372,6 +404,16 @@ static void readInjectedLine(SavedInjected& o, const std::string& key, std::istr
 		SavedInjected::Spot sp;
 		if (l >> i >> sp.l >> sp.t >> sp.r >> sp.b >> sp.func >> sp.message >> sp.mask && i >= 0 && i < 6)
 			o.spots[i] = sp;
+	} else if (key == "lift") {
+		o.hasLift = (bool)(l >> o.liftcur >> o.liftnew);
+	} else if (key == "rider") {
+		std::string kind, who;
+		if (l >> kind >> who) {
+			if (kind == "c")
+				o.riderCreatures.push_back(who);
+			else if (kind == "o")
+				o.riderObjects.push_back(atoi(who.c_str()));
+		}
 	} else if (key == "cabin") {
 		o.hasCabin = (bool)(l >> o.cabin[0] >> o.cabin[1] >> o.cabin[2] >> o.cabin[3] >> o.cabin[4] >> o.capacity >> o.bump >> o.xvec >> o.yvec);
 	}
@@ -479,6 +521,14 @@ static void restoreWorldObjects(std::vector<SavedInjected>& objects, int& matche
 		ag->falling = o.falling;
 		ag->paused = o.paused;
 		ag->visible = o.visible;
+		if (Vehicle* v = dynamic_cast<Vehicle*>(ag); v && o.hasCabin) {
+			v->xvec = o.xvec;
+			v->yvec = o.yvec;
+		}
+		if (Lift* lift = dynamic_cast<Lift*>(ag); lift && o.hasLift && o.liftcur < lift->callbuttony.size() && o.liftnew < lift->callbuttony.size()) {
+			lift->currentbutton = o.liftcur;
+			lift->newbutton = o.liftnew;
+		}
 		if (!o.busy) {
 			ag->actv = o.actv;
 			for (auto& sp : o.parts)
@@ -489,7 +539,7 @@ static void restoreWorldObjects(std::vector<SavedInjected>& objects, int& matche
 	}
 	// gone during play: removed
 	for (auto& [idx, ag] : bySfc)
-		if (!kept.count(ag)) {
+		if (!kept.count(ag) && !isMachine(ag)) {
 			ag->kill();
 			removed++;
 		}
@@ -504,6 +554,29 @@ static void restoreWorldObjects(std::vector<SavedInjected>& objects, int& matche
 			ag->var[i].setInt(0);
 		applyVars(ag, *o, made);
 	}
+	// riders back aboard (creatures were restored before this)
+	int riders = 0;
+	for (auto& [ag, o] : fromFile) {
+		Vehicle* v = dynamic_cast<Vehicle*>(ag);
+		if (!v)
+			continue;
+		std::vector<Agent*> aboard;
+		for (int id : o->riderObjects)
+			if (made.count(id))
+				aboard.push_back(made[id]);
+		if (!o->riderCreatures.empty() && world.history)
+			for (auto& a : world.agents)
+				if (oldCreature* c = a ? oldCreatureOf(a.get()) : nullptr)
+					if (std::find(o->riderCreatures.begin(), o->riderCreatures.end(), world.history->findMoniker(c->getGenome())) != o->riderCreatures.end())
+						aboard.push_back(a.get());
+		for (Agent* r : aboard)
+			if (r && !r->isDying() && !r->carriedby && !r->invehicle) {
+				v->carry(r);
+				riders++;
+			}
+	}
+	if (riders)
+		fmt::print("* Riders back aboard their vehicles: {}\n", riders);
 }
 
 
