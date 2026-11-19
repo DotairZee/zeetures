@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 476 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 477 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 15 commits, 18 November 2026 to 19 November 2026
+- [Unreleased](#unreleased): 16 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,29 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 19 November 2026
+
+#### C2: doors a script can open no longer make sealed pockets
+
+[`66ed3f82`](https://github.com/DotairZee/zeetures/commit/66ed3f82f6f484ff80435dedd02becdca65ebfa5)
+
+The pocket rescue groups rooms through open doors and trusted a shut door
+only once it had opened that session. The glass terrarium by the incubator
+(room 85, pear plants inside) is shut off from room 81 by a door its door
+object (2 9 21) toggles with SETV DOOR, so until a creature first opened it
+every creature inside was moved out through the glass, and hungry ones
+outside reaching for the pears were moved again and again (up to 21 times
+in a 5-minute copy).
+
+Before grouping, the installed scripts are now scanned (again whenever the
+number of scripts changes) for "setv door &lt;dir&gt; &lt;room&gt; &lt;room&gt; &lt;perm&gt;" with a
+perm other than a plain 0, and those doors count as openable while shut
+(Map::markDoorOpenable, Scriptorium::forEachCode/scriptCount). In Home this
+joins only room 85 to the world. Matched tests: norns placed inside the
+terrarium were pulled out 3 of 3 times with the old rule and 0 with the new;
+they left through the door once a norn opened it. Three pairs of 5-minute
+Home copies: meals and hunger unchanged (at 255: 33/35/30 vs 39/34/31).
+OPENC2E_OLD_SCRIPT_DOORS restores the old rule; OPENC2E_LIST_POCKETS also
+reports how many shut doors scripts can open.
 
 #### Developer aids: cut a creature's air on demand; breath in the fuel watch
 
