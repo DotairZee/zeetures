@@ -113,6 +113,11 @@ VERSIONS = [
      "no longer row straight back to a shore they just searched; railings close the treehouse platform's and the "
      "scaffold's open ends; creatures no longer step off into the cage lift's shaft when a nearer floor is beside them; a fall that starts just under a floor line begins on it; lifts rest half as long "
      "between rides; no fruit bushes in lift shafts."),
+    ("0.14.1", "58cd1380",
+     "Fixes: the gene splicer works: two creatures in its pods give an egg crossed from both (one gives a "
+     "clone), and the Owner's Kit says the baby was spliced from them; eggs being hatched can no longer be "
+     "cut off by a creature pushing, pulling or hitting them, which left grendel, ettin and norn eggs that "
+     "never hatched, and eggs stuck that way start again at load."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

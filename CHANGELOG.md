@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 492 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 496 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.14.1](#version-0141): 4 commits, 19 November 2026
 - [0.14.0](#version-0140): 11 commits, 19 November 2026
 - [0.13.0](#version-0130): 20 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
@@ -21,6 +22,65 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.14.1
+
+Fixes: the gene splicer works: two creatures in its pods give an egg crossed from both (one gives a clone), and the Owner's Kit says the baby was spliced from them; eggs being hatched can no longer be cut off by a creature pushing, pulling or hitting them, which left grendel, ettin and norn eggs that never hatched, and eggs stuck that way start again at load.
+
+### 19 November 2026
+
+#### Version 0.14.1
+
+[`58cd1380`](https://github.com/DotairZee/zeetures/commit/58cd1380728f282f9e2a59b0e519c39d70dc0666)
+
+#### Eggs: a hatching cannot be cut off
+
+[`3554c069`](https://github.com/DotairZee/zeetures/commit/3554c06954b0b182fffa50b10745b46570a66439)
+
+Once an egg starts hatching its timer is stopped, and a creature pushing,
+pulling, hitting or trying to eat it runs the world's catch-all object
+script (2 0 0 1-3, 12) on the egg, which ended the hatching midway with the
+timer still stopped. The egg then never hatched: 13 of the 22 grendel and
+ettin eggs at the gene lab's chute in Home were stuck that way, one since
+2026-11-08.
+
+- The egg machine's and the egg pile's eggs (grendels.cos) and the norn
+  egg (script-patches.txt) LOCK their hatching once it starts, with a retry
+  timer in case it is ever cut off.
+- At load, grendel and ettin eggs stuck mid-hatch are started again (they
+  hatch as the population limit allows); empty shells are cleared.
+
+Test, every egg poked once a second as a creature would: old scripts, 12
+machine eggs stuck for good; new, all 12 hatched.
+
+#### C2: the gene splicer makes its egg
+
+[`65940b09`](https://github.com/DotairZee/zeetures/commit/65940b0900acbb84976617512c74bec9ff4cab13)
+
+The gene lab's splicer takes the creatures in its two pods (killing them),
+then crosses their genomes with NEW: GENE. NEW: GENE found a creature's
+genome only through the living creature, so it failed ("failed to find
+genome") once the pods had taken them: both creatures were lost, no egg was
+made, and the console's script died partway. It also refused a 0 parent,
+which the console passes with only one pod filled.
+
+- The genomes of the last 64 creatures taken out of the world are kept by
+  moniker (historyManager::goneGenomes, filled in Agent::kill), and NEW:
+  GENE looks there after the living creatures.
+- NEW: GENE with one parent 0 copies the other (a clone, as the
+  Metamorphosis device makes).
+- A creature hatched from a splice of two creatures is recorded as
+  spliced (history event 1, not conceived), saved as "parents M F
+  spliced", and the Owner's Kit says "spliced from M and F in the gene
+  lab".
+
+Tested in Home copies: two norns in the pods gave an egg (genome crossed
+from both) that hatched a baby; one norn gave a clone; the record survives
+a save and a reload; the ASan build was clean.
+
+#### Changelog
+
+[`1f6ca574`](https://github.com/DotairZee/zeetures/commit/1f6ca574485a21ad1ef457f1df7cf82de7c53aa2)
 
 ## Version 0.14.0
 
