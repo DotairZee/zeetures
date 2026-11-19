@@ -118,6 +118,11 @@ VERSIONS = [
      "clone), and the Owner's Kit says the baby was spliced from them; eggs being hatched can no longer be "
      "cut off by a creature pushing, pulling or hitting them, which left grendel, ettin and norn eggs that "
      "never hatched, and eggs stuck that way start again at load."),
+    ("0.15.0", "cb77e0c8",
+     "The Life Kit's Metamorph Device stands in every world, in the gene splicer room: a creature put in its "
+     "cabin is replaced by a newly hatched copy of the other sex, and a switch on the device (a lightning bolt "
+     "or a skull) chooses whether the creature put in is ended at once or poisoned, kept with the world; only "
+     "the hand runs it. Fix: a click on hotspots that objects' scripts set up ran the wrong action."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

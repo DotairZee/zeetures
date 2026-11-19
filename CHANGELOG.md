@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 499 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 501 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 3 commits, 19 November 2026
+- [0.15.0](#version-0150): 5 commits, 19 November 2026
 - [0.14.1](#version-0141): 4 commits, 19 November 2026
 - [0.14.0](#version-0140): 11 commits, 19 November 2026
 - [0.13.0](#version-0130): 20 commits, 18 November 2026 to 19 November 2026
@@ -24,11 +24,33 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.15.0
 
-Changes since the last version.
+The Life Kit's Metamorph Device stands in every world, in the gene splicer room: a creature put in its cabin is replaced by a newly hatched copy of the other sex, and a switch on the device (a lightning bolt or a skull) chooses whether the creature put in is ended at once or poisoned, kept with the world; only the hand runs it. Fix: a click on hotspots that objects' scripts set up ran the wrong action.
 
 ### 19 November 2026
+
+#### Version 0.15.0
+
+[`cb77e0c8`](https://github.com/DotairZee/zeetures/commit/cb77e0c82002a82ef098869b4a5af7f672d342fe)
+
+#### Metamorph Device: a switch for its two versions
+
+[`cc14903c`](https://github.com/DotairZee/zeetures/commit/cc14903c6930f19d7b33bfb19ab692d993a76e23)
+
+A small riveted plate on the front of the device's left end block (2 1 164,
+sprite zmsw, drawn by art/metamorph_lever.py): an embossed, painted
+lightning bolt above (the creature inside is ended at once) and a skull
+below (it is poisoned and let out to die), the paint rubbed off the raised
+edges, and a lever that points at the one in use. The owner chose the icons
+and finish from mock-ups (2026-11-19). A click from the hand flips it, sets
+the device's OV10 and opens the game's announcement window saying what the
+device now does (announcements.txt 42, 43). Creatures do not see it. It is
+kept with the world (OV99 7461), so the setting stays between launches.
+
+Tested in a Home copy: a click flipped it (lever down, device on poisons,
+note shown); saved, reloaded with the lever still down and the device on
+poisons; a second click flipped it back with its note.
 
 #### The Metamorph Device in the gene splicer room
 
