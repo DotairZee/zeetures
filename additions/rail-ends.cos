@@ -1,0 +1,26 @@
+* Two walkway ends closed with railings (openc2e Creatures 2 project, our
+* own script and our own art from art/rail_ends.py; owner, 2026-11-19:
+* "railing + closed end", mock-up rail-ends-mockup.png approved). Run by
+* openc2e after the world loads (Additions folder); made anew each load.
+*
+* The treehouse platform's east end (room 51, walk line y 1747, ends at
+* x 3917): creatures walked off it into the open air east of it (rooms 52
+* and 35, whose floor there is open) and fell 508 px to the cave floor,
+* hurt nearly to death (pain ~245). Its top rail ran on past the last post
+* with nothing under it; a new post there, the deck beam carried out to it
+* and a lower rail close it (zrle frame 0, at x 3876, y 1686).
+* The scaffold's east end in the cave (room 54, walk line y 1996, ends at
+* x 3828): creatures walked off into the open air (room 53) and fell 259 px
+* to the flower beds. Its last leaning post already stands at the end; a
+* lower rail across the last two posts closes it (zrle frame 1, at x 3798,
+* y 1962). The scaffold is still reached by its two lifts.
+* Both pieces sit behind creatures with the walkways' own railings (plane
+* -20). The doorways are 150: too small for a creature (224), still open to
+* thrown objects and flying critters.
+setv door 0 51 52 150
+setv door 0 51 35 150
+setv door 0 54 53 150
+enum 2 3 255 kill targ next
+enum 2 3 256 kill targ next
+inst new: simp zrle 1 0 -20 0 setv cls2 2 3 255 setv attr 0 mvto 3876 1686 slow
+inst new: simp zrle 1 1 -20 0 setv cls2 2 3 256 setv attr 0 mvto 3798 1962 slow
