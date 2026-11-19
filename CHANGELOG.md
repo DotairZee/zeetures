@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 488 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 491 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 7 commits, 19 November 2026
+- [Unreleased](#unreleased): 10 commits, 19 November 2026
 - [0.13.0](#version-0130): 20 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
@@ -27,6 +27,66 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 19 November 2026
+
+#### C2 mind: no foraging boat ride back to a shore searched lately
+
+[`b876da2d`](https://github.com/DotairZee/zeetures/commit/b876da2d7a1c389e6ebc951d4628d3659e413e5b)
+
+Starving norns rode the east sea's boat back and forth (one five round
+trips, a ride every ~40 decisions; owner's screencast): the boat set them
+down fine, but foraging's "water ahead and a boat in view: row across to
+search further" never asked whether the far shore had just been searched.
+Now a direction is skipped when a learned boat ride that way lands where
+the creature was within 3000 decisions (Params::forageRevisit); a shore
+never reached by boat is still worth exploring.
+
+Tests: three pairs of 5-minute Home copies: straight-back rides within 300
+decisions 2 vs 12, most rides by one norn 3 vs 5, meals per thousand
+524/485/535 vs 486/521/516, at hunger 255 108 vs 112.
+OPENC2E_OLD_BOAT_FORAGE restores the old rule.
+
+#### C2 relationships: gifts credited to the giver, sharing and defending
+
+[`c887ea56`](https://github.com/DotairZee/zeetures/commit/c887ea569470ccb8dcb781590126354037b4317d)
+
+The owner's relationship ideas (2026-11-11) left to do: share with and
+defend friends, and gifts credited to the giver.
+
+Gifts: Agent::drop records who put a thing down and when
+(lastDroppedBy, lastDroppedTick). A stimulus felt from a thing a creature
+put down within 1200 ticks counts, in Relationships::felt, as from that
+creature: eating food a friend carried over warms the eater to it ("brought
+me something that eased my hunger"). OPENC2E_NO_GIFT_CREDIT turns it off.
+
+Sharing (HomeostatMind::addShare): a creature not hungry itself (hunger at
+most 0.35), with a friend in sight (affinity 0.4 or more) who looks hungry
+(0.6 or more; SeenAgent::hunger, the other's Hunger drive), brings it food:
+picks some up nearby, carries it over and drops it beside it, the bring
+that tending already did (now addBring, shared by both). OPENC2E_NO_SHARE.
+
+Defending (HomeostatMind::addDefend): when a creature is hurt by another,
+creatures within 400 px who count it a friend or mate are told who did it
+for 200 ticks (oldCreature::defendFrom, MindPerception::defendFrom); unless
+they fear that one, are babies, or have more pressing needs, they may go
+and hit it. OPENC2E_NO_DEFEND.
+
+Tests: three pairs of 5-minute Home copies (all three on vs off): at hunger
+255 127 vs 141, over 200 189 vs 199, meals per thousand 1,569 vs 1,634,
+creature hits 1,644 vs 1,503, deaths and faints the same; 3-15 shares and
+3-19 defends a copy. A 4-minute copy under AddressSanitizer: clean.
+OPENC2E_WATCH_TEND logs share and defend offers.
+
+#### Food: no fruit bushes in lift shafts
+
+[`5c9dcc7c`](https://github.com/DotairZee/zeetures/commit/5c9dcc7cf8ef160595da9893697ec06580bfcb10)
+
+A fruit bush grew between the cage lift's cables at its middle stop, in
+the cabin's way (owner's screenshot); another stood at the top stop of
+the lift at x 4549. Fruit no longer sprouts with its middle inside a
+lift's span between 250 px above the lift's top stop and its bottom stop
+(the spans and stops of the world's 16 lifts, from the engine's lift
+list), and at load any bush already there is removed (Home: those two;
+26 bushes to 24).
 
 #### C2: a fall starting under a solid floor line begins on that line
 
