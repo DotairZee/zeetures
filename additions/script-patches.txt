@@ -190,3 +190,27 @@ replace setv var1 posb over inst
 scrp 2 5 2 9
 find drea 1 mvto var0 var1 slim
 replace drea 1 setv var2 posb subv var2 post subv var1 var2 mvto var0 var1 slim
+
+* Lifts rest half as long after arriving (owner, 2026-11-19). Each of the
+* world's lifts (3 2 0-4) on arriving sets itself busy (OBV0) and starts a
+* 30-tick timer that frees it; until then an activation does nothing. In a
+* 5-minute Home copy 553 of 869 creature activations of lifts fell in that
+* rest, norns waiting to board pressing until it was free. The rest is 15
+* ticks now (three pairs of 5-minute Home copies: at hunger 255 97 vs 111,
+* meals per thousand 1,370 vs 1,350, activations on a busy lift 854 vs
+* 1,874); riders set down on arrival still have time to step off.
+scrp 3 2 0 0
+find dpas part 2 pose 0 tick 30
+replace dpas part 2 pose 0 tick 15
+scrp 3 2 1 0
+find dpas part 2 pose 0 tick 30
+replace dpas part 2 pose 0 tick 15
+scrp 3 2 2 0
+find dpas part 2 pose 0 tick 30
+replace dpas part 2 pose 0 tick 15
+scrp 3 2 3 0
+find dpas part 2 pose 0 tick 30
+replace dpas part 2 pose 0 tick 15
+scrp 3 2 4 0
+find dpas part 2 pose 0 tick 30
+replace dpas part 2 pose 0 tick 15
