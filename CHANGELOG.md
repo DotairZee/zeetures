@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 477 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 478 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 16 commits, 18 November 2026 to 19 November 2026
+- [Unreleased](#unreleased): 17 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,24 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 19 November 2026
+
+#### C2: pocket rescue steps onto a floor beside up to 80 px up before lifting
+
+[`69e41ab5`](https://github.com/DotairZee/zeetures/commit/69e41ab51321b92cf06cf009f7c59ccd4e409b95)
+
+A norn turning at the gene lab's west wall (x 6113) has its 50 px box swing
+over the rock beyond (room 160, whose floor is 100 px lower); C2 physics
+lets it fall there, and by the next rescue check (every 5 ticks) its feet
+were about 57 px under the lab's floor (room 159). The side step only looked
+40 px up, so liftUp moved it 216-220 px onto the ledge above (room 158), a
+floor it could not walk back from. After the 40 px side step fails, the
+rescue now tries the same step once more reaching 80 px up, before lifting.
+
+Tests: six norns at that wall, two copies each: the old rule lifted one to
+room 158; the new rule stepped the same case back onto 159's floor (feet
+1797, floor 1798). Three pairs of 5-minute Home copies: meals 520/487/479
+vs 477/442/492, at 255 38/26/30 vs 33/31/35 (no change beyond noise).
+OPENC2E_OLD_STEP_RISE restores the old order.
 
 #### C2: doors a script can open no longer make sealed pockets
 
