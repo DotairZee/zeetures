@@ -502,20 +502,18 @@ void World::tick() {
 	// pocket). The world has about 30 of them; a room whose doorways a script
 	// opens and shuts (an airlock) is not one unless both were shut at the
 	// start and still are.
-	// C2: a metabolism stalled with fuel in store is restarted. Every organ
-	// needs ATP to run, so a creature whose ATP reaches 0 can neither digest
-	// what it eats nor burn its fat to make more: it stays at 0 for good,
-	// starving with food in its stomach (owner, 2026-11-10: a grendel ate
-	// berries and was never satiated; it had starch 255, fat 255, ATP 0; the
-	// Home ettin did the same). When a living creature has no ATP but has
-	// fuel (glucose, glycogen, starch, fatty acid, fat), it gets its genome's
-	// starting ATP, as a creature from an older save does at load; every 100
-	// ticks at most.
-	// (stalled means less ATP than the cheapest working organ needs, not only
-	// none: 4OXL, with glycogen 187 and fat 214, had its ATP fall to 1 and
-	// every organ costs more than that, so nothing ran, its chemistry froze
-	// with glucose 95 in its blood, it fainted and died of "starvation" in
-	// two of a day's test copies, and 2SWL likewise; 2026-11-18)
+	// C2: a metabolism stalled with fuel in store (ATP below what the
+	// cheapest working organ needs, so no organ can run, the one that makes
+	// ATP included) stays stalled: the creature faints and dies, as in the
+	// real game, where a newborn read over DDE froze at ATP 0 with glucose
+	// and pyruvate in store (2026-11-18). This used to be restarted with the
+	// genome's starting ATP every 100 ticks (642318a3, c09c8452), which kept
+	// healthy creatures alive while brain relay cells passed on too little
+	// (fixed, b74ca45c) and since then mostly kept newborns with lethal
+	// mutations on life support (e.g. the organ that makes PGK switched off
+	// by a mutated receptor). Owner, 2026-11-19: drop it.
+	// OPENC2E_RESTART_METABOLISM turns the restart back on (for experiments;
+	// OPENC2E_OLD_STALL_CHECK then restarts at ATP 0 only).
 	static const bool oldStallCheck = getenv("OPENC2E_OLD_STALL_CHECK") != nullptr; // (to compare)
 	// developer aid: OPENC2E_DUMP_ORGANS=MONIKER prints that creature's
 	// organs once (energy cost, clock rate, life force, and the reactions
@@ -587,7 +585,8 @@ void World::tick() {
 			}
 		}
 	}
-	if (engine.version == 2 && tickcount % 100 == 61) {
+	static const bool restartMetabolism = getenv("OPENC2E_RESTART_METABOLISM") != nullptr;
+	if (engine.version == 2 && restartMetabolism && tickcount % 100 == 61) {
 		for (auto& a : agents) {
 			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
 			auto* c = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
