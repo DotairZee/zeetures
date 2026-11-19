@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 475 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 476 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 14 commits, 18 November 2026 to 19 November 2026
+- [Unreleased](#unreleased): 15 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,18 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 19 November 2026
+
+#### Developer aids: cut a creature's air on demand; breath in the fuel watch
+
+[`d34012b1`](https://github.com/DotairZee/zeetures/commit/d34012b16c855ab61c5ad1f7768730ce29991a58)
+
+OPENC2E_TEST_NO_AIR cuts the air of a creature a script marks with OV96 = 1, as if
+it were out of breath under water, and OPENC2E_WATCH_FUEL now prints how
+much breath a creature has used. Measured with them (norn.gen adults,
+normal speed): with no air, oxygen falls to about 1 within 30 s and ATP
+crashes 40-60 s in; given air back before the crash a creature recovers
+fully, after it never does. With the 5-minute breath first, a creature
+held under water can be saved for about 5 minutes 40 seconds.
 
 #### C2: no metabolism restart unless asked for
 
