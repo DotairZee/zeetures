@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 467 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 468 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 6 commits, 18 November 2026
+- [Unreleased](#unreleased): 7 commits, 18 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,28 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### C2: restart a metabolism stalled below the cheapest organ's ATP need
+
+[`c09c8452`](https://github.com/DotairZee/zeetures/commit/c09c8452b43346613cd088ba559566f54c5c1ad8)
+
+4OXL died of "starvation" twice in a day's test copies with glycogen
+~190 and fat ~210 in store: its ATP fell to 1 and every chemical froze
+until it fainted. In these genomes ATP is made only by one organ (1
+Energy + 6 ADP -&gt; 6 ATP) that costs 3 ATP to run, and every organ costs
+2 or more, so ATP below the cheapest working organ's cost is as complete
+a deadlock as ATP 0. The metabolism restart (642318a3) looked for 0
+only; it now restarts a living creature with fuel whose ATP is below the
+least energy cost of its working organs, and names it in the log.
+OPENC2E_OLD_STALL_CHECK compares.
+
+Developer aids: OPENC2E_WATCH_FUEL also prints pyruvate, lactate,
+oxygen, carbon dioxide and air, and marks an unconscious creature;
+OPENC2E_DUMP_ORGANS=MONIKER prints that creature's organs once (energy
+cost, clock rate, life force, and its reactions on ATP and ADP).
+
+Three matched pairs: deaths 3 vs 4, faints 3 vs 5 (the rest is 1RUW,
+starving with no fuel, in both).
 
 #### Sea pads: land a creature by its size at landing, not at the throw
 
