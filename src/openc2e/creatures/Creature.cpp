@@ -757,6 +757,12 @@ void c2Creature::tick() {
 	senses[8] = 0; // season (no genome reads it)
 	senses[9] = 255; // air quality: full, unless the head is under water (below)
 	updateUnderwater();
+	// developer aid: OPENC2E_TEST_NO_AIR cuts the air of a creature a script
+	// marks with OV96 = 1, as if it were out of breath under water (to time
+	// how long a creature can go without air before it cannot recover)
+	static const bool testNoAir = getenv("OPENC2E_TEST_NO_AIR") != nullptr;
+	if (testNoAir && parentagent && parentagent->var[96].hasInt() && parentagent->var[96].getInt() == 1)
+		senses[9] = 0;
 	senses[12] = 0; // wind towards (no genome reads it)
 	senses[13] = 0; // wind behind (no genome reads it)
 
@@ -805,10 +811,10 @@ void c2Creature::tick() {
 	// creatures apart in C2: UNID is not readable there)
 	static const int watchFuel = getenv("OPENC2E_WATCH_FUEL") ? atoi(getenv("OPENC2E_WATCH_FUEL")) : 0;
 	if (watchFuel > 0 && world.tickcount % watchFuel == 0 && world.history)
-		fmt::print("* FUEL {} t{} hunger {} glucose {} glycogen {} starch {} fat {} adipose {} energy {} ATP {} ADP {} pyruvate {} lactate {} oxygen {} CO2 {} air {} PGK {}{}\n",
+		fmt::print("* FUEL {} t{} hunger {} glucose {} glycogen {} starch {} fat {} adipose {} energy {} ATP {} ADP {} pyruvate {} lactate {} oxygen {} CO2 {} air {} PGK {} breath held {}{}\n",
 			world.history->findMoniker(genome), world.tickcount, (int)chemicals[3], (int)chemicals[70], (int)chemicals[72],
 			(int)chemicals[73], (int)chemicals[74], (int)chemicals[75], (int)chemicals[98], (int)chemicals[99], (int)chemicals[100],
-			(int)chemicals[69], (int)chemicals[68], (int)chemicals[95], (int)chemicals[90], (int)chemicals[96], (int)chemicals[179], unconscious ? " (unconscious)" : "");
+			(int)chemicals[69], (int)chemicals[68], (int)chemicals[95], (int)chemicals[90], (int)chemicals[96], (int)chemicals[179], breathHeld, unconscious ? " (unconscious)" : "");
 
 	// C1/C2: the world's egg-laying script takes the baby's genome name from
 	// BABY and sets it to 0 as the egg is laid; that ends the pregnancy
