@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 485 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 486 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 4 commits, 19 November 2026
+- [Unreleased](#unreleased): 5 commits, 19 November 2026
 - [0.13.0](#version-0130): 20 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
@@ -27,6 +27,22 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 19 November 2026
+
+#### Lifts: rest 15 ticks after arriving instead of 30
+
+[`ed91f323`](https://github.com/DotairZee/zeetures/commit/ed91f323ae0473c5639d2280e6fa2a93a33ec723)
+
+The world's lifts (3 2 0-4) set themselves busy on arriving and a 30-tick
+timer frees them; an activation in that rest does nothing. A 5-minute Home
+copy (OPENC2E_WATCH_LIFT_USE) had 553 of 869 creature activations of
+lifts in the rest: norns waiting to board pressing until it was free, the
+busy lifts (the east lift at x 7525, the library lift, the cave lift)
+making fewer trips. script-patches.txt now halves the rest to 15 ticks;
+riders set down on arrival still step off before it can leave again.
+
+Tests: three pairs of 5-minute Home copies (patched world vs not): at
+hunger 255 41/29/27 vs 35/38/38, meals per thousand 512/448/410 vs
+428/460/462, activations on a busy lift 854 vs 1,874, no errors.
 
 #### Developer aid: OPENC2E_WATCH_LIFT_USE prints each creature action on a lift
 
