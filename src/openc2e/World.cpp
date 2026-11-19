@@ -553,9 +553,9 @@ void World::tick() {
 					if (auto* rc = dynamic_cast<bioReceptorGene*>(og); rc && rc->organ == 0 && rc->tissue == 9)
 						rx += fmt::format(" <receptor {} -> 0,9,{}>", (int)rc->chemical, (int)rc->locus);
 					else if (rc && rc->organ == 2)
-						rx += fmt::format(" <organ receptor: chemical {} -> {} threshold {} nominal {} gain {}{}{}>", (int)rc->chemical,
+						rx += fmt::format(" <organ receptor: chemical {} -> {} threshold {} nominal {} gain {}{}{} on at stage {}{}>", (int)rc->chemical,
 							rc->locus == 0 ? "clock rate" : rc->locus == 1 ? "repair rate" : "injury", (int)rc->threshold, (int)rc->nominal, (int)rc->gain,
-							rc->inverted ? " inverted" : "", rc->digital ? " digital" : "");
+							rc->inverted ? " inverted" : "", rc->digital ? " digital" : "", (int)rc->header.switchontime, rc->header.flags.notexpressed ? " not expressed" : "");
 					else if (auto* e = dynamic_cast<bioEmitterGene*>(og))
 						rx += fmt::format(" {{emits {} from {},{},{} rate {} gain {}}}", (int)e->chemical, (int)e->organ, (int)e->tissue, (int)e->locus, (int)e->rate, (int)e->gain);
 				fmt::print("* ORGAN {} #{} cost {} clock {} life {:.0f}/{:.0f} reactions {}{}\n", dm, k++, (int)o->getEnergyCost(), (int)o->getClockRate(),
