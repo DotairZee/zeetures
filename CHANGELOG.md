@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 464 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 465 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 3 commits, 18 November 2026
+- [Unreleased](#unreleased): 4 commits, 18 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,32 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Pocket check: a creature at a wall line is not in the pocket beyond
+
+[`29501b01`](https://github.com/DotairZee/zeetures/commit/29501b01fac6de1bda1ae1e6cc4f875285c49b56)
+
+About half of all sealed-pocket rescues named room 102, the sealed shaft
+behind the library's east wall (x 1473). Every traced case was a norn
+facing that wall with its box's middle exactly on the wall line and its
+foot about 10 px past it. Its foot room had been cleared (a hop, flinch
+or knock makes it briefly "falling"), so the check judged it by the foot
+or by the middle on the line, which the room lookup gives to room 102,
+and moved it 27 px.
+
+- keepInRoomSystem: a creature whose middle stands on a floor of the
+  world, looked at 4 px either side of the line, is not in a pocket;
+  and a foot a few px under a floor stands on that floor, as foot
+  placement already takes it.
+- snapDownFoot: a foot placed afresh with the middle on a wall line
+  takes the middle's room from the side away from the foot.
+- Rescue messages now give the foot's position and foot room.
+- New developer aid OPENC2E_WATCH_SCRIPT_MOVES prints every script move
+  of a creature with the script that made it.
+
+OPENC2E_OLD_WALL_LINE turns the checks off to compare. Two rounds of
+three matched pairs: room 102/107 rescues 5 to 2; meals and hunger no
+different (481 vs 480 meals per 1000 ticks).
 
 #### Food: the west machine room's slender bush stands in a pot
 
