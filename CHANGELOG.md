@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 496 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 499 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [Unreleased](#unreleased): 3 commits, 19 November 2026
 - [0.14.1](#version-0141): 4 commits, 19 November 2026
 - [0.14.0](#version-0140): 11 commits, 19 November 2026
 - [0.13.0](#version-0130): 20 commits, 18 November 2026 to 19 November 2026
@@ -22,6 +23,50 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Unreleased
+
+Changes since the last version.
+
+### 19 November 2026
+
+#### The Metamorph Device in the gene splicer room
+
+[`7f08dbcc`](https://github.com/DotairZee/zeetures/commit/7f08dbcc2a8c98cbe8bc63a8451c02d1240a71cb)
+
+The Life Kit's Metamorph Device is built into every world from the
+player's own COB (builtin-cobs.txt) and moved by metamorph.cos to the gene
+splicer room's floor, between the teleporter and the tall threaded pillar
+(owner, 2026-11-19, from the mock-up metamorph-lab-mockup.png). Our own
+script for it: a creature in its cabin is replaced by a newly hatched copy
+of the opposite sex from its own genome; OV10 picks how the creature put in
+ends (0 at once, the default; 1 the COB's five poisons, let out to die), the
+two versions the COB has. Only the hand runs it (creatures press things
+often, and it ends the creature inside); its run cannot be cut off.
+
+Tested in Home copies: the hand's click on the button ran it; a male norn
+in the cabin gave a female copy (NEW: GENE of one creature) that hatched
+beside the device, in both versions (the poisoned norn fell unconscious
+within the test).
+
+#### C2 hotspots set by KNOB run the right script
+
+[`e6d9e1db`](https://github.com/DotairZee/zeetures/commit/e6d9e1db3281b02b65ed5606926e72fbcfe106fc)
+
+CompoundAgent::setHotspotFunc stored a hotspot function's message already
+turned into a script number, and handleClick turned it into one again: a
+hand's click on a hotspot set by KNOB ran activate 2 instead of activate 1
+(and deactivate instead of activate 2). Objects from the world file were
+unaffected (their message numbers are read raw), but objects made by
+scripts were: COB devices such as the Metamorph Device, and the gene lab's
+announcement window. The message number is stored raw now, as KMSG does.
+
+Found with the Metamorph Device: a click on its button fired activate 2
+("no script"); now activate 1, and the device runs.
+
+#### Changelog
+
+[`a344a5fa`](https://github.com/DotairZee/zeetures/commit/a344a5fa0790e46d06509158d118be60eda9de82)
 
 ## Version 0.14.1
 
