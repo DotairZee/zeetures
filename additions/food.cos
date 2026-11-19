@@ -1201,6 +1201,41 @@ doif var0 eq 0
   inst new: simp zfom 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 6718 1635 setv ov05 1 setv ov07 2 setv ov00 2 setv ov01 150 setv ov02 1 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
 endi
 
+* The upper-east deck's bush moves to the cave under the east dock (owner,
+* 2026-11-18: deck-bush-spots.png, spot A, moved left past the guitar). On
+* the deck (room 145, potted at 7604/779; 7582/779 before ledge.cos moves
+* it) it fed nobody: the deck is a dead end reached only by a lift that
+* mostly waits at its bottom stop, and no creature stood there in 56
+* samples while about 3 of its fruit lay ripe. In the cave (room 14, floor
+* 892 on the planks) hungry creatures wait with no food. The stalactites
+* leave no room for the full bush, so it becomes the compact one in a pot
+* (zfqw, warm rock, OV07 = 1), its right edge 3 px left of the guitar (2 13
+* 17, x 6063-6135) and clear of the submarine's stop at the cave's east
+* end. Stage, age and picture are kept; the fruit still on it go (their
+* places were for the full crown).
+setv var0 0
+enum 2 4 141
+  doif post eq 779
+    doif posl eq 7604 setv var0 1 endi
+    doif posl eq 7582 setv var0 1 endi
+    doif var0 eq 1
+      setv var3 ov00 setv var4 ov01 setv var6 pose
+      setv var1 posl setv var2 posr setv var5 posb
+      kill targ
+    endi
+  endi
+next
+doif var0 eq 1
+  enum 2 25 0
+    doif attr eq 0
+      doif posx gt var1 doif posx lt var2 doif posy gt 779 doif posy lt var5
+        kill targ
+      endi endi endi endi
+    endi
+  next
+  inst new: simp zfqw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 5952 796 setv ov05 1 setv ov07 1 setv ov00 var3 setv ov01 var4 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov99 7461 pose var6 tick 250 slow
+endi
+
 * the berry shrubs, standing on the floor (made again each load; the old
 * hidden patches 2 1 141 are cleared above): the dome's garden at the far
 * east top (8222/969, floor 1029, clear of the lamp machine) and the bamboo walkway
