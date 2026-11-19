@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 465 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 466 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 4 commits, 18 November 2026
+- [Unreleased](#unreleased): 5 commits, 18 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,20 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Food: the upper-east deck's bush moves to the cave under the east dock
+
+[`48ba7694`](https://github.com/DotairZee/zeetures/commit/48ba769446c5d3e48c017b9c0e4f52a86540936b)
+
+On the deck (room 145) it fed nobody: the deck is a dead end reached
+only by a lift that mostly waits at its bottom stop, and no creature
+stood there in 56 samples while about 3 of its fruit lay ripe. In the
+cave under the east dock (room 14) hungry creatures wait with no food.
+The owner chose that spot, moved left past the guitar and clear of the
+submarine's stop. The stalactites leave no room for the full bush, so it
+becomes the compact one in a pot (zfqw, OV07 = 1) at 5952/796, its right
+edge 3 px left of the guitar. Stage, age and picture are kept; the fruit
+hanging on it are dropped, since their places were for the full crown.
 
 #### Pocket check: a creature at a wall line is not in the pocket beyond
 
