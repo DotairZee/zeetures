@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 469 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 470 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 8 commits, 18 November 2026
+- [Unreleased](#unreleased): 9 commits, 18 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,23 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Developer aids: count a creature's energy flows, dump a marked creature
+
+[`f72548ea`](https://github.com/DotairZee/zeetures/commit/f72548ea051b4105b281dfba2a496f19ddea4e9f)
+
+OPENC2E_COUNT_ENERGY sums, for the creature a script marks with OV97 =
+1, how each organ changes Energy (98), ATP (99) and ADP (100), and what
+half-lives take, and prints the totals every 500 biochemistry steps.
+OPENC2E_DUMP_ORGANS=OV97 dumps that marked creature's organs once it
+exists (e.g. one just made from a genome file with NEW: CREA), and the
+dump now lists each organ's receptors on its own clock rate, repair rate
+and injury.
+
+Used to compare the energy chain with the real game over DDE: for the
+standard norn and grendel genomes ours behaves as the real game does
+(newborn norn's Energy dip and recovery, adult grendel pinned at 255,
+the same response to a dose of phosphoglycerokinase).
 
 #### Developer aids for the energy chain: organ dump detail, PGK in fuel watch
 
