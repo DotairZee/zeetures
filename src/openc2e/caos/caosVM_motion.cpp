@@ -24,6 +24,7 @@
 #include "Map.h"
 #include "Room.h"
 #include "World.h"
+#include "caosScript.h"
 #include "caosVM.h"
 #include "creatures/SkeletalCreature.h"
 #include "common/throw_ifnot.h"
@@ -64,6 +65,21 @@ void v_ELAS(caosVM* vm) {
 	vm->result.setInt(vm->targ->elas);
 }
 
+
+// developer aid: OPENC2E_WATCH_SCRIPT_MOVES prints each script's move of a
+// creature (MVTO, MVBY, MCRT): which script, from where to where, to find
+// what puts creatures somewhere odd
+static void watchScriptMove(caosVM* vm, const char* cmd, float fromx, float fromy) {
+	static const bool watch = getenv("OPENC2E_WATCH_SCRIPT_MOVES") != nullptr;
+	if (!watch || !dynamic_cast<SkeletalCreature*>(vm->targ.get()))
+		return;
+	auto& s = vm->currentscript;
+	Agent* o = vm->owner.get();
+	fmt::print("* SCRIPT MOVE t{} {} unid {} {:.0f},{:.0f} -> {:.0f},{:.0f} by script {} {} {} {} (owner {} {} {} at {:.0f},{:.0f})\n", world.tickcount, cmd,
+		vm->targ->getUNID(), fromx, fromy, vm->targ->x, vm->targ->y, s ? s->fmly : -1, s ? s->gnus : -1, s ? s->spcs : -1, s ? s->scrp : -1,
+		o ? (int)o->family : -1, o ? (int)o->genus : -1, o ? (int)o->species : -1, o ? o->x : 0.0f, o ? o->y : 0.0f);
+}
+
 /**
  MVTO (command) x (float) y (float)
  %status maybe
@@ -76,7 +92,9 @@ void c_MVTO(caosVM* vm) {
 	VM_PARAM_FLOAT(y)
 	VM_PARAM_FLOAT(x)
 	valid_agent(vm->targ);
+	float fx = vm->targ->x, fy = vm->targ->y;
 	vm->targ->moveTo(x, y);
+	watchScriptMove(vm, "MVTO", fx, fy);
 	if (auto* sc = dynamic_cast<SkeletalCreature*>(vm->targ.get()))
 		sc->scriptMoved();
 }
@@ -93,7 +111,9 @@ void c_MVBY(caosVM* vm) {
 	VM_PARAM_FLOAT(x)
 
 	valid_agent(vm->targ);
+	float fx = vm->targ->x, fy = vm->targ->y;
 	vm->targ->moveTo(vm->targ->x + x, vm->targ->y + y);
+	watchScriptMove(vm, "MVBY", fx, fy);
 	if (auto* sc = dynamic_cast<SkeletalCreature*>(vm->targ.get()))
 		sc->scriptMoved();
 }
@@ -682,7 +702,9 @@ void c_MCRT(caosVM* vm) {
 		if (r)
 			y = r->floorYatX(x + vm->targ->getWidth() / 2.0f) - vm->targ->getHeight() - 1;
 	}
+	float fx = vm->targ->x, fy = vm->targ->y;
 	vm->targ->moveTo(x, y);
+	watchScriptMove(vm, "MCRT", fx, fy);
 	if (sc)
 		sc->scriptMoved();
 }

@@ -1059,16 +1059,47 @@ void oldCreature::keepInRoomSystem() {
 		// world are part of it.)
 		auto livable = [&](Room* r) { return group.count(r) && group[r] == worldGroup; };
 		bool feetInWorld = false;
+		static const bool oldWallLine = getenv("OPENC2E_OLD_WALL_LINE") != nullptr; // (to compare: the two checks below off)
+		// (for the messages below: where its foot was judged to stand)
+		std::string footNote;
 		if (auto* sc = dynamic_cast<SkeletalCreature*>(a)) {
 			std::shared_ptr<Room> fr = sc->footRoom();
+			footNote = fmt::format(" (foot {:.0f},{:.0f}, foot room {})", sc->footX(), sc->footY(), fr ? fmt::format("{}", fr->id) : std::string("none yet"));
 			// (no foot room yet, after a load or a script's move: the room
 			// under the foot itself. A creature at the foot of the tree-trunk
 			// lift's shaft, its box over the rock beside it (room 103) and
 			// its foot in the shaft, was moved 40 px each time; 2026-11-15)
-			if (!fr)
+			if (!fr) {
 				fr = world.map->roomAt(sc->footX(), sc->footY() - 2);
+				// (a foot a few pixels under a floor stands on that floor, as
+				// placing a foot takes it: a norn just moved by a script, its foot
+				// 4 px under the library's floor, was judged in the sealed rock
+				// below (room 107) and moved; 2026-11-18)
+				if (!oldWallLine && (!fr || !livable(fr.get()))) {
+					std::shared_ptr<Room> above = world.map->roomAt(sc->footX(), sc->footY() - 8);
+					if (above && above->type != 2 && livable(above.get())) {
+						float fl = above->floorYatX(sc->footX());
+						if (fl >= sc->footY() - 8 && fl <= sc->footY() + 1)
+							fr = above;
+					}
+				}
+			}
 			if (fr && livable(fr.get()))
 				feetInWorld = true;
+		}
+		// nor when its middle stands on a floor of the world, the middle on a
+		// wall line judged from either side: a norn facing the library's east
+		// wall (x 1473, the sealed shaft 102 beyond) with its middle on the
+		// line and its foot over the shaft, its foot room cleared while it
+		// hopped or was knocked, was moved 27 px each time (most of the room
+		// 102 rescues; 2026-11-18)
+		if (!feetInWorld && !oldWallLine) {
+			float feet = a->y + a->getHeight();
+			for (float off : {-4.0f, 4.0f}) {
+				std::shared_ptr<Room> r = world.map->roomAt(cx + off, feet - 2);
+				if (r && r->type != 2 && livable(r.get()) && std::fabs(r->floorYatX(cx + off) - feet) <= 8.0f)
+					feetInWorld = true;
+			}
 		}
 		if (!feetInWorld && group.count(foot.get()) && group[foot.get()] != worldGroup) {
 			// up onto the floor it sank through: a floor of the world just
@@ -1125,8 +1156,8 @@ void oldCreature::keepInRoomSystem() {
 					a->vely = 0;
 					if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
 						sc->scriptMoved(); // its feet find their room afresh, not the pocket's floor
-					fmt::print("* {} (unid {}) was in a sealed pocket (room {}) at {:.0f},{:.0f}; lifted to the floor of room {} at {:.0f},{:.0f}\n",
-						world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y);
+					fmt::print("* {} (unid {}) was in a sealed pocket (room {}) at {:.0f},{:.0f}; lifted to the floor of room {} at {:.0f},{:.0f}{}\n",
+						world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y, footNote);
 					return true;
 				}
 				return false;
@@ -1156,8 +1187,8 @@ void oldCreature::keepInRoomSystem() {
 					a->vely = 0;
 					if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
 						sc->scriptMoved();
-					fmt::print("* {} (unid {}) was in a sealed pocket (room {}) at {:.0f},{:.0f}; moved beside it into room {} at {:.0f},{:.0f}\n",
-						world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y);
+					fmt::print("* {} (unid {}) was in a sealed pocket (room {}) at {:.0f},{:.0f}; moved beside it into room {} at {:.0f},{:.0f}{}\n",
+						world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y, footNote);
 					return true;
 				}
 			return false;
@@ -1192,8 +1223,8 @@ void oldCreature::keepInRoomSystem() {
 							a->vely = 0;
 							if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
 								sc->scriptMoved();
-							fmt::print("* {} (unid {}) was in a sealed pocket (room {}) at {:.0f},{:.0f}; stepped onto the floor of room {} beside it at {:.0f},{:.0f}\n",
-								world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y);
+							fmt::print("* {} (unid {}) was in a sealed pocket (room {}) at {:.0f},{:.0f}; stepped onto the floor of room {} beside it at {:.0f},{:.0f}{}\n",
+								world.history->findMoniker(genome), a->getUNID(), foot->id, oldx, oldy, r->id, a->x, a->y, footNote);
 							return true;
 						}
 					}

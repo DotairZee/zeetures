@@ -1050,6 +1050,17 @@ void SkeletalCreature::snapDownFoot() {
 		if (engine.version == 2 && !noFootMiddle && newroom && sealedRoom(newroom)) {
 			float midx = x + getWidth() / 2.0f;
 			std::shared_ptr<Room> mid = bestRoomAt(midx, footy, 3, m, std::shared_ptr<Room>());
+			// (a middle on the wall line itself belongs to the side away from
+			// the foot: a norn facing the library's east wall, its middle at
+			// x 1473 where the library (114) meets the sealed shaft (102), had
+			// that line judged part of the shaft, so its foot stayed in the
+			// shaft and it was "rescued" from it; 2026-11-18)
+			static const bool oldWallLine = getenv("OPENC2E_OLD_WALL_LINE") != nullptr; // (to compare)
+			if (!oldWallLine && mid == newroom) {
+				std::shared_ptr<Room> side = bestRoomAt(midx + (footx > midx ? -3.0f : 3.0f), footy, 3, m, std::shared_ptr<Room>());
+				if (side)
+					mid = side;
+			}
 			if (mid && mid != newroom && !sealedRoom(mid) && (!world.map->hasDoor(mid, newroom) || world.map->getDoorPerm(mid, newroom) < size)) {
 				float dx = 0;
 				if (footx < (float)mid->x_left + 2)
