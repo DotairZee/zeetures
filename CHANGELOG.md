@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 461 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 463 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [Unreleased](#unreleased): 2 commits, 18 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -19,6 +20,39 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Unreleased
+
+Changes since the last version.
+
+### 18 November 2026
+
+#### Food: five more fruit plants, compact and slender bush forms
+
+[`dc89e5bd`](https://github.com/DotairZee/zeetures/commit/dc89e5bdb362160b0bc9844301bc48fb7a9eba9a)
+
+Two copies of Home sampled 28 times put about 3.5 very hungry creatures
+at a time on the upper desert slope alone, with no fruit in reach; the
+far-east lift balcony, the east caves by the rope lift, the west machine
+room, and the gene splicing room were next. Three of those spots are too
+narrow for the full 156 px bush, so fruitbush.py now draws two smaller
+forms in every look and season: compact (108 x 80, zfc\*) and slender
+(56 x 118, zfn\*), with potted versions for floors that are not earth
+(zfq\*, zfo\*; planter.sized gives the narrower pots). Existing pictures
+are unchanged byte for byte.
+
+OV07 is a bush's form: it sets where its fruit grow (measured over the
+leaves of every look and season) and how many it carries (compact 2/4,
+slender 1/3). The five plants are planted full-grown wherever missing.
+
+Matched pairs (new plants removed at start in the control): creatures
+at Hunger 255 at the end 33/41/38 vs 47/46/50, median hunger
+145/151/132 vs 182/164/167, meals per 1000 ticks 556/448/502 vs
+419/460/411.
+
+#### Changelog
+
+[`bbef9839`](https://github.com/DotairZee/zeetures/commit/bbef9839db29d696e642561268ff15b3252bbb26)
 
 ## Version 0.12.1
 
