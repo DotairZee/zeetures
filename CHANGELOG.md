@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 483 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 484 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 2 commits, 19 November 2026
+- [Unreleased](#unreleased): 3 commits, 19 November 2026
 - [0.13.0](#version-0130): 20 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
@@ -27,6 +27,29 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 19 November 2026
+
+#### C2 senses: a drop ahead is measured from the room a step goes into
+
+[`3dc6ab38`](https://github.com/DotairZee/zeetures/commit/3dc6ab38ff8cac64157e1456cb7232be1255a17b)
+
+The drop-ahead sense took every room on a side as one a step could go
+into, rooms below the floor's height included. The desert lift's shaft
+(room 12) has a walk-over floor line at y 573-598, and its walls also
+touch rooms 15 (west) and 14 (east), reached only by falling down the
+shaft: their floors read as drops of 299 and 284 px, so starving norns
+standing on the line saw cliffs both ways and were offered no walk to
+food. Now, on each side, only the room the foot would step into counts,
+as SkeletalCreature::snapDownFoot picks it: the one whose floor is
+nearest the floor here, none far above. Real drops are still followed
+down from that room. Also gone: an 858 px drop sensed east of the
+walkway to the volcano lift (room 227, the level floor is room 182) and
+214 px east of room 6.
+
+Tests: on the shaft line, 88 of 88 readings had both drops (old) vs none
+(new). Three pairs of 5-minute Home copies: meals per thousand
+473/446/443 vs 464/457/434, at hunger 255 38/35/30 vs 37/32/38; at the
+desert lift's top, starving choices 667 vs 1,009 and choices with no food
+step 274 vs 489. OPENC2E_OLD_SIDE_DROPS restores the old sense.
 
 #### Developer aid: OPENC2E_WATCH_ROUTES prints each route step offered
 
