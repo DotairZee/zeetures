@@ -99,6 +99,14 @@ VERSIONS = [
      "beside it instead of pacing (the way out of water ignores floors it cannot step up to); hatchlings stand "
      "where their egg lay instead of in the floor; the far-east lift balcony's railing keeps creatures in; a "
      "developer aid prints creatures' fuel chemicals."),
+    ("0.13.0", "ee4c076a",
+     "Lifts, boats, the submarine and call buttons are saved with the world, with their riders still aboard; "
+     "five more fruit plants in compact and slender bush forms, potted away from the earth, and the upper-east "
+     "deck's bush moved to the cave under the east dock; brain relay cells pass on their whole state, so every "
+     "creature keeps a full energy reserve; the metabolism restart is off unless asked for; the sea jump pads "
+     "land creatures by their size; pocket rescues fixed: the incubator's glass terrarium is a room behind a "
+     "door, creatures at the gene lab's west wall step back onto its floor, and a rescued creature goes back "
+     "to the side it came from; developer aids for the energy chain and for cutting a creature's air."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

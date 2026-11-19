@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 480 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 481 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 19 commits, 18 November 2026 to 19 November 2026
+- [0.13.0](#version-0130): 20 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -21,11 +21,15 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.13.0
 
-Changes since the last version.
+Lifts, boats, the submarine and call buttons are saved with the world, with their riders still aboard; five more fruit plants in compact and slender bush forms, potted away from the earth, and the upper-east deck's bush moved to the cave under the east dock; brain relay cells pass on their whole state, so every creature keeps a full energy reserve; the metabolism restart is off unless asked for; the sea jump pads land creatures by their size; pocket rescues fixed: the incubator's glass terrarium is a room behind a door, creatures at the gene lab's west wall step back onto its floor, and a rescued creature goes back to the side it came from; developer aids for the energy chain and for cutting a creature's air.
 
 ### 19 November 2026
+
+#### Version 0.13.0
+
+[`ee4c076a`](https://github.com/DotairZee/zeetures/commit/ee4c076afa218d4c869afdc28e6fbd32d07a2ba6)
 
 #### C2 saves: lifts, boats, the submarine and call buttons kept with their riders
 
