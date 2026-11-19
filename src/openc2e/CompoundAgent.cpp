@@ -198,10 +198,12 @@ void CompoundAgent::setHotspotFunc(unsigned int id, unsigned int f) {
 
 	// TODO: this tries to make c2 work nicely, necessary?
 	hotspotfunctions[id].mask = 3;
-	if (id < 3)
-		hotspotfunctions[id].message = calculateScriptId(id);
-	else
-		hotspotfunctions[id].message = calculateScriptId(id - 3);
+	// the message number (0 activate 1, 1 activate 2, 2 deactivate), as
+	// KMSG and the world file give it: handleClick turns it into a script
+	// number. (It was turned into one here too, so a click on a hotspot
+	// set by KNOB ran the wrong script: activate 1 became activate 2, and
+	// activate 2 deactivate; 2026-11-19, found with the Metamorph Device.)
+	hotspotfunctions[id].message = (id < 3) ? id : id - 3;
 }
 
 void CompoundAgent::setHotspotFuncDetails(unsigned int id, uint16_t m, uint8_t f) {
