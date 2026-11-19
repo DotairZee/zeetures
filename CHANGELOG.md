@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 463 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 464 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 2 commits, 18 November 2026
+- [Unreleased](#unreleased): 3 commits, 18 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,16 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Food: the west machine room's slender bush stands in a pot
+
+[`774aae82`](https://github.com/DotairZee/zeetures/commit/774aae82f2314f246bef0fbc414b7ce3a8015964)
+
+The owner asked for it potted (the machine room floor is not earth). It
+moves from 516/1724 in the ground to 516/1708 in a pot (zfom); a world
+that already has the in-ground one gets it swapped for the potted one,
+keeping its stage, age and picture, with the fruit on it raised 16 px
+to stay on the leaves. Tested both paths in copies of Home.
 
 #### Food: five more fruit plants, compact and slender bush forms
 
