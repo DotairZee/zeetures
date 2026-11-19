@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 466 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 467 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 5 commits, 18 November 2026
+- [Unreleased](#unreleased): 6 commits, 18 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,20 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Sea pads: land a creature by its size at landing, not at the throw
+
+[`a0adecb8`](https://github.com/DotairZee/zeetures/commit/a0adecb8c2aef35481f21a15032e911d927f2e56)
+
+The carrier sized the landing from the creature's box at the start of
+the throw, when it is swimming or crouched (43-71 px tall). By the
+landing it stands (about 110), so its feet came down 40-65 px under the
+east dock's planks, in the sealed water below (room 31), and the pocket
+rescue lifted it back: 6 of 8 test throws from the east seabed pad.
+
+The box is now placed by its size on every step of the arc, aiming the
+middle of its feet at the landing spot. Test throws: 0 of 8 rescued from
+the east pad, and the two west pads land all 8 on their shores.
 
 #### Food: the upper-east deck's bush moves to the cave under the east dock
 
