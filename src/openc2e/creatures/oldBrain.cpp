@@ -1210,7 +1210,7 @@ void oldBrain::processInstinct(creatureInstinctGene& instinct) {
 // dendrites, and its state rule just keeps the state; thinking lobes never
 // qualify. The update is our own, reading the lobe gene's numbers: the state
 // fades toward the rest state at the leakage rate, and the output is the
-// state above the threshold.
+// state, once it is at or above the threshold (below it, nothing).
 bool oldLobe::isChemicalRelay() {
 	if (!receptor_fed || !ourGene)
 		return false;
@@ -1242,7 +1242,20 @@ void oldLobe::tickChemicalRelay() {
 				out = rest;
 		}
 		cell.state = out;
-		cell.output = out >= threshold ? out - threshold : 0;
+		// a relay cell above its threshold passes on its whole state, not
+		// the part above the threshold. The energy chain hangs on it: the ADP
+		// cell (norn lobe 9, cell 13) drives the emitter that makes
+		// phosphoglycerokinase, without which glucose is not burned. Passing
+		// on state - 10, a norn made from norn.gen ran its Energy reserve
+		// down (237 -> 12 within minutes) and lived on 8-55 while the same
+		// genome's creatures in the real game keep it near 250 (over DDE,
+		// 2026-11-18: babies past their first minutes, a child, the adult
+		// grendel and old ettin); passing on the state, it stays near 255 and
+		// hunger and the other drives rise exactly as before (the other lobe
+		// 9 cells are on/off: 255 instead of 245). OPENC2E_OLD_RELAY_OUTPUT
+		// compares.
+		static const bool oldOutput = getenv("OPENC2E_OLD_RELAY_OUTPUT") != nullptr;
+		cell.output = out >= threshold ? (oldOutput ? out - threshold : out) : 0;
 	}
 }
 
