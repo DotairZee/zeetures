@@ -33,6 +33,11 @@ scrp 2 5 4 9
 * as the game's norn eggs do; EGGL is the limit less the grendels and ettins
 * alive, so this compares all creatures with it; owner, 2026-11-16)
   doif totl 4 1 0 ge eggl tick 1200 stop endi
+* (the hatching cannot be cut off: a creature pushing, pulling or hitting
+* the egg runs the world's catch-all object script, 2 0 0 1-3, on it, which
+* ended this script mid-hatch with the timer stopped, and the egg never
+* hatched; 2026-11-19. A retry timer, too, in case it is ever cut off.)
+  lock tick 300
   rndv var0 0 1
   doif var0 eq 0
     new: gene tokn gren tokn gren var4
@@ -64,6 +69,10 @@ scrp 2 5 3 9
   doif pose eq 7 kill ownr stop endi
 * (the world's limit, as the grendel eggs above)
   doif totl 4 1 0 ge eggl tick 1200 stop endi
+* (not to be cut off, and retried if it ever is, as the egg pile's eggs
+* above: 13 of the machine's 22 eggs in Home lay at its chute with their
+* hatching cut off, some since 2026-11-08)
+  lock tick 300
   doif ov01 eq 1
     setv var0 0 enum 4 3 0 addv var0 1 next
     doif var0 gt 0
@@ -80,3 +89,16 @@ scrp 2 5 3 9
   inst new: crea ov00 ov01 drea 1 setv var3 posb subv var3 post subv var2 var3 mvto var1 var2 slim setv grav 1
   targ ownr tick 200
 endm
+*
+* Eggs whose hatching was cut off before the scripts above were locked
+* (2026-11-19) wait with their timers stopped: start them again at load.
+* An empty shell (picture 7) is cleared away; the egg pile's eggs (2 5 4)
+* wait with no timer until the pile's keeper starts one, so those that
+* were cut off mid-hatch (pictures 3-9) are started again, and the rest
+* left to the keeper.
+enum 2 5 3
+  doif pose eq 7 tick 200 else tick 100 endi
+next
+enum 2 5 4
+  doif pose ge 3 doif pose lt 10 tick 100 endi endi
+next
