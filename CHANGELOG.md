@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 474 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 475 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 13 commits, 18 November 2026 to 19 November 2026
+- [Unreleased](#unreleased): 14 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,24 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 19 November 2026
+
+#### C2: no metabolism restart unless asked for
+
+[`e1cffd67`](https://github.com/DotairZee/zeetures/commit/e1cffd6751f81b155fb387fb46226ad76cb55ca5)
+
+A creature whose ATP falls below what its cheapest working organ needs
+can run no organ, the one that makes ATP included, and stays stalled
+until it dies, as in the real game: a newborn read over DDE froze at
+ATP 0 with glucose and pyruvate in store. The restart (642318a3,
+c09c8452) kept healthy creatures alive while brain relay cells passed
+on too little (fixed, b74ca45c); since that fix it mostly kept newborns
+with lethal mutations on life support (one had the organ that makes
+phosphoglycerokinase switched off by a mutated receptor). The owner
+chose to drop it. OPENC2E_RESTART_METABOLISM turns it back on for
+experiments.
+
+Three copies of Home without it: no crashes except 1RUW's, who has no
+fuel left (true starvation).
 
 #### Organ dump: wait until the named creature exists
 
