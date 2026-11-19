@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 486 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 487 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 5 commits, 19 November 2026
+- [Unreleased](#unreleased): 6 commits, 19 November 2026
 - [0.13.0](#version-0130): 20 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
@@ -27,6 +27,25 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 19 November 2026
+
+#### Rail ends: close the treehouse platform's and the scaffold's open ends
+
+[`e6d58599`](https://github.com/DotairZee/zeetures/commit/e6d58599d09db77f1fe91002243c9c21c2160bd8)
+
+Creatures walked off two walkway ends into long drops: the treehouse
+platform's east end (room 51, x 3917; 508 px to the cave floor, pain about
+245, 33 falls in 24 test copies) and the scaffold's east end in the cave
+(room 54, x 3828; 259 px to the flower beds). The owner chose railings and
+closed ends (mock-up approved).
+
+additions/rail-ends.cos sets the doorways 51-52, 51-35 and 54-53 to 150
+(too small for a creature, still open to thrown objects and critters) and
+places our own railing pieces behind creatures (plane -20): at the
+treehouse end a new post under the top rail's end, the deck beam carried
+out to it and a lower rail; at the scaffold end a lower rail across the
+last two posts. art/rail_ends.py draws them from scratch (rust-orange
+square-cut poles, grey cord lashings) into art/sprites/zrle.s16 and can
+make a before/after mock-up.
 
 #### Lifts: rest 15 ticks after arriving instead of 30
 
