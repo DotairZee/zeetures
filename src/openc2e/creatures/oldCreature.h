@@ -54,6 +54,11 @@ class oldCreature : public Creature {
 	// a creature restored from a save may already be pregnant
 	bool pregnancywatched = false, waspregnant = false;
 	unsigned int keepcheck = 0; // ticks to the next out-of-the-ground check
+	// where its middle stood (map x) the last time the check found it in the
+	// world, and when: a creature rescued from a pocket goes back to that side
+	float lastWorldMidX = 0;
+	unsigned int lastWorldTick = 0;
+	bool haveLastWorld = false;
 	void keepInRoomSystem();
 	unsigned int lastbaby = 0; // the baby's genome name (as BABY holds it) while pregnant: the egg's, once laid
 	void watchPregnancy();

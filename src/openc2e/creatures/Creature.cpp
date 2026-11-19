@@ -1145,6 +1145,11 @@ void oldCreature::keepInRoomSystem() {
 					feetInWorld = true;
 			}
 		}
+		if (feetInWorld || !group.count(foot.get()) || group[foot.get()] == worldGroup) {
+			lastWorldMidX = cx;
+			lastWorldTick = world.tickcount;
+			haveLastWorld = true;
+		}
 		if (!feetInWorld && group.count(foot.get()) && group[foot.get()] != worldGroup) {
 			// up onto the floor it sank through: a floor of the world just
 			// above its feet (owner, 2026-11-14: creatures sinking at the gene
@@ -1208,7 +1213,7 @@ void oldCreature::keepInRoomSystem() {
 			};
 			// the nearest room of the world beside it, at its feet's height, up
 			// to maxdx away
-			auto moveBeside = [&](float maxdx) -> bool {
+			auto moveBeside = [&](float maxdx, float onlySide = 0) -> bool {
 			float fy = a->y + a->getHeight() - 2;
 			// (across the seam of a wrapping world too: the pocket at the far
 			// east edge, room 183, lies beside the rooms at x 0)
@@ -1217,6 +1222,8 @@ void oldCreature::keepInRoomSystem() {
 				mr = world.map->wrappingMetaRoomNear(cx, fy);
 			for (float dx = 4; dx <= maxdx; dx += 4)
 				for (float side : {-1.0f, 1.0f}) {
+					if (onlySide != 0 && side != onlySide)
+						continue;
 					std::shared_ptr<Room> r = mr ? mr->roomAt(cx + side * dx, fy) : world.map->roomAt(cx + side * dx, fy);
 					if (!r || r->type == 2 || !livable(r.get()))
 						continue;
@@ -1245,10 +1252,12 @@ void oldCreature::keepInRoomSystem() {
 			// beside
 			// a floor of the world just beside, at or a little above its feet
 			// (up to maxrise): it steps onto it, its box clear of the wall
-			auto stepOnto = [&](float maxdx, float maxrise) -> bool {
+			auto stepOnto = [&](float maxdx, float maxrise, float onlySide = 0) -> bool {
 				float fy = a->y + a->getHeight() - 2, w = a->getWidth();
 				for (float dx = 2; dx <= maxdx; dx += 2)
 					for (float side : {-1.0f, 1.0f}) {
+						if (onlySide != 0 && side != onlySide)
+							continue;
 						float x2 = cx + side * dx;
 						for (float k = 0; k <= maxrise; k += 4) {
 							std::shared_ptr<Room> r = world.map->roomAt(x2, fy - k);
@@ -1274,6 +1283,22 @@ void oldCreature::keepInRoomSystem() {
 					}
 				return false;
 			};
+			// first back to the side it came from, when it slid sideways into
+			// the pocket (its middle last stood in the world at least 8 px to
+			// that side within the last 200 ticks): a norn that walked from the
+			// tree-trunk lift's shaft (room 80) into the rock between it and the
+			// library (102) was stepped into the library through the wall,
+			// whichever floor was nearest (2026-11-19). One that sank straight
+			// down keeps the usual order.
+			static const bool anySide = getenv("OPENC2E_OLD_RESCUE_SIDE") != nullptr; // (to compare)
+			if (!anySide && haveLastWorld && world.tickcount - lastWorldTick <= 200) {
+				float back = lastWorldMidX - cx;
+				if (std::fabs(back) >= 8.0f && std::fabs(back) <= 300.0f) {
+					float side = back < 0 ? -1.0f : 1.0f;
+					if (stepOnto(32.0f, 40.0f, side) || stepOnto(32.0f, 80.0f, side) || moveBeside(80.0f, side))
+						return;
+				}
+			}
 			if (stepOnto(32.0f, 40.0f))
 				return;
 			// then a floor beside a little higher: a norn turning at the
