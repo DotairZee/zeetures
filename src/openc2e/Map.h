@@ -63,6 +63,9 @@ class Map {
 	bool hasDoor(const std::shared_ptr<Room>& r1, const std::shared_ptr<Room>& r2);
 	void setDoorPerm(const std::shared_ptr<Room>& r1, const std::shared_ptr<Room>& r2, int perm);
 	int getDoorPerm(const std::shared_ptr<Room>& r1, const std::shared_ptr<Room>& r2);
+	// counts the door as one that opens (RoomDoor::everOpen) though it is
+	// shut now: a script can open it
+	void markDoorOpenable(const std::shared_ptr<Room>& r1, const std::shared_ptr<Room>& r2);
 
 	unsigned int getMetaRoomCount();
 	std::shared_ptr<Room> getRoom(unsigned int);

@@ -40,11 +40,14 @@
 #include "Relationships.h"
 #include "caosVM.h"
 #include "caosScript.h"
+#include "Scriptorium.h"
 
 #include <algorithm>
 #include <functional>
 #include <cassert>
 #include <memory>
+#include <sstream>
+#include <cctype>
 
 std::map<std::string, int>& censusDeaths() {
 	static std::map<std::string, int> tally;
@@ -973,6 +976,39 @@ void oldCreature::keepInRoomSystem() {
 	if (grouped == UINT_MAX || world.tickcount - grouped > 600) {
 		grouped = world.tickcount;
 		group.clear();
+		// a door a script can open joins its rooms while shut: the glass
+		// terrarium by the incubator (room 85, pear plants inside) is shut
+		// off from room 81 by a door its door object (2 9 21) opens and
+		// shuts, and until it was first opened in a session every creature
+		// inside was "rescued" out through the glass, and hungry ones
+		// outside, reaching for the pears behind it, again and again (up to
+		// 21 times a 5-minute copy; 2026-11-19). Any script line "setv door
+		// <dir> <room> <room> <perm>" with a perm other than a plain 0 counts
+		// (scanned again whenever the number of scripts changes).
+		static size_t scannedScripts = SIZE_MAX;
+		static const bool oldScriptDoors = getenv("OPENC2E_OLD_SCRIPT_DOORS") != nullptr; // (to compare)
+		if (!oldScriptDoors && world.scriptorium && world.scriptorium->scriptCount() != scannedScripts) {
+			scannedScripts = world.scriptorium->scriptCount();
+			int marked = 0;
+			world.scriptorium->forEachCode([&](const std::string& code) {
+				std::string lc = code;
+				std::transform(lc.begin(), lc.end(), lc.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+				for (size_t at = lc.find("setv door "); at != std::string::npos; at = lc.find("setv door ", at + 10)) {
+					std::istringstream in(lc.substr(at + 10, 40));
+					std::string dir, perm;
+					int r1 = -1, r2 = -1;
+					if (!(in >> dir >> r1 >> r2 >> perm) || perm == "0")
+						continue;
+					std::shared_ptr<Room> a1 = world.map->getRoom(r1), a2 = world.map->getRoom(r2);
+					if (a1 && a2 && world.map->hasDoor(a1, a2) && world.map->getDoorPerm(a1, a2) <= 0) {
+						world.map->markDoorOpenable(a1, a2);
+						marked++;
+					}
+				}
+			});
+			if (getenv("OPENC2E_LIST_POCKETS"))
+				fmt::print("* Doors scripts open, shut now: {}\n", marked);
+		}
 		std::map<int, int> sizes;
 		int g = 0;
 		for (auto& r0 : world.map->getRooms()) {

@@ -83,6 +83,20 @@ std::shared_ptr<script> Scriptorium::getScript(unsigned char family, unsigned ch
 
 /* vim: set noet: */
 
+void Scriptorium::forEachCode(const std::function<void(const std::string&)>& f) const {
+	for (auto& [value, events] : scripts)
+		for (auto& [event, s] : events)
+			if (s)
+				f(s->code);
+}
+
+size_t Scriptorium::scriptCount() const {
+	size_t n = 0;
+	for (auto& [value, events] : scripts)
+		n += events.size();
+	return n;
+}
+
 void Scriptorium::dumpScripts(std::ostream& out) {
 	for (auto& [value, events] : scripts) {
 		unsigned int family = value & 0xff;

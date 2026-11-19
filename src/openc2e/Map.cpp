@@ -99,6 +99,11 @@ void Map::setDoorPerm(const std::shared_ptr<Room>& r1, const std::shared_ptr<Roo
 		r1->doors[r2].everOpen = r2->doors[r1].everOpen = true;
 }
 
+void Map::markDoorOpenable(const std::shared_ptr<Room>& r1, const std::shared_ptr<Room>& r2) {
+	if (hasDoor(r1, r2))
+		r1->doors[r2].everOpen = r2->doors[r1].everOpen = true;
+}
+
 int Map::getDoorPerm(const std::shared_ptr<Room>& r1, const std::shared_ptr<Room>& r2) {
 	if (!hasDoor(r1, r2)) {
 		throw Exception("Door doesn't exist!");

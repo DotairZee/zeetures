@@ -26,6 +26,8 @@
 #include <map>
 #include <ostream>
 #include <memory>
+#include <functional>
+#include <string>
 
 class script;
 
@@ -49,6 +51,10 @@ class Scriptorium {
 
 	// Developer aid: write every script's classifier, event and source text.
 	void dumpScripts(std::ostream& out);
+	// every script's source text in turn, and how many scripts there are
+	// (for scanning what the installed scripts can do)
+	void forEachCode(const std::function<void(const std::string&)>& f) const;
+	size_t scriptCount() const;
 };
 
 #endif
