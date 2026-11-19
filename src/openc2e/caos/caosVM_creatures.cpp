@@ -1339,8 +1339,12 @@ void c_NEW_CREA_c1(caosVM* vm) {
 		for (auto& gn : genome->genes)
 			if (auto* genus = dynamic_cast<creatureGenusGene*>(gn.get())) {
 				std::string mum = genus->mum.c_str(), dad = genus->dad.c_str();
-				if (mum.size() == 4 && dad.size() == 4 && world.history->hasMoniker(mum) && world.history->hasMoniker(dad))
-					m.addEvent(0, mum, dad);
+				if (mum.size() == 4 && dad.size() == 4 && world.history->hasMoniker(mum) && world.history->hasMoniker(dad)) {
+					// (the gene splicer's: spliced; bred: conceived)
+					bool spliced = world.history->splicedGenomes.count(realmoniker) > 0;
+					m.addEvent(spliced ? 1 : 0, mum, dad);
+					m.spliced = spliced;
+				}
 				break;
 			}
 		// C1/C2 hatching scripts don't call BORN, so the birth is recorded

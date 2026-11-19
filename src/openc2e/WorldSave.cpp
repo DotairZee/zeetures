@@ -785,7 +785,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 				monikerData& m = world.history->getMoniker(mon);
 				out << "moniker " << mon << "\n";
 				if (!m.mother.empty() || !m.father.empty())
-					out << "parents " << (m.mother.empty() ? "-" : m.mother) << " " << (m.father.empty() ? "-" : m.father) << "\n";
+					out << "parents " << (m.mother.empty() ? "-" : m.mother) << " " << (m.father.empty() ? "-" : m.father) << (m.spliced ? " spliced" : "") << "\n";
 				if (!m.name.empty())
 					out << "name " << escapeLine(m.name) << "\n";
 				out << "registered " << (m.registered ? 1 : 0) << "\n";
@@ -852,7 +852,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 		out << "moniker " << mon << "\n";
 		out << "genus " << (int)m.genus << " " << m.gender << "\n";
 		if (!m.mother.empty() || !m.father.empty())
-			out << "parents " << (m.mother.empty() ? "-" : m.mother) << " " << (m.father.empty() ? "-" : m.father) << "\n";
+			out << "parents " << (m.mother.empty() ? "-" : m.mother) << " " << (m.father.empty() ? "-" : m.father) << (m.spliced ? " spliced" : "") << "\n";
 		if (!m.name.empty())
 			out << "name " << escapeLine(m.name) << "\n";
 		out << "registered " << (m.registered ? 1 : 0) << "\n";
@@ -915,6 +915,7 @@ struct SavedCreature {
 	std::vector<std::string> photos;
 	std::vector<storyEntry> story; // its life story
 	std::string moniker, mother, father; // as saved (monikers used to be new each load)
+	bool spliced = false; // "parents M F spliced": made by the gene splicer
 	// a record only (a creature that has died): its kind, sex and death
 	bool record = false;
 	int genus = 1, gender = -1, diedstage = -1;
@@ -1084,6 +1085,7 @@ static void restoreCreature(const fs::path& savedir, const SavedCreature& s, boo
 	m.name = s.name;
 	m.mother = s.mother;
 	m.father = s.father;
+	m.spliced = s.spliced;
 	historyManager::lineageGeneration++;
 	m.story = s.story;
 	m.registered = s.registered;
@@ -1333,6 +1335,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 				l >> c->moniker;
 			else if (key == "parents") {
 				l >> c->mother >> c->father;
+				std::string how;
+				c->spliced = (l >> how) && how == "spliced";
 				if (c->mother == "-")
 					c->mother.clear();
 				if (c->father == "-")
@@ -1467,6 +1471,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 		m.diedstage = r.diedstage;
 		m.mother = r.mother;
 		m.father = r.father;
+		m.spliced = r.spliced;
 		historyManager::lineageGeneration++;
 	}
 	for (auto& s : eggs)

@@ -174,11 +174,14 @@ void v_MTOC(caosVM* vm) {
 	vm->result.setAgent(a);
 }
 
-// a genome by moniker: a living creature's own, or a file in Genetics
+// a genome by moniker: a living creature's own, one just taken out of the
+// world, or a file in Genetics
 static std::shared_ptr<genomeFile> genomeByName(const std::string& name) {
 	if (world.history->hasMoniker(name))
 		if (auto g = world.history->getMoniker(name).genome.lock())
 			return g;
+	if (auto g = world.history->goneGenome(name))
+		return g;
 	return world.loadGenome(name);
 }
 
@@ -191,14 +194,22 @@ static std::shared_ptr<genomeFile> genomeByName(const std::string& name) {
  egg's genome), the way a conception does (crossover and mutation), stores it
  under a new name and sets destination to that name. mum and dad may be the
  same: a copy of one genome, with the usual small mutations (the
- Metamorphosis device clones a creature this way).
+ Metamorphosis device clones a creature this way); either may be 0, also a
+ copy of the other (the gene splicer with one pod filled). A creature's
+ genome is found by its moniker for a while after the creature is gone.
 */
 void c_NEW_GENE(caosVM* vm) {
 	VM_PARAM_VARIABLE(destination)
 	VM_PARAM_INTEGER(dad)
 	VM_PARAM_INTEGER(mum)
 
-	THROW_IFNOT(mum != 0 && dad != 0);
+	// one of them 0: a copy of the other (C2's gene splicer with a creature
+	// in one pod only asks for this)
+	THROW_IFNOT(mum != 0 || dad != 0);
+	if (mum == 0)
+		mum = dad;
+	if (dad == 0)
+		dad = mum;
 	std::string mumName = genomeNameFromInt(mum), dadName = genomeNameFromInt(dad);
 	std::shared_ptr<genomeFile> m = genomeByName(mumName), d = genomeByName(dadName);
 	if (!m)
@@ -213,6 +224,8 @@ void c_NEW_GENE(caosVM* vm) {
 	if (name.empty())
 		throw Exception("NEW: GENE: couldn't store the new genome");
 	fmt::print("* NEW: GENE {} and {}: genome {} ({} genes, {} mutations)\n", mumName, dadName, name, rep.genes, rep.mutations);
+	if (mumName != dadName && world.history->hasMoniker(mumName) && world.history->hasMoniker(dadName))
+		world.history->splicedGenomes.insert(name);
 	destination->setInt(genomeNameToInt(name));
 }
 

@@ -138,6 +138,8 @@ static void RegistrationPage() {
 		row("Parents", "none: it hatched from an egg laid by the Hatchery or the Breeder's Kit");
 	else if (m->mother == m->father) // one genome copied (NEW: GENE of one creature: the Metamorphosis device)
 		row("Parents", "cloned from " + nameOf(m->mother));
+	else if (m->spliced) // the gene splicer's (NEW: GENE of two creatures)
+		row("Parents", fmt::format("spliced from {} and {} in the gene lab", nameOf(m->mother), nameOf(m->father)));
 	else
 		row("Parents", fmt::format("{} and {}", m->mother.empty() ? "unknown" : nameOf(m->mother), m->father.empty() ? "unknown" : nameOf(m->father)));
 	std::vector<std::string> kids;

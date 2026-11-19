@@ -38,6 +38,7 @@
 #include "Vehicle.h"
 #include "VoiceData.h"
 #include "World.h"
+#include "historyManager.h"
 #include "caosVM.h"
 #include "caosScript.h"
 #include "common/audio/AudioBackend.h"
@@ -1568,6 +1569,12 @@ void Agent::kill() {
 	// TODO: should the carried agent really be responsible for dropping from vehicle?
 	if (invehicle)
 		invehicle->drop(this);
+
+	// a creature's genome stays findable by its moniker for a while after
+	// it leaves the world (historyManager::goneGenomes)
+	if (family == 4)
+		if (auto g = genome_slots.find(0); g != genome_slots.end() && g->second)
+			world.history->rememberGoneGenome(world.history->findMoniker(g->second), g->second);
 
 	dying = true; // what a world, what a world...
 

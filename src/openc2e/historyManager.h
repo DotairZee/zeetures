@@ -23,7 +23,9 @@
 #include "AgentRef.h"
 #include "creatures/lifestage.h"
 
+#include <deque>
 #include <map>
+#include <set>
 #include <unordered_map>
 #include <memory>
 #include <vector>
@@ -116,6 +118,9 @@ class monikerData {
 	int diedstage = -1;
 	// its parents' monikers (set by a conceived or spliced event; kept with the world)
 	std::string mother, father;
+	// made by the gene splicer from its parents' genomes (NEW: GENE), not
+	// conceived (kept with the world)
+	bool spliced = false;
 	// its own life story, from 2026-11-11 on (storyEntry)
 	std::vector<storyEntry> story;
 
@@ -171,8 +176,30 @@ class historyManager {
 	// (performance, 2026-11-16). A hit is checked against its record; any
 	// change to the set of records clears it.
 	std::unordered_map<const genomeFile*, std::string> genomeMonikers;
+	// the genomes of the last creatures taken out of the world (killed or
+	// dead), newest last: a monikerData holds its genome only weakly, and a
+	// script may ask for a creature's genome just after removing it (C2's
+	// gene splicer takes both creatures, then crosses their genomes;
+	// 2026-11-19)
+	std::deque<std::pair<std::string, std::shared_ptr<genomeFile>>> goneGenomes;
 
   public:
+	// genomes NEW: GENE made from two creatures' genomes, by name: a
+	// creature hatched from one was spliced, not conceived
+	std::set<std::string> splicedGenomes;
+	void rememberGoneGenome(const std::string& moniker, std::shared_ptr<genomeFile> g) {
+		if (moniker.empty() || !g)
+			return;
+		goneGenomes.emplace_back(moniker, std::move(g));
+		while (goneGenomes.size() > 64)
+			goneGenomes.pop_front();
+	}
+	std::shared_ptr<genomeFile> goneGenome(const std::string& moniker) const {
+		for (auto it = goneGenomes.rbegin(); it != goneGenomes.rend(); ++it)
+			if (it->first == moniker)
+				return it->second;
+		return {};
+	}
 	// raised whenever a record's parents, or the set of records, may have
 	// changed (any world's history; never reset), so answers about kinship
 	// can be kept until it moves (performance, 2026-11-16)
