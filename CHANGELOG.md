@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 468 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 469 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 7 commits, 18 November 2026
+- [Unreleased](#unreleased): 8 commits, 18 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,22 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 18 November 2026
+
+#### Developer aids for the energy chain: organ dump detail, PGK in fuel watch
+
+[`894e83a5`](https://github.com/DotairZee/zeetures/commit/894e83a5775aae7627d3306dc84bfc7f2ee9c500)
+
+OPENC2E_DUMP_ORGANS=MONIKER now also lists each organ's emitters and the
+receptors feeding brain relay lobe 9, lobe 9's threshold, leakage, gain
+and rest state, and the genes that make or set the energy chain's
+chemicals (glucose, pyruvate, Energy, ATP, ADP, phosphoglycerokinase):
+emitters, initial concentrations and half-lives. With
+OPENC2E_DUMP_ORGANS_ALL it prints every reaction, not only those on
+ATP and ADP. OPENC2E_WATCH_FUEL also prints phosphoglycerokinase (179).
+
+Used to trace why some creatures make ATP slower than they spend it:
+all ATP comes from one organ, fed by glycolysis that needs PGK, which is
+made in proportion to ADP by an emitter in another organ.
 
 #### C2: restart a metabolism stalled below the cheapest organ's ATP need
 
