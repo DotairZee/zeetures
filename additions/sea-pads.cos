@@ -31,7 +31,8 @@ scrp 2 1 163 9
   tick 0
   inst
 * var0, var1 where the creature starts (its left edge and top); var2, var3
-* where it lands (likewise); var4 the arc's height; var5 the step (0-28)
+* where it lands (the middle of its feet); var4 the arc's height; var5 the
+* step (0-28)
   targ ov01
   setv var0 posl
   setv var9 rtyp
@@ -66,29 +67,35 @@ scrp 2 1 163 9
   targ ov00
   setv var0 posl
   setv var1 post
-  setv var9 posr
-  subv var9 posl
-  divv var9 2
-  subv var2 var9
-  setv var9 posb
-  subv var9 post
-  subv var3 var9
   setv var5 0
   loop
     addv var5 1
-*   across: var0 + (var2 - var0) * step / 28
-    setv var8 var2
+*   where its box lands, by its size now: a creature changes pose in the
+*   air, from swimming or crouched (43-71 px tall) to standing (about 110),
+*   and a landing sized at the start of the throw put its feet 40-65 px
+*   under the dock's planks, into the water room below (room 31), every
+*   time (2026-11-18); var6 its left there, var7 its top there
+    setv var9 posr
+    subv var9 posl
+    divv var9 2
+    setv var6 var2
+    subv var6 var9
+    setv var9 posb
+    subv var9 post
+    setv var7 var3
+    subv var7 var9
+*   across: var0 + (var6 - var0) * step / 28
+    setv var8 var6
     subv var8 var0
     mulv var8 var5
     divv var8 28
     addv var8 var0
-*   and up: var1 + (var3 - var1) * step / 28 - 4 h step (28 - step) / 784
+*   and up: var1 + (var7 - var1) * step / 28 - 4 h step (28 - step) / 784
     setv var9 28
     subv var9 var5
     mulv var9 var5
     mulv var9 var4
     divv var9 196
-    setv var7 var3
     subv var7 var1
     mulv var7 var5
     divv var7 28
