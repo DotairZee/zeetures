@@ -252,6 +252,27 @@ scrp 2 25 141 9
               endi
               addv var6 1
             repe
+            * (nor in a lift's shaft, between 250 px above its top stop and
+            * its bottom stop, judged by the fruit's middle: a bush grew between
+            * the cage lift's cables at its middle stop, in the cabin's way;
+            * owner, 2026-11-19. The lifts' spans and stops are the world's.)
+            setv var3 posl addv var3 posr divv var3 2
+            doif var3 ge 1534 doif var3 le 1637 doif posb ge 89 doif posb le 971 setv var2 1 endi endi endi endi
+            doif var3 ge 1546 doif var3 le 1649 doif posb ge 1245 doif posb le 2153 setv var2 1 endi endi endi endi
+            doif var3 ge 2334 doif var3 le 2458 doif posb ge 715 doif posb le 1705 setv var2 1 endi endi endi endi
+            doif var3 ge 3188 doif var3 le 3312 doif posb ge 1034 doif posb le 2000 setv var2 1 endi endi endi endi
+            doif var3 ge 3526 doif var3 le 3650 doif posb ge 1294 doif posb le 2265 setv var2 1 endi endi endi endi
+            doif var3 ge 4172 doif var3 le 4275 doif posb ge 342 doif posb le 1165 setv var2 1 endi endi endi endi
+            doif var3 ge 4549 doif var3 le 4673 doif posb ge 1826 doif posb le 2259 setv var2 1 endi endi endi endi
+            doif var3 ge 5116 doif var3 le 5240 doif posb ge 1364 doif posb le 1862 setv var2 1 endi endi endi endi
+            doif var3 ge 5705 doif var3 le 5829 doif posb ge 1607 doif posb le 2259 setv var2 1 endi endi endi endi
+            doif var3 ge 5759 doif var3 le 5862 doif posb ge 211 doif posb le 1179 setv var2 1 endi endi endi endi
+            doif var3 ge 2220 doif var3 le 2324 doif posb ge 1898 doif posb le 2325 setv var2 1 endi endi endi endi
+            doif var3 ge 302 doif var3 le 406 doif posb ge 1264 doif posb le 1845 setv var2 1 endi endi endi endi
+            doif var3 ge 60 doif var3 le 164 doif posb ge 784 doif posb le 1507 setv var2 1 endi endi endi endi
+            doif var3 ge 7525 doif var3 le 7629 doif posb ge 442 doif posb le 2156 setv var2 1 endi endi endi endi
+            doif var3 ge 8118 doif var3 le 8222 doif posb ge 1053 doif posb le 1849 setv var2 1 endi endi endi endi
+            doif var3 ge 1320 doif var3 le 1479 doif posb ge 1049 doif posb le 1845 setv var2 1 endi endi endi endi
             doif var2 eq 0
               setv var3 posl subv var3 70 setv var4 posb subv var4 107
               setv var5 ov02
@@ -375,6 +396,27 @@ scrp 2 25 142 9
               endi
               addv var6 1
             repe
+            * (nor in a lift's shaft, between 250 px above its top stop and
+            * its bottom stop, judged by the fruit's middle: a bush grew between
+            * the cage lift's cables at its middle stop, in the cabin's way;
+            * owner, 2026-11-19. The lifts' spans and stops are the world's.)
+            setv var3 posl addv var3 posr divv var3 2
+            doif var3 ge 1534 doif var3 le 1637 doif posb ge 89 doif posb le 971 setv var2 1 endi endi endi endi
+            doif var3 ge 1546 doif var3 le 1649 doif posb ge 1245 doif posb le 2153 setv var2 1 endi endi endi endi
+            doif var3 ge 2334 doif var3 le 2458 doif posb ge 715 doif posb le 1705 setv var2 1 endi endi endi endi
+            doif var3 ge 3188 doif var3 le 3312 doif posb ge 1034 doif posb le 2000 setv var2 1 endi endi endi endi
+            doif var3 ge 3526 doif var3 le 3650 doif posb ge 1294 doif posb le 2265 setv var2 1 endi endi endi endi
+            doif var3 ge 4172 doif var3 le 4275 doif posb ge 342 doif posb le 1165 setv var2 1 endi endi endi endi
+            doif var3 ge 4549 doif var3 le 4673 doif posb ge 1826 doif posb le 2259 setv var2 1 endi endi endi endi
+            doif var3 ge 5116 doif var3 le 5240 doif posb ge 1364 doif posb le 1862 setv var2 1 endi endi endi endi
+            doif var3 ge 5705 doif var3 le 5829 doif posb ge 1607 doif posb le 2259 setv var2 1 endi endi endi endi
+            doif var3 ge 5759 doif var3 le 5862 doif posb ge 211 doif posb le 1179 setv var2 1 endi endi endi endi
+            doif var3 ge 2220 doif var3 le 2324 doif posb ge 1898 doif posb le 2325 setv var2 1 endi endi endi endi
+            doif var3 ge 302 doif var3 le 406 doif posb ge 1264 doif posb le 1845 setv var2 1 endi endi endi endi
+            doif var3 ge 60 doif var3 le 164 doif posb ge 784 doif posb le 1507 setv var2 1 endi endi endi endi
+            doif var3 ge 7525 doif var3 le 7629 doif posb ge 442 doif posb le 2156 setv var2 1 endi endi endi endi
+            doif var3 ge 8118 doif var3 le 8222 doif posb ge 1053 doif posb le 1849 setv var2 1 endi endi endi endi
+            doif var3 ge 1320 doif var3 le 1479 doif posb ge 1049 doif posb le 1845 setv var2 1 endi endi endi endi
             doif var2 eq 0
               setv var3 posl subv var3 70 setv var4 posb subv var4 107
               setv var5 ov02
@@ -498,6 +540,27 @@ scrp 2 25 143 9
               endi
               addv var6 1
             repe
+            * (nor in a lift's shaft, between 250 px above its top stop and
+            * its bottom stop, judged by the fruit's middle: a bush grew between
+            * the cage lift's cables at its middle stop, in the cabin's way;
+            * owner, 2026-11-19. The lifts' spans and stops are the world's.)
+            setv var3 posl addv var3 posr divv var3 2
+            doif var3 ge 1534 doif var3 le 1637 doif posb ge 89 doif posb le 971 setv var2 1 endi endi endi endi
+            doif var3 ge 1546 doif var3 le 1649 doif posb ge 1245 doif posb le 2153 setv var2 1 endi endi endi endi
+            doif var3 ge 2334 doif var3 le 2458 doif posb ge 715 doif posb le 1705 setv var2 1 endi endi endi endi
+            doif var3 ge 3188 doif var3 le 3312 doif posb ge 1034 doif posb le 2000 setv var2 1 endi endi endi endi
+            doif var3 ge 3526 doif var3 le 3650 doif posb ge 1294 doif posb le 2265 setv var2 1 endi endi endi endi
+            doif var3 ge 4172 doif var3 le 4275 doif posb ge 342 doif posb le 1165 setv var2 1 endi endi endi endi
+            doif var3 ge 4549 doif var3 le 4673 doif posb ge 1826 doif posb le 2259 setv var2 1 endi endi endi endi
+            doif var3 ge 5116 doif var3 le 5240 doif posb ge 1364 doif posb le 1862 setv var2 1 endi endi endi endi
+            doif var3 ge 5705 doif var3 le 5829 doif posb ge 1607 doif posb le 2259 setv var2 1 endi endi endi endi
+            doif var3 ge 5759 doif var3 le 5862 doif posb ge 211 doif posb le 1179 setv var2 1 endi endi endi endi
+            doif var3 ge 2220 doif var3 le 2324 doif posb ge 1898 doif posb le 2325 setv var2 1 endi endi endi endi
+            doif var3 ge 302 doif var3 le 406 doif posb ge 1264 doif posb le 1845 setv var2 1 endi endi endi endi
+            doif var3 ge 60 doif var3 le 164 doif posb ge 784 doif posb le 1507 setv var2 1 endi endi endi endi
+            doif var3 ge 7525 doif var3 le 7629 doif posb ge 442 doif posb le 2156 setv var2 1 endi endi endi endi
+            doif var3 ge 8118 doif var3 le 8222 doif posb ge 1053 doif posb le 1849 setv var2 1 endi endi endi endi
+            doif var3 ge 1320 doif var3 le 1479 doif posb ge 1049 doif posb le 1845 setv var2 1 endi endi endi endi
             doif var2 eq 0
               setv var3 posl subv var3 70 setv var4 posb subv var4 107
               setv var5 ov02
@@ -621,6 +684,27 @@ scrp 2 25 144 9
               endi
               addv var6 1
             repe
+            * (nor in a lift's shaft, between 250 px above its top stop and
+            * its bottom stop, judged by the fruit's middle: a bush grew between
+            * the cage lift's cables at its middle stop, in the cabin's way;
+            * owner, 2026-11-19. The lifts' spans and stops are the world's.)
+            setv var3 posl addv var3 posr divv var3 2
+            doif var3 ge 1534 doif var3 le 1637 doif posb ge 89 doif posb le 971 setv var2 1 endi endi endi endi
+            doif var3 ge 1546 doif var3 le 1649 doif posb ge 1245 doif posb le 2153 setv var2 1 endi endi endi endi
+            doif var3 ge 2334 doif var3 le 2458 doif posb ge 715 doif posb le 1705 setv var2 1 endi endi endi endi
+            doif var3 ge 3188 doif var3 le 3312 doif posb ge 1034 doif posb le 2000 setv var2 1 endi endi endi endi
+            doif var3 ge 3526 doif var3 le 3650 doif posb ge 1294 doif posb le 2265 setv var2 1 endi endi endi endi
+            doif var3 ge 4172 doif var3 le 4275 doif posb ge 342 doif posb le 1165 setv var2 1 endi endi endi endi
+            doif var3 ge 4549 doif var3 le 4673 doif posb ge 1826 doif posb le 2259 setv var2 1 endi endi endi endi
+            doif var3 ge 5116 doif var3 le 5240 doif posb ge 1364 doif posb le 1862 setv var2 1 endi endi endi endi
+            doif var3 ge 5705 doif var3 le 5829 doif posb ge 1607 doif posb le 2259 setv var2 1 endi endi endi endi
+            doif var3 ge 5759 doif var3 le 5862 doif posb ge 211 doif posb le 1179 setv var2 1 endi endi endi endi
+            doif var3 ge 2220 doif var3 le 2324 doif posb ge 1898 doif posb le 2325 setv var2 1 endi endi endi endi
+            doif var3 ge 302 doif var3 le 406 doif posb ge 1264 doif posb le 1845 setv var2 1 endi endi endi endi
+            doif var3 ge 60 doif var3 le 164 doif posb ge 784 doif posb le 1507 setv var2 1 endi endi endi endi
+            doif var3 ge 7525 doif var3 le 7629 doif posb ge 442 doif posb le 2156 setv var2 1 endi endi endi endi
+            doif var3 ge 8118 doif var3 le 8222 doif posb ge 1053 doif posb le 1849 setv var2 1 endi endi endi endi
+            doif var3 ge 1320 doif var3 le 1479 doif posb ge 1049 doif posb le 1845 setv var2 1 endi endi endi endi
             doif var2 eq 0
               setv var3 posl subv var3 70 setv var4 posb subv var4 107
               setv var5 ov02
@@ -771,6 +855,30 @@ endm
 
 * clear what an earlier load made (the bushes are kept by the world save,
 * so they stay; fruit on them regrows)
+* No bush in a lift's shaft (owner, 2026-11-19): ones that seeded there
+* before the fruit learned not to sprout in shafts go, judged by their
+* middle against each lift's span and stops (as the sprouting test above).
+enum 2 4 141
+  setv var2 0
+  setv var3 posl addv var3 posr divv var3 2
+  doif var3 ge 1534 doif var3 le 1637 doif posb ge 89 doif posb le 971 setv var2 1 endi endi endi endi
+  doif var3 ge 1546 doif var3 le 1649 doif posb ge 1245 doif posb le 2153 setv var2 1 endi endi endi endi
+  doif var3 ge 2334 doif var3 le 2458 doif posb ge 715 doif posb le 1705 setv var2 1 endi endi endi endi
+  doif var3 ge 3188 doif var3 le 3312 doif posb ge 1034 doif posb le 2000 setv var2 1 endi endi endi endi
+  doif var3 ge 3526 doif var3 le 3650 doif posb ge 1294 doif posb le 2265 setv var2 1 endi endi endi endi
+  doif var3 ge 4172 doif var3 le 4275 doif posb ge 342 doif posb le 1165 setv var2 1 endi endi endi endi
+  doif var3 ge 4549 doif var3 le 4673 doif posb ge 1826 doif posb le 2259 setv var2 1 endi endi endi endi
+  doif var3 ge 5116 doif var3 le 5240 doif posb ge 1364 doif posb le 1862 setv var2 1 endi endi endi endi
+  doif var3 ge 5705 doif var3 le 5829 doif posb ge 1607 doif posb le 2259 setv var2 1 endi endi endi endi
+  doif var3 ge 5759 doif var3 le 5862 doif posb ge 211 doif posb le 1179 setv var2 1 endi endi endi endi
+  doif var3 ge 2220 doif var3 le 2324 doif posb ge 1898 doif posb le 2325 setv var2 1 endi endi endi endi
+  doif var3 ge 302 doif var3 le 406 doif posb ge 1264 doif posb le 1845 setv var2 1 endi endi endi endi
+  doif var3 ge 60 doif var3 le 164 doif posb ge 784 doif posb le 1507 setv var2 1 endi endi endi endi
+  doif var3 ge 7525 doif var3 le 7629 doif posb ge 442 doif posb le 2156 setv var2 1 endi endi endi endi
+  doif var3 ge 8118 doif var3 le 8222 doif posb ge 1053 doif posb le 1849 setv var2 1 endi endi endi endi
+  doif var3 ge 1320 doif var3 le 1479 doif posb ge 1049 doif posb le 1845 setv var2 1 endi endi endi endi
+  doif var2 eq 1 kill targ endi
+next
 enum 2 1 141 kill targ next
 enum 2 25 141 kill targ next
 enum 2 25 142 kill targ next
