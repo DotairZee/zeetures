@@ -324,6 +324,9 @@ struct Params {
 	float forageShare = 0.35f; // worth this share of an expected meal
 	unsigned int forageCommit = 150; // mind ticks to keep a heading
 	float visitBinWidth = 400.0f, visitBinHeight = 300.0f;
+	// a boat ride to search across water is not taken to a shore visited
+	// this recently (decisions)
+	unsigned int forageRevisit = 3000;
 	int forageLookBins = 4; // how far ahead (in bins) staleness is judged
 	// Noticing lack of progress: a search heading that has not carried the
 	// creature foragePass pixels after forageStuckTicks is turned around (both
@@ -3159,9 +3162,30 @@ class HomeostatMind : public CreatureMind {
 				addLinkToward(p, bestLink->toX, bestLink->toY, want, t, out);
 			}
 		}
-		// water ahead with a boat in view: rowing across is a way to search further
+		// water ahead with a boat in view: rowing across is a way to search
+		// further, but not back to a shore searched lately (a known ride that
+		// way lands where it was not long ago): starving norns took the east
+		// sea's boat to the palm side, found nothing, took it straight back,
+		// found nothing, and so on, a ride every 40 decisions (owner's
+		// screencast, 2026-11-19)
+		static const bool oldBoatForage = getenv("OPENC2E_OLD_BOAT_FORAGE") != nullptr; // (to compare)
+		auto searchedLately = [&](int dir) {
+			if (oldBoatForage)
+				return false;
+			for (auto& tl : travelLinks) {
+				if (tl.category != prm.boatCategory || std::fabs(dxTo(p, tl.fromX)) > prm.linkNear || std::fabs(tl.fromY - p.y) > prm.sameLevel)
+					continue;
+				float go = wrapD(tl.toX - tl.fromX);
+				if ((dir == 10) != (go < 0))
+					continue;
+				auto it = visited.find({(int)std::floor(tl.toX / prm.visitBinWidth), (int)std::floor(tl.toY / prm.visitBinHeight)});
+				if (it != visited.end() && p.tick - it->second < prm.forageRevisit)
+					return true;
+			}
+			return false;
+		};
 		for (int dir : {10, 11})
-			if (waterAhead(p, dir)) {
+			if (waterAhead(p, dir) && !searchedLately(dir)) {
 				Candidate t{};
 				t.forage = true;
 				addBoatInstead(p, dir, want, t, out);
