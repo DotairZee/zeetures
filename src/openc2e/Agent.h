@@ -124,6 +124,10 @@ class Agent : public std::enable_shared_from_this<Agent> {
 
 	AgentRef carrying;
 	AgentRef carriedby;
+	// who last put this down, and when (world ticks): food a creature
+	// carries over and drops is credited to it when eaten (Relationships)
+	AgentRef lastDroppedBy;
+	unsigned int lastDroppedTick = 0;
 	AgentRef invehicle;
 
 	inline bool isDying() const {

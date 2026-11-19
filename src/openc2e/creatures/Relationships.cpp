@@ -132,8 +132,28 @@ std::vector<Living> living() {
 
 } // namespace
 
+// how long after a creature puts something down it is still its gift
+// witnesses this near (px, half as far up or down) may defend a friend, for
+// this long (world ticks)
+static const float DEFEND_SEE = 400.0f;
+static const unsigned int DEFEND_TICKS = 200;
+static const unsigned int GIFT_WINDOW = 1200;
+
 void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 4>& chems, const std::array<int, 4>& amounts) {
 	oldCreature* other = creatureOf(source);
+	// a gift: food (or anything) another creature carried over and put down
+	// not long ago, felt from the thing itself, counts as from that creature
+	// (the bring of tending and sharing is credited to the bringer)
+	bool gift = false;
+	static const bool noGifts = getenv("OPENC2E_NO_GIFT_CREDIT") != nullptr; // (to compare)
+	if (!other && source && !noGifts && source->lastDroppedBy && world.worldtickcount - source->lastDroppedTick < GIFT_WINDOW) {
+		Agent* giver = source->lastDroppedBy.get();
+		if (giver && giver != creature && creatureOf(giver)) {
+			other = creatureOf(giver);
+			source = giver;
+			gift = true;
+		}
+	}
 	if (!creature || !c || !other || source == creature || engine.version != 2)
 		return;
 	std::string them = monikerOf(other);
@@ -187,12 +207,38 @@ void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 
 		what = "punished me";
 	else if (rewarded)
 		what = "pleased me";
+	else if (gift)
+		what = std::string("brought me something that eased my ") + driveName(eased);
 	else
 		what = std::string("eased my ") + driveName(eased);
 	if (harm > 0)
 		b.lastHarm = now;
 	b.events[what]++;
 	relabelAndTell(monikerOf(c), them, b, wasFeared);
+	// witnesses: creatures near the one hurt who count it a friend may stand
+	// up for it against the one who hurt it (owner's idea, 2026-11-11: defend
+	// friends; the mind decides whether, HomeostatMind::addDefend)
+	static const bool noDefend = getenv("OPENC2E_NO_DEFEND") != nullptr; // (to compare)
+	if (harm > 0 && !gift && !noDefend) {
+		std::string victim = monikerOf(c);
+		float vx = creature->x + creature->getWidth() / 2.0f, vy = creature->y + creature->getHeight() / 2.0f;
+		for (auto& ag : world.agents) {
+			if (!ag || ag.get() == creature || ag.get() == source || ag->isDying())
+				continue;
+			oldCreature* w = creatureOf(ag.get());
+			if (!w)
+				continue;
+			float wx = ag->x + ag->getWidth() / 2.0f, wy = ag->y + ag->getHeight() / 2.0f;
+			if (std::fabs(wx - vx) > DEFEND_SEE || std::fabs(wy - vy) > DEFEND_SEE / 2)
+				continue;
+			auto it = w->bonds.find(victim);
+			if (it == w->bonds.end() || !(it->second.friend_ || it->second.mate) || it->second.affinity < 0.3f)
+				continue;
+			w->defendFrom = AgentRef(source);
+			w->defendUntil = now + DEFEND_TICKS;
+			w->defendFor = victim;
+		}
+	}
 	if (watching())
 		fmt::print("* BOND {} -> {}: {} ({:+.3f}) recent {:+.2f} affinity {:+.2f} fear {:.2f}\n", monikerOf(c), them, what, x, b.recent,
 			b.affinity, b.fear);

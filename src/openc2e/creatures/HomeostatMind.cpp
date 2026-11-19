@@ -247,6 +247,13 @@ struct Params {
 	float bringSearch = 250.0f; // food or a toy this near is picked up to bring
 	float bringDropNear = 60.0f; // dropped when this near (centres, x)
 	unsigned int tendAgain = 900, bringAgain = 1800, bringFailWait = 600;
+	// sharing with friends (addShare): only when its own hunger is at most
+	// shareFed, for a friend (affinity at least shareFriend) whose hunger is
+	// at least shareHungry; worth shareWant x (0.5 + affinity) x its hunger
+	float shareFed = 0.35f, shareFriend = 0.4f, shareHungry = 0.6f, shareWant = 0.12f;
+	// defending a friend (addDefend): worth defendWant, less as its own most
+	// pressing need grows
+	float defendWant = 0.10f;
 	float tendCalmPower = 2.0f; // a tend urge without a drive: times (1 - most pressing need)^this
 	std::vector<int> bringCategories{6, 25, 13}; // food, fruit, toys
 	float pheromoneWantScale = 0.1f;
@@ -4141,6 +4148,8 @@ class HomeostatMind : public CreatureMind {
 		addFoodSeek(p, d, D, canWest, canEast, out);
 		addScentFollow(p, d, D, canWest, canEast, out);
 		addScentUrges(p, d, D, canWest, canEast, out);
+		addShare(p, d, canWest, canEast, out);
+		addDefend(p, d, out);
 		addForage(p, d, D, canWest, canEast, out);
 		addStarveLeave(p, d, D, canWest, canEast, out);
 		addMateSeek(p, d, D, canWest, canEast, out);
@@ -4207,7 +4216,13 @@ class HomeostatMind : public CreatureMind {
 
 	// Tending (see Params, tendSee): with one to tend in sight, tickle it and
 	// bring it food or a toy. False when there is none to tend here.
-	bool addTend(const MindPerception& p, float want, bool canWest, bool canEast, std::vector<Candidate>& out) {
+	// A bring is over: what was carried for someone is no longer held (and a
+	// pickup chosen to bring that left the hands empty is not tried again for
+	// a while). Run before tending or sharing offers anything.
+	void bringBookkeeping(const MindPerception& p) {
+		if (bookkeptTick == p.tick)
+			return;
+		bookkeptTick = p.tick;
 		// a bring finished: what was carried for someone is no longer held
 		if (lastCarrying >= 0 && p.carryingCategory < 0 && !bringingFor.empty()) {
 			broughtUntil[bringingFor] = p.tick + prm.bringAgain;
@@ -4223,6 +4238,11 @@ class HomeostatMind : public CreatureMind {
 				bringFailUntil[bringPickupCategory] = p.tick + prm.bringFailWait;
 			bringPickupCategory = -1;
 		}
+	}
+	unsigned int bookkeptTick = UINT_MAX;
+
+	bool addTend(const MindPerception& p, float want, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		bringBookkeeping(p);
 		const SeenAgent* tendee = nullptr;
 		for (auto& s : p.visible)
 			if (s.genus == p.genus && s.genus >= 0 && (s.stage == 0 || s.stage == 1 || s.stage == 6) && s.reachable && !s.who.empty() &&
@@ -4244,41 +4264,99 @@ class HomeostatMind : public CreatureMind {
 			added = true;
 		}
 		// the bring
-		auto bu = broughtUntil.find(tendee->who);
+		return addBring(p, *tendee, want * prm.bringShare, "bring:", canWest, canEast, out) || added;
+	}
+
+	// Bringing food or a toy to another creature: carry what is held over
+	// and drop it beside them, or pick something up nearby to bring. False
+	// when nothing was offered.
+	bool addBring(const MindPerception& p, const SeenAgent& to, float bw, const std::string& prefix, bool canWest, bool canEast, std::vector<Candidate>& out,
+		bool foodOnly = false) {
+		auto bu = broughtUntil.find(to.who);
 		if (bu != broughtUntil.end() && p.tick < bu->second)
-			return added;
-		float bw = want * prm.bringShare;
-		if (bringable(p.carryingCategory)) {
-			float dx = dxTo(p, tendee->x);
+			return false;
+		auto ok = [&](int category) { return bringable(category) && (!foodOnly || category != 13); };
+		if (ok(p.carryingCategory)) {
+			float dx = dxTo(p, to.x);
 			Candidate c{-1, 7, 0, bw, 0, bw}; // drop it beside them
 			if (std::fabs(dx) > prm.bringDropNear) {
 				int kind = dx < 0 ? 10 : 11; // or walk it over
 				if ((kind == 10 && !canWest) || (kind == 11 && !canEast) || isBlocked(p, kind) || waterAhead(p, kind) || cliffAhead(p, kind))
-					return added;
+					return false;
 				c.decision = kind;
 				c.chain = true;
 			}
-			c.urge = "bring:" + tendee->who;
+			c.urge = prefix + to.who;
 			out.push_back(c);
-			bringingFor = tendee->who;
+			bringingFor = to.who;
 			return true;
 		}
 		if (p.carryingCategory >= 0)
-			return added; // holding something else: tickling only
+			return false; // holding something else
 		const SeenAgent* item = nullptr;
 		for (auto& s : p.visible)
-			if (bringable(s.category) && s.carryable && s.reachable && s.distance < prm.bringSearch && s.edible >= 0.0f &&
+			if (ok(s.category) && s.carryable && s.reachable && s.distance < prm.bringSearch && s.edible >= 0.0f &&
 				p.tick >= bringFailUntil[s.category] && (!item || s.distance < item->distance))
 				item = &s;
-		if (item) {
-			Candidate c{item->category, 6, item->distance, bw, 0, 0}; // pick it up to bring
-			c.score = bw - prm.distanceCost * item->distance;
-			c.chain = true;
-			c.urge = "bring:" + tendee->who;
-			out.push_back(c);
-			added = true;
+		if (!item)
+			return false;
+		Candidate c{item->category, 6, item->distance, bw, 0, 0}; // pick it up to bring
+		c.score = bw - prm.distanceCost * item->distance;
+		c.chain = true;
+		c.urge = prefix + to.who;
+		out.push_back(c);
+		return true;
+	}
+
+	// Defending (owner's idea, 2026-11-11: defend friends): a friend nearby
+	// was just hurt by a creature in sight; unless this one fears that
+	// creature, is a baby, or has more pressing needs, it goes for it (hit).
+	void addDefend(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, std::vector<Candidate>& out) {
+		if (!p.defendFrom || p.stage == 0)
+			return;
+		const SeenAgent* foe = nullptr;
+		for (auto& s : p.visible)
+			if (s.agent == p.defendFrom && s.reachable)
+				foe = &s;
+		if (!foe || foe->fear >= 0.5f || foe->stage == 0)
+			return;
+		float pressing = std::max({d[PAIN], d[HUNGER], d[TIRED], d[SLEEPY], d[FEAR], d[INJURY], d[SUFFOCATE]});
+		float want = prm.defendWant * std::clamp(1.0f - pressing, 0.0f, 1.0f);
+		if (want < prm.seekMinWant)
+			return;
+		Candidate c{foe->category, prm.hitDecision, foe->distance, want, 0, 0};
+		c.score = want - prm.distanceCost * foe->distance;
+		c.target = foe->agent;
+		c.who = foe->who;
+		c.urge = "defend:" + p.defendFor;
+		out.push_back(c);
+		static const bool watch = getenv("OPENC2E_WATCH_TEND") != nullptr;
+		if (watch)
+			fmt::print("[homeostat] creature {} t{}: DEFEND offered: {} hurt {}\n", p.creatureId, p.tick, foe->who, p.defendFor);
+	}
+
+	// Sharing (owner's idea, 2026-11-11: share with friends): not hungry
+	// itself, with a friend in sight who looks hungry, a creature brings it
+	// food. The friend credits the gift to it when it eats (Relationships).
+	void addShare(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		static const bool noShare = getenv("OPENC2E_NO_SHARE") != nullptr; // (to compare)
+		if (noShare || d[HUNGER] > prm.shareFed)
+			return;
+		bringBookkeeping(p);
+		const SeenAgent* friendIn = nullptr;
+		for (auto& s : p.visible)
+			if (!s.who.empty() && s.affinity >= prm.shareFriend && s.hunger >= prm.shareHungry && s.reachable && s.distance < prm.tendSee &&
+				(!friendIn || s.hunger > friendIn->hunger))
+				friendIn = &s;
+		if (!friendIn)
+			return;
+		float want = prm.shareWant * (0.5f + friendIn->affinity) * friendIn->hunger;
+		if (addBring(p, *friendIn, want, "share:", canWest, canEast, out, true)) {
+			static const bool watch = getenv("OPENC2E_WATCH_TEND") != nullptr;
+			if (watch)
+				fmt::print("[homeostat] creature {} t{}: SHARE offered for {} (affinity {:.2f}, its hunger {:.2f})\n", p.creatureId, p.tick, friendIn->who,
+					friendIn->affinity, friendIn->hunger);
 		}
-		return added;
 	}
 
 	void addScentUrges(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {

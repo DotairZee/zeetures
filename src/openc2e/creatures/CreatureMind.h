@@ -53,6 +53,8 @@ struct SeenAgent {
 	int genus = -1;
 	bool female = false;
 	int stage = -1;
+	// how hungry it looks (its hunger, 0-1: it says so and shows it)
+	float hunger = 0;
 };
 
 // An instinct from the genome, translated into neutral terms (see
@@ -139,6 +141,10 @@ struct MindPerception {
 	// the short way round.
 	float wrapWidth = 0;
 	bool riding = false; // carried by a vehicle (a lift, a boat)
+	// a friend nearby was just hurt by this creature (or none): who hurt it,
+	// and the friend's moniker
+	AgentRef defendFrom;
+	std::string defendFor;
 	bool carried = false; // held by the hand (or another agent): not moving by itself
 	int carryingCategory = -1; // the category of what this creature holds, or -1
 	bool scriptMoved = false; // moved by a script in the last few ticks (a stream, a launcher): not by its own power

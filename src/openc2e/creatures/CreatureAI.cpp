@@ -949,6 +949,7 @@ MindPerception oldCreature::buildPerception() {
 				sa.genus = oc->getGenus();
 				sa.female = oc->isFemale();
 				sa.stage = (int)oc->getStage();
+				sa.hunger = oc->getChemical(150) / 255.0f; // (the Hunger drive's chemical)
 				if (const Bond* b = Relationships::bondOf(this, sa.who)) {
 					sa.affinity = b->affinity;
 					sa.fear = b->fear;
@@ -984,6 +985,10 @@ MindPerception oldCreature::buildPerception() {
 		if (MetaRoom* m = world.map->wrappingMetaRoomNear(cx, cy))
 			p.wrapWidth = (float)m->width();
 	p.riding = (bool)parentagent->invehicle;
+	if (defendFrom && world.worldtickcount < defendUntil) {
+		p.defendFrom = defendFrom;
+		p.defendFor = defendFor;
+	}
 	if (auto* sc = dynamic_cast<SkeletalCreature*>(parentagent); sc && sc->lastFall.tick && sc->lastFall.tick != fallSeenTick) {
 		fallSeenTick = sc->lastFall.tick;
 		p.fellHeight = sc->lastFall.height;

@@ -1768,6 +1768,8 @@ void Agent::drop(AgentRef a) {
 		return;
 	assert(carrying == a);
 
+	a->lastDroppedBy = AgentRef(this);
+	a->lastDroppedTick = world.worldtickcount;
 	a->beDropped();
 	carrying = AgentRef(0);
 }
