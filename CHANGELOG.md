@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 478 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 480 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 17 commits, 18 November 2026 to 19 November 2026
+- [Unreleased](#unreleased): 19 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
 - [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
@@ -26,6 +26,54 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 19 November 2026
+
+#### C2 saves: lifts, boats, the submarine and call buttons kept with their riders
+
+[`067978f6`](https://github.com/DotairZee/zeetures/commit/067978f648ee7901f23246bffe03dafd95472ed3)
+
+The rest of stage 3 of saving the whole world. World-file vehicles
+(Vehicle, Lift) and call buttons are now world objects in the save: matched
+by their place in the world file and updated in place with position,
+velocity, timers, variables and pictures, plus a vehicle's xvec/yvec and a
+lift's current and next stop ("lift" line). They are never removed or made
+again (saves before this have no records of them, and the rule that removes
+world objects missing from the save would have deleted every lift).
+
+Who rides a vehicle is saved too ("rider c &lt;moniker&gt;" for creatures, "rider
+o &lt;id&gt;" for other saved objects) and put back aboard with Vehicle::carry
+after the creatures and objects are restored.
+
+Tests: a Home copy saved itself after 3000 ticks (16 lifts, 7 riders on the
+tree-trunk lift, the volcano lift and a boat). Loaded back, every lift and
+boat was where it was saved, the two lifts mid-trip went on to their stops
+with their riders, and "Riders back aboard their vehicles: 7". With
+OPENC2E_NO_SAVED_MACHINES (the old behavior) ten lifts and three boats
+jumped back to their world-file places (the tree-trunk lift 409 px, the
+riders' boat 430 px). Loaded and saved again under AddressSanitizer: clean.
+
+#### C2: pocket rescue sends a creature back to the side it came from
+
+[`99fadc46`](https://github.com/DotairZee/zeetures/commit/99fadc4611659db35b974bac2d32caeae24ea741)
+
+The rescue chose whichever floor beside was nearest, so a norn that
+walked from the library through its east wall into the rock by the
+tree-trunk lift (room 102), or out of the lift's shaft into the rock
+beside its foot (103), could come out on the other side of the wall:
+library creatures into the shaft, shaft creatures into the library or
+the cave west of it.
+
+Each creature now remembers where its middle stood (map x, oldCreature::
+lastWorldMidX) the last time the check found it in the world. When it is
+found in a sealed pocket within 200 ticks of that and at least 8 px to
+one side (it slid sideways in), the step onto a floor beside (40 px,
+then 80 px up) and the move beside (80 px) are tried on that side first.
+One that sank straight down keeps the usual order.
+
+Tests: a norn from the library 13 px from the shaft was put back in the
+library (the old rule's nearest floor was the shaft). Three pairs of
+5-minute Home copies: at hunger 255 39/26/17 vs 37/37/33, meals per
+thousand 446/489/482 vs 479/528/449. OPENC2E_OLD_RESCUE_SIDE restores
+the old order.
 
 #### C2: pocket rescue steps onto a floor beside up to 80 px up before lifting
 
