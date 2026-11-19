@@ -2874,6 +2874,14 @@ class HomeostatMind : public CreatureMind {
 			return false;
 		}
 		foodTrip = -1; // (the straight-line trip check does not apply)
+		// developer aid: OPENC2E_WATCH_ROUTES (1, or a creature id) prints each
+		// route step offered: the food it leads to and the step
+		static const char* watchRoutes = getenv("OPENC2E_WATCH_ROUTES");
+		if (watchRoutes && (std::string(watchRoutes) == "1" || std::to_string(p.creatureId) == watchRoutes)) {
+			const FoodPlace& t = foodPlaces[bestIdx];
+			fmt::print("[homeostat] creature {} t{}: ROUTE at {:.0f},{:.0f} cell {},{} to food {:.0f},{:.0f} cost {:.0f}: step dir {} cat {} dec {} lift {}\n", p.creatureId, p.tick, p.x,
+				p.y, start.first, start.second, t.x, t.y, bestCost, bestStep.dir, bestStep.category, bestStep.decision, bestStep.lift);
+		}
 		Candidate c{bestStep.category, bestStep.category >= 0 ? bestStep.decision : bestStep.dir, bestCost, bestWant, 0, bestWant};
 		c.chain = true;
 		c.food = true;
