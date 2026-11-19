@@ -18,6 +18,8 @@
  */
 
 #include <array>
+#include <cstring>
+#include <vector>
 #include <map>
 #include <set>
 #include "c2eBrain.h"
@@ -141,37 +143,63 @@ void c2Creature::tickBiochemistry() {
 	reproSum[0] = reproSum[1] = 0;
 	reproSet[0] = reproSet[1] = false;
 	// developer aid: OPENC2E_COUNT_ENERGY sums, for a creature a script has
-	// marked (OV97 = 1), how each organ changes Energy (98), ATP (99) and
-	// ADP (100), and what half-lives take, and prints the totals every 500
-	// steps: where an energy budget is made and spent
-	static const bool countEnergy = getenv("OPENC2E_COUNT_ENERGY") != nullptr;
-	bool counting = countEnergy && parentagent && parentagent->var[97].hasInt() && parentagent->var[97].getInt() == 1;
-	static std::map<int, std::array<long, 3>> energyByOrgan;
+	// marked (OV97 = 1), how each organ changes a few chemicals (by default
+	// Energy 98, ATP 99, ADP 100; OPENC2E_COUNT_ENERGY="69,95" names
+	// others), and what half-lives take, and prints the totals every 500
+	// steps: where a budget is made and spent
+	static const char* countEnv = getenv("OPENC2E_COUNT_ENERGY");
+	static const std::vector<int> countChems = [] {
+		std::vector<int> v;
+		if (countEnv && strchr(countEnv, ',')) {
+			for (const char* q = countEnv; *q;) {
+				v.push_back(atoi(q));
+				const char* c = strchr(q, ',');
+				if (!c)
+					break;
+				q = c + 1;
+			}
+		} else
+			v = {98, 99, 100};
+		return v;
+	}();
+	bool counting = countEnv && parentagent && parentagent->var[97].hasInt() && parentagent->var[97].getInt() == 1;
+	static std::map<int, std::vector<long>> flowByOrgan;
 	static long countedSteps = 0;
 	int oi = 0;
+	std::vector<int> before(countChems.size());
 	for (auto& organ : organs) {
-		int e0 = chemicals[98], a0 = chemicals[99], d0 = chemicals[100];
+		if (counting)
+			for (size_t k = 0; k < countChems.size(); k++)
+				before[k] = chemicals[countChems[k]];
 		organ->tick();
 		if (counting) {
-			auto& t = energyByOrgan[oi];
-			t[0] += chemicals[98] - e0;
-			t[1] += chemicals[99] - a0;
-			t[2] += chemicals[100] - d0;
+			auto& t = flowByOrgan[oi];
+			t.resize(countChems.size());
+			for (size_t k = 0; k < countChems.size(); k++)
+				t[k] += chemicals[countChems[k]] - before[k];
 		}
 		oi++;
 	}
 	if (counting) {
-		int e0 = chemicals[98], a0 = chemicals[99], d0 = chemicals[100];
+		for (size_t k = 0; k < countChems.size(); k++)
+			before[k] = chemicals[countChems[k]];
 		oldCreature::tickBiochemistry();
-		auto& t = energyByOrgan[-1];
-		t[0] += chemicals[98] - e0;
-		t[1] += chemicals[99] - a0;
-		t[2] += chemicals[100] - d0;
+		auto& t = flowByOrgan[-1];
+		t.resize(countChems.size());
+		for (size_t k = 0; k < countChems.size(); k++)
+			t[k] += chemicals[countChems[k]] - before[k];
 		if (++countedSteps % 500 == 0) {
 			std::string out;
-			for (auto& [k, v] : energyByOrgan)
-				if (v[0] || v[1] || v[2])
-					out += fmt::format(" {}:E{:+}/ATP{:+}/ADP{:+}", k < 0 ? std::string("decay") : fmt::format("#{}", k), v[0], v[1], v[2]);
+			for (auto& [o, v] : flowByOrgan) {
+				std::string cells;
+				bool any = false;
+				for (size_t k = 0; k < v.size(); k++) {
+					cells += fmt::format("{}c{}{:+}", k ? "/" : "", countChems[k], v[k]);
+					any = any || v[k];
+				}
+				if (any)
+					out += fmt::format(" {}:{}", o < 0 ? std::string("decay") : fmt::format("#{}", o), cells);
+			}
 			fmt::print("* ENERGY COUNT {} steps:{}\n", countedSteps, out);
 		}
 		for (int i = 0; i < 2; i++)

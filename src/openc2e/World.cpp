@@ -577,6 +577,9 @@ void World::tick() {
 					fmt::print("* GENE {} initial: chemical {} quantity {}\n", dm, (int)ic->chemical, (int)ic->quantity);
 				// what feeds the brain's relay lobe 9 (whose cell 13 the
 				// phosphoglycerokinase emitter reads)
+				if (auto* rc = dynamic_cast<bioReceptorGene*>(gn.get()); rc && rc->organ == 1 && rc->tissue == 0)
+					fmt::print("* GENE {} life-stage receptor: chemical {} into locus {} threshold {} nominal {} gain {}{}{}\n", dm, (int)rc->chemical,
+						(int)rc->locus, (int)rc->threshold, (int)rc->nominal, (int)rc->gain, rc->inverted ? " inverted" : "", rc->digital ? " digital" : "");
 				if (auto* rc = dynamic_cast<bioReceptorGene*>(gn.get()); rc && rc->organ == 0 && rc->tissue == 9)
 					fmt::print("* GENE {} receptor: chemical {} into organ 0 tissue 9 locus {} threshold {} nominal {} gain {}{}{}\n", dm, (int)rc->chemical,
 						(int)rc->locus, (int)rc->threshold, (int)rc->nominal, (int)rc->gain, rc->inverted ? " inverted" : "", rc->digital ? " digital" : "");
