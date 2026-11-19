@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 484 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 485 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 3 commits, 19 November 2026
+- [Unreleased](#unreleased): 4 commits, 19 November 2026
 - [0.13.0](#version-0130): 20 commits, 18 November 2026 to 19 November 2026
 - [0.12.1](#version-0121): 8 commits, 18 November 2026
 - [0.12.0](#version-0120): 7 commits, 18 November 2026
@@ -27,6 +27,16 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 19 November 2026
+
+#### Developer aid: OPENC2E_WATCH_LIFT_USE prints each creature action on a lift
+
+[`f24113d2`](https://github.com/DotairZee/zeetures/commit/f24113d2ae7bfb7e4bdda783101ce1af2fb5caf0)
+
+Prints the lift's place, OBV0 (1 while it moves and for its 30-tick rest
+after arriving, when its activate scripts do nothing) and YVEC, with the
+creature's place. A 5-minute Home copy: 602 of 869 activations found the
+lift busy, 553 of them in the rest after arriving (norns waiting to board
+press until it is free; the next press works), 49 while it moved.
 
 #### C2 senses: a drop ahead is measured from the room a step goes into
 
