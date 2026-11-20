@@ -73,7 +73,8 @@ jobs:
         tar czf "$out.tar.gz" "$out"
         # (used only if linux-appimage's, which runs on older systems, fails)
         packaging/linux/make-appimage.sh "$out" x86_64 Zeetures-x86_64.AppImage
-        ./Zeetures-x86_64.AppImage --appimage-extract-and-run --version
+        # (--version exits 1 in openc2e; its output shows the program runs)
+        ./Zeetures-x86_64.AppImage --appimage-extract-and-run --version | grep -q "^openc2e"
     - uses: actions/upload-artifact@v4
       with:
         name: linux
@@ -109,7 +110,8 @@ jobs:
         cmake --install build --prefix installed
         strip installed/openc2e
         packaging/linux/make-appimage.sh installed x86_64 Zeetures-x86_64.AppImage
-        ./Zeetures-x86_64.AppImage --appimage-extract-and-run --version
+        # (--version exits 1 in openc2e; its output shows the program runs)
+        ./Zeetures-x86_64.AppImage --appimage-extract-and-run --version | grep -q "^openc2e"
     - uses: actions/upload-artifact@v4
       with:
         name: linux-appimage
