@@ -90,4 +90,7 @@ std::vector<std::filesystem::path> getBootstrapDirectories();
 std::vector<std::filesystem::path> getCatalogueDirectories();
 
 std::filesystem::path homeDirectory();
+// the user folder that holds the per-game ones (~/.openc2e, Documents\\My
+// Games, ~/Documents/openc2e Data), and the current game's folder in it
+std::filesystem::path storageBaseDirectory();
 std::filesystem::path storageDirectory();

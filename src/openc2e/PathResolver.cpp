@@ -424,7 +424,7 @@ fs::path homeDirectory() {
 	return p;
 }
 
-fs::path storageDirectory() {
+fs::path storageBaseDirectory() {
 #ifdef _WIN32
 	fs::path dirname = "My Games";
 #elif defined(__APPLE__)
@@ -436,9 +436,14 @@ fs::path storageDirectory() {
 	// main storage dir
 	fs::path p = homeDirectory() / dirname;
 	if (!fs::exists(p))
-		fs::create_directory(p);
+		fs::create_directories(p);
 	else if (!fs::is_directory(p))
 		throw Exception("Your openc2e data directory " + p.string() + " is a file, not a directory. That's bad.");
+	return p;
+}
+
+fs::path storageDirectory() {
+	fs::path p = storageBaseDirectory();
 
 	// game-specific storage dir
 	p = p / engine.getGameName();

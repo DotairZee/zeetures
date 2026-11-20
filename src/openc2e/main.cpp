@@ -19,18 +19,26 @@
  */
 
 #include "Engine.h"
+#include "PathResolver.h"
 #include "common/backtrace.h"
 #include "common/Exception.h"
 #include "sdlbackend/SDLBackend.h"
 #include "sdlbackend/SDLMixerBackend.h"
 #include "version.h"
 
+#include <SDL3/SDL_init.h>
+#include <SDL3/SDL_messagebox.h>
+#include <cstdio>
+#include <cstring>
+#include <filesystem>
 #include <fmt/core.h>
 #include <memory>
-#include <cstring>
+#include <string>
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <unistd.h>
 #endif
 
 #if defined(__linux__)
@@ -98,11 +106,58 @@ void startSampler() {
 } // namespace
 #endif
 
+// Zeetures: a program started from a file manager, the Start menu or the
+// Dock has no terminal, so a fatal error is shown in a window too
+static bool hasTerminal() {
+#ifdef _WIN32
+	return GetConsoleWindow() != nullptr;
+#else
+	return isatty(fileno(stderr));
+#endif
+}
+
+static void fatalError(const std::string& message) {
+	fmt::print(stderr, "error: {}\n", message);
+	fflush(stdout);
+	fflush(stderr);
+	if (!hasTerminal())
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Zeetures", message.c_str(), nullptr);
+}
+
+#ifdef _WIN32
+// Zeetures.exe is a windowed program (no console window behind the game).
+// Started from a command prompt it writes there; otherwise its output goes
+// to zeetures-log.txt in the user folder, for bug reports.
+static void connectOutput() {
+	HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (out && out != INVALID_HANDLE_VALUE && GetFileType(out) != FILE_TYPE_UNKNOWN)
+		return; // (redirected to a file or pipe already)
+	if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+		freopen("CONOUT$", "w", stdout);
+		freopen("CONOUT$", "w", stderr);
+		return;
+	}
+	try {
+		std::filesystem::path log = storageBaseDirectory() / "zeetures-log.txt";
+		std::error_code ec;
+		std::filesystem::remove(log, ec);
+		if (_wfreopen(log.c_str(), L"a", stdout))
+			setvbuf(stdout, nullptr, _IONBF, 0);
+		_wfreopen(log.c_str(), L"a", stderr);
+	} catch (std::exception&) {
+	}
+}
+#endif
+
 // SDL tries stealing main on some platforms, which we don't want.
 #undef main
 
 int main(int argc, char* argv[]) {
+#ifdef _WIN32
+	connectOutput();
+#endif
 	install_backtrace_printer();
+	SDL_SetAppMetadata("Zeetures", nullptr, "io.github.dotairzee.zeetures");
 #if defined(__linux__)
 	startSampler();
 #endif
@@ -122,14 +177,19 @@ int main(int argc, char* argv[]) {
 	try {
 		if (!engine.parseCommandLine(argc, argv))
 			return 1;
-	} catch (const Exception& e) {
-		fmt::print(stderr, "error: {}\n", e.what());
+	} catch (const std::exception& e) {
+		fatalError(e.what());
 		return 1;
 	}
 
 	// get the engine to do all the startup (read catalogue, loading world, etc)
-	if (!engine.initialSetup())
-		return 0;
+	try {
+		if (!engine.initialSetup())
+			return 0;
+	} catch (const std::exception& e) {
+		fatalError(e.what());
+		return 1;
+	}
 
 	get_backend()->run([] {
 		hang_watch_beat(); // (see install_backtrace_printer: hang reports)

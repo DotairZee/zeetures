@@ -24,6 +24,7 @@
 #include <ctime>
 
 #include "Additions.h"
+#include "GameFolder.h"
 #include "AgentHelpers.h"
 #include "madeart/MadeArt.h"
 
@@ -1821,44 +1822,6 @@ static std::vector<DataDirectory> data_directories_from_machine_cfg(fs::path mac
 	return result;
 }
 
-#ifdef _WIN32
-static fs::path showDirectoryPicker() {
-	if (FAILED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE))) {
-		// TODO: handle RPC_E_CHANGED_MODE, we can continu w/ a multithreaded COM.
-		return {};
-	}
-
-	struct coinit_scope {
-		~coinit_scope() { CoUninitialize(); }
-	} coinit_scope_instance;
-
-	ComPtr<IFileOpenDialog> fo;
-	if (FAILED(CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_IFileOpenDialog, fo.receive_vpp()))) {
-		fmt::print("Couldn't open File Dialog\n");
-		return {};
-	}
-	fo->SetOptions(FOS_PICKFOLDERS);
-
-	// Show the Open dialog box.
-	if (FAILED(fo->Show(NULL))) {
-		fmt::print("Couldn't show File Open Dialog\n");
-		return {};
-	}
-
-	// Get the file name from the dialog box.
-	ComPtr<IShellItem> pItem;
-	if (FAILED(fo->GetResult(pItem.receive()))) {
-		return {};
-	}
-
-	ComHeapPtr<WCHAR> pszFilePath;
-	if (FAILED(pItem->GetDisplayName(SIGDN_FILESYSPATH, pszFilePath.receive()))) {
-		return {};
-	}
-
-	return fs::path(pszFilePath.get());
-}
-#endif
 
 bool Engine::parseCommandLine(int argc, char* argv[]) {
 	// variables for command-line flags
@@ -1941,18 +1904,31 @@ bool Engine::parseCommandLine(int argc, char* argv[]) {
 		fmt::print("* Creature mind: {}\n", mindname);
 	}
 
-#ifdef _WIN32
+	// Zeetures (owner, 2026-11-20): no command line needed. Without -d, the
+	// remembered or usual Creatures 2 folder; then ./data, as in openc2e,
+	// if it holds a game; then a window asks the player
+	bool data_from_cmdline = !data_vec.empty();
 	if (data_vec.empty()) {
-		fs::path picked_path = showDirectoryPicker();
-		if (!picked_path.empty()) {
-			data_vec.push_back(picked_path);
+		fs::path found = GameFolder::find();
+		if (found.empty()) {
+			fs::path d = data_default;
+			for (auto* marker : {"creatures2.exe", "creatures.exe", "machine.cfg", "Catalogue"}) {
+				if (case_insensitive_filesystem::exists(d / marker)) {
+					fmt::print("* Using the data folder {:?}\n", data_default);
+					found = d;
+					break;
+				}
+			}
 		}
+		if (found.empty())
+			found = GameFolder::ask();
+		if (found.empty()) {
+			fmt::print("No Creatures 2 folder chosen; see --help to give one with -d.\n");
+			return false;
+		}
+		data_vec.push_back(found);
 	}
-#endif
-	if (data_vec.empty()) {
-		fmt::print("Warning: No data path specified, trying default of {:?}, see --help if you need to specify one.\n", data_default);
-		data_vec.push_back(data_default);
-	}
+	GameFolder::setCurrent(data_vec[0], data_from_cmdline);
 
 	// check first data directory exists
 	if (!fs::exists(data_vec[0])) {
@@ -2149,7 +2125,7 @@ bool Engine::initialSetup() {
 	if (const char* size = getenv("OPENC2E_WINDOW_SIZE")) // developer aid, e.g. 1200x950
 		sscanf(size, "%dx%d", &window_width, &window_height);
 	b->init(
-		gamename.size() ? gamename + " - openc2e (development build)" : "openc2e (development build)",
+		version == 2 ? std::string("Zeetures") : gamename.size() ? gamename + " - openc2e (development build)" : "openc2e (development build)",
 		window_width,
 		window_height);
 	setBackend(b);

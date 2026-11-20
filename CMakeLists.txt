@@ -371,6 +371,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/creatures/oldBrain.cpp
 	src/openc2e/parseException.cpp
 	src/openc2e/partzorder.cpp
+	src/openc2e/GameFolder.cpp
 	src/openc2e/PathResolver.cpp
 	src/openc2e/physics.cpp
 	src/openc2e/PointerAgent.cpp
@@ -441,6 +442,17 @@ endif()
 add_executable(openc2e src/openc2e/main.cpp)
 target_include_directories(openc2e PRIVATE src/openc2e)
 target_link_libraries(openc2e openc2e_core openc2e_sdlbackend)
+# Windows (owner, 2026-11-20: players start it from the Start menu): the
+# program is Zeetures.exe, with its icon, and a windowed program, so no
+# console window opens behind the game (main.cpp: its output goes to the
+# command prompt it was started from, or to zeetures-log.txt)
+if(WIN32)
+	target_sources(openc2e PRIVATE src/openc2e/zeetures.rc)
+	set_target_properties(openc2e PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME Zeetures)
+	if(MSVC)
+		target_link_options(openc2e PRIVATE /ENTRY:mainCRTStartup)
+	endif()
+endif()
 
 add_executable(test_openc2e
 	src/openc2e/tests/CaosTest.cpp
