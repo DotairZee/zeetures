@@ -36,8 +36,11 @@ inst new: simp zldk 1 2 -22 0 setv cls2 2 3 240 setv attr 0 mvto 5292 2080 slow
 *    button to it. BHVR 1 makes a click activate it (owner: it was not
 *    clickable; the world file's callers carry their click behavior).
 enum 2 2 2 doif posl eq 5254 doif post eq 1977 kill targ endi endi next
+*    (The lift is found between x 5100 and 5140: at 5126 as the world file
+*    has it, or at 5116 where step 5 moved it and a save kept it; looking
+*    for 5126 only, the stop and its caller were left out of saved worlds.)
 enum 3 2 2
-  doif posl eq 5126
+  doif posl gt 5100 and posl lt 5140
     inst new: call targ 2077 cbt2 2 0 5000 setv cls2 2 2 2 setv attr 196 bhvr 1 0 pose 0 mvto 5254 1977 slow
   endi
 next
@@ -49,7 +52,7 @@ next
 *    The lift (plane 0) goes to plane 300, in front of the tube; the crane
 *    to 250, behind the lift and still in front of the tube. Creatures stay
 *    in front of both (1500). PLNE is openc2e's in C2.
-enum 3 2 2 doif posl eq 5126 plne 300 endi next
+enum 3 2 2 doif posl gt 5100 and posl lt 5140 plne 300 endi next
 enum 1 0 0 doif posl eq 5042 doif post eq 1467 plne 250 endi endi next
 *
 * 5. The lift 10 px to the left (owner, 2026-11-10: off-centre over the two
