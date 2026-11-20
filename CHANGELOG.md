@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 545 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 550 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.12](#version-01612): 5 commits, 20 November 2026
 - [0.16.11](#version-01611): 4 commits, 20 November 2026
 - [0.16.10](#version-01610): 3 commits, 20 November 2026
 - [0.16.9](#version-0169): 2 commits, 20 November 2026
@@ -35,6 +36,52 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.12
+
+The submarine is drawn in front of creatures and its callers behind them, beneath the submarine; the east dock's caller moves out from behind the rock onto the berth's back wall. The gene splicing room's west half has its floor on the drawn floor slab, 10 pixels higher.
+
+### 20 November 2026
+
+#### Version 0.16.12
+
+[`2ccfcbd5`](https://github.com/DotairZee/zeetures/commit/2ccfcbd5537d33e24c117693a9ef0eba7838b793)
+
+#### Gene splicing room: the west half's floor up to its drawn slab
+
+[`1e4e26a5`](https://github.com/DotairZee/zeetures/commit/1e4e26a5877bda1220d98f1c8456a4915dbe7f9f)
+
+Owner, 2026-11-20 (marked picture): the floor on the room's left side a
+little lower than the picture. Room 159's floor 1788 (was 1798) to x 6413,
+where the slab rises, then up to the east half's 1768 at 6503; the tube's
+end (room 158) comes down to 1788. The second bush sits on it (1655); one
+kept at the old height, and the fruit on it, go up 10.
+
+#### sub-callers.cos: callers beneath the submarine; the submarine in front of creatures
+
+[`abc9a557`](https://github.com/DotairZee/zeetures/commit/abc9a557136a5e5cff0f00e2593969ee06969e5a)
+
+Owner, 2026-11-20: the callers on a layer beneath the sub, and the sub in
+front of creatures. Callers at plane -1 (behind creatures and the sub, in
+front of the background and bushes); the airlock caller 6 px east, clear
+of the airlock door (plane 1000). The submarine at plane 1600, over
+creatures' 1500; riders are drawn at its plane plus its cabin plane, so
+they stay in front of its hull.
+
+#### sub-callers.cos: callers behind creatures; the east one out from behind the rock
+
+[`c18f2bc3`](https://github.com/DotairZee/zeetures/commit/c18f2bc3c932c5b048f4cdc735e74fb2945416b1)
+
+All three submarine callers were at plane 5000, in front of creatures
+(owner: behind them). West and airlock now at 1400, under creatures'
+\1500. The east caller at 7386 was hidden by the rock in front of the dock
+(1 0 0 at plane 8999); it moves onto the back wall of the berth's cave
+(owner's circled spot; 7235, where the arch clears its dome), at plane -1
+so the docked submarine, which covers that wall, stands in front of it.
+
+#### Changelog
+
+[`36a334b9`](https://github.com/DotairZee/zeetures/commit/36a334b9074135a786e8947dcd453d4cac56052c)
 
 ## Version 0.16.11
 

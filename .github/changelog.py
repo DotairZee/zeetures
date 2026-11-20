@@ -164,6 +164,10 @@ VERSIONS = [
      "A second skinny fruit bush in the gene splicing room, by the teleporter where the glass tube comes in. "
      "Fix: riders stay aboard the submarine (and other vehicles) for the whole trip; they were let out and "
      "taken back many times a second."),
+    ("0.16.12", "2ccfcbd5",
+     "The submarine is drawn in front of creatures and its callers behind them, beneath the submarine; the "
+     "east dock's caller moves out from behind the rock onto the berth's back wall. The gene splicing room's "
+     "west half has its floor on the drawn floor slab, 10 pixels higher."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
