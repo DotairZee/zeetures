@@ -16,10 +16,13 @@
 * The pod is four parts on one sprite: 1 the far glass (plane 1399) and 0
 * the floor (1400), behind creatures; riders are drawn at 1401 (CABP, which
 * openc2e allows in C2 for this; a C2 vehicle's riders are otherwise drawn
-* at plane 1, behind nearly everything) and creatures standing in it at
-* 1500; then 2 the near glass (1600, a faint tint and soft reflections) and
-* 3 the top housing and base with their light lines (1601; picture 0 dim,
-* 1 bright while moving). Parts 2 and 3 are click-through
+* at plane 1, behind nearly everything); then 2 the near glass (1450, a
+* faint tint and soft reflections) and 3 the top housing and base with their
+* light lines (1451; picture 0 dim, 1 bright while moving), in front of its
+* riders but behind creatures walking past (1500): at 1600 the pod hid the
+* creatures on the lab floor in front of it (owner, 2026-11-19). A creature
+* standing in the pod at a stop is drawn as any walker. Parts 2 and 3 are
+* click-through
 * (TRAN, which openc2e allows in C2 for this), so a creature inside can
 * still be clicked. Run by openc2e after the world loads (Additions folder);
 * made anew each load.
@@ -42,8 +45,8 @@ new: vhcl zlft 10 0
 setv cls2 3 2 141
 new: part 0 0 0 0 1400
 new: part 1 0 0 1 1399
-new: part 2 0 0 2 1600
-new: part 3 0 0 8 1601
+new: part 2 0 0 2 1450
+new: part 3 0 0 8 1451
 tran 1 2
 tran 1 3
 part 2 pose 5
