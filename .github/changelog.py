@@ -203,6 +203,9 @@ VERSIONS = [
     ("0.18.1", "7cf503c5",
      "A starving creature with no food in sight and no known way out tries a lift: it rides one that is "
      "there, calls one, or walks to one it can see (the west airlock's corridor, whose only ways out are lifts)."),
+    ("0.18.2", "3ee6c7a9",
+     "A new program icon, drawn from scratch: an egg with a heartbeat, a pale pink core in a mauve shell "
+     "with a plum outline. It is the window icon and the icon of the Windows, macOS and Linux packages."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

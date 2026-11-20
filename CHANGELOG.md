@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 553 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 555 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.18.2](#version-0182): 2 commits, 20 November 2026
 - [0.18.1](#version-0181): 3 commits, 20 November 2026
 - [0.18.0](#version-0180): 4 commits, 20 November 2026
 - [0.17.5](#version-0175): 2 commits, 20 November 2026
@@ -46,6 +47,28 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.18.2
+
+A new program icon, drawn from scratch: an egg with a heartbeat, a pale pink core in a mauve shell with a plum outline. It is the window icon and the icon of the Windows, macOS and Linux packages.
+
+### 20 November 2026
+
+#### Version 0.18.2
+
+[`3ee6c7a9`](https://github.com/DotairZee/zeetures/commit/3ee6c7a9ba1ad3138a6347056cf7bba8ee597372)
+
+#### A new program icon: the egg with a heartbeat
+
+[`f2fc53d8`](https://github.com/DotairZee/zeetures/commit/f2fc53d8c585462c6f399241412632a1bd952439)
+
+art/app_icon.py draws Zeetures's icon from scratch (no game art): a pale
+pink core in a mauve shell with a plum outline, and a pulse line across
+the core whose ends run under the shell's inner edge. It keeps the other
+designs tried (concepts A-D, the tree, Z and heartbeat variations).
+python3 art/app_icon.py --install writes packaging/icons (png, ico, icns)
+and the 128 x 128 window icon in src/sdlbackend/openc2e_icon.h, which
+replace the egg from openc2e's 2008 logo.
 
 ## Version 0.18.1
 
