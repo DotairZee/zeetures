@@ -146,6 +146,10 @@ VERSIONS = [
     ("0.16.6", "09400119",
      "Fix: creatures no longer walk in mid-air across the domed lab's left side and through its glass "
      "lift's shaft; a wall stands at the shaft's left side."),
+    ("0.16.7", "cc218617",
+     "The domed lab's power is switched on and off by the button on the dock's wall (where the pod used to be "
+     "called), no longer by the generator on the desk; the gene splicer knows its power after a load, and its "
+     "\"no power\" window no longer opens."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

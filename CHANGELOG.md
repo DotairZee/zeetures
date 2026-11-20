@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 530 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 533 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.7](#version-0167): 3 commits, 19 November 2026
 - [0.16.6](#version-0166): 3 commits, 19 November 2026
 - [0.16.5](#version-0165): 3 commits, 19 November 2026
 - [0.16.4](#version-0164): 3 commits, 19 November 2026
@@ -30,6 +31,37 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.7
+
+The domed lab's power is switched on and off by the button on the dock's wall (where the pod used to be called), no longer by the generator on the desk; the gene splicer knows its power after a load, and its "no power" window no longer opens.
+
+### 19 November 2026
+
+#### Version 0.16.7
+
+[`cc218617`](https://github.com/DotairZee/zeetures/commit/cc218617c81054ff7d603aba3b20bf02462b2b80)
+
+#### The dome's power on its old pod button; no "no power" window
+
+[`da8ed9b0`](https://github.com/DotairZee/zeetures/commit/da8ed9b027537883e9bc3e5e8a24019331c10177)
+
+Owner, 2026-11-19, night: the button on the dock's wall that called the
+pod now switches the lab's power on and off, the generator on the desk no
+longer does, and the splicer console's "no power" window never opens.
+transit.cos makes the button (2 2 22, the game's picture for it, hand
+only): a press runs the generator's own start or stop script. The
+generator takes no clicks and creatures no longer see it. The console now
+takes the generator's state at load (a world saved with the power on came
+back with the console thinking there was none: a press did nothing but
+open the window). script-patches.txt: the console's no-power branch stops
+before making the window. OPENC2E_TEST_CLICK takes "+N,x,y" (N ticks after
+load). Copy tests: a click on the button switched the power off; the
+console then made no window; a click on the generator hit nothing.
+
+#### Changelog
+
+[`0faba406`](https://github.com/DotairZee/zeetures/commit/0faba406d2f3bc20608c6383f8b762060018e6f5)
 
 ## Version 0.16.6
 
