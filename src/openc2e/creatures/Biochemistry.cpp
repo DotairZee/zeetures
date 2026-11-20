@@ -27,6 +27,7 @@
 #include "oldBrain.h"
 #include "oldCreature.h"
 #include "Agent.h"
+#include "Engine.h"
 #include "caosValue.h"
 #include "World.h"
 #include "Temperament.h"
@@ -226,6 +227,16 @@ void oldCreature::tickBiochemistry() {
 			// if the tickmask doesn't want us to change things this tick, don't!
 			if ((biochemticks & calculateTickMask(rate)) != 0)
 				continue;
+
+			// the Life chemical (C2's 76) at the creature's own pace: a decay
+			// step falls due 1/lifespanScale times per step the genome gives
+			// it, so its life is lifespanScale times its genome's
+			if (i == 76 && engine.version == 2 && lifespanScale != 1.0f) {
+				lifeDecayDue += 1.0f / lifespanScale;
+				for (; lifeDecayDue >= 1.0f; lifeDecayDue -= 1.0f)
+					chemicals[i] = (chemicals[i] * calculateMultiplier(rate)) / 65536;
+				continue;
+			}
 
 			// do the actual adjustment
 			chemicals[i] = (chemicals[i] * calculateMultiplier(rate)) / 65536;

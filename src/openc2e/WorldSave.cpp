@@ -766,6 +766,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 			if (c->temperamentDrift.any())
 				out << "temperament-drift " << Temperaments::driftLine(c->temperamentDrift) << "\n";
 			out << "seasonal " << fmt::format("{:.3f}", c->seasonalZ) << "\n";
+			out << "lifespan-scale " << fmt::format("{:.3f}", c->lifespanScale) << "\n";
 			if (c->fertilityOverride >= 0)
 				out << "fertility " << c->fertilityOverride << "\n"; // the owner's setting (Breeder's Kit)
 			// what it feels about the creatures it has met (Relationships.h)
@@ -902,6 +903,7 @@ struct SavedCreature {
 	std::string temperament; // Temperaments::toLine; empty: keep the one drawn at hatching
 	std::string temperamentBorn, temperamentDrift; // (saves before 2026-11-17 have neither: born is the temperament)
 	std::string seasonal; // its seasonal rhythm (SeasonalRhythm); empty: keep the one it has
+	std::string lifespanScale; // its own pace of ageing; empty (saves before 0.18.3): keep the one drawn now
 	int fertility = -1; // the owner's setting: -1 the world's, 0 fertile, 1 infertile
 	float x = 0, y = 0;
 	float foot = -1; // where its feet were (y), or -1 (older saves)
@@ -1027,6 +1029,8 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 		Temperaments::driftFromLine(s.temperamentDrift, c->temperamentDrift);
 	if (!s.seasonal.empty())
 		c->seasonalZ = std::clamp((float)std::atof(s.seasonal.c_str()), -2.0f, 2.0f);
+	if (!s.lifespanScale.empty())
+		c->lifespanScale = std::clamp((float)std::atof(s.lifespanScale.c_str()), 0.5f, 2.0f);
 	c->fertilityOverride = s.fertility;
 	for (auto& line : s.bonds) {
 		std::string other;
@@ -1317,6 +1321,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 				std::getline(l, c->temperamentDrift);
 			else if (key == "seasonal")
 				std::getline(l, c->seasonal);
+			else if (key == "lifespan-scale")
+				l >> c->lifespanScale;
 			else if (key == "fertility")
 				l >> c->fertility;
 			else if (key == "bond") {

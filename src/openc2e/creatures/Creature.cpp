@@ -342,6 +342,10 @@ oldCreature::oldCreature(std::shared_ptr<genomeFile> g, bool is_female, unsigned
 	// each creature its own temperament (a saved world puts back its own)
 	temperament = Temperaments::roll();
 	temperamentBorn = temperament;
+	// its own pace of ageing, 0.9-1.1 and most often near 1 (the sum of two
+	// draws); OPENC2E_NO_LIFE_SPREAD keeps every creature at its genome's
+	if (engine.version == 2 && !getenv("OPENC2E_NO_LIFE_SPREAD"))
+		lifespanScale = 1.0f + rand_float(-0.05f, 0.05f) + rand_float(-0.05f, 0.05f);
 	if (!engine.mindname.empty()) {
 		mind = createCreatureMind(engine.mindname);
 		// C1/C2 agents fall into categories 0-39 (see World::findCategory)
