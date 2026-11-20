@@ -96,7 +96,20 @@ scrp 3 10 13 1
 * (not to be cut off midway: the creature would be ended with no copy)
   lock
   sndc bt1_
-  gpas
+* (only a creature inside the cabin: its middle between the cabin's walls,
+* its feet within the cabin's height; owner, 2026-11-20. GPAS took every
+* creature touching the device's box, and so ended one standing beside it.
+* The cabin: x 55-155, y 36-160 from the device's corner)
+  setv var6 posl addv var6 55
+  setv var7 posl addv var7 155
+  setv var8 post addv var8 36
+  setv var9 post addv var9 165
+  enum 4 0 0
+    setv var0 posl addv var0 posr divv var0 2
+    doif var0 ge var6 and var0 le var7 and posb ge var8 and posb le var9
+      spas ownr targ
+    endi
+  next
   part 1
   anim [0123456] over
   anim [56R]
