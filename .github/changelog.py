@@ -123,6 +123,12 @@ VERSIONS = [
      "cabin is replaced by a newly hatched copy of the other sex, and a switch on the device (a lightning bolt "
      "or a skull) chooses whether the creature put in is ended at once or poisoned, kept with the world; only "
      "the hand runs it. Fix: a click on hotspots that objects' scripts set up ran the wrong action."),
+    ("0.16.0", "a1c18476",
+     "The glass tube between the domed lab and the gene splicer room is walked: its car is gone, the tube "
+     "slopes down into the gene lab, which is widened west behind a new rock face, with stalactites under the "
+     "cave arch and the teleporter moved beside the tube's end; the cage lift by the huts no longer stops at "
+     "the old deck, which now holds its pulley on bamboo props. The tube's pictures are made from the "
+     "player's own game files, in the engine, the same on every machine."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

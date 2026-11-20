@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 503 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 512 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 2 commits, 19 November 2026
+- [0.16.0](#version-0160): 11 commits, 19 November 2026
 - [0.15.0](#version-0150): 5 commits, 19 November 2026
 - [0.14.1](#version-0141): 4 commits, 19 November 2026
 - [0.14.0](#version-0140): 11 commits, 19 November 2026
@@ -25,11 +25,113 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.16.0
 
-Changes since the last version.
+The glass tube between the domed lab and the gene splicer room is walked: its car is gone, the tube slopes down into the gene lab, which is widened west behind a new rock face, with stalactites under the cave arch and the teleporter moved beside the tube's end; the cage lift by the huts no longer stops at the old deck, which now holds its pulley on bamboo props. The tube's pictures are made from the player's own game files, in the engine, the same on every machine.
 
 ### 19 November 2026
+
+#### Version 0.16.0
+
+[`a1c18476`](https://github.com/DotairZee/zeetures/commit/a1c18476e59193fcdc9df8806b9a230d3573ba28)
+
+#### Tube made art: make() assembled and its four pictures, in C++
+
+[`cde4f84c`](https://github.com/DotairZee/zeetures/commit/cde4f84c270c180246153482b569bbcc4d1cbe09)
+
+Ports the rest of art/tube_walk.py's make() and its output: the deck masks
+(DECK_RM), the stalactites, the tube's glass and its ring mask, the dock
+collar's old place filled behind the glass, the glass's inside (the cave
+behind it muted and dithered with a Bayer pattern), the collar cut, filled
+and drawn again turned, the deck filled outside the glass, the front and
+the scenery restored, the rock face with its feathered top and shadows,
+and the overhang's shadow; then the layers ztwb (the changed scene,
+MaxFilter 5), ztwf (the glass on a checkerboard, rings, collar, front),
+ztwr (the rock) and ztwg (genc.s16 frame 0 less its west end). One make()
+gives all four, so it runs once and its pictures are kept.
+
+Verified with OPENC2E_DUMP_MADE_ART (empty home) and art/compare_made.py
+against the recipe's PNGs: ztwb, ztwf, ztwr and ztwg identical (max
+difference 0 in every channel, transparent pixels included, sizes equal);
+the ASan build gives the same with no errors. Making the four takes about
+1.9 s in the engine (4.8 s under ASan).
+
+#### Merge branch 'refs/heads/worktree-agent-a1bb96dd6d59e1a7f' into creature-mind
+
+[`049989b8`](https://github.com/DotairZee/zeetures/commit/049989b8cb3f4ed789f6b136f19572b791214a0d)
+
+#### Merge branch 'refs/heads/worktree-agent-a30ab2dcdde3cd6c4' into creature-mind
+
+[`b00fcb37`](https://github.com/DotairZee/zeetures/commit/b00fcb37d8f62862c4f69d94b6b73a7cf86103e3)
+
+#### Tube made art: the scene and the old tube painted out, in C++
+
+[`63ca749e`](https://github.com/DotairZee/zeetures/commit/63ca749e55c2fbcfe05b7155b79710dd3f596a53)
+
+Port of tube_walk.py's put_scenery (with cut=), top_of, tube_y and their
+constants, old_tube, new_tube and paint_out, and tube_walk_lib.py's
+quilt_fill, tone_correct, match_texture and restore_branches, to
+madeart/tube_walk_paint (namespace MadeArt::tubewalk), on npcore.
+
+OPENC2E_TW_CHECK_PAINT=DIR (game folder from OPENC2E_TW_CHECK_PAINT_C2)
+runs it on the game's pictures and writes every intermediate;
+art/tube_walk_check_paint.py runs the recipe and compares: all 19 arrays
+(scene, masks, strip, module, piece, the quilt search's 104480 energies,
+each paint-out step) match with max difference 0, floats bit for bit.
+
+#### Tube made art: the gene lab's new west end, ported pixel-exact
+
+[`2a797dbd`](https://github.com/DotairZee/zeetures/commit/2a797dbd1294f6baed63b9a279bc94363929d699)
+
+madeart/tube_walk_lab.{h,cpp}: C++ port of tube_walk.py lab_west_end and
+tube_walk_lib.py Canvas (noise, shade, put, sphere, cyl_h, flange_h,
+ibeam_h, grime, result), light_pools, rust_and_grime, trim_wall (with its
+strip_h / strip_v), lab_wall and blur, with the recipe's random streams
+and numpy's float32 / float64 promotions step by step.
+
+art/tube_walk_check_lab.py proves it on the real recipe's inputs
+(OPENC2E_TW_CHECK_LAB=DIR): the lab wall's RGB and alpha, lab_west_end's
+result and 47 intermediates, all with max difference 0 (floats bitwise).
+
+#### Tube made art: the tube's parts, ported pixel-exact
+
+[`0856b467`](https://github.com/DotairZee/zeetures/commit/0856b467c481e5981200bc8b3886250cbac385bc)
+
+C++ ports (madeart/tube_walk_parts.{h,cpp}, namespace MadeArt::tubewalk)
+of tube_walk.py's paste_rot_masked, blob, smooth_fill, deck_fill and
+load_front, and tube_walk_lib.py's dock_join, \_fbm, \_q8, stalactites and
+render_rock_earth, for the assembly step's make().
+
+load_front's annotation mask (tube_walk_data/front.png, our own) is
+embedded as run lengths in tube_walk_front_data.inc, written and checked
+against the PNG by art/tube_walk_front_embed.py.
+
+Proof: art/tube_walk_check_parts.py runs the recipe's make() with these
+functions wrapped, records every call's real inputs and results, and
+compares them with the engine's (OPENC2E_TW_CHECK_PARTS=DIR): all 25
+arrays match, max difference 0, floats bit for bit.
+
+#### Tube made art: module stubs; git rev read in a worktree
+
+[`de7be55b`](https://github.com/DotairZee/zeetures/commit/de7be55b51f5c732328ad21319d9d3644f65daed)
+
+Empty source files for the four parts of the tube recipe's engine port, so
+they can be written in parallel. Openc2eReadGitRev.cmake: a worktree's .git
+is a file, so read no revision there instead of failing to configure.
+
+#### Walkable glass tube: map, recipe, RSTP, made-art numeric core
+
+[`875cba55`](https://github.com/DotairZee/zeetures/commit/875cba55396645e33c97e954dfd3e8da13f79e09)
+
+The tube car is gone; creatures walk the glass tube from the domed lab's
+dock down to the gene lab (tube-walk.cos: rooms along the owner's walking
+line, doors, the teleporter moved, the cage lift's old top stop removed by
+the new RSTP command, the pictures placed). art/tube_walk.py makes the
+tube's pictures from the player's own game; art/lift_deck_props.py draws
+the deck's props (our own sprite, ztdp). madeart/npcore: numpy and Pillow
+operations ported bit-exact for the coming engine port of the recipe
+(art/npcore_check.py proves it). Until that port lands, tube-walk.cos is
+skipped where its pictures are not installed.
 
 #### Metamorph Device switch: no note window
 
