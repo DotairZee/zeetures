@@ -1,0 +1,15 @@
+* The collar at the sandy tunnel's east end, in front of creatures
+* (openc2e Creatures 2 project, our own script; the picture cut from the
+* player's own background, art/sea_collar.py, made in the engine). Run by
+* openc2e after the world loads (Additions folder); made anew each load.
+*
+* Under the west sea's east shore a sandy tunnel runs east from the glass
+* tube's end by the jump pad; at its east end a bronze collar (x 1156-1182,
+* y 998-1097) is painted in the background. The game's front piece for the
+* tunnel (1 0 0, fore, 759,952, plane 8999) ends at x 1158, so creatures at
+* the tunnel's end stood in front of the collar (owner's screenshot,
+* 2026-11-19, night: "the creature here should be behind the collar").
+* zscl (2 3 262) is the collar, its band and two knobs only, at the front
+* piece's plane.
+enum 2 3 262 kill targ next
+inst new: simp zscl 1 0 8999 0 setv cls2 2 3 262 setv attr 0 mvto 1145 995 slow
