@@ -21,37 +21,24 @@ Gameware.
 
 Running it
 ----------
-(The program is still called openc2e.)
+The friendliest downloads are Zeetures-Setup.exe (Windows),
+Zeetures-macOS.dmg (Mac) and Zeetures-x86_64.AppImage (Linux), on the
+same release page; the one-time steps for each are under "Download and
+play" at https://github.com/DotairZee/zeetures#download-and-play
 
-Linux:
+This archive is the same program unpacked. Start Zeetures.exe (Windows)
+or openc2e (Linux) from this folder: no command line is needed. The first
+time, it looks for Creatures 2 in the usual Steam and GOG folders; if it
+finds none, a window asks for the folder (the one that holds
+Creatures2.exe, Eden.sfc and the Images folder, or the Creatures The
+Albian Years folder that holds it) and remembers it. To change it later:
+File > Creatures 2 Folder.
+
+From a terminal, -d still gives the folder directly:
     ./openc2e -d "/path/to/Creatures 2"
+    Zeetures.exe -d "C:\path\to\Creatures 2"
 
-  The path is the folder that holds Creatures 2's Images and Sounds
-  folders and Eden.sfc. With Steam it is usually under
-  ~/.local/share/Steam/steamapps/common/Creatures The Albian Years/Creatures 2
-
-Windows:
-    openc2e.exe -d "C:\path\to\Creatures 2"
-
-macOS (the arm64 download for Apple Silicon, M1 or later; x86_64 for
-Intel Macs, macOS 10.15 or later):
-    ./openc2e -d "$HOME/Games/Creatures The Albian Years/Creatures 2"
-
-  Zeetures runs natively: no Wine, CrossOver or Steam Play is needed,
-  only the game's files. Steam for Mac won't install the game (it is
-  listed as Windows-only), but downloads its files through its console:
-  run  open "steam://open/console"  in Terminal, then type
-      download_depot 1818340 1818341
-  in Steam's Console tab. The files land in
-  ~/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/
-  MacOS/steamapps/content/app_1818340/depot_1818341 ; copy that folder
-  somewhere permanent, for example ~/Games/Creatures The Albian Years
-  (ditto <that folder> ~/Games/"Creatures The Albian Years"), and use its
-  Creatures 2 folder. The download is not signed by Apple: the first
-  time, right-click openc2e and choose Open, or run
-  xattr -dr com.apple.quarantine .  in its folder.
-
-  (The Windows and macOS builds are new and less tried than Linux.)
+  (The Windows builds are newer and less tried than Linux.)
 
 The creatures use Zeetures's own mind (--mind original gives them
 openc2e's unfinished copy of the original brain, which does very little).

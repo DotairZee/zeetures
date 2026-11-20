@@ -23,7 +23,7 @@ Download the file for your system from the [nightly release](../../releases/tag/
 * **Mac:** open `Zeetures-macOS.dmg` and drag Zeetures into Applications. The first time, open it from Applications: macOS says it can't check it, because it is not signed by Apple. Click **Done**, open **System Settings > Privacy & Security**, click **Open Anyway** beside "Zeetures was blocked", and confirm. (On macOS 14 and earlier, right-click Zeetures and choose **Open** instead.) From then on it opens normally. To get the game's files on a Mac, see [On a Mac](#on-a-mac).
 * **Linux:** make the file executable once (in most file managers: right-click it, **Properties**, then tick **Allow executing file as program** or **Executable as Program**; or `chmod +x Zeetures-x86_64.AppImage`), then double-click it. It runs on Ubuntu 22.04, Debian 12, Zorin 17, Mint 21, Fedora 36 and later, and needs nothing else installed.
 
-**Finding your Creatures 2.** The first time Zeetures starts, it looks for Creatures 2 in the usual places: every Steam library (including Steam's Flatpak and Snap versions on Linux), GOG's folders, and on a Mac `~/Games/Creatures The Albian Years`. If it finds none, a window asks you to choose the folder: the `Creatures 2` folder that holds `Creatures2.exe`, `Eden.sfc` and the `Images` folder, or the `Creatures The Albian Years` folder that holds it. It remembers the folder. To use a different one later, choose **File > Creatures 2 Folder...** (or edit `game-folder.txt` in the user folder; see below).
+**Finding your Creatures 2.** The first time Zeetures starts, it looks for Creatures 2 in the usual places: every Steam library (including Steam's Flatpak and Snap versions on Linux), GOG's folders, and on a Mac `~/Games/Creatures The Albian Years`. If it finds none, a window asks you to choose the folder: the `Creatures 2` folder that holds `Creatures2.exe`, `Eden.sfc` and the `Images` folder, or the `Creatures The Albian Years` folder that holds it. It remembers the folder. To use a different one later, choose **File > Creatures 2 Folder...** (or edit `game-folder.txt`; see below).
 
 The `.zip` and `.tar.gz` files in the release are the same programs unpacked, for anyone who prefers them: unpack and start `Zeetures.exe` (Windows) or `openc2e` (Linux). Started from a terminal, they still take `-d "<Creatures 2 folder>"` (see [Command-line options](#command-line-options)).
 
@@ -34,6 +34,8 @@ Your worlds, saves and settings are kept in the user folder, never in the game's
 * **Linux:** `~/.openc2e/Creatures 2`
 * **Windows:** `Documents\My Games\Creatures 2`
 * **macOS:** `~/Documents/openc2e Data/Creatures 2`
+
+One level up from those (for example `~/.openc2e`) is `game-folder.txt`, the Creatures 2 folder Zeetures remembered, and on Windows `zeetures-log.txt`, the program's messages from its last run, useful with a bug report.
 
 ### On a Mac
 
