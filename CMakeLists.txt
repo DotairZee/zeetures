@@ -331,6 +331,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/madeart/tube_walk_parts.cpp
 	src/openc2e/madeart/tube_walk.cpp
 	src/openc2e/madeart/sea_collar.cpp
+	src/openc2e/madeart/tree_sway.cpp
 	src/openc2e/CompoundAgent.cpp
 	src/openc2e/AnimatablePart.cpp
 	src/openc2e/ButtonPart.cpp
