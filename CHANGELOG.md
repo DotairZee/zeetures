@@ -1,37 +1,38 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 559 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 535 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [0.17.0](#version-0170): 3 commits, 20 November 2026
-- [0.16.14](#version-01614): 3 commits, 20 November 2026
-- [0.16.13](#version-01613): 3 commits, 20 November 2026
-- [0.16.12](#version-01612): 5 commits, 20 November 2026
-- [0.16.11](#version-01611): 4 commits, 20 November 2026
-- [0.16.10](#version-01610): 3 commits, 20 November 2026
+- [Unreleased](#unreleased): 1 commits, 20 November 2026
+- [0.17.0](#version-0170): 2 commits, 20 November 2026
+- [0.16.14](#version-01614): 2 commits, 20 November 2026
+- [0.16.13](#version-01613): 2 commits, 20 November 2026
+- [0.16.12](#version-01612): 4 commits, 20 November 2026
+- [0.16.11](#version-01611): 3 commits, 20 November 2026
+- [0.16.10](#version-01610): 2 commits, 20 November 2026
 - [0.16.9](#version-0169): 2 commits, 20 November 2026
-- [0.16.8](#version-0168): 3 commits, 19 November 2026 to 20 November 2026
-- [0.16.7](#version-0167): 3 commits, 19 November 2026
-- [0.16.6](#version-0166): 3 commits, 19 November 2026
-- [0.16.5](#version-0165): 3 commits, 19 November 2026
-- [0.16.4](#version-0164): 3 commits, 19 November 2026
-- [0.16.3](#version-0163): 3 commits, 19 November 2026
-- [0.16.2](#version-0162): 3 commits, 19 November 2026
-- [0.16.1](#version-0161): 3 commits, 19 November 2026
-- [0.16.0](#version-0160): 11 commits, 19 November 2026
-- [0.15.0](#version-0150): 5 commits, 19 November 2026
-- [0.14.1](#version-0141): 4 commits, 19 November 2026
-- [0.14.0](#version-0140): 11 commits, 19 November 2026
-- [0.13.0](#version-0130): 20 commits, 18 November 2026 to 19 November 2026
-- [0.12.1](#version-0121): 8 commits, 18 November 2026
-- [0.12.0](#version-0120): 7 commits, 18 November 2026
-- [0.11.0](#version-0110): 14 commits, 17 November 2026 to 18 November 2026
-- [0.10.0](#version-0100): 7 commits, 16 November 2026 to 17 November 2026
-- [0.9.0](#version-090): 14 commits, 16 November 2026
-- [0.8.0](#version-080): 47 commits, 15 November 2026 to 16 November 2026
+- [0.16.8](#version-0168): 2 commits, 20 November 2026
+- [0.16.7](#version-0167): 2 commits, 19 November 2026
+- [0.16.6](#version-0166): 2 commits, 19 November 2026
+- [0.16.5](#version-0165): 2 commits, 19 November 2026
+- [0.16.4](#version-0164): 2 commits, 19 November 2026
+- [0.16.3](#version-0163): 2 commits, 19 November 2026
+- [0.16.2](#version-0162): 2 commits, 19 November 2026
+- [0.16.1](#version-0161): 2 commits, 19 November 2026
+- [0.16.0](#version-0160): 10 commits, 19 November 2026
+- [0.15.0](#version-0150): 4 commits, 19 November 2026
+- [0.14.1](#version-0141): 3 commits, 19 November 2026
+- [0.14.0](#version-0140): 10 commits, 19 November 2026
+- [0.13.0](#version-0130): 19 commits, 18 November 2026 to 19 November 2026
+- [0.12.1](#version-0121): 7 commits, 18 November 2026
+- [0.12.0](#version-0120): 6 commits, 18 November 2026
+- [0.11.0](#version-0110): 13 commits, 17 November 2026 to 18 November 2026
+- [0.10.0](#version-0100): 6 commits, 17 November 2026
+- [0.9.0](#version-090): 13 commits, 16 November 2026
+- [0.8.0](#version-080): 46 commits, 15 November 2026 to 16 November 2026
 - [0.7.0](#version-070): 4 commits, 15 November 2026
 - [0.6.1](#version-061): 14 commits, 15 November 2026
 - [0.6.0](#version-060): 30 commits, 14 November 2026 to 15 November 2026
@@ -39,6 +40,28 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Unreleased
+
+Changes since the last version.
+
+### 20 November 2026
+
+#### C2 physics: an object at rest over open water sinks
+
+[`4db6acc4`](https://github.com/DotairZee/zeetures/commit/4db6acc416e2d60d3305cda56965e3d8a1d528ab)
+
+Owner, 2026-11-20: a toy, a tin and other objects lay on the east sea's
+surface. They had come to rest there at some time (falling cleared, GRAV
+0), were saved so, and never looked again at what was under them, though
+the doorway down into the water room is open (perm 255, their size 127).
+Every 50 ticks a resting object (family 2, physics on, not carried, not
+riding) whose feet are within 16 px of the bottom of a room with no floor
+line, over an open doorway into a water room it fits through, falls
+again. Rooms with floor lines over water (boardwalks, docks) keep what
+lies on them. Test (copy of Home): the toy, tin and 2 20 4 sank to the
+seabed; the dock's objects stayed; nothing left the room map. Two seeds
+(2 15 7) beside them still rest at the surface (not followed up).
 
 ## Version 0.17.0
 
@@ -76,10 +99,6 @@ OPENC2E_TEST_INSEM_FRAMES. Tests (copies of Home): living donor, genome
 file and departed donor each conceived; the file donor's baby was laid
 and hatched in the run; the tab is hidden for a male.
 
-#### Changelog
-
-[`df24c039`](https://github.com/DotairZee/zeetures/commit/df24c039c788c026cad6e4007d8e22a83b06d605)
-
 ## Version 0.16.14
 
 The domed lab's power button is green while the power is on and red while it is off.
@@ -97,10 +116,6 @@ The domed lab's power button is green while the power is on and red while it is 
 Owner, 2026-11-20. The button (2 2 22) used com_ frame 37 (red) always;
 it now starts at frame 36 (green), and a 10-tick timer sets picture 0
 (green) while the generator (3 10 11) is on and 1 (red) while it is off.
-
-#### Changelog
-
-[`8e4a44e2`](https://github.com/DotairZee/zeetures/commit/8e4a44e2cc0307cce66addac135e24e376ffc6aa)
 
 ## Version 0.16.13
 
@@ -123,10 +138,6 @@ its chute. Its timer (C2's own) now stops while one of its eggs (OV01 1)
 waits, and at load all but one of its waiting eggs at the chute are
 cleared (owner's choice). The gene splicer's eggs are left alone and keep
 the limit (owner's choice).
-
-#### Changelog
-
-[`99631e8e`](https://github.com/DotairZee/zeetures/commit/99631e8e10f30ef84b182b99a95af83dc39a3033)
 
 ## Version 0.16.12
 
@@ -170,10 +181,6 @@ All three submarine callers were at plane 5000, in front of creatures
 (owner's circled spot; 7235, where the arch clears its dome), at plane -1
 so the docked submarine, which covers that wall, stands in front of it.
 
-#### Changelog
-
-[`36a334b9`](https://github.com/DotairZee/zeetures/commit/36a334b9074135a786e8947dcd453d4cac56052c)
-
 ## Version 0.16.11
 
 A second skinny fruit bush in the gene splicing room, by the teleporter where the glass tube comes in. Fix: riders stay aboard the submarine (and other vehicles) for the whole trip; they were let out and taken back many times a second.
@@ -206,10 +213,6 @@ riders were dropped and re-boarded about 13,000 times in three minutes,
 each drop marking them falling and moving them to a place nearby. With
 the check: 124 boardings, riders let out at the docks.
 
-#### Changelog
-
-[`77945aab`](https://github.com/DotairZee/zeetures/commit/77945aab580590b7cdde8d244b59dc9e46fdf94a)
-
 ## Version 0.16.10
 
 Fix: creatures share food with friends who are really hungry; a friend's hunger was read from a chemical that never changes in Creatures 2.
@@ -229,10 +232,6 @@ drives apart from the chemicals: chemical 150 does not move there (about
 60% of Home's creatures sat at 248 for good, the rest at fixed lower
 values), so food was shared with whoever had a high stuck number. Read
 drive 2, as the census does.
-
-#### Changelog
-
-[`34af9721`](https://github.com/DotairZee/zeetures/commit/34af972157bbb41b69c34a852672b83a6c669cea)
 
 ## Version 0.16.9
 
@@ -262,12 +261,6 @@ The submarine has a caller at each of its three stops (the sea cave's dock, the 
 
 [`93bffca1`](https://github.com/DotairZee/zeetures/commit/93bffca186f5abedceb9f7d8a7b8e6684240bf2b)
 
-### 19 November 2026
-
-#### Changelog
-
-[`6f44526f`](https://github.com/DotairZee/zeetures/commit/6f44526f1c6a28b8a9259780adcc1a2812f3c9f8)
-
 ## Version 0.16.7
 
 The domed lab's power is switched on and off by the button on the dock's wall (where the pod used to be called), no longer by the generator on the desk; the gene splicer knows its power after a load, and its "no power" window no longer opens.
@@ -295,10 +288,6 @@ before making the window. OPENC2E_TEST_CLICK takes "+N,x,y" (N ticks after
 load). Copy tests: a click on the button switched the power off; the
 console then made no window; a click on the generator hit nothing.
 
-#### Changelog
-
-[`0faba406`](https://github.com/DotairZee/zeetures/commit/0faba406d2f3bc20608c6383f8b762060018e6f5)
-
 ## Version 0.16.6
 
 Fix: creatures no longer walk in mid-air across the domed lab's left side and through its glass lift's shaft; a wall stands at the shaft's left side.
@@ -319,10 +308,6 @@ walked across in mid-air and through the lift's shaft (owner, 2026-11-19).
 Room 35 now ends at x 4225; the shaft's column is room 255, open to the
 right platform and walled from 35. Copy test: none got past in 45 s.
 
-#### Changelog
-
-[`6f989b21`](https://github.com/DotairZee/zeetures/commit/6f989b21f02947905bbf27170647bb92a21378cf)
-
 ## Version 0.16.5
 
 The Metamorph Device stands 20 px further west in the gene splicer room, its switch with it.
@@ -339,10 +324,6 @@ The Metamorph Device stands 20 px further west in the gene splicer room, its swi
 
 The device (3 10 13) from x 6244 to 6224 and its switch (2 1 164) with it,
 6247 to 6227 (owner, 2026-11-19, night).
-
-#### Changelog
-
-[`c196e3bf`](https://github.com/DotairZee/zeetures/commit/c196e3bf7c0549f54a2abc3b5464a1c0dadf8f37)
 
 ## Version 0.16.4
 
@@ -367,10 +348,6 @@ plate, the two posts, and the crane sprite's own pixels; the glass shows
 everywhere else. Engine and recipe still identical (all four pictures,
 max difference 0).
 
-#### Changelog
-
-[`27f03bbd`](https://github.com/DotairZee/zeetures/commit/27f03bbdc7b1f65839108fbb8dd0faa8f45a61c9)
-
 ## Version 0.16.3
 
 Fix: the domed lab's glass lift is behind creatures walking past it, and still in front of the creatures riding in it.
@@ -389,10 +366,6 @@ Its near glass and housing (parts 2 and 3) were at planes 1600-1601, in
 front of creatures on the lab floor beside it (owner's screenshot,
 2026-11-19); now 1450-1451: still in front of its riders (1401), behind
 walkers (1500).
-
-#### Changelog
-
-[`7c5df80f`](https://github.com/DotairZee/zeetures/commit/7c5df80f9bd3d61fe65ce4c4056ec7ea54d55a7b)
 
 ## Version 0.16.2
 
@@ -416,10 +389,6 @@ console (2 2 21) was at plane 2000, in front of creatures; now 1400.
 Copy test: eight creatures walked into the wall stood at 1768 (one dip of
 8 px), boxes 13 px into the strip, and walked away within 10 s.
 
-#### Changelog
-
-[`e26d6b9a`](https://github.com/DotairZee/zeetures/commit/e26d6b9ac76085c35a1ef304188981e8efe428c9)
-
 ## Version 0.16.1
 
 Fix: the cage lift by the huts goes down to the lower deck again, with its caller there, in saved worlds too.
@@ -440,10 +409,6 @@ in saved worlds the lift's stop at the lower deck (y 2077) and its caller
 were never made (owner, 2026-11-19). Now the lift is found between 5100
 and 5140; only the 10 px move still needs 5126. Copy test: the caller is
 made, a press brings the cage down to 2077 and the walkway's back to 1858.
-
-#### Changelog
-
-[`97896770`](https://github.com/DotairZee/zeetures/commit/97896770511f00cb51d1e3826b57df48361fa218)
 
 ## Version 0.16.0
 
@@ -561,10 +526,6 @@ The owner tried the note window that a flip opened and did not want it
 (2026-11-19; its text also ran past the window's bottom). A flip now just
 moves the lever, sets the device and clicks. Announcements 42 and 43 removed.
 
-#### Changelog
-
-[`a7577bf0`](https://github.com/DotairZee/zeetures/commit/a7577bf0c6030c35e1447c66fae5b048dd8777ea)
-
 ## Version 0.15.0
 
 The Life Kit's Metamorph Device stands in every world, in the gene splicer room: a creature put in its cabin is replaced by a newly hatched copy of the other sex, and a switch on the device (a lightning bolt or a skull) chooses whether the creature put in is ended at once or poisoned, kept with the world; only the hand runs it. Fix: a click on hotspots that objects' scripts set up ran the wrong action.
@@ -627,10 +588,6 @@ announcement window. The message number is stored raw now, as KMSG does.
 Found with the Metamorph Device: a click on its button fired activate 2
 ("no script"); now activate 1, and the device runs.
 
-#### Changelog
-
-[`a344a5fa`](https://github.com/DotairZee/zeetures/commit/a344a5fa0790e46d06509158d118be60eda9de82)
-
 ## Version 0.14.1
 
 Fixes: the gene splicer works: two creatures in its pods give an egg crossed from both (one gives a clone), and the Owner's Kit says the baby was spliced from them; eggs being hatched can no longer be cut off by a creature pushing, pulling or hitting them, which left grendel, ettin and norn eggs that never hatched, and eggs stuck that way start again at load.
@@ -685,10 +642,6 @@ which the console passes with only one pod filled.
 Tested in Home copies: two norns in the pods gave an egg (genome crossed
 from both) that hatched a baby; one norn gave a clone; the record survives
 a save and a reload; the ASan build was clean.
-
-#### Changelog
-
-[`1f6ca574`](https://github.com/DotairZee/zeetures/commit/1f6ca574485a21ad1ef457f1df7cf82de7c53aa2)
 
 ## Version 0.14.0
 
@@ -859,10 +812,6 @@ place the route leads to, the cost, and the step (walk direction, object
 action, or lift ride). Used to find why starving norns walk back and forth
 (the best route from neighbouring cells pointing at each other, often to
 different food places).
-
-#### Changelog
-
-[`ef5353e6`](https://github.com/DotairZee/zeetures/commit/ef5353e6026876b5fb3dc0937d2bac2c7b25eb80)
 
 ## Version 0.13.0
 
@@ -1189,10 +1138,6 @@ at Hunger 255 at the end 33/41/38 vs 47/46/50, median hunger
 145/151/132 vs 182/164/167, meals per 1000 ticks 556/448/502 vs
 419/460/411.
 
-#### Changelog
-
-[`bbef9839`](https://github.com/DotairZee/zeetures/commit/bbef9839db29d696e642561268ff15b3252bbb26)
-
 ## Version 0.12.1
 
 Fixes: creatures no longer fall down the cage lift's shaft stepping into the tunnel at its middle stop; wide creatures by the pipe machine stay in the room map; a creature stuck on the seabed tries the jump pad beside it instead of pacing (the way out of water ignores floors it cannot step up to); hatchlings stand where their egg lay instead of in the floor; the far-east lift balcony's railing keeps creatures in; a developer aid prints creatures' fuel chemicals.
@@ -1297,10 +1242,6 @@ shaft falls 6/5/0 vs 19/15/12, falls over 200 px 132/118/136 vs
 210/166/166. A few remain (big creatures' long strides onto the steep
 east end); walking steps down of up to 40 px did not help in three more
 pairs and was not kept.
-
-#### Changelog
-
-[`ca26033e`](https://github.com/DotairZee/zeetures/commit/ca26033e80159af1884d8af66bce916e6e90a414)
 
 ## Version 0.12.0
 
@@ -1428,10 +1369,6 @@ surface is removed; the potted bush on the dock planks stays.
 Test (fruit held at the surface, 24 per copy, two copies each): bushes
 on the surface afterwards 0 and 0 with the rule, 2 and 2 without (the
 old bush and a kelp at the surface).
-
-#### Changelog
-
-[`d5c33dda`](https://github.com/DotairZee/zeetures/commit/d5c33ddaf0a71a9aeeac6f9b868efaf8e6232789)
 
 ## Version 0.11.0
 
@@ -1714,10 +1651,6 @@ Scorpio and other lines with added lobes get roles from theirs. The
 known-genome entries stay for what wiring cannot show (Canny's
 curiosity).
 
-#### Changelog: version 0.10.0 in the version list
-
-[`c964646f`](https://github.com/DotairZee/zeetures/commit/c964646f32b5cfe0bee4fbb63ec08b5f2bbd290d)
-
 ## Version 0.10.0
 
 Temperament partly passed on from the parents. Old custom genomes work: eggs with an author's description read and hatchable (and Import Genome takes eggs); the genomes' sense, drive, decision and attention cells set from what the creature does, so their emitters work (the norns' kin pheromones among them); instincts naming senses or no drive become inborn nudges judged by the genome's reward and punishment chemicals; lobe 7 read as attention (Canny Norns' eating instincts); brain profiles giving added lobes roles in the mind (Nova Subterra and Canny Norns known, others read from their wiring), shown in the Breeder's Kit.
@@ -1902,12 +1835,6 @@ Without it nothing changes. First used for a doubled hungerPatience
 (12 instead of 6) in three matched pairs of Home copies: hungry
 65.4/65.2/64.0 vs 81.2/65.6/64.6, starving 42.0/40.2/40.9 vs
 49.8/38.9/36.9, no consistent difference, so the default stays.
-
-### 16 November 2026
-
-#### Changelog: version 0.9.0 in the version list
-
-[`ebceaa06`](https://github.com/DotairZee/zeetures/commit/ebceaa067fdeef2df98112d2f4125c56be6f5a94)
 
 ## Version 0.9.0
 
@@ -2171,10 +2098,6 @@ decisions 80/79 vs 57/55; conceptions in spring 11/0 vs 6/0, in winter
 cells per creature) 17.9/18.0 vs 18.1/17.1, no change; loneliness was
 already low (drive 6-9 of 255) and the test rooms were not cold, so
 winter bonds hardly showed; no deaths.
-
-#### Changelog: version 0.8.0 in the version list
-
-[`db2498dd`](https://github.com/DotairZee/zeetures/commit/db2498dd721e11cdfc886edc5281183b46295a29)
 
 ## Version 0.8.0
 
@@ -3138,10 +3061,6 @@ Grendel Update needs the Boney pack), pheromones load, the mind is the
 homeostat. The 17 additions that draw our sprites still fail there
 until the art ships. Home's installed copies are identical to the
 built-in ones, so Home runs as before.
-
-#### Changelog: version 0.7.0 in the version list
-
-[`e0829e03`](https://github.com/DotairZee/zeetures/commit/e0829e03a89b843d39f3e3cec06476de68fd80ca)
 
 ## Version 0.7.0
 

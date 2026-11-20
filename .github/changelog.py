@@ -8,7 +8,8 @@ newest first.
     python3 .github/changelog.py --check   # exit 1 if CHANGELOG.md is stale
 
 Run from anywhere in the repository. Commits that change only CHANGELOG.md
-are left out, so the commit that updates the file does not make it stale.
+and this script are left out, so the commit that updates the file (with a
+version's entry here) does not make it stale.
 
 When the version is raised (OPENC2E_FORK_VERSION in
 src/openc2e/openc2eimgui/C2ToolBar.cpp), add the version to VERSIONS below:
@@ -198,7 +199,10 @@ def commits():
             continue
         h, date, msg = rec.split("\x1f", 2)
         files = [f for f in git("show", "--format=", "--name-only", h).split("\n") if f]
-        if files and all(f == OUT for f in files):
+        # (the changelog's own upkeep: the file, and a version's entry in
+        # this script, committed together after the version bump; counting
+        # that commit made the file it carries stale on every push)
+        if files and all(f in (OUT, ".github/changelog.py") for f in files):
             continue
         lines = [l for l in msg.strip("\n").split("\n") if not l.startswith("Co-Authored-By:")]
         subject = lines[0].strip() if lines else "(no message)"
