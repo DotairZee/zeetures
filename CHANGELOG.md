@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 535 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 537 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 1 commits, 20 November 2026
+- [0.17.1](#version-0171): 3 commits, 20 November 2026
 - [0.17.0](#version-0170): 2 commits, 20 November 2026
 - [0.16.14](#version-01614): 2 commits, 20 November 2026
 - [0.16.13](#version-01613): 2 commits, 20 November 2026
@@ -41,11 +41,27 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.17.1
 
-Changes since the last version.
+Objects resting on open water sink (a toy, a tin and others lay on the east sea's surface). The Chronicles Kit's History shows a detail's full text on hovering, its Details column half as wide, and the kit fits each page, so Statistics is no wider than it needs. The changelog check no longer fails on every push.
 
 ### 20 November 2026
+
+#### Version 0.17.1
+
+[`e4a93669`](https://github.com/DotairZee/zeetures/commit/e4a9366908600e27aaeee6f69a93df171e1c9f79)
+
+#### Chronicles Kit: History details on hover, half-width column; the kit fits each page
+
+[`d4a294d7`](https://github.com/DotairZee/zeetures/commit/d4a294d76eec35f5ae5554e63e81e65434a8ae79)
+
+Owner, 2026-11-20. History: the Details column fixed at 230 px (it
+stretched to fill the window, about 460), its full text in a tooltip when
+it does not fit; fixed columns and a 430 px list. The kit now fits each
+page instead of being sized by the player (one size for both pages made
+Statistics as wide as the History list): Statistics' counts table at its
+columns' widths and the records two across, each as wide as its longest
+line (about 720 px, was the window's width).
 
 #### C2 physics: an object at rest over open water sinks
 

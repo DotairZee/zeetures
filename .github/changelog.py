@@ -179,6 +179,11 @@ VERSIONS = [
      "or female, living, departed or a genome file, see the two side by side with their temperaments and "
      "kinship, and she conceives from its genes. Creatures' genes are kept when they die so they can be "
      "chosen later."),
+    ("0.17.1", "e4a93669",
+     "Objects resting on open water sink (a toy, a tin and others lay on the east sea's surface). The "
+     "Chronicles Kit's History shows a detail's full text on hovering, its Details column half as wide, and "
+     "the kit fits each page, so Statistics is no wider than it needs. The changelog check no longer fails "
+     "on every push."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
