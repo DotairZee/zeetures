@@ -1,0 +1,24 @@
+Zeetures is a noncommercial fan fork of openc2e, the open-source engine for
+the Creatures games, focused on Creatures 2.
+
+You need your own copy of Creatures 2
+-------------------------------------
+Zeetures contains no part of the game: no sprites, sounds, genomes,
+scripts or worlds. It plays from your own installed copy: Creatures 2
+comes with "Creatures: The Albian Years" on Steam, and is also sold on
+GOG. Zeetures looks for it in the usual Steam and GOG folders. If it
+can't find it, it asks you for the folder the first time it starts, and
+remembers it.
+
+Creatures, Norns, Grendels, Ettins and Albia belong to Gameware Europe.
+This project is not affiliated with or endorsed by Gameware.
+
+Your worlds and saves are kept in Documents\My Games\Creatures 2, never in
+the game's own folder or here. Uninstalling Zeetures leaves them there.
+
+License
+-------
+openc2e is free software under the GNU Lesser General Public License,
+version 2.1, and Zeetures's changes are under the same license. The full
+license is in COPYING in the installed folder. The source code:
+https://github.com/DotairZee/zeetures

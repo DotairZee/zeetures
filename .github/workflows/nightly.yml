@@ -4,7 +4,13 @@ name: nightly
 # has been committed since the last nightly, build it and replace the
 # "nightly" pre-release with the new build (Linux, Windows, macOS on Apple
 # Silicon and Intel, and 32-bit Linux and Windows). Run by hand (Actions > nightly >
-# Run workflow) to build now, changed or not.
+# Run workflow) to build now, changed or not; run on another branch, it
+# builds everything but publishes nothing.
+#
+# Players' downloads (owner, 2026-11-20: no command line): Zeetures-Setup.exe
+# (Windows installer, 64- and 32-bit), Zeetures-macOS.dmg (one app for
+# Apple Silicon and Intel), Zeetures-x86_64.AppImage and Zeetures-i686.AppImage
+# (Linux), beside the plain archives. Scripts: packaging/.
 
 on:
   schedule:
@@ -65,10 +71,49 @@ jobs:
         strip "$out"/openc2e "$out"/cobdumper "$out"/mngdumper "$out"/mngplayer2 "$out"/praybuilder "$out"/praydumper "$out"/spritedumper || true
         cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
         tar czf "$out.tar.gz" "$out"
+        # (used only if linux-appimage's, which runs on older systems, fails)
+        packaging/linux/make-appimage.sh "$out" x86_64 Zeetures-x86_64.AppImage
+        ./Zeetures-x86_64.AppImage --appimage-extract-and-run --version
     - uses: actions/upload-artifact@v4
       with:
         name: linux
         path: zeetures-nightly-linux-x86_64.tar.gz
+    - uses: actions/upload-artifact@v4
+      with:
+        name: linux-appimage-fallback
+        path: Zeetures-x86_64.AppImage
+
+  # The Linux AppImage, built on Ubuntu 22.04 so that it runs on systems as
+  # old as that (glibc 2.35: Ubuntu 22.04, Debian 12, Zorin 17, Mint 21)
+  linux-appimage:
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential gcc-12 g++-12 cmake python3 zlib1g-dev \
+          libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev libxtst-dev libxfixes-dev \
+          libwayland-dev libxkbcommon-dev libegl1-mesa-dev libgl1-mesa-dev libdecor-0-dev wayland-protocols \
+          libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev
+    - name: Build
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DOPENC2E_BUNDLED_SDL=ON \
+          -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 "-DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc"
+        cmake --build build
+    - name: Package
+      run: |
+        cmake --install build --prefix installed
+        strip installed/openc2e
+        packaging/linux/make-appimage.sh installed x86_64 Zeetures-x86_64.AppImage
+        ./Zeetures-x86_64.AppImage --appimage-extract-and-run --version
+    - uses: actions/upload-artifact@v4
+      with:
+        name: linux-appimage
+        path: Zeetures-x86_64.AppImage
 
   windows:
     needs: check
@@ -95,56 +140,47 @@ jobs:
         name: windows
         path: zeetures-nightly-windows-x64.zip
 
+  # macOS: one universal program (Apple Silicon and Intel, macOS 10.15 and
+  # later) as Zeetures.app in a disk image. GitHub's macOS runners were
+  # sometimes not available at all (2026-11-16 to 11-20: "The job was not
+  # acquired by Runner"), so if this job does not finish, macos-fallback
+  # builds the same on an Intel runner, a separate pool; and if both fail,
+  # the release keeps the previous night's disk image (release, below).
   macos:
     needs: check
     if: needs.check.outputs.build == 'true'
-    runs-on: macos-latest # (Apple Silicon)
-    # (new: as with Windows, a failed build leaves the others as the release)
+    runs-on: macos-15
     continue-on-error: true
+    timeout-minutes: 90
+    outputs:
+      built: ${{ steps.done.outputs.built }}
     steps:
     - uses: actions/checkout@v4
-    - name: Build
-      run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF
-        cmake --build build -j3
-    - name: Package
-      run: |
-        out=zeetures-nightly-macos-arm64
-        cmake --install build --prefix "$out"
-        strip "$out"/openc2e "$out"/cobdumper "$out"/mngdumper "$out"/mngplayer2 "$out"/praybuilder "$out"/praydumper "$out"/spritedumper || true
-        cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
-        ditto -c -k --keepParent "$out" "$out.zip"
+    - name: Build and package
+      run: packaging/macos/build.sh Zeetures-macOS.dmg
     - uses: actions/upload-artifact@v4
       with:
         name: macos
-        path: zeetures-nightly-macos-arm64.zip
+        path: Zeetures-macOS.dmg
+    - id: done
+      run: echo "built=true" >> "$GITHUB_OUTPUT"
 
-  # Intel Macs (owner, 2026-11-15), cross-compiled on the Apple Silicon
-  # runner: x86_64 only, for macOS 10.15 and later (std::filesystem)
-  macos-intel:
-    needs: check
-    if: needs.check.outputs.build == 'true'
-    runs-on: macos-latest
+  macos-fallback:
+    needs: [check, macos]
+    # (the job's own result reads "success" under continue-on-error, so its
+    # output says whether it really built)
+    if: always() && needs.check.outputs.build == 'true' && needs.macos.outputs.built != 'true'
+    runs-on: macos-15-intel
     continue-on-error: true
+    timeout-minutes: 90
     steps:
     - uses: actions/checkout@v4
-    - name: Build
-      run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15
-        cmake --build build -j3
-    - name: Package
-      run: |
-        out=zeetures-nightly-macos-x86_64
-        cmake --install build --prefix "$out"
-        strip "$out"/openc2e "$out"/cobdumper "$out"/mngdumper "$out"/mngplayer2 "$out"/praybuilder "$out"/praydumper "$out"/spritedumper || true
-        file "$out"/openc2e
-        lipo -archs "$out"/openc2e | grep -qx x86_64
-        cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
-        ditto -c -k --keepParent "$out" "$out.zip"
+    - name: Build and package
+      run: packaging/macos/build.sh Zeetures-macOS.dmg
     - uses: actions/upload-artifact@v4
       with:
-        name: macos-intel
-        path: zeetures-nightly-macos-x86_64.zip
+        name: macos
+        path: Zeetures-macOS.dmg
 
   # 32-bit builds (owner, 2026-11-15: it should run on 32-bit machines
   # too); allowed to fail like the other new ones
@@ -171,6 +207,37 @@ jobs:
         name: windows-32
         path: zeetures-nightly-windows-x86.zip
 
+  # The Windows installer: both builds in one Zeetures-Setup.exe (Inno Setup)
+  windows-installer:
+    needs: [check, windows, windows-32]
+    if: always() && needs.check.outputs.build == 'true'
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with:
+        path: dist
+    - name: Installer
+      shell: pwsh
+      run: |
+        $version = (Select-String -Path src/openc2e/openc2eimgui/C2ToolBar.cpp -Pattern '^#define OPENC2E_FORK_VERSION "(.*)"').Matches[0].Groups[1].Value
+        7z x dist/windows/zeetures-nightly-windows-x64.zip -oexpanded
+        if ($LASTEXITCODE -ne 0) { exit 1 }
+        $isccArgs = @("/DX64Dir=$PWD\expanded\zeetures-nightly-windows-x64", "/DAppVersion=$version", "/DOutDir=$PWD\out")
+        if (Test-Path dist/windows-32/zeetures-nightly-windows-x86.zip) {
+          7z x dist/windows-32/zeetures-nightly-windows-x86.zip -oexpanded
+          $isccArgs += "/DX86Dir=$PWD\expanded\zeetures-nightly-windows-x86"
+        }
+        $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+        if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+        & $iscc @isccArgs packaging\windows\zeetures.iss
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    - uses: actions/upload-artifact@v4
+      with:
+        name: windows-installer
+        path: out/Zeetures-Setup.exe
+
   linux-32:
     needs: check
     if: needs.check.outputs.build == 'true'
@@ -195,14 +262,18 @@ jobs:
         strip "$out"/openc2e "$out"/cobdumper "$out"/mngdumper "$out"/mngplayer2 "$out"/praybuilder "$out"/praydumper "$out"/spritedumper || true
         cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
         tar czf "$out.tar.gz" "$out"
+        packaging/linux/make-appimage.sh "$out" i686 Zeetures-i686.AppImage
     - uses: actions/upload-artifact@v4
       with:
         name: linux-32
-        path: zeetures-nightly-linux-i386.tar.gz
+        path: |
+          zeetures-nightly-linux-i386.tar.gz
+          Zeetures-i686.AppImage
 
   release:
-    needs: [check, linux, windows, macos, macos-intel, windows-32, linux-32]
-    if: always() && needs.check.outputs.build == 'true' && needs.linux.result == 'success'
+    needs: [check, linux, linux-appimage, windows, windows-32, windows-installer, macos, macos-fallback, linux-32]
+    # (only the creature-mind branch publishes; other branches just build)
+    if: always() && needs.check.outputs.build == 'true' && needs.linux.result == 'success' && github.ref_name == 'creature-mind'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -211,14 +282,46 @@ jobs:
     - uses: actions/download-artifact@v4
       with:
         path: dist
+    - name: Collect the files
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        mkdir files
+        find dist -path dist/linux-appimage-fallback -prune -o -type f \( -name '*.tar.gz' -o -name '*.zip' \
+          -o -name '*.exe' -o -name '*.dmg' -o -name '*.AppImage' \) -exec cp {} files/ \;
+        # (the AppImage built on Ubuntu 24.04 only if the 22.04 one failed)
+        if [ ! -f files/Zeetures-x86_64.AppImage ]; then
+          cp dist/linux-appimage-fallback/Zeetures-x86_64.AppImage files/ || true
+        fi
+        # A download whose build failed tonight (for example no macOS runner
+        # was available) is kept from the previous nightly, so no system
+        # drops out of the release
+        gh release view nightly --json name -q .name > previous-title.txt 2>/dev/null || true
+        gh release download nightly -D previous 2>/dev/null || true
+        : > carried.txt
+        for f in Zeetures-Setup.exe Zeetures-macOS.dmg Zeetures-x86_64.AppImage Zeetures-i686.AppImage \
+          zeetures-nightly-linux-x86_64.tar.gz zeetures-nightly-linux-i386.tar.gz \
+          zeetures-nightly-windows-x64.zip zeetures-nightly-windows-x86.zip; do
+          if [ ! -f "files/$f" ] && [ -f "previous/$f" ]; then
+            cp "previous/$f" files/
+            echo "$f" >> carried.txt
+          fi
+        done
+        ls -l files
     - name: Release notes
       run: |
         prev="${{ needs.check.outputs.previous }}"
         {
           echo "Nightly build of Zeetures, a labor of love by an old fan: a fan fork of [openc2e](https://github.com/openc2e/openc2e) (forked from its commit dfcd46f2, 7 October 2026), from the creature-mind branch at ${GITHUB_SHA:0:8}, $(date -u +%Y-%m-%d)."
           echo
-          echo "You need your own copy of Creatures 2 (Steam's \"Creatures: The Albian Years\", or GOG). See README-NIGHTLY.txt in the download."
+          echo "You need your own copy of Creatures 2 (Steam's \"Creatures: The Albian Years\", or GOG). Zeetures finds it in the usual Steam and GOG folders, or asks for its folder the first time."
           echo
+          echo "**Which file:** Windows: \`Zeetures-Setup.exe\`. Mac (Apple Silicon or Intel): \`Zeetures-macOS.dmg\`. Linux: \`Zeetures-x86_64.AppImage\` (\`Zeetures-i686.AppImage\` on 32-bit). The one-time steps for each are under [Download and play](https://github.com/${GITHUB_REPOSITORY}#download-and-play). The .zip and .tar.gz files are the same programs unpacked, for those who prefer them."
+          echo
+          if [ -s carried.txt ]; then
+            echo "**Kept from the previous nightly** ($(cat previous-title.txt 2>/dev/null)), because tonight's build of it did not finish (often no GitHub runner was free): $(sed 's/.*/`&`/' carried.txt | paste -sd, - | sed 's/,/, /g'). It does not have tonight's changes."
+            echo
+          fi
           echo "Every change since the fork, in technical detail: [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/CHANGELOG.md)."
           echo
           if [ -n "$prev" ] && [ "$prev" != "$GITHUB_SHA" ]; then
@@ -247,6 +350,5 @@ jobs:
         fi
         gh release delete nightly --cleanup-tag --yes || true
         git push origin ":refs/tags/nightly" || true
-        files=$(find dist -type f \( -name '*.tar.gz' -o -name '*.zip' \))
-        gh release create nightly $files --prerelease --target "$GITHUB_SHA" \
+        gh release create nightly files/* --prerelease --target "$GITHUB_SHA" \
           --title "Zeetures nightly $(date -u +%Y-%m-%d) (${GITHUB_SHA:0:8})" --notes-file notes.md

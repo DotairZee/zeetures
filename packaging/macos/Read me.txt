@@ -1,0 +1,34 @@
+ZEETURES FOR MAC
+================
+
+Zeetures is a noncommercial fan fork of openc2e, the open-source engine
+for the Creatures games, focused on Creatures 2. It runs on Apple Silicon
+and Intel Macs, macOS 10.15 or later.
+
+1. Drag Zeetures into Applications.
+
+2. The first time, open it from Applications. macOS says it can't check
+   it for malicious software (Zeetures is not signed by Apple). Click
+   Done, then open System Settings > Privacy & Security, scroll down to
+   "Zeetures was blocked", click Open Anyway, and confirm. (On macOS 14
+   and earlier: right-click Zeetures, choose Open, then Open.) After that
+   it opens normally.
+
+3. Zeetures needs your own copy of Creatures 2 and asks for its folder
+   the first time. Steam for Mac won't install the game (it is listed as
+   Windows-only), but it downloads the files. The steps:
+   https://github.com/DotairZee/zeetures#on-a-mac
+   If you copy them to ~/Games/Creatures The Albian Years, Zeetures finds
+   them on its own.
+
+Zeetures contains no part of the game: no sprites, sounds, genomes,
+scripts or worlds. Creatures, Norns, Grendels, Ettins and Albia belong to
+Gameware Europe. This project is not affiliated with or endorsed by
+Gameware.
+
+Your worlds and saves are kept in Documents/openc2e Data/Creatures 2.
+
+License: openc2e is free software under the GNU Lesser General Public
+License, version 2.1, and Zeetures's changes are under the same license
+(see "License (LGPL 2.1).txt"). The source code:
+https://github.com/DotairZee/zeetures

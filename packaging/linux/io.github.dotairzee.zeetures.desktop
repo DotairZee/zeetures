@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Zeetures
+GenericName=Artificial life
+Comment=Creatures 2 with a new creature mind (plays from your own copy of Creatures 2)
+Exec=openc2e
+Icon=io.github.dotairzee.zeetures
+Terminal=false
+Categories=Game;Simulation;
+StartupWMClass=io.github.dotairzee.zeetures
