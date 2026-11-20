@@ -27,29 +27,34 @@
 * travelling, or already there, nothing happens.
 *   west    x 6280, on the sea-cave walkway's floor (y 892), on the cave wall
 *           right of the docked submarine (the owner's spot)
-*   airlock x 6416, in the chamber between its west door and the docked
+*   airlock x 6422, in the chamber between its west door and the docked
 *           submarine, on the floor (about 1446)
 *   east    x 7235, on the back wall of the berth's cave, on its floor (906)
 *           (owner, 2026-11-20: at 7386 the rock in front of the dock, 1 0 0
 *           at plane 8999, hid it); the docked submarine (x 7155-7377, y
-*           815-981) stands in front of this wall and covers it, so this
-*           caller is at plane -1, behind the submarine (plane 0) as well:
-*           hidden only while the submarine is here, when it has nothing
-*           to do
-* All three behind creatures (1500; owner, 2026-11-20), the west and
-* airlock ones at 1400, in front of the scenery behind them; they were at
-* 5000, as the lifts' callers are.
+*           815-981) stands in front of this wall and covers it: the
+*           caller is hidden only while the submarine is here, when it has
+*           nothing to do
+* All three at plane -1 (owner, 2026-11-20): behind creatures (1500) and
+* beneath the submarine (0), in front of the background and bushes (-10);
+* they were at 5000, as the lifts' callers are. The airlock one moved 6 px
+* east, clear of the airlock door (2 9 7, plane 1000, to x 6421).
 enum 3 1 2
   doif velx eq 0 and vely eq 0
     setv var1 attr andv var1 4
     doif var1 eq 0 addv attr 4 endi
   endi
 next
+* The submarine in front of creatures (owner, 2026-11-20): plane 1600, over
+* creatures' 1500 (it was at 0); its riders are drawn at its plane plus its
+* cabin's (1), so they stay in front of its hull, and the front scenery
+* (the airlock's front, 8999; fish, 7000) stays in front of it.
+enum 3 1 2 plne 1600 next
 enum 2 2 223 kill targ next
 enum 2 2 224 kill targ next
 enum 2 2 225 kill targ next
-inst new: simp lbtn 6 0 1400 0 setv cls2 2 2 223 setv attr 4 bhvr 1 0 pose 0 setv ov01 0 mvto 6280 812 slow
-inst new: simp lbtn 6 0 1400 0 setv cls2 2 2 224 setv attr 4 bhvr 1 0 pose 0 setv ov01 1 mvto 6416 1366 slow
+inst new: simp lbtn 6 0 -1 0 setv cls2 2 2 223 setv attr 4 bhvr 1 0 pose 0 setv ov01 0 mvto 6280 812 slow
+inst new: simp lbtn 6 0 -1 0 setv cls2 2 2 224 setv attr 4 bhvr 1 0 pose 0 setv ov01 1 mvto 6422 1366 slow
 inst new: simp lbtn 6 0 -1 0 setv cls2 2 2 225 setv attr 4 bhvr 1 0 pose 0 setv ov01 2 mvto 7235 826 slow
 
 scrp 2 2 223 1
