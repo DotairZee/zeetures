@@ -132,6 +132,9 @@ VERSIONS = [
     ("0.16.1", "630f3c58",
      "Fix: the cage lift by the huts goes down to the lower deck again, with its caller there, in saved "
      "worlds too."),
+    ("0.16.2", "7e8c9bf8",
+     "Fixes: creatures pressed against the gene lab's east wall no longer bob up and down in the rock; the "
+     "gene lab's console stands behind creatures walking past."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

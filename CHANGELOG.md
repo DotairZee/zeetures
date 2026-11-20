@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 515 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 518 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.2](#version-0162): 3 commits, 19 November 2026
 - [0.16.1](#version-0161): 3 commits, 19 November 2026
 - [0.16.0](#version-0160): 11 commits, 19 November 2026
 - [0.15.0](#version-0150): 5 commits, 19 November 2026
@@ -25,6 +26,32 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.2
+
+Fixes: creatures pressed against the gene lab's east wall no longer bob up and down in the rock; the gene lab's console stands behind creatures walking past.
+
+### 19 November 2026
+
+#### Version 0.16.2
+
+[`7e8c9bf8`](https://github.com/DotairZee/zeetures/commit/7e8c9bf8a85a93b2777b0352d4ab3efa9657d355)
+
+#### Gene lab pit: no bobbing in the east wall's rock; the console behind creatures
+
+[`4ed9e41d`](https://github.com/DotairZee/zeetures/commit/4ed9e41d6899d87ea7a6ccbeaf9af273167d5f10)
+
+Room 251, the strip east of room 159's end, had its floor at the room's
+bottom (1798), 30 px under 159's east end (1768): a creature against the
+wall with a corner of its box in the strip bobbed up and down in the rock
+(owner's screencast). Its floor now matches (SSFC 30). The splicer's
+console (2 2 21) was at plane 2000, in front of creatures; now 1400.
+Copy test: eight creatures walked into the wall stood at 1768 (one dip of
+8 px), boxes 13 px into the strip, and walked away within 10 s.
+
+#### Changelog
+
+[`e26d6b9a`](https://github.com/DotairZee/zeetures/commit/e26d6b9ac76085c35a1ef304188981e8efe428c9)
 
 ## Version 0.16.1
 
