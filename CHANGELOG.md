@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 524 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 527 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.5](#version-0165): 3 commits, 19 November 2026
 - [0.16.4](#version-0164): 3 commits, 19 November 2026
 - [0.16.3](#version-0163): 3 commits, 19 November 2026
 - [0.16.2](#version-0162): 3 commits, 19 November 2026
@@ -28,6 +29,27 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.5
+
+The Metamorph Device stands 20 px further west in the gene splicer room, its switch with it.
+
+### 19 November 2026
+
+#### Version 0.16.5
+
+[`88f0214c`](https://github.com/DotairZee/zeetures/commit/88f0214c089ee5299a5350218177c7b71940172f)
+
+#### Metamorph Device 20 px west
+
+[`7f3541f0`](https://github.com/DotairZee/zeetures/commit/7f3541f02e5b657e7124873250bdfee388ae290f)
+
+The device (3 10 13) from x 6244 to 6224 and its switch (2 1 164) with it,
+6247 to 6227 (owner, 2026-11-19, night).
+
+#### Changelog
+
+[`c196e3bf`](https://github.com/DotairZee/zeetures/commit/c196e3bf7c0549f54a2abc3b5464a1c0dadf8f37)
 
 ## Version 0.16.4
 

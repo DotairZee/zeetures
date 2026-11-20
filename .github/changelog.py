@@ -141,6 +141,8 @@ VERSIONS = [
     ("0.16.4", "3a71370b",
      "Fix: the glass tube's checkered glass runs on around the pulley by the huts, so creatures inside "
      "show through it there too."),
+    ("0.16.5", "88f0214c",
+     "The Metamorph Device stands 20 px further west in the gene splicer room, its switch with it."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
