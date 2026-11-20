@@ -1,0 +1,131 @@
+* Callers for the submarine (openc2e Creatures 2 project, our own script;
+* the game's own caller picture). Run by openc2e after the world loads
+* (Additions folder); made anew each load.
+*
+* The submarine (vehicle 3 1 2) had no callers: it moved only by its own two
+* arrow buttons, each a fixed leg from each stop (owner, 2026-11-19, night:
+* "add the style of caller ... and I would like that to call the submarine
+* from its current stopped position"; then "make three"). Its stops are its
+* OV00: 0 the west dock (in the sea cave under the stalactites), 1 the
+* airlock (the tunnel under the seabed), 2 the east dock. Its activate 1
+* goes on round the loop (0 to 1, 1 to 2, 2 to 0) and activate 2 back the
+* other way (0 to 2, 2 to 1, 1 to 0), so every stop is one leg from every
+* other. It is taken to be docked when it is still and at the dock its OV00
+* names (west: left x under 6120, top above 850; airlock: left x 6400-6520,
+* top below 1200; east: left x over 7100, top above 860).
+*
+* Its scripts clear its ATTR 4 (activateable) while it travels and set it
+* again when it docks; Home's submarine was docked at the airlock with ATTR
+* 8, without it (a save mid-trip, likely), so its own arrows did nothing and
+* the next trip's "subv attr 4" would have cleared another bit. A
+* submarine found still at its dock without it gets it back at load.
+*
+* A caller at each stop (2 2 223 west, 224 airlock, 225 east; the game's
+* capsule caller picture, lbtn, as the lifts' callers; OV01 its stop): a
+* press, by the hand or a creature, brings the submarine to its stop from
+* wherever it is docked, by the one leg that goes there; while it is
+* travelling, or already there, nothing happens.
+*   west    x 6280, on the sea-cave walkway's floor (y 892), on the cave wall
+*           right of the docked submarine (the owner's spot)
+*   airlock x 6416, in the chamber between its west door and the docked
+*           submarine, on the floor (about 1446)
+*   east    x 7386, on the dock's floor (906), right of the docked submarine
+enum 3 1 2
+  doif velx eq 0 and vely eq 0
+    setv var1 attr andv var1 4
+    doif var1 eq 0 addv attr 4 endi
+  endi
+next
+enum 2 2 223 kill targ next
+enum 2 2 224 kill targ next
+enum 2 2 225 kill targ next
+inst new: simp lbtn 6 0 5000 0 setv cls2 2 2 223 setv attr 4 bhvr 1 0 pose 0 setv ov01 0 mvto 6280 812 slow
+inst new: simp lbtn 6 0 5000 0 setv cls2 2 2 224 setv attr 4 bhvr 1 0 pose 0 setv ov01 1 mvto 6416 1366 slow
+inst new: simp lbtn 6 0 5000 0 setv cls2 2 2 225 setv attr 4 bhvr 1 0 pose 0 setv ov01 2 mvto 7386 826 slow
+
+scrp 2 2 223 1
+  pose 5 snde but2
+  setv var0 ov01
+  enum 3 1 2
+    setv var3 -1
+    doif velx eq 0 and vely eq 0
+      doif posl lt 6120 and post lt 850 setv var3 0 endi
+      doif posl gt 6400 and posl lt 6520 and post gt 1200 setv var3 1 endi
+      doif posl gt 7100 and post lt 860 setv var3 2 endi
+    endi
+    doif var3 eq ov00 and ov00 ne var0
+      setv var2 ov00 addv var2 1 modv var2 3
+      doif var2 eq var0
+        mesg writ targ 0
+      else
+        mesg writ targ 1
+      endi
+    endi
+  next
+  wait 20 pose 0 setv actv 0
+endm
+scrp 2 2 223 2
+  mesg writ ownr 0
+  setv actv 0
+endm
+scrp 2 2 223 0
+  setv var0 0
+endm
+
+scrp 2 2 224 1
+  pose 5 snde but2
+  setv var0 ov01
+  enum 3 1 2
+    setv var3 -1
+    doif velx eq 0 and vely eq 0
+      doif posl lt 6120 and post lt 850 setv var3 0 endi
+      doif posl gt 6400 and posl lt 6520 and post gt 1200 setv var3 1 endi
+      doif posl gt 7100 and post lt 860 setv var3 2 endi
+    endi
+    doif var3 eq ov00 and ov00 ne var0
+      setv var2 ov00 addv var2 1 modv var2 3
+      doif var2 eq var0
+        mesg writ targ 0
+      else
+        mesg writ targ 1
+      endi
+    endi
+  next
+  wait 20 pose 0 setv actv 0
+endm
+scrp 2 2 224 2
+  mesg writ ownr 0
+  setv actv 0
+endm
+scrp 2 2 224 0
+  setv var0 0
+endm
+
+scrp 2 2 225 1
+  pose 5 snde but2
+  setv var0 ov01
+  enum 3 1 2
+    setv var3 -1
+    doif velx eq 0 and vely eq 0
+      doif posl lt 6120 and post lt 850 setv var3 0 endi
+      doif posl gt 6400 and posl lt 6520 and post gt 1200 setv var3 1 endi
+      doif posl gt 7100 and post lt 860 setv var3 2 endi
+    endi
+    doif var3 eq ov00 and ov00 ne var0
+      setv var2 ov00 addv var2 1 modv var2 3
+      doif var2 eq var0
+        mesg writ targ 0
+      else
+        mesg writ targ 1
+      endi
+    endi
+  next
+  wait 20 pose 0 setv actv 0
+endm
+scrp 2 2 225 2
+  mesg writ ownr 0
+  setv actv 0
+endm
+scrp 2 2 225 0
+  setv var0 0
+endm
