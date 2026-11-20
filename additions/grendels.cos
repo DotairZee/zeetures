@@ -90,6 +90,35 @@ scrp 2 5 3 9
   targ ownr tick 200
 endm
 *
+* The egg machine lays one egg at a time (owner, 2026-11-20: "Lay one,
+* clear extras"). Its timer (C2's own, below as it was) lays an ettin egg
+* whenever no ettin lives; an egg hatches only while the norns are under
+* the world's limit, so with Home at its limit no ettin came and the
+* machine laid on: 74 eggs on one spot at its chute (6308, 2186). Now it
+* lays only while none of its eggs (OV01 1) waits. (Its grendel
+* subroutine is never called, in C2 as here.)
+scrp 2 1 25 9
+  setv var1 0
+  enum 2 5 3
+    doif ov01 eq 1 addv var1 1 endi
+  next
+  doif var1 gt 0 stop endi
+  setv var0 0 enum 4 3 0 addv var0 1 next doif var0 lt 1 rtar 3 10 7 mesg writ targ 0 wait 10 gsub ettn stop endi
+  subr gren inst rndv var0 0 5 mulv var0 8 new: simp eggs 8 var0 2 0 setv cls2 2 5 3 setv attr 196 bhvr 1 0 new: gene tokn gren tokn gren ov00 setv ov01 1 pose 3 mvto 6308 2090 slim setv grav 1 tick 50 slow retn
+  subr ettn inst rndv var0 0 5 mulv var0 8 new: simp eggs 8 var0 2 0 setv cls2 2 5 3 setv attr 196 bhvr 1 0 new: gene tokn ettn tokn ettn ov00 setv ov01 1 pose 3 mvto 6308 2090 slim setv grav 1 tick 50 slow retn
+endm
+* The pile it left: of its eggs waiting unhatched at the chute (OV01 1,
+* picture 3, at x 6308), one is kept and the rest cleared away (73 in
+* Home). The gene splicer's eggs (OV01 0, at 6300 and 6310) are not
+* touched.
+setv var0 0
+enum 2 5 3
+  doif ov01 eq 1 and pose eq 3 and posl eq 6308
+    addv var0 1
+    doif var0 gt 1 kill targ endi
+  endi
+next
+*
 * Eggs whose hatching was cut off before the scripts above were locked
 * (2026-11-19) wait with their timers stopped: start them again at load.
 * An empty shell (picture 7) is cleared away; the egg pile's eggs (2 5 4)
