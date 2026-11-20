@@ -10,22 +10,22 @@
 
 ## Download and play
 
-Ready-to-run builds for each system are made automatically every night there are changes: see the [nightly release](../../releases/tag/nightly).
+Download the file for your system from the [nightly release](../../releases/tag/nightly) (built automatically every night there are changes), then follow its one-time steps. No command line is needed.
 
 | System | Download |
 | --- | --- |
-| Linux (x86-64) | `zeetures-nightly-linux-x86_64.tar.gz` |
-| Windows (64-bit) | `zeetures-nightly-windows-x64.zip` |
-| macOS (Apple Silicon: M1 or later) | `zeetures-nightly-macos-arm64.zip` |
-| macOS (Intel, macOS 10.15 Catalina or later) | `zeetures-nightly-macos-x86_64.zip` |
-| Linux (32-bit x86) | `zeetures-nightly-linux-i386.tar.gz` |
-| Windows (32-bit) | `zeetures-nightly-windows-x86.zip` |
+| Windows 10 or 11 | `Zeetures-Setup.exe` |
+| Mac (Apple Silicon or Intel, macOS 10.15 or later) | `Zeetures-macOS.dmg` |
+| Linux (64-bit) | `Zeetures-x86_64.AppImage` |
+| Linux (32-bit) | `Zeetures-i686.AppImage` |
 
-Unpack it and start the program (still called `openc2e`) with the path to your Creatures 2 folder, the one that holds its `Images` and `Sounds` folders and `Eden.sfc`:
+* **Windows:** run `Zeetures-Setup.exe`. Windows may say "Windows protected your PC", because the installer is not signed: click **More info**, then **Run anyway**. It installs for you alone (no administrator password), adds Zeetures to the Start menu and the desktop, and can start it at the end. The 64-bit and 32-bit programs are both inside; it picks the right one.
+* **Mac:** open `Zeetures-macOS.dmg` and drag Zeetures into Applications. The first time, open it from Applications: macOS says it can't check it, because it is not signed by Apple. Click **Done**, open **System Settings > Privacy & Security**, click **Open Anyway** beside "Zeetures was blocked", and confirm. (On macOS 14 and earlier, right-click Zeetures and choose **Open** instead.) From then on it opens normally. To get the game's files on a Mac, see [On a Mac](#on-a-mac).
+* **Linux:** make the file executable once (in most file managers: right-click it, **Properties**, then tick **Allow executing file as program** or **Executable as Program**; or `chmod +x Zeetures-x86_64.AppImage`), then double-click it. It runs on Ubuntu 22.04, Debian 12, Zorin 17, Mint 21, Fedora 36 and later, and needs nothing else installed.
 
-* **Linux:** `./openc2e -d "$HOME/.local/share/Steam/steamapps/common/Creatures The Albian Years/Creatures 2"`
-* **Windows:** `openc2e.exe -d "C:\Program Files (x86)\Steam\steamapps\common\Creatures The Albian Years\Creatures 2"`
-* **macOS:** `./openc2e -d "$HOME/Games/Creatures The Albian Years/Creatures 2"`. Steam for Mac won't install the game, but it will download its files: see [On a Mac](#on-a-mac) below.
+**Finding your Creatures 2.** The first time Zeetures starts, it looks for Creatures 2 in the usual places: every Steam library (including Steam's Flatpak and Snap versions on Linux), GOG's folders, and on a Mac `~/Games/Creatures The Albian Years`. If it finds none, a window asks you to choose the folder: the `Creatures 2` folder that holds `Creatures2.exe`, `Eden.sfc` and the `Images` folder, or the `Creatures The Albian Years` folder that holds it. It remembers the folder. To use a different one later, choose **File > Creatures 2 Folder...** (or edit `game-folder.txt` in the user folder; see below).
+
+The `.zip` and `.tar.gz` files in the release are the same programs unpacked, for anyone who prefers them: unpack and start `Zeetures.exe` (Windows) or `openc2e` (Linux). Started from a terminal, they still take `-d "<Creatures 2 folder>"` (see [Command-line options](#command-line-options)).
 
 The creatures use Zeetures's own mind (`--mind original` gives them openc2e's unfinished copy of the original brain, which does very little). Zeetures's world additions (map fixes, script fixes and new objects) are built into the program and applied to every Creatures 2 world as it loads. All 42 run on a fresh install. Their pictures that Zeetures draws itself (walkways, lifts, bushes, the memorial stone and more) come with the download, in its `zeetures-art` folder: keep it beside the program. The pictures that are cut from the game's own (the waterwheel stream, the west sea airlock's rock, the volcano passage and trunk, the treehouse lift, the waterfall path, a pillar's foot) are made by Zeetures on your machine, from your own copy of the game, when it starts.
 
@@ -52,11 +52,7 @@ Zeetures runs natively on macOS (Metal graphics, CoreAudio sound). You do **not*
 
    The folder to give Zeetures is then `~/Games/Creatures The Albian Years/Creatures 2`. (The same console command works on Linux and Windows, to get the files without installing the game. With the GOG release, use the `Creatures 2` folder from a Windows install of it.)
 
-**Running the download.** It is not signed by Apple: the first time, right-click `openc2e` and choose Open, or run `xattr -dr com.apple.quarantine .` in its folder. Then:
-
-```bash
-./openc2e -d "$HOME/Games/Creatures The Albian Years/Creatures 2"
-```
+**Running it.** Open `Zeetures-macOS.dmg`, drag Zeetures into Applications, and allow it once in System Settings > Privacy & Security (see [Download and play](#download-and-play)). If the game's files are in `~/Games/Creatures The Albian Years`, or still where Steam downloaded them, Zeetures finds them by itself; otherwise it asks for the folder. From Terminal: `/Applications/Zeetures.app/Contents/MacOS/Zeetures -d "$HOME/Games/Creatures The Albian Years/Creatures 2"`.
 
 **Two breed packs, fetched on your machine.** The first time a Creatures 2 world runs, Zeetures downloads two community breed packs from the [Eem Foo archive](https://eem.foo/archive), which already hosts them, and imports them: [Boney Grendels](https://eem.foo/archive/downloads/1fad-boney-grendels) (Creature Labs' own Creatures 2 release) and [Frog Norns V3](https://eem.foo/archive/downloads/2538-frog-norns-v3) (by Alex of Norns of the Round Table, from Nornenmeister's V2), which takes the place of the game's own frog norn. Zeetures itself does not carry or host them. The files are kept in your user folder's `Downloads`; to skip this, put the line `breed-packs off` in your user folder's `settings.txt`.
 
@@ -64,7 +60,7 @@ Linux is where Zeetures is played and tested every day; the Windows and macOS bu
 
 ## Status
 
-Zeetures is at version 0.17.4 (shown in Help > About). It is a work in progress, but Creatures 2 is playable from start to finish: creatures hatch, eat, learn, talk, breed, grow old and die, and worlds are saved. The published research behind the creatures' mind and behaviors is listed in [CITATIONS.md](CITATIONS.md) (also in Help > About).
+Zeetures is at version 0.17.5 (shown in Help > About). It is a work in progress, but Creatures 2 is playable from start to finish: creatures hatch, eat, learn, talk, breed, grow old and die, and worlds are saved. The published research behind the creatures' mind and behaviors is listed in [CITATIONS.md](CITATIONS.md) (also in Help > About).
 
 ### What works
 
@@ -170,7 +166,7 @@ cmake --build build32 -j"$(nproc)"
 
 `openc2e --help` lists them all. The ones Zeetures adds or uses most:
 
-* `-d PATH`: the Creatures 2 folder (needed).
+* `-d PATH`: the Creatures 2 folder. Without it, Zeetures uses the folder it remembered, looks in the usual Steam and GOG places, or asks.
 * `--mind original`: openc2e's unfinished copy of the original brain instead of Zeetures's mind.
 * `--world NAME`: open that world from the Worlds folder, skipping the world chooser.
 * `--no-autosave`: don't save the world on quit or when switching worlds.

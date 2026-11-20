@@ -10,7 +10,9 @@
 #include "creatures/CreatureSpeech.h"
 #include "creatures/Thoughts.h"
 
+#include <SDL3/SDL_keyboard.h>
 #include <SDL3/SDL_misc.h>
+#include "GameFolder.h"
 
 #include "AgentInjector.h"
 #include "C2Kits.h"
@@ -228,7 +230,7 @@ static const char* GenusName(int genus) {
 // 0.5.0 (2026-11-14, night): every object kept between launches (stage 3).
 // 0.6.0 (2026-11-14, night): signature scents; the hand takes things from
 // creatures and keeps its mode; the gene lab's east end sealed.
-#define OPENC2E_FORK_VERSION "0.17.4"
+#define OPENC2E_FORK_VERSION "0.17.5"
 
 // CITATIONS.md, as Help > About shows it: "## " headings as separators,
 // "- " entries wrapped, each Markdown link [text](url) as a small button
@@ -403,6 +405,13 @@ static void DrawC2MenuBar() {
 				ImGui::SetTooltip("Creatures' speech");
 			ImGui::EndMenu();
 		}
+		ImGui::Separator();
+		// not in C2's menu: the player's own game folder (GameFolder.cpp)
+		if (ImGui::MenuItem("Creatures 2 Folder..."))
+			GameFolder::chooseAnother(SDL_GetKeyboardFocus());
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Playing from %s\nChoose another folder for the next start",
+				(const char*)GameFolder::currentFolder().u8string().c_str());
 		ImGui::Separator();
 		if (ImGui::MenuItem("Exit"))
 			world.quitting = true;
@@ -1032,6 +1041,7 @@ static void LoadViewSettings() {
 }
 
 void DrawC2Toolbar() {
+	GameFolder::pollChooseAnother(SDL_GetKeyboardFocus());
 	// developer aid: OPENC2E_VIEW="labels,tips,smooth" starts with Text
 	// Labels, ToolTips for Objects and Smooth Scrolling on (headless tests)
 	static bool s_view_aid = [] {
