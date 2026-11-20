@@ -168,6 +168,9 @@ VERSIONS = [
      "The submarine is drawn in front of creatures and its callers behind them, beneath the submarine; the "
      "east dock's caller moves out from behind the rock onto the berth's back wall. The gene splicing room's "
      "west half has its floor on the drawn floor slab, 10 pixels higher."),
+    ("0.16.13", "9772325e",
+     "Fix: the egg machine under the gene lab lays one egg at a time; while the world was at its population "
+     "limit it kept laying ettin eggs that could not hatch, and the pile is cleared at load."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

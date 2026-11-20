@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 550 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 553 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.13](#version-01613): 3 commits, 20 November 2026
 - [0.16.12](#version-01612): 5 commits, 20 November 2026
 - [0.16.11](#version-01611): 4 commits, 20 November 2026
 - [0.16.10](#version-01610): 3 commits, 20 November 2026
@@ -36,6 +37,32 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.13
+
+Fix: the egg machine under the gene lab lays one egg at a time; while the world was at its population limit it kept laying ettin eggs that could not hatch, and the pile is cleared at load.
+
+### 20 November 2026
+
+#### Version 0.16.13
+
+[`9772325e`](https://github.com/DotairZee/zeetures/commit/9772325e197d13d563065d4f939a97a52afff04d)
+
+#### grendels.cos: the egg machine lays one egg at a time; its pile cleared
+
+[`7f3734ef`](https://github.com/DotairZee/zeetures/commit/7f3734ef7c2664855b738da4f860154a97c6aae4)
+
+The egg machine (2 1 25) lays an ettin egg whenever no ettin lives. Eggs
+hatch only while norns are under the world's limit, so with Home at its
+limit no ettin came and the machine kept laying: 74 eggs on one spot at
+its chute. Its timer (C2's own) now stops while one of its eggs (OV01 1)
+waits, and at load all but one of its waiting eggs at the chute are
+cleared (owner's choice). The gene splicer's eggs are left alone and keep
+the limit (owner's choice).
+
+#### Changelog
+
+[`99631e8e`](https://github.com/DotairZee/zeetures/commit/99631e8e10f30ef84b182b99a95af83dc39a3033)
 
 ## Version 0.16.12
 
