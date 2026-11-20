@@ -1,11 +1,13 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 533 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 538 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.9](#version-0169): 2 commits, 20 November 2026
+- [0.16.8](#version-0168): 3 commits, 19 November 2026 to 20 November 2026
 - [0.16.7](#version-0167): 3 commits, 19 November 2026
 - [0.16.6](#version-0166): 3 commits, 19 November 2026
 - [0.16.5](#version-0165): 3 commits, 19 November 2026
@@ -31,6 +33,40 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.9
+
+Fix: creatures at the east end of the sandy tunnel under the west sea now pass behind the tunnel's bronze collar, not in front of it.
+
+### 20 November 2026
+
+#### Version 0.16.9
+
+[`67a78941`](https://github.com/DotairZee/zeetures/commit/67a78941d0cc18144fb1328ea6f7c81992889027)
+
+#### The sandy tunnel's collar in front of creatures
+
+[`31432bd9`](https://github.com/DotairZee/zeetures/commit/31432bd91f6d82c84e46bd404a8f3ec866f014f2)
+
+## Version 0.16.8
+
+The submarine has a caller at each of its three stops (the sea cave's dock, the airlock under the seabed and the east dock): a press brings it from wherever it is docked; a submarine saved mid-trip gets its buttons back at load.
+
+### 20 November 2026
+
+#### Version 0.16.8
+
+[`585ae575`](https://github.com/DotairZee/zeetures/commit/585ae575be35b5d35243080f0c3de5f2012aefd1)
+
+#### Submarine callers at its three stops
+
+[`93bffca1`](https://github.com/DotairZee/zeetures/commit/93bffca186f5abedceb9f7d8a7b8e6684240bf2b)
+
+### 19 November 2026
+
+#### Changelog
+
+[`6f44526f`](https://github.com/DotairZee/zeetures/commit/6f44526f1c6a28b8a9259780adcc1a2812f3c9f8)
 
 ## Version 0.16.7
 

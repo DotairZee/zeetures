@@ -150,6 +150,13 @@ VERSIONS = [
      "The domed lab's power is switched on and off by the button on the dock's wall (where the pod used to be "
      "called), no longer by the generator on the desk; the gene splicer knows its power after a load, and its "
      "\"no power\" window no longer opens."),
+    ("0.16.8", "585ae575",
+     "The submarine has a caller at each of its three stops (the sea cave's dock, the airlock under the seabed "
+     "and the east dock): a press brings it from wherever it is docked; a submarine saved mid-trip gets its "
+     "buttons back at load."),
+    ("0.16.9", "67a78941",
+     "Fix: creatures at the east end of the sandy tunnel under the west sea now pass behind the tunnel's "
+     "bronze collar, not in front of it."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
