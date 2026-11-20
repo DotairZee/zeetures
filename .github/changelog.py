@@ -184,6 +184,8 @@ VERSIONS = [
      "Chronicles Kit's History shows a detail's full text on hovering, its Details column half as wide, and "
      "the kit fits each page, so Statistics is no wider than it needs. The changelog check no longer fails "
      "on every push."),
+    ("0.17.2", "a572debe",
+     "Fix: the Metamorph Device takes only a creature inside its cabin, no longer one standing beside it."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

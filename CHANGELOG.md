@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 537 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 539 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.17.2](#version-0172): 2 commits, 20 November 2026
 - [0.17.1](#version-0171): 3 commits, 20 November 2026
 - [0.17.0](#version-0170): 2 commits, 20 November 2026
 - [0.16.14](#version-01614): 2 commits, 20 November 2026
@@ -40,6 +41,30 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.17.2
+
+Fix: the Metamorph Device takes only a creature inside its cabin, no longer one standing beside it.
+
+### 20 November 2026
+
+#### Version 0.17.2
+
+[`a572debe`](https://github.com/DotairZee/zeetures/commit/a572debe77f038bceedddefc91ab67e9516b94c3)
+
+#### metamorph.cos: the device takes only a creature inside its cabin
+
+[`5640c2dc`](https://github.com/DotairZee/zeetures/commit/5640c2dc3f84b8d0e47e1f414a08d24622aa525e)
+
+Owner, 2026-11-20. Its run script boarded with GPAS, every creature
+touching the device's box, and ended one of them: in a test it took a
+creature standing beside it. Now it boards only a creature whose middle
+is between the cabin's walls (x 55-155 from the device's corner) and
+whose feet are within the cabin's height (y 36-165), as one the hand
+drops in is; one standing on the room floor beside or in front of it
+(feet 1788, the cabin's floor 1761) is left alone. Tests (copies of
+Home, lightning): a creature against the device on the floor was not
+taken; one put in the cabin was ended and its copy made.
 
 ## Version 0.17.1
 
