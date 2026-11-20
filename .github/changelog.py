@@ -135,6 +135,9 @@ VERSIONS = [
     ("0.16.2", "7e8c9bf8",
      "Fixes: creatures pressed against the gene lab's east wall no longer bob up and down in the rock; the "
      "gene lab's console stands behind creatures walking past."),
+    ("0.16.3", "784a4df6",
+     "Fix: the domed lab's glass lift is behind creatures walking past it, and still in front of the "
+     "creatures riding in it."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

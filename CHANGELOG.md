@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 518 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 521 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.3](#version-0163): 3 commits, 19 November 2026
 - [0.16.2](#version-0162): 3 commits, 19 November 2026
 - [0.16.1](#version-0161): 3 commits, 19 November 2026
 - [0.16.0](#version-0160): 11 commits, 19 November 2026
@@ -26,6 +27,29 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.3
+
+Fix: the domed lab's glass lift is behind creatures walking past it, and still in front of the creatures riding in it.
+
+### 19 November 2026
+
+#### Version 0.16.3
+
+[`784a4df6`](https://github.com/DotairZee/zeetures/commit/784a4df6a5e418d0b3436e1499f2295bc733d449)
+
+#### The domed lab's glass lift behind creatures walking past
+
+[`3742b475`](https://github.com/DotairZee/zeetures/commit/3742b475205c4a65a9aaa8b8800ea4ed74d89fa1)
+
+Its near glass and housing (parts 2 and 3) were at planes 1600-1601, in
+front of creatures on the lab floor beside it (owner's screenshot,
+2026-11-19); now 1450-1451: still in front of its riders (1401), behind
+walkers (1500).
+
+#### Changelog
+
+[`7c5df80f`](https://github.com/DotairZee/zeetures/commit/7c5df80f9bd3d61fe65ce4c4056ec7ea54d55a7b)
 
 ## Version 0.16.2
 
