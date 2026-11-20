@@ -186,6 +186,10 @@ VERSIONS = [
      "on every push."),
     ("0.17.2", "a572debe",
      "Fix: the Metamorph Device takes only a creature inside its cabin, no longer one standing beside it."),
+    ("0.17.3", "de5f38a9",
+     "Fix: the white line in the sky over the west sea is gone (a stray row of pixels in one frame of the "
+     "game's own picture of the big tree, now made without it). The Insemination page keeps one width "
+     "whichever donor or source is picked, and looks for genome files each time it is opened."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

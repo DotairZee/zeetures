@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 539 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 542 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.17.3](#version-0173): 3 commits, 20 November 2026
 - [0.17.2](#version-0172): 2 commits, 20 November 2026
 - [0.17.1](#version-0171): 3 commits, 20 November 2026
 - [0.17.0](#version-0170): 2 commits, 20 November 2026
@@ -41,6 +42,44 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.17.3
+
+Fix: the white line in the sky over the west sea is gone (a stray row of pixels in one frame of the game's own picture of the big tree, now made without it). The Insemination page keeps one width whichever donor or source is picked, and looks for genome files each time it is opened.
+
+### 20 November 2026
+
+#### Version 0.17.3
+
+[`de5f38a9`](https://github.com/DotairZee/zeetures/commit/de5f38a9d69710c5765d5245d838041693d78c54)
+
+#### Insemination page: one width whatever is shown; genome files looked for at opening
+
+[`a8670582`](https://github.com/DotairZee/zeetures/commit/a8670582de86dd0633186a92c6af67cea9485709)
+
+Owner, 2026-11-20. The kit fits its page, and the note beside the button
+("Two mothers: ...") and the Rescan button made the page wider for some
+donors and sources. The page now has a fixed width (its two columns), its
+notes wrap under the button, and the Rescan button is gone: the genome
+files are looked for again each time the page is opened (the kit opened
+or the tab chosen). Departed donors were already per world (the world
+folder's departed/ files and the saved records).
+
+#### Made art: the big tree's sway picture without its white line (tre2)
+
+[`0cb32e57`](https://github.com/DotairZee/zeetures/commit/0cb32e572ff07f5afa9b2d27e9ab908a13bdab7c)
+
+The owner's "white line in the sky" (seen many times since 2026-11-11;
+found 2026-11-20 with the game paused on it): frame 4 of the game's own
+tre2.s16 (the big tree's sway over the west sea, object 2 3 8, 11 frames
+of 820 x 500 at 840, 0) has 77 opaque near-white pixels in its bottom row
+(x 0-76), drawn at world 840-916, y 499 whenever the sway rests on that
+frame. art/tree_sway.py and madeart/tree_sway.cpp make the picture from
+the player's own file with that row's near-white pixels transparent; it
+takes the place of the game's tre2 (an Overrides/Images file still wins).
+compare_made: 820x500x11, max diff 0. In a paused copy with the tree held
+on frame 4: 76 light pixels on that row with the game's picture, 0 with
+the made one.
 
 ## Version 0.17.2
 
