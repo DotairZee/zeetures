@@ -288,9 +288,10 @@ void RelationshipsPage() {
 		myName.c_str());
 
 	// ---- the list ----
-	// about ten rows, scrolling (owner, 2026-11-16: the page ran on for every
-	// creature in the world)
-	float listH = ImGui::GetFrameHeightWithSpacing() * 11;
+	// seven rows under its header, scrolling (owner, 2026-11-20: the kit was
+	// too tall; before, 2026-11-16, about fifteen rows)
+	float rowH = ImGui::GetTextLineHeight() + ImGui::GetStyle().CellPadding.y * 2;
+	float listH = rowH * 8 + 2;
 	if (ImGui::BeginTable("rels", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY,
 			ImVec2(0, listH))) {
 		ImGui::TableSetupScrollFreeze(0, 1);
