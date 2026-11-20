@@ -317,6 +317,58 @@ void c_NEW_CALL_c2(caosVM* vm) {
 }
 
 /**
+ RSTP (command) lift (agent) stop_y (integer)
+ %status maybe
+ %variants c2
+
+ openc2e: the opposite of NEW: CALL. Removes a C1/C2 lift's stop nearest
+ stop_y (the lift's bottom edge when it stands there; within 12 px, else
+ nothing happens), kills the call buttons for that stop and renumbers the
+ others. The lift keeps going to the stop it was heading for, or, if that
+ was the one removed, stops at the nearest one left when next used. The
+ world file's lifts are made anew at each load, so a world addition script
+ removes the stop again each time (owner, 2026-11-19: the cage lift by the
+ huts no longer stops at the old deck where the glass tube now runs).
+*/
+void c_RSTP(caosVM* vm) {
+	VM_PARAM_INTEGER(stop_y)
+	VM_PARAM_VALIDAGENT(liftagent)
+
+	Lift* lift = dynamic_cast<Lift*>(liftagent.get());
+	THROW_IFNOT(lift);
+	std::vector<int>& ys = lift->callbuttony;
+	if (ys.size() < 2)
+		return; // (a lift needs two stops)
+	unsigned int id = 0;
+	for (unsigned int i = 1; i < ys.size(); i++)
+		if (std::abs(ys[i] - stop_y) < std::abs(ys[id] - stop_y))
+			id = i;
+	if (std::abs(ys[id] - stop_y) > 12) {
+		std::string all;
+		for (int y : ys)
+			all += fmt::format(" {}", y);
+		fmt::print("* RSTP: no stop within 12 px of {} on the lift at {:.0f} (stops:{})\n", stop_y, lift->x, all);
+		return;
+	}
+	fmt::print("* RSTP: stop {} taken from the lift at {:.0f}\n", ys[id], lift->x);
+	ys.erase(ys.begin() + id);
+	for (auto& other : world.agents)
+		if (auto* cb = dynamic_cast<CallButton*>(other.get()))
+			if (cb->lift.get() == lift) {
+				if (cb->buttonid == id)
+					cb->kill();
+				else if (cb->buttonid > id)
+					cb->buttonid--;
+			}
+	auto renumber = [&](unsigned int& b) {
+		if (b > id || b >= ys.size())
+			b = b > 0 ? b - 1 : 0;
+	};
+	renumber(lift->currentbutton);
+	renumber(lift->newbutton);
+}
+
+/**
  NEW: COMP (command) family (integer) genus (integer) species (integer) sprite_file (string) image_count (integer) first_image (integer) plane (integer)
  %status maybe
 

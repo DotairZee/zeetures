@@ -325,6 +325,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/madeart/volcano_passage.cpp
 	src/openc2e/madeart/ettinhead.cpp
 	src/openc2e/madeart/golden_desert_heads.cpp
+	src/openc2e/madeart/npcore.cpp
 	src/openc2e/CompoundAgent.cpp
 	src/openc2e/AnimatablePart.cpp
 	src/openc2e/ButtonPart.cpp
