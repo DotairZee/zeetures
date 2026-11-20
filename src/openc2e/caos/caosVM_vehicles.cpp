@@ -113,6 +113,8 @@ void c_GPAS(caosVM* vm) {
 			continue;
 		if (species && species != a->species)
 			continue;
+		if (a->invehicle.get() == v)
+			continue; // already aboard (see GPAS below)
 
 		if (agentsTouching(a.get(), v)) {
 			v->addCarried(a);
@@ -140,6 +142,14 @@ void c_GPAS_c2(caosVM* vm) {
 			continue;
 		if (a->family != 4)
 			continue; // only pickup creatures (TODO: good check?)
+		// already aboard: left where it is. addCarried lets a passenger out
+		// of its vehicle before taking it in, so each GPAS let every rider
+		// out and took it back: the submarine's rescue watcher (GPAS every 2
+		// ticks while it moves) dropped and re-boarded its riders about
+		// 13,000 times in three minutes of a Home copy, each drop marking
+		// them falling and moving them to a place nearby (2026-11-20)
+		if (a->invehicle.get() == v)
+			continue;
 
 		if (agentsTouching(a.get(), v)) {
 			v->addCarried(a);
