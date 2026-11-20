@@ -160,6 +160,10 @@ VERSIONS = [
     ("0.16.10", "5f417596",
      "Fix: creatures share food with friends who are really hungry; a friend's hunger was read from a "
      "chemical that never changes in Creatures 2."),
+    ("0.16.11", "7589bb9f",
+     "A second skinny fruit bush in the gene splicing room, by the teleporter where the glass tube comes in. "
+     "Fix: riders stay aboard the submarine (and other vehicles) for the whole trip; they were let out and "
+     "taken back many times a second."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

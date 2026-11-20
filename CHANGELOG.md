@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 541 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 545 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.11](#version-01611): 4 commits, 20 November 2026
 - [0.16.10](#version-01610): 3 commits, 20 November 2026
 - [0.16.9](#version-0169): 2 commits, 20 November 2026
 - [0.16.8](#version-0168): 3 commits, 19 November 2026 to 20 November 2026
@@ -34,6 +35,42 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.11
+
+A second skinny fruit bush in the gene splicing room, by the teleporter where the glass tube comes in. Fix: riders stay aboard the submarine (and other vehicles) for the whole trip; they were let out and taken back many times a second.
+
+### 20 November 2026
+
+#### Version 0.16.11
+
+[`7589bb9f`](https://github.com/DotairZee/zeetures/commit/7589bb9fa7fe87a912ac88449b3630f8d5c3355d)
+
+#### food.cos: a second skinny bush in the gene splicing room
+
+[`38b1d81a`](https://github.com/DotairZee/zeetures/commit/38b1d81a6e0e8e11e0359aa4675a30772998a81d)
+
+The room's east end held about a fifth of the world's hungry creatures,
+queuing for its one slender bush (3 fruit at most). A second slender
+potted bush in the room's west half (6140,1665, floor 1798), between the
+teleporter dish and the machinery, where the glass tube comes in (owner's
+choice and placement). Matched copies: world hungry 43%/43% vs 48%/45%,
+starving 28%/29% vs 35%/29%.
+
+#### GPAS: leave creatures already aboard where they are
+
+[`6029d574`](https://github.com/DotairZee/zeetures/commit/6029d57418b31f69bd2cad9f80a7c97ab08557c0)
+
+addCarried lets a passenger out of its vehicle before taking it in, so
+every GPAS let each rider out and took it back. The submarine's rescue
+watcher calls GPAS every 2 ticks while the sub moves: in a Home copy its
+riders were dropped and re-boarded about 13,000 times in three minutes,
+each drop marking them falling and moving them to a place nearby. With
+the check: 124 boardings, riders let out at the docks.
+
+#### Changelog
+
+[`77945aab`](https://github.com/DotairZee/zeetures/commit/77945aab580590b7cdde8d244b59dc9e46fdf94a)
 
 ## Version 0.16.10
 
