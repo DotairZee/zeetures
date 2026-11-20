@@ -12,13 +12,12 @@
 * is the owner's: the dock's floor (y 1544) to x 4735, down over the dock's
 * collar to (4801, 1569), straight down to the lab's floor (1798) at x 6023.
 *
-* 1. The car, its watcher and both of its callers, gone (transit.cos no
-*    longer makes them; the car and the dome's dock button are the world
-*    file's, made again at each load).
+* 1. The car, its watcher and its far caller, gone (transit.cos no longer
+*    makes them; the car is the world file's, made again at each load).
 enum 3 6 3 kill targ next
 enum 2 1 143 kill targ next
 enum 2 2 219 kill targ next
-enum 2 2 22 kill targ next
+* (the dome's dock button, 2 2 22, is the lab's power button now: transit.cos)
 *
 * 2. The cage lift by the huts (3 2 2, cage at x 5116 after treelift.cos)
 *    no longer stops at the old deck (y 1615), where the tube now runs: the

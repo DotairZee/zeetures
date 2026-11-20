@@ -225,3 +225,11 @@ replace dpas part 2 pose 0 tick 15
 scrp 3 2 4 0
 find dpas part 2 pose 0 tick 30
 replace dpas part 2 pose 0 tick 15
+
+* The gene lab's console again (owner, 2026-11-19, night: "I don't want
+* this dialog to ever pop-up"). Pressed while the lab has no power, it
+* opened announcement 5 ("The gene splicer has no power..."); it now stops
+* just before making that window (the pumps' twitch and the sound stay).
+scrp 2 2 21 1
+find setv var8 cmrx setv var9 cmry new: cbub anou 16 0 5
+replace setv actv 0 stop setv var8 cmrx setv var9 cmry new: cbub anou 16 0 5

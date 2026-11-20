@@ -674,7 +674,17 @@ void Engine::update() {
 	}
 	if (static const char* k = getenv("OPENC2E_TEST_CLICK"); k && world.hand()) {
 		int n = 0, cx = 0, cy = 0;
-		if (sscanf(k, "%d,%d,%d", &n, &cx, &cy) == 3 && world.tickcount == (unsigned int)n) {
+		// ("+N,x,y": N ticks after the world loaded, as OPENC2E_TEST_KILL=+N)
+		static unsigned int clickAt = 0;
+		if (k[0] == '+' && sscanf(k + 1, "%d,%d,%d", &n, &cx, &cy) == 3) {
+			if (!clickAt)
+				clickAt = world.tickcount + (unsigned int)n;
+			n = (int)clickAt;
+		}
+		if (sscanf(k, "%*[+]%d,%d,%d", &n, &cx, &cy) == 3 || sscanf(k, "%d,%d,%d", &n, &cx, &cy) == 3)
+			if (k[0] == '+')
+				n = (int)clickAt;
+		if (n && world.tickcount == (unsigned int)n) {
 			int prevsel = world.selectedcreature ? (int)world.selectedcreature->genus : -1;
 			if (CompoundPart* hit = world.partAt(cx, cy, true, false, true))
 				fmt::print("* TEST CLICK hits {} {} {} plane {}\n", (int)hit->getParent()->family, (int)hit->getParent()->genus, hit->getParent()->species, hit->getParent()->getZOrder());

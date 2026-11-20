@@ -18,3 +18,44 @@ enum 2 2 219 kill targ next
 * start is quiet, then press the switch.
 enum 2 2 21 setv ov02 1 next
 enum 3 10 11 doif ov00 eq 0 mesg writ targ 0 endi next
+* A world saved with the power on keeps the generator on (OV00 1), but the
+* splicer's console comes back from the world file thinking there is no
+* power (its OV01 0), so a press did nothing but open the "no power" window
+* (owner, 2026-11-19): the console now takes the generator's state at load.
+setv va00 0
+enum 3 10 11 setv va00 ov00 next
+enum 2 2 21 setv ov01 va00 next
+
+* The dome's power button (owner, 2026-11-19, night: the button on the
+* dock's wall that called the pod, "formerly the pod button--turns the
+* power on and off in the dome"; the generator on the desk no longer does).
+* The pod's button (2 2 22) went with the pod (tube-walk.cos, 0.16.0); a new
+* one stands in its place (4564,1464), the game's own picture for it (com_
+* frame 37, the player's copy), hand only (ATTR 20, hidden from creatures),
+* behind creatures. A press starts the generator (3 10 11, its activate 1)
+* when the power is off and stops it (its deactivate) when on, through the
+* generator's own scripts, so the lab's machines and the splicer's console
+* follow as before. The generator itself takes no clicks any more (BHVR 0
+* 0) and creatures no longer see it (ATTR 0).
+enum 2 2 22 kill targ next
+inst new: simp com_ 2 37 1300 0 setv cls2 2 2 22 setv attr 20 bhvr 1 0 pose 0 mvto 4564 1464 slow
+enum 3 10 11 setv attr 0 bhvr 0 0 next
+
+scrp 2 2 22 1
+  doif from eq pntr
+    pose 1 snde ding
+    enum 3 10 11
+      doif ov00 eq 0
+        mesg writ targ 0
+      else
+        mesg writ targ 2
+      endi
+    next
+    wait 10 pose 0
+  endi
+  setv actv 0
+endm
+
+scrp 2 2 22 0
+  setv var0 0
+endm
