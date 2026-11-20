@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 551 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 553 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 1 commits, 20 November 2026
+- [0.18.1](#version-0181): 3 commits, 20 November 2026
 - [0.18.0](#version-0180): 4 commits, 20 November 2026
 - [0.17.5](#version-0175): 2 commits, 20 November 2026
 - [0.17.4](#version-0174): 2 commits, 20 November 2026
@@ -47,11 +47,37 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.18.1
 
-Changes since the last version.
+A starving creature with no food in sight and no known way out tries a lift: it rides one that is there, calls one, or walks to one it can see (the west airlock's corridor, whose only ways out are lifts).
 
 ### 20 November 2026
+
+#### Version 0.18.1
+
+[`7cf503c5`](https://github.com/DotairZee/zeetures/commit/7cf503c5957014f9d63d35dd8d1b819ed07e5941)
+
+#### Homeostat mind: a starving creature with no way out rides a lift
+
+[`24c647df`](https://github.com/DotairZee/zeetures/commit/24c647df98b28cb06bfdc5cb7bccbff69d896d3c)
+
+Owner, 2026-11-20 ("smarter lift use", for the west airlock's corridor,
+rooms 120-118, whose only ways out are two cage lifts). Starving creatures
+there stayed for minutes at Hunger 255: of 412 lift actions in the
+corridor in two copies only 27 led to a ride; their food memories were
+thousands of px off, worth too little for the floor-change steps, and the
+starve-leave rule left lifts out. Now starve-leave, as its last resort
+after known far links and teleporters: ride a lift that is here (a way not
+yet found futile; activate 1 and 2 go opposite ways), or press its call
+button, or walk to a lift in sight on this floor. Rides are learned as
+any other (learnRide). OPENC2E_NO_STARVE_LIFT turns it off.
+
+Tests. Eight norns put in the corridor, 5 minutes: 7 and 7 left (median
+exit 40 and 140 s) vs 5 and 7 with the switch off (120 and 110 s). Whole
+world, matched copies: hungry 36% and 36% vs 36% and 35%, starving 24%
+and 20% vs 22% and 24%: no change. The corridor's own crowd did not fall
+(about 4 vs 0.6-3.7): it has a berry bush (x 150-200) that creatures
+remember and come to, by lift too.
 
 #### Nightly: the macOS build script executable; the AppImage check passes
 

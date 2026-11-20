@@ -200,6 +200,9 @@ VERSIONS = [
      "and Intel) and Linux AppImages. Zeetures finds Creatures 2 in the usual Steam and GOG folders, or asks "
      "for its folder once and remembers it (File > Creatures 2 Folder changes it). The nightly keeps a "
      "system's download from the night before when its build fails, so macOS no longer drops out."),
+    ("0.18.1", "7cf503c5",
+     "A starving creature with no food in sight and no known way out tries a lift: it rides one that is "
+     "there, calls one, or walks to one it can see (the west airlock's corridor, whose only ways out are lifts)."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
