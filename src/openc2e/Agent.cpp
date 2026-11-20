@@ -1261,6 +1261,29 @@ void Agent::physicsTickC2() {
 	if (dx != 0 || dy != 0)
 		falling = true;
 
+	// C2: an object at rest over open water sinks (owner, 2026-11-20: a toy,
+	// seeds and a tin lay on the east sea's surface). Objects stopped there
+	// at some time (their falling cleared, GRAV 0) were saved so and never
+	// looked again at what is under them, though the way down into the water
+	// room is open. Now and then a resting object checks: its feet in a room
+	// with no floor line, just above an open doorway into a water room (C2
+	// room type 2) that it fits through: it falls again. Boardwalks and
+	// docks over water have floor lines and keep what lies on them.
+	if (engine.version == 2 && !falling && sufferphysics() && family == 2 && !carriedby && !invehicle &&
+		(world.tickcount + (unsigned int)getUNID()) % 50 == 0 && world.map) {
+		float cx = x + getWidth() / 2.0f, bottom = y + getHeight();
+		std::shared_ptr<Room> r = world.map->roomAt(cx, bottom - 1);
+		if (r && r->type != 2 && r->floorpoints.empty()) {
+			// (within 16 px of its room's bottom: seeds rest 11 px above it)
+			float span = std::max(1.0f, (float)r->x_right - (float)r->x_left);
+			float roombottom = r->y_left_floor + ((float)r->y_right_floor - (float)r->y_left_floor) * (cx - r->x_left) / span;
+			std::shared_ptr<Room> below = world.map->roomAt(cx, roombottom + 2);
+			if (bottom > roombottom - 16 && below && below != r && below->type == 2 && world.map->hasDoor(r, below) &&
+				size < world.map->getDoorPerm(r, below))
+				falling = true;
+		}
+	}
+
 	if (falling && sufferphysics()) {
 		dy += round(accg);
 	}
