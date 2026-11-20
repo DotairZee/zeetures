@@ -949,7 +949,11 @@ MindPerception oldCreature::buildPerception() {
 				sa.genus = oc->getGenus();
 				sa.female = oc->isFemale();
 				sa.stage = (int)oc->getStage();
-				sa.hunger = oc->getChemical(150) / 255.0f; // (the Hunger drive's chemical)
+				// its Hunger drive (C2 drive 2, as the census reads it). C2 keeps
+				// drives apart from the chemicals: chemical 150 is not hunger
+				// there and does not move (2026-11-20: about 60% of Home's
+				// creatures stuck at 248, so sharing went to the wrong friends)
+				sa.hunger = oc->getDrive(2) / 255.0f;
 				if (const Bond* b = Relationships::bondOf(this, sa.who)) {
 					sa.affinity = b->affinity;
 					sa.fear = b->fear;
