@@ -496,16 +496,22 @@ void WorldHistoryPage() {
 		return;
 	}
 	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit;
-	// the list fills the kit's window, which the player sizes (owner,
-	// 2026-11-13: a fixed 800 px left the window's right side empty and cut
-	// the details short)
-	if (ImGui::BeginTable("log", 5, flags, ImVec2(0, std::max(200.0f, ImGui::GetContentRegionAvail().y)))) {
+	// fixed columns, the kit fitting them (owner, 2026-11-20: the Details
+	// column half as wide, its full text on hovering; before, 2026-11-13, the
+	// list filled a window the player sized, which made the Statistics page
+	// as wide)
+	const float colW[5] = {180, 96, 120, 230, 44};
+	const ImGuiStyle& st = ImGui::GetStyle();
+	float tableW = st.ScrollbarSize + 6;
+	for (float w : colW)
+		tableW += w + st.CellPadding.x * 2 + 1;
+	if (ImGui::BeginTable("log", 5, flags, ImVec2(tableW, 430))) {
 		ImGui::TableSetupScrollFreeze(0, 1);
-		ImGui::TableSetupColumn("When", 0, 180);
-		ImGui::TableSetupColumn("What", 0, 96); // room for "Unconscious"
-		ImGui::TableSetupColumn("Who", 0, 120);
-		ImGui::TableSetupColumn("Details", ImGuiTableColumnFlags_WidthStretch);
-		ImGui::TableSetupColumn("", 0, 44);
+		ImGui::TableSetupColumn("When", 0, colW[0]);
+		ImGui::TableSetupColumn("What", 0, colW[1]); // room for "Unconscious"
+		ImGui::TableSetupColumn("Who", 0, colW[2]);
+		ImGui::TableSetupColumn("Details", 0, colW[3]);
+		ImGui::TableSetupColumn("", 0, colW[4]);
 		ImGui::TableHeadersRow();
 		for (int i = (int)log.size() - 1; i >= 0; i--) {
 			auto& e = log[i];
@@ -518,7 +524,18 @@ void WorldHistoryPage() {
 			ImGui::TableNextColumn();
 			ImGui::TextUnformatted(entryName(e).c_str());
 			ImGui::TableNextColumn();
-			ImGui::TextUnformatted(entryDetail(e).c_str());
+			{
+				std::string detail = entryDetail(e);
+				ImGui::TextUnformatted(detail.c_str());
+				// the whole of it, when it does not fit the column
+				if (ImGui::IsItemHovered() && ImGui::CalcTextSize(detail.c_str()).x > ImGui::GetColumnWidth()) {
+					ImGui::BeginTooltip();
+					ImGui::PushTextWrapPos(ImGui::GetFontSize() * 30.0f);
+					ImGui::TextUnformatted(detail.c_str());
+					ImGui::PopTextWrapPos();
+					ImGui::EndTooltip();
+				}
+			}
 			ImGui::TableNextColumn();
 			if (e.kind == lifeLogEntry::death) {
 				if (ImGui::SmallButton("Grave"))

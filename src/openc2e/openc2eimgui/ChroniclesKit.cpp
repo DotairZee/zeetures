@@ -180,13 +180,14 @@ void StatisticsPage() {
 				children[*p]++;
 	}
 	ImGui::TextUnformatted("Every creature this world has had");
-	// (across the window's width, as the records below; owner, 2026-11-13:
-	// no empty band at the right)
-	if (ImGui::BeginTable("counts", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
-		ImGui::TableSetupColumn("", 0, 120);
-		ImGui::TableSetupColumn("Living", 0, 80);
-		ImGui::TableSetupColumn("Died", 0, 80);
-		ImGui::TableSetupColumn("Hatched here", 0, 110);
+	// (at their own widths, the kit fitting the page; owner, 2026-11-20: the
+	// page was far wider than it needed)
+	const float countsW = 90 + 70 + 70 + 100 + ImGui::GetStyle().CellPadding.x * 8 + 4;
+	if (ImGui::BeginTable("counts", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit, ImVec2(countsW, 0))) {
+		ImGui::TableSetupColumn("", 0, 90);
+		ImGui::TableSetupColumn("Living", 0, 70);
+		ImGui::TableSetupColumn("Died", 0, 70);
+		ImGui::TableSetupColumn("Hatched here", 0, 100);
 		ImGui::TableHeadersRow();
 		const char* kinds[4] = {"", "Norns", "Grendels", "Ettins"};
 		for (int g = 1; g <= 3; g++) {
@@ -251,10 +252,9 @@ void StatisticsPage() {
 				recs[5].rows.push_back({(double)f, fmt::format("{}: {}", who, f)});
 		}
 	}
-	// as many across as the window's width holds whole (up to three), so
-	// the records use the width without cutting lines short
-	int across = std::clamp((int)(ImGui::GetContentRegionAvail().x / 360.0f), 1, 3);
-	if (ImGui::BeginTable("records", across, ImGuiTableFlags_SizingStretchSame)) {
+	// two across, each as wide as its longest line
+	const int across = 2;
+	if (ImGui::BeginTable("records", across, ImGuiTableFlags_SizingFixedFit)) {
 		for (size_t i = 0; i < recs.size(); i++) {
 			if (i % across == 0)
 				ImGui::TableNextRow();

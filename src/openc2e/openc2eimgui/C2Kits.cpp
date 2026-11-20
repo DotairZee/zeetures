@@ -62,7 +62,7 @@ static const KitDef s_kits[] = {
 	{"breeders", "Breeder's Kit", "Breeder's", 5, DrawBreedersKit},
 	{"owners", "Owner's Kit", "Owner's", 2, DrawOwnersKit},
 	{"observation", "Observation Kit", "Observation", 6, DrawObservationKit},
-	{"chronicles", "Chronicles Kit", "Chronicles", 8, DrawChroniclesKit, true},
+	{"chronicles", "Chronicles Kit", "Chronicles", 8, DrawChroniclesKit}, // (fits its page: owner, 2026-11-20)
 	{"graveyard", "Graveyard Kit", "Graveyard", 9, DrawGraveyardKit},
 	{"mind", "Mind Kit", "Mind", 12, DrawMindKit},
 	{"ecology", "Ecology Kit", "Ecology", 1, DrawEcologyKit},
