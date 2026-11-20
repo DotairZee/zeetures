@@ -190,6 +190,8 @@ VERSIONS = [
      "Fix: the white line in the sky over the west sea is gone (a stray row of pixels in one frame of the "
      "game's own picture of the big tree, now made without it). The Insemination page keeps one width "
      "whichever donor or source is picked, and looks for genome files each time it is opened."),
+    ("0.17.4", "ad766b2b",
+     "The Owner's Kit's Relationships list shows seven rows and scrolls, so the kit is less tall."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

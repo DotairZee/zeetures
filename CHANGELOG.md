@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 542 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 544 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.17.4](#version-0174): 2 commits, 20 November 2026
 - [0.17.3](#version-0173): 3 commits, 20 November 2026
 - [0.17.2](#version-0172): 2 commits, 20 November 2026
 - [0.17.1](#version-0171): 3 commits, 20 November 2026
@@ -42,6 +43,22 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.17.4
+
+The Owner's Kit's Relationships list shows seven rows and scrolls, so the kit is less tall.
+
+### 20 November 2026
+
+#### Version 0.17.4
+
+[`ad766b2b`](https://github.com/DotairZee/zeetures/commit/ad766b2b7620f0f4d4082e4636ed39a4367a263c)
+
+#### Owner's Kit Relationships: the list seven rows tall, scrolling
+
+[`b14850f7`](https://github.com/DotairZee/zeetures/commit/b14850f788ac2bc5fc8b0bb504def8454e556e17)
+
+Owner, 2026-11-20: the kit was too tall. The list under the map was eleven frame heights (about fifteen rows); it is now its header and seven rows (text height plus cell padding), scrolling.
 
 ## Version 0.17.3
 
