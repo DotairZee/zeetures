@@ -138,6 +138,9 @@ VERSIONS = [
     ("0.16.3", "784a4df6",
      "Fix: the domed lab's glass lift is behind creatures walking past it, and still in front of the "
      "creatures riding in it."),
+    ("0.16.4", "3a71370b",
+     "Fix: the glass tube's checkered glass runs on around the pulley by the huts, so creatures inside "
+     "show through it there too."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 521 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 524 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.4](#version-0164): 3 commits, 19 November 2026
 - [0.16.3](#version-0163): 3 commits, 19 November 2026
 - [0.16.2](#version-0162): 3 commits, 19 November 2026
 - [0.16.1](#version-0161): 3 commits, 19 November 2026
@@ -27,6 +28,33 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.4
+
+Fix: the glass tube's checkered glass runs on around the pulley by the huts, so creatures inside show through it there too.
+
+### 19 November 2026
+
+#### Version 0.16.4
+
+[`3a71370b`](https://github.com/DotairZee/zeetures/commit/3a71370b0a7e763e62d053d9ddcfac94f7dff32f)
+
+#### The tube's glass is unbroken around the deck's pulley
+
+[`6721e726`](https://github.com/DotairZee/zeetures/commit/6721e726cf78e2395eb439781ca3c40aba9f6a12)
+
+The owner-traced mask of what stands in front of the tube covered the
+pulley's housing as a block (x 5146-5199, y 1486-1606), so its dark gaps
+were drawn solid over the tube's checkered glass: the checkering looked
+different there and a creature inside had its face hidden (owner's
+screenshot, 2026-11-19). In front there now: the two wheels and their
+plate, the two posts, and the crane sprite's own pixels; the glass shows
+everywhere else. Engine and recipe still identical (all four pictures,
+max difference 0).
+
+#### Changelog
+
+[`27f03bbd`](https://github.com/DotairZee/zeetures/commit/27f03bbdc7b1f65839108fbb8dd0faa8f45a61c9)
 
 ## Version 0.16.3
 
