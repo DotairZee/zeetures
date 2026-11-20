@@ -28,6 +28,11 @@ ssfc 159 4 0 0 200 0 390 30 782 30
 * own now (251, the same values as 159), with no doorway to any other, so the
 * wall stays a wall and a corner reaching past it is still in a room.
 room 251 6895 1470 6930 1798 room 159 4 room 159 5 room 159 6 room 159 7 room 159 8 room 159 9 room 159 12 room 159 13 room 159 14 room 159 15 room 159 16 room 159 17 room 159 19
+*   Its floor at the height of 159's east end (30 above 1798), not at the
+*   room's bottom: a creature against the wall with a corner of its box in
+*   the strip stood partly over a floor 30 px lower and bobbed up and down
+*   in the rock (owner's screencast, 2026-11-19, 22:24).
+ssfc 251 2 0 30 35 30
 setv door 0 158 159 255
 enum 2 1 157 kill targ next
 *
@@ -48,3 +53,8 @@ enum 3 10 4 plne 1100 next
 * 2026-11-14: "it should be behind both"); now at 8990, in front of creatures
 * and just behind the frame.
 enum 3 10 2 plne 8990 next
+*
+* The splicer's console (2 2 21, the dome with the lever and the lamp, by
+* the tall pillar) was at plane 2000, in front of creatures walking past
+* (owner, 2026-11-19); now 1400, behind them.
+enum 2 2 21 plne 1400 next
