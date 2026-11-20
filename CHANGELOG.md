@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 553 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 556 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.14](#version-01614): 3 commits, 20 November 2026
 - [0.16.13](#version-01613): 3 commits, 20 November 2026
 - [0.16.12](#version-01612): 5 commits, 20 November 2026
 - [0.16.11](#version-01611): 4 commits, 20 November 2026
@@ -37,6 +38,28 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.14
+
+The domed lab's power button is green while the power is on and red while it is off.
+
+### 20 November 2026
+
+#### Version 0.16.14
+
+[`b71b325f`](https://github.com/DotairZee/zeetures/commit/b71b325f2caf8747ea6231adceaf3f2a122a06c5)
+
+#### transit.cos: the dome's power button green when on, red when off
+
+[`ee70f826`](https://github.com/DotairZee/zeetures/commit/ee70f826040f693b51c71b11ef61d61c0884b8fe)
+
+Owner, 2026-11-20. The button (2 2 22) used com_ frame 37 (red) always;
+it now starts at frame 36 (green), and a 10-tick timer sets picture 0
+(green) while the generator (3 10 11) is on and 1 (red) while it is off.
+
+#### Changelog
+
+[`8e4a44e2`](https://github.com/DotairZee/zeetures/commit/8e4a44e2cc0307cce66addac135e24e376ffc6aa)
 
 ## Version 0.16.13
 

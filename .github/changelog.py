@@ -171,6 +171,8 @@ VERSIONS = [
     ("0.16.13", "9772325e",
      "Fix: the egg machine under the gene lab lays one egg at a time; while the world was at its population "
      "limit it kept laying ettin eggs that could not hatch, and the pile is cleared at load."),
+    ("0.16.14", "b71b325f",
+     "The domed lab's power button is green while the power is on and red while it is off."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
