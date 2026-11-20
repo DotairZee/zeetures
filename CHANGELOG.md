@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 556 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 559 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.17.0](#version-0170): 3 commits, 20 November 2026
 - [0.16.14](#version-01614): 3 commits, 20 November 2026
 - [0.16.13](#version-01613): 3 commits, 20 November 2026
 - [0.16.12](#version-01612): 5 commits, 20 November 2026
@@ -38,6 +39,46 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.17.0
+
+The Breeder's Kit has an Insemination tab for female creatures: choose any creature of her kind, male or female, living, departed or a genome file, see the two side by side with their temperaments and kinship, and she conceives from its genes. Creatures' genes are kept when they die so they can be chosen later.
+
+### 20 November 2026
+
+#### Version 0.17.0
+
+[`59623f5f`](https://github.com/DotairZee/zeetures/commit/59623f5f4f39445a2f908f178321b1ab6a6b3449)
+
+#### Breeder's Kit: Insemination tab
+
+[`659db245`](https://github.com/DotairZee/zeetures/commit/659db245b0377e5aa16d16bdb4c597a7162acab4)
+
+Owner, 2026-11-20: for a female creature, choose any creature of her
+kind's genes, male or female, to impregnate her (the owner's chosen
+mock-up C, in the kit's own style). The tab shows only for females: a
+donor picker over living creatures, departed ones and genome files; both
+side by side with the Owner's Kit temperament bars; kinship from the
+family records; her readiness (adolescent or older, not pregnant, not set
+infertile, genes readable); Inseminate.
+
+Breeding: inseminate() crosses her genome with the donor's as a mating
+does, passes on temperament and seasonal rhythm (drawn at random for a
+donor without them), sets BABY and her pregnancy; her life story says
+"Was inseminated with X's genes", the donor's "Gave its genes for Y's
+egg". A creature's genes are now kept when it dies (the world folder's
+departed/MONIKER.gen and .traits) so departed creatures can be donors.
+Genome files: the player's and the game's Genetics folders, without the
+generated z names. TraitBar is shared from the Owner's Kit.
+
+Developer aids: OPENC2E_TEST_SELECT=female, OPENC2E_TEST_INSEM="SOURCE\[:NAME\]",
+OPENC2E_TEST_INSEM_FRAMES. Tests (copies of Home): living donor, genome
+file and departed donor each conceived; the file donor's baby was laid
+and hatched in the run; the tab is hidden for a male.
+
+#### Changelog
+
+[`df24c039`](https://github.com/DotairZee/zeetures/commit/df24c039c788c026cad6e4007d8e22a83b06d605)
 
 ## Version 0.16.14
 

@@ -173,6 +173,11 @@ VERSIONS = [
      "limit it kept laying ettin eggs that could not hatch, and the pile is cleared at load."),
     ("0.16.14", "b71b325f",
      "The domed lab's power button is green while the power is on and red while it is off."),
+    ("0.17.0", "59623f5f",
+     "The Breeder's Kit has an Insemination tab for female creatures: choose any creature of her kind, male "
+     "or female, living, departed or a genome file, see the two side by side with their temperaments and "
+     "kinship, and she conceives from its genes. Creatures' genes are kept when they die so they can be "
+     "chosen later."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
