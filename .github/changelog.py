@@ -143,6 +143,9 @@ VERSIONS = [
      "show through it there too."),
     ("0.16.5", "88f0214c",
      "The Metamorph Device stands 20 px further west in the gene splicer room, its switch with it."),
+    ("0.16.6", "09400119",
+     "Fix: creatures no longer walk in mid-air across the domed lab's left side and through its glass "
+     "lift's shaft; a wall stands at the shaft's left side."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

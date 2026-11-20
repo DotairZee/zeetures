@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 527 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 530 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.6](#version-0166): 3 commits, 19 November 2026
 - [0.16.5](#version-0165): 3 commits, 19 November 2026
 - [0.16.4](#version-0164): 3 commits, 19 November 2026
 - [0.16.3](#version-0163): 3 commits, 19 November 2026
@@ -29,6 +30,30 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.6
+
+Fix: creatures no longer walk in mid-air across the domed lab's left side and through its glass lift's shaft; a wall stands at the shaft's left side.
+
+### 19 November 2026
+
+#### Version 0.16.6
+
+[`09400119`](https://github.com/DotairZee/zeetures/commit/094001193128aa983a4ca2b998ac363ff43436a8)
+
+#### Domed lab: a wall at the glass lift shaft's left side
+
+[`72d8eefa`](https://github.com/DotairZee/zeetures/commit/72d8eefae4c32a5f442a002cb7e0bb9075f9e677)
+
+The right platform's floor (room 35, y 1739) ran on west over the left
+balcony to the dome's wall, joining the walkway from the west: creatures
+walked across in mid-air and through the lift's shaft (owner, 2026-11-19).
+Room 35 now ends at x 4225; the shaft's column is room 255, open to the
+right platform and walled from 35. Copy test: none got past in 45 s.
+
+#### Changelog
+
+[`6f989b21`](https://github.com/DotairZee/zeetures/commit/6f989b21f02947905bbf27170647bb92a21378cf)
 
 ## Version 0.16.5
 
