@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 555 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 557 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.18.3](#version-0183): 2 commits, 20 November 2026
 - [0.18.2](#version-0182): 2 commits, 20 November 2026
 - [0.18.1](#version-0181): 3 commits, 20 November 2026
 - [0.18.0](#version-0180): 4 commits, 20 November 2026
@@ -47,6 +48,34 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.18.3
+
+Each creature ages at its own pace, 0.9 to 1.1 times its genome's lifespan, drawn at hatching: creatures of one genome no longer all die at the same age, and a hatching boom no longer becomes a wave of old-age deaths.
+
+### 20 November 2026
+
+#### Version 0.18.3
+
+[`5ad16c0e`](https://github.com/DotairZee/zeetures/commit/5ad16c0e0684693fffda75cbb5423c49165707e2)
+
+#### Each creature ages at its own pace
+
+[`d55e606d`](https://github.com/DotairZee/zeetures/commit/d55e606d5795ceacf9d1af8ec6562db37ea981eb)
+
+A creature's lifespan was exactly its genome's: the Life chemical (76)
+decays by the genome's half-life gene, so every creature of one genome
+died at the same age (all the world's ettins; a hatching boom's norns,
+in a wave of old-age deaths about 10 hours later). Each C2 creature now
+draws its own pace at hatching, 0.9-1.1 (the sum of two draws, most near
+1): its Life decay steps fall due 1/pace times as often, so it lives
+about pace times its genome's lifespan. C2's lifespans stay the default.
+Saved as lifespan-scale; older saves draw one at load.
+OPENC2E_NO_LIFE_SPREAD keeps every creature at its genome's.
+
+Test (copy of Home, two saves 60,000 ticks apart): fast agers (mean
+0.95) lost Life 5.2% faster than the middle and slow ones (1.05) 4.2%
+slower; all 124 creatures in both saves kept their pace.
 
 ## Version 0.18.2
 

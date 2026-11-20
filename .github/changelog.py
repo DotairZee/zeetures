@@ -206,6 +206,9 @@ VERSIONS = [
     ("0.18.2", "3ee6c7a9",
      "A new program icon, drawn from scratch: an egg with a heartbeat, a pale pink core in a mauve shell "
      "with a plum outline. It is the window icon and the icon of the Windows, macOS and Linux packages."),
+    ("0.18.3", "5ad16c0e",
+     "Each creature ages at its own pace, 0.9 to 1.1 times its genome's lifespan, drawn at hatching: creatures "
+     "of one genome no longer all die at the same age, and a hatching boom no longer becomes a wave of old-age deaths."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
