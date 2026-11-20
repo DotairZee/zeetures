@@ -192,6 +192,9 @@ VERSIONS = [
      "whichever donor or source is picked, and looks for genome files each time it is opened."),
     ("0.17.4", "ad766b2b",
      "The Owner's Kit's Relationships list shows seven rows and scrolls, so the kit is less tall."),
+    ("0.17.5", "e26c1a31",
+     "The Genetics folder is tidied when a world loads: babies' genomes that no world needs any more go "
+     "to the system's Trash, so the folder no longer grows by hundreds of files a day."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

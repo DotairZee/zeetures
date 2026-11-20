@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 544 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 546 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.17.5](#version-0175): 2 commits, 20 November 2026
 - [0.17.4](#version-0174): 2 commits, 20 November 2026
 - [0.17.3](#version-0173): 3 commits, 20 November 2026
 - [0.17.2](#version-0172): 2 commits, 20 November 2026
@@ -43,6 +44,36 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.17.5
+
+The Genetics folder is tidied when a world loads: babies' genomes that no world needs any more go to the system's Trash, so the folder no longer grows by hundreds of files a day.
+
+### 20 November 2026
+
+#### Version 0.17.5
+
+[`e26c1a31`](https://github.com/DotairZee/zeetures/commit/e26c1a31a3047498fb903e9d2d3854aab4f87122)
+
+#### Tidy the Genetics folder at world load: unused generated genomes to the Trash
+
+[`fc5c2185`](https://github.com/DotairZee/zeetures/commit/fc5c2185a5d0b34c574740404afed9bd3b69997b)
+
+Owner, 2026-11-20 ("tidy at world load"). Every conception, NEW: GENE and
+splice writes a generated genome (z and three letters, with .season and
+.temperament beside it) to the player's Genetics folder; most are needed
+only until the baby hatches. Home's folder had 8,527 of them (12,529
+files, 307 MB), 7,084 named by no world's save. After a saved world is
+restored, tidyGeneratedGenomes reads every world's .txt files for the
+generated names they mention and moves each generated genome file that
+none mentions, and that is over a day old, to the system Trash: the
+freedesktop.org Trash on Linux (files/ and info/\*.trashinfo), ~/.Trash on
+macOS, the Recycle Bin on Windows (SHFileOperation with undo). Only
+generated names in the user data folder's Genetics; nothing if no save
+could be read; OPENC2E_NO_GENOME_TIDY turns it off. Departed donors'
+genes are kept in the world folder, not here. Test (scratch copy of the
+owner's folder and Home): 10,300 files to the scratch Trash in 0.9 s,
+1,456 named kept, every genome Home's save names still present.
 
 ## Version 0.17.4
 
