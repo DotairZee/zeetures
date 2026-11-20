@@ -1,5 +1,6 @@
 # if we don't have .git, just say we don't know
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+# (a worktree's .git is a file pointing elsewhere: no HEAD to read here)
+if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/.git")
     message(WARNING "Couldn't parse Git rev, not in a Git repository")
     set(git_short_rev "unknown")
     return()

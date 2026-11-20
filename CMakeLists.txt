@@ -326,6 +326,10 @@ add_library(openc2e_core OBJECT
 	src/openc2e/madeart/ettinhead.cpp
 	src/openc2e/madeart/golden_desert_heads.cpp
 	src/openc2e/madeart/npcore.cpp
+	src/openc2e/madeart/tube_walk_paint.cpp
+	src/openc2e/madeart/tube_walk_lab.cpp
+	src/openc2e/madeart/tube_walk_parts.cpp
+	src/openc2e/madeart/tube_walk.cpp
 	src/openc2e/CompoundAgent.cpp
 	src/openc2e/AnimatablePart.cpp
 	src/openc2e/ButtonPart.cpp
