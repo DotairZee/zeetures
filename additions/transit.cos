@@ -31,19 +31,24 @@ enum 2 2 21 setv ov01 va00 next
 * power on and off in the dome"; the generator on the desk no longer does).
 * The pod's button (2 2 22) went with the pod (tube-walk.cos, 0.16.0); a new
 * one stands in its place (4564,1464), the game's own picture for it (com_
-* frame 37, the player's copy), hand only (ATTR 20, hidden from creatures),
+* frames 36-37, the player's copy), hand only (ATTR 20, hidden from creatures),
 * behind creatures. A press starts the generator (3 10 11, its activate 1)
 * when the power is off and stops it (its deactivate) when on, through the
 * generator's own scripts, so the lab's machines and the splicer's console
 * follow as before. The generator itself takes no clicks any more (BHVR 0
 * 0) and creatures no longer see it (ATTR 0).
+* Its light shows the power (owner, 2026-11-20: "green when the power is
+* on, and red when the power is off"): com_ frames 36 (green) and 37 (red),
+* picture 0 and 1 from first image 36; a timer every 10 ticks takes the
+* generator's state (OV00 1 on), so it is right after a press, at load,
+* and whatever else switches the power.
 enum 2 2 22 kill targ next
-inst new: simp com_ 2 37 1300 0 setv cls2 2 2 22 setv attr 20 bhvr 1 0 pose 0 mvto 4564 1464 slow
+inst new: simp com_ 2 36 1300 0 setv cls2 2 2 22 setv attr 20 bhvr 1 0 pose 1 mvto 4564 1464 tick 10 slow
 enum 3 10 11 setv attr 0 bhvr 0 0 next
 
 scrp 2 2 22 1
   doif from eq pntr
-    pose 1 snde ding
+    snde ding
     enum 3 10 11
       doif ov00 eq 0
         mesg writ targ 0
@@ -51,9 +56,14 @@ scrp 2 2 22 1
         mesg writ targ 2
       endi
     next
-    wait 10 pose 0
   endi
   setv actv 0
+endm
+
+scrp 2 2 22 9
+  setv var0 0
+  enum 3 10 11 setv var0 ov00 next
+  doif var0 eq 1 pose 0 else pose 1 endi
 endm
 
 scrp 2 2 22 0
