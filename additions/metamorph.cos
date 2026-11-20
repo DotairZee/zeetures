@@ -43,7 +43,9 @@ enum 3 10 13
 next
 doif va00 ne 0
   targ va00
-  mvto 6244 1601
+* (x 6224: 20 px west of where the owner first chose, 6244; owner,
+* 2026-11-19, night)
+  mvto 6224 1601
   doif totl 2 1 164 eq 0
     inst
     new: simp zmsw 2 0 1200 0
@@ -56,7 +58,7 @@ doif va00 ne 0
 * (on the left end block's front face; the device's setting from it)
   setv va01 0
   enum 2 1 164
-    mvto 6247 1740
+    mvto 6227 1740
 * (a click from the hand sends activate 1; set at each load, as a kept
 * object's click setting is not saved)
     bhvr 1 0
