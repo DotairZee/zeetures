@@ -27,6 +27,26 @@
 * still be clicked. Run by openc2e after the world loads (Additions folder);
 * made anew each load.
 
+* The right platform's floor (room 35, y 1739) ran on west of the shaft
+* over the left balcony (room 33, 1858) to the dome's west wall, joining the
+* walkway from the west (room 51): creatures walked across in mid-air and
+* through the shaft to the right platform (owner, 2026-11-19, night: they
+* should meet a wall at the shaft's left side). Room 35 now ends at x 4225,
+* by the shaft's left side, short of the pod at 4248 (a creature against a
+* wall stands up to about 20 px into it, and the pod would sweep up one
+* touching it); the shaft's column at that level is room 255 (35's values),
+* open to the right platform (36) and walled from 35. ROOM takes all of a
+* room's data, so each room's own values are passed back. Copy test: three
+* creatures walked east at the wall from over the balcony for 45 s; none
+* got past it (furthest right edge x 4199).
+room 35 3917 1544 4225 1739 room 35 4 room 35 5 room 35 6 room 35 7 room 35 8 room 35 9 room 35 12 room 35 13 room 35 14 room 35 15 room 35 16 room 35 17 room 35 19
+room 255 4225 1544 4349 1739 room 35 4 room 35 5 room 35 6 room 35 7 room 35 8 room 35 9 room 35 12 room 35 13 room 35 14 room 35 15 room 35 16 room 35 17 room 35 19
+setv door 0 35 255 0
+setv door 0 255 36 255
+setv door 0 255 32 100
+setv door 0 255 33 100
+setv door 0 35 36 0
+
 enum 3 2 141 kill targ next
 * The callers are 25 x 75 (25% bigger than first drawn, owner 2026-11-09:
 * they read small beside similar devices), each kept centred where it was.
