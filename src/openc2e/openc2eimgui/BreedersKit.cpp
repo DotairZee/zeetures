@@ -268,6 +268,17 @@ static void InseminationPage() {
 	int genus = c->getGenus(); // 0 norn, 1 grendel, 2 ettin
 	const char* kind = genus >= 0 && genus <= 2 ? kinds[genus] : "creature";
 	std::string mumMon = world.history->findMoniker(AgentRef(a));
+	// the genome files are looked for again each time the page is opened
+	// (the kit opened, or the tab chosen; owner, 2026-11-20: no Rescan button)
+	{
+		static int lastFrame = -10;
+		int frame = ImGui::GetFrameCount();
+		if (frame - lastFrame > 2)
+			s_genomeFilesScanned = false;
+		lastFrame = frame;
+	}
+	// the page's width, whatever is shown (colW twice and the gap between)
+	ImGui::Dummy(ImVec2(2 * 270.0f + 24, 0));
 
 	static int from = 0;
 	// developer aid: OPENC2E_TEST_INSEM="SOURCE[:NAME]" (0 living, 1 departed,
@@ -377,11 +388,6 @@ static void InseminationPage() {
 	ImGui::SetNextItemWidth(170);
 	if (ImGui::Combo("##from", &from, froms, 3))
 		s_insemMessage.clear();
-	if (from == 2) {
-		ImGui::SameLine();
-		if (ImGui::SmallButton("Rescan"))
-			scanGenomeFiles();
-	}
 	if (donors.empty()) {
 		if (from == 0)
 			KitNote("No other %s old enough to give its genes (adolescent or older).", kind);
@@ -526,17 +532,18 @@ static void InseminationPage() {
 								   : fmt::format("Not done: {}.", why);
 	}
 	ImGui::EndDisabled();
-	ImGui::SameLine();
+	// (notes wrap at the page's width and do not widen it: the window kept
+	// its size whichever donor or source is picked; owner, 2026-11-20)
 	if (!block.empty())
-		ImGui::TextColored(amber, "Not now: %s.", block.c_str());
+		KitNoteColored(amber, "Not now: %s.", block.c_str());
 	else if (d.source != 2 && d.female)
-		ImGui::TextDisabled("Two mothers: her egg crosses the two genomes as a mating does.");
+		KitNote("Two mothers: her egg crosses the two genomes as a mating does.");
 	else
-		ImGui::TextDisabled("Her egg crosses the two genomes as a mating does.");
+		KitNote("Her egg crosses the two genomes as a mating does.");
 	if (testPress && (!block.empty() || !dg))
 		fmt::print("* TEST INSEMINATE: not pressed ({})\n", block.empty() ? "genes unreadable" : block);
 	if (!s_insemMessage.empty())
-		ImGui::TextColored(s_insemOk ? green : red, "%s", s_insemMessage.c_str());
+		KitNoteColored(s_insemOk ? green : red, "%s", s_insemMessage.c_str());
 	KitNote("The donor is not touched: only a copy of its genes is used. She carries the egg and lays it as usual; the child's sex is chance.");
 }
 
