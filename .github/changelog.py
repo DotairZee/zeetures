@@ -129,6 +129,9 @@ VERSIONS = [
      "cave arch and the teleporter moved beside the tube's end; the cage lift by the huts no longer stops at "
      "the old deck, which now holds its pulley on bamboo props. The tube's pictures are made from the "
      "player's own game files, in the engine, the same on every machine."),
+    ("0.16.1", "630f3c58",
+     "Fix: the cage lift by the huts goes down to the lower deck again, with its caller there, in saved "
+     "worlds too."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 512 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 515 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.1](#version-0161): 3 commits, 19 November 2026
 - [0.16.0](#version-0160): 11 commits, 19 November 2026
 - [0.15.0](#version-0150): 5 commits, 19 November 2026
 - [0.14.1](#version-0141): 4 commits, 19 November 2026
@@ -24,6 +25,31 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.1
+
+Fix: the cage lift by the huts goes down to the lower deck again, with its caller there, in saved worlds too.
+
+### 19 November 2026
+
+#### Version 0.16.1
+
+[`630f3c58`](https://github.com/DotairZee/zeetures/commit/630f3c581f2cebfa0c3c3ef85ae99357d2de8e94)
+
+#### The cage lift by the huts stops at the lower deck again
+
+[`4c21214a`](https://github.com/DotairZee/zeetures/commit/4c21214ab6fdc4df9ac8b4dc6c6f37ef35f224dd)
+
+treelift.cos looked for the lift at x 5126, where the world file has it,
+but its own step 5 moves it to 5116 and a saved world keeps it there, so
+in saved worlds the lift's stop at the lower deck (y 2077) and its caller
+were never made (owner, 2026-11-19). Now the lift is found between 5100
+and 5140; only the 10 px move still needs 5126. Copy test: the caller is
+made, a press brings the cage down to 2077 and the walkway's back to 1858.
+
+#### Changelog
+
+[`97896770`](https://github.com/DotairZee/zeetures/commit/97896770511f00cb51d1e3826b57df48361fa218)
 
 ## Version 0.16.0
 
