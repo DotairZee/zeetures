@@ -158,6 +158,16 @@ static void OpenTestKits() {
 	if (!s)
 		return;
 	s_test_kits = true;
+	// OPENC2E_TEST_SELECT=female: the first adult female norn not pregnant
+	if (const char* sel = getenv("OPENC2E_TEST_SELECT"); sel && std::string(sel) == "female")
+		for (auto& a : world.agents) {
+			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
+			auto* oc = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+			if (oc && a->genus == 1 && oc->isAlive() && oc->isFemale() && (int)oc->getStage() == 4 && oc->getPregnant() == 0 && a->babymoniker == 0) {
+				world.selectedcreature = a;
+				break;
+			}
+		}
 	for (int pass = 0; pass < 2 && !world.selectedcreature; pass++) // a norn, or else any creature
 		for (auto& a : world.agents)
 			if (a && dynamic_cast<CreatureAgent*>(a.get()) && (pass == 1 || a->genus == 1)) {

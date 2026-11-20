@@ -1455,7 +1455,7 @@ static void FamilyPage() {
 // temper red (anger), energy yellow (activity), steadiness blue (calm),
 // boldness orange, curiosity teal (the new and open), sociability pink
 // (warmth), reactivity purple (nervous arousal).
-static void TraitBar(int trait, int percent, const char* label, float width) {
+void TraitBar(int trait, int percent, const char* label, float width) {
 	static const ImU32 colors[NUM_TRAITS] = {
 		IM_COL32(235, 140, 40, 255), // boldness
 		IM_COL32(40, 175, 170, 255), // curiosity

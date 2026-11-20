@@ -65,6 +65,8 @@ void KitBar(float level, const char* label, float width = 192, bool need = false
 ImU32 KitLevelColor(float level, bool need = false);
 // a section heading: warm text with a faint rule under it
 void KitHeading(const char* text);
+// a temperament trait's bar in its own color (Owner's Kit, Temperament page)
+void TraitBar(int trait, int percent, const char* label, float width);
 // a reading in a small panel: heading, the value large with its unit, a
 // line under it in a color, and optionally a trend line (oldest first)
 void KitStatTile(const char* id, const char* head, const std::string& big, const char* unit, const char* sub, ImU32 subColor, float width, const std::vector<float>* trend = nullptr);

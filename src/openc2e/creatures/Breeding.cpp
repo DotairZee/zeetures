@@ -30,6 +30,7 @@
 #include "creatures/oldCreature.h"
 #include "historyManager.h"
 #include "common/Random.h"
+#include "common/io/FileReader.h"
 #include "common/io/FileWriter.h"
 #include "common/io/SpanReader.h"
 #include "common/io/VectorWriter.h"
@@ -38,6 +39,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <fmt/core.h>
 #include <map>
 #include <tuple>
@@ -377,6 +379,143 @@ bool fertileBySetting(const oldCreature* c) {
 	if (!c)
 		return false;
 	return c->fertilityOverride >= 0 ? c->fertilityOverride == 0 : world.allFertile;
+}
+
+static fs::path departedDir() {
+	return engine.currentworlddir / "departed";
+}
+
+void keepDepartedGenes(const std::string& moniker, genomeFile& g, const Temperament& t, float seasonal, bool female) {
+	if (moniker.empty() || engine.currentworlddir.empty())
+		return;
+	std::error_code ec;
+	fs::create_directories(departedDir(), ec);
+	try {
+		FileWriter f(departedDir() / (moniker + ".gen"));
+		f << g;
+		std::ofstream tf(departedDir() / (moniker + ".traits"));
+		tf << fmt::format("female {}\nseasonal {:.4f}\ntemperament", female ? 1 : 0, seasonal);
+		for (float z : t.z)
+			tf << fmt::format(" {:.4f}", z);
+		tf << "\n";
+	} catch (std::exception& e) {
+		fmt::print("* Couldn't keep {}'s genes: {}\n", moniker, e.what());
+	}
+}
+
+int departedSex(const std::string& moniker) {
+	if (moniker.empty() || engine.currentworlddir.empty())
+		return -1;
+	std::ifstream tf(departedDir() / (moniker + ".traits"));
+	std::string key;
+	int v;
+	while (tf >> key)
+		if (key == "female" && (tf >> v))
+			return v ? 1 : 0;
+	return -1;
+}
+
+bool departedGenesKept(const std::string& moniker) {
+	std::error_code ec;
+	return !moniker.empty() && !engine.currentworlddir.empty() && fs::exists(departedDir() / (moniker + ".gen"), ec);
+}
+
+bool loadDepartedGenes(const std::string& moniker, std::shared_ptr<genomeFile>& g, Temperament& t, bool& hasTraits, float& seasonal) {
+	hasTraits = false;
+	if (!departedGenesKept(moniker))
+		return false;
+	try {
+		g = std::make_shared<genomeFile>();
+		FileReader f(departedDir() / (moniker + ".gen"));
+		f >> *g;
+	} catch (std::exception& e) {
+		g.reset();
+		return false;
+	}
+	std::ifstream tf(departedDir() / (moniker + ".traits"));
+	std::string key;
+	bool s = false, te = false;
+	while (tf >> key) {
+		if (key == "female") {
+			int v;
+			tf >> v;
+		} else if (key == "seasonal")
+			s = (bool)(tf >> seasonal);
+		else if (key == "temperament") {
+			te = true;
+			for (auto& z : t.z)
+				te = te && (bool)(tf >> z);
+		}
+	}
+	hasTraits = s && te;
+	return true;
+}
+
+std::string inseminationBlock(CreatureAgent* mumAgent) {
+	if (!mumAgent || engine.version != 2)
+		return "only in Creatures 2";
+	oldCreature* mum = dynamic_cast<oldCreature*>(mumAgent->getCreature());
+	Agent* body = dynamic_cast<Agent*>(mumAgent);
+	if (!mum || !body || !mum->isAlive())
+		return "she is not alive";
+	if (!mum->isFemale())
+		return "only a female can carry an egg";
+	if ((int)mum->getStage() < 2)
+		return "she is too young: creatures carry eggs from adolescence";
+	if (body->babymoniker != 0 || mum->getPregnant() != 0)
+		return "she is already pregnant";
+	if (!fertileBySetting(mum))
+		return "her Infertile box is ticked (Reproductive tab)";
+	return "";
+}
+
+bool inseminate(CreatureAgent* mumAgent, const InseminationDonor& donor, std::string& why) {
+	why = inseminationBlock(mumAgent);
+	if (why.empty() && !donor.genome)
+		why = "the donor's genes could not be read";
+	oldCreature* mum = mumAgent ? dynamic_cast<oldCreature*>(mumAgent->getCreature()) : nullptr;
+	Agent* mumBody = dynamic_cast<Agent*>(mumAgent);
+	if (why.empty()) {
+		// the same kind: the genus gene's genus (0 norn, 1 grendel, 2 ettin)
+		int donorGenus = -1;
+		for (auto& gn : donor.genome->genes)
+			if (auto* g = dynamic_cast<creatureGenusGene*>(gn.get())) {
+				donorGenus = g->genus;
+				break;
+			}
+		if (donorGenus != (int)mum->getGenus())
+			why = "the donor is not of her kind";
+	}
+	std::string mumMon = mum ? world.history->findMoniker(mum->getGenome()) : std::string();
+	std::string donorName = donor.moniker.empty() ? donor.label : donor.moniker;
+	if (!why.empty()) {
+		fmt::print("* INSEMINATE {} with {}: not done ({})\n", mumMon, donorName, why);
+		return false;
+	}
+	CrossReport rep;
+	std::shared_ptr<genomeFile> child = crossGenomes(*mum->getGenome(), *donor.genome, mumMon, donor.moniker, &rep);
+	std::string name = storeGenome(*child);
+	if (name.empty()) {
+		why = "the baby's genome could not be stored";
+		return false;
+	}
+	float donorZ = donor.seasonal ? *donor.seasonal : SeasonalRhythm::roll();
+	float childSeasonal = SeasonalRhythm::child(mum->seasonalZ, donorZ);
+	SeasonalRhythm::store(name, childSeasonal);
+	Temperament donorT = donor.temperament ? *donor.temperament : Temperaments::roll();
+	Temperament childTemperament = Temperaments::child(mum->temperament, donorT);
+	Temperaments::store(name, childTemperament);
+	mumBody->babymoniker = genomeNameToInt(name);
+	mum->setPregnant(255);
+	// her life story: pregnant, marked inseminated (the Chronicles Kit words
+	// it so); the donor's too, if it is a creature with a record
+	world.history->tell(mumMon, storyEntry::pregnant, donor.moniker, donor.moniker.empty() ? "inseminated:" + donor.label : "inseminated");
+	if (!donor.moniker.empty())
+		world.history->tell(donor.moniker, storyEntry::fathered, mumMon, "donor");
+	fmt::print("* INSEMINATE {} with {}: conceived, genome {} ({} genes: {} from her, {} from the donor, {} crossovers, {} mutations, {} duplications, {} losses; seasonal rhythm {:+.2f}; temperament {})\n",
+		mumMon, donorName, name, rep.genes, rep.fromMum, rep.fromDad, rep.crossovers, rep.mutations, rep.duplications, rep.deletions, childSeasonal,
+		Temperaments::toLine(childTemperament));
+	return true;
 }
 
 bool tryConceive(CreatureAgent* a, CreatureAgent* b) {

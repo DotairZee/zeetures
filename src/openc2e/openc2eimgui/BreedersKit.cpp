@@ -19,7 +19,12 @@
 #include "common/Random.h"
 #include "creatures/BreedSlots.h"
 #include "creatures/oldCreature.h"
+#include "creatures/CreatureAgent.h"
+#include "creatures/Temperament.h"
+#include "historyManager.h"
 #include "common/io/SpanReader.h"
+#include "common/io/FileReader.h"
+#include "Engine.h"
 #include "fileformats/c2cobfile.h"
 #include "fileformats/genomeFile.h"
 
@@ -139,6 +144,400 @@ static void ReproductivePage() {
 		for (int chem : g.second)
 			KitBar(c->getChemical(chem) / 255.0f, fmt::format("{} {}", chem < (int)names.size() ? names[chem] : std::string("?"), (int)c->getChemical(chem)).c_str(), W);
 	}
+}
+
+// ---- Insemination (owner, 2026-11-20) ----------------------------------------
+
+// Female creatures only: choose any creature of her kind, male or female,
+// living, departed (genes kept when it died) or a genome file, and she
+// conceives from its genes (Breeding.h, inseminate).
+
+// the creature's mother and father, by moniker, from the records
+static std::pair<std::string, std::string> parentsOf(const std::string& m) {
+	if (m.empty())
+		return {};
+	auto& all = world.history->all();
+	auto it = all.find(m);
+	if (it == all.end())
+		return {};
+	return {it->second.mother, it->second.father};
+}
+
+static std::string kinship(const std::string& a, const std::string& b, bool bFemale) {
+	auto [am, af] = parentsOf(a);
+	auto [bm, bf] = parentsOf(b);
+	if (b == am || b == af)
+		return bFemale ? "her mother" : "her father";
+	if (a == bm || a == bf)
+		return bFemale ? "her daughter" : "her son";
+	std::set<std::string> ap, bp;
+	for (auto& x : {am, af})
+		if (!x.empty())
+			ap.insert(x);
+	for (auto& x : {bm, bf})
+		if (!x.empty())
+			bp.insert(x);
+	int shared = 0;
+	for (auto& x : ap)
+		shared += (int)bp.count(x);
+	if (shared == 2)
+		return bFemale ? "her sister" : "her brother";
+	if (shared == 1)
+		return bFemale ? "her half-sister" : "her half-brother";
+	std::set<std::string> ag, bg;
+	for (auto& x : ap)
+		for (auto& g : {parentsOf(x).first, parentsOf(x).second})
+			if (!g.empty())
+				ag.insert(g);
+	for (auto& x : bp)
+		for (auto& g : {parentsOf(x).first, parentsOf(x).second})
+			if (!g.empty())
+				bg.insert(g);
+	for (auto& g : ag)
+		if (bg.count(g) || bp.count(g))
+			return "close kin (a shared grandparent)";
+	for (auto& g : bg)
+		if (ap.count(g))
+			return "close kin (a shared grandparent)";
+	return "";
+}
+
+struct InsemDonor {
+	int source = 0; // 0 living, 1 departed, 2 genome file
+	Agent* agent = nullptr;
+	oldCreature* creature = nullptr;
+	std::string name, moniker, file, photo, breed;
+	bool female = false;
+	int stage = -1;
+};
+
+// genome files of each kind (0 norn, 1 grendel, 2 ettin), by name, scanned
+// once: the player's Genetics folder and the game's, without the generated
+// "z" names (a conception's or the splicer's)
+static std::map<int, std::vector<std::pair<std::string, fs::path>>> s_genomeFiles;
+static bool s_genomeFilesScanned = false;
+static void scanGenomeFiles() {
+	s_genomeFilesScanned = true;
+	s_genomeFiles.clear();
+	std::set<std::string> seen;
+	std::vector<fs::path> dirs = {getUserDataDir() / "Genetics"};
+	for (auto& d : getMainDirectories())
+		dirs.push_back(d / "Genetics");
+	for (auto& dir : dirs) {
+		std::error_code ec;
+		for (auto& e : fs::directory_iterator(dir, ec)) {
+			std::string fn = e.path().filename().string();
+			if (fn.size() < 5 || to_ascii_lowercase(fn.substr(fn.size() - 4)) != ".gen")
+				continue;
+			std::string name = fn.substr(0, fn.size() - 4);
+			std::string lower = to_ascii_lowercase(name);
+			if (lower.size() == 4 && lower[0] == 'z')
+				continue; // generated
+			if (seen.count(lower))
+				continue; // the player's copy first
+			std::ifstream f(e.path(), std::ios::binary);
+			std::vector<uint8_t> b((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+			int genus = -1;
+			for (size_t i = 0; i + 12 < b.size(); i++)
+				if (b[i] == 'g' && b[i + 1] == 'e' && b[i + 2] == 'n' && b[i + 3] == 'e' && b[i + 4] == 2 && b[i + 5] == 1) {
+					genus = b[i + 11];
+					break;
+				}
+			if (genus < 0)
+				continue;
+			seen.insert(lower);
+			s_genomeFiles[genus].push_back({name, e.path()});
+		}
+	}
+	for (auto& [g, v] : s_genomeFiles)
+		std::sort(v.begin(), v.end(), [](auto& a, auto& b) { return to_ascii_lowercase(a.first) < to_ascii_lowercase(b.first); });
+}
+
+static std::string s_insemMessage;
+static bool s_insemOk = false;
+
+static void InseminationPage() {
+	if (!KitNeedsCreature())
+		return;
+	c2Creature* c = KitCreature();
+	Agent* a = KitCreatureAgent();
+	auto* mumAgent = dynamic_cast<CreatureAgent*>(a);
+	static const char* stages[] = {"baby", "child", "adolescent", "youth", "adult", "old", "senile"};
+	static const char* kinds[] = {"norn", "grendel", "ettin"};
+	const ImVec4 gold(0.86f, 0.70f, 0.40f, 1), green(0.35f, 0.77f, 0.41f, 1), amber(0.89f, 0.67f, 0.27f, 1), red(0.84f, 0.38f, 0.34f, 1);
+	int genus = c->getGenus(); // 0 norn, 1 grendel, 2 ettin
+	const char* kind = genus >= 0 && genus <= 2 ? kinds[genus] : "creature";
+	std::string mumMon = world.history->findMoniker(AgentRef(a));
+
+	static int from = 0;
+	// developer aid: OPENC2E_TEST_INSEM="SOURCE[:NAME]" (0 living, 1 departed,
+	// 2 genome files; NAME a donor's name, moniker or file name) picks that
+	// donor and presses Inseminate once, when the page has been drawn a few
+	// times (headless tests, with OPENC2E_OPEN_KITS and OPENC2E_KIT_PAGE)
+	static const char* testInsem = getenv("OPENC2E_TEST_INSEM");
+	static int testFrames = 0;
+	static std::string testName;
+	if (testInsem && testFrames == 0) {
+		from = std::clamp(atoi(testInsem), 0, 2);
+		const char* colon = std::strchr(testInsem, ':');
+		testName = colon ? std::string(colon + 1) : std::string();
+	}
+	std::vector<InsemDonor> donors;
+	if (from == 0) {
+		// every other living creature of her kind, adolescent or older
+		for (auto& ag : world.agents) {
+			auto* ca = dynamic_cast<CreatureAgent*>(ag.get());
+			if (!ca || ag.get() == a)
+				continue;
+			auto* oc = dynamic_cast<oldCreature*>(ca->getCreature());
+			if (!oc || !oc->isAlive() || (int)oc->getGenus() != genus || (int)oc->getStage() < 2)
+				continue;
+			InsemDonor d;
+			d.agent = ag.get();
+			d.creature = oc;
+			d.name = KitCreatureName(ag.get());
+			d.moniker = world.history->findMoniker(AgentRef(ag.get()));
+			d.female = oc->isFemale();
+			d.stage = (int)oc->getStage();
+			donors.push_back(d);
+		}
+		std::sort(donors.begin(), donors.end(), [](auto& x, auto& y) { return x.name < y.name; });
+	} else if (from == 1) {
+		// the departed whose genes were kept (from 2026-11-20 on)
+		for (auto& [mon, r] : world.history->all()) {
+			if (!r.died || (int)r.genus != genus + 1 || !departedGenesKept(mon))
+				continue;
+			InsemDonor d;
+			d.source = 1;
+			d.name = r.name.empty() ? mon : r.name;
+			d.moniker = mon;
+			d.female = departedSex(mon) == 1;
+			d.stage = r.diedstage;
+			if (!r.photos.empty())
+				d.photo = r.photos.back();
+			donors.push_back(d);
+		}
+		std::sort(donors.begin(), donors.end(), [](auto& x, auto& y) { return x.name < y.name; });
+	} else {
+		if (!s_genomeFilesScanned)
+			scanGenomeFiles();
+		for (auto& [name, path] : s_genomeFiles[genus]) {
+			InsemDonor d;
+			d.source = 2;
+			d.name = name;
+			d.file = path.string();
+			donors.push_back(d);
+		}
+	}
+
+	// the donor picked, kept by who it is while the list changes
+	static std::string pickKey;
+	static int pickFrom = -1;
+	auto keyOf = [](const InsemDonor& d) { return d.source == 2 ? d.file : d.moniker; };
+	int pick = -1;
+	for (int i = 0; i < (int)donors.size(); i++)
+		if (pickFrom == from && keyOf(donors[i]) == pickKey)
+			pick = i;
+	if (pick < 0 && !donors.empty()) {
+		pick = 0;
+		pickKey = keyOf(donors[0]);
+		pickFrom = from;
+	}
+
+	static const int testAt = getenv("OPENC2E_TEST_INSEM_FRAMES") ? std::max(5, atoi(getenv("OPENC2E_TEST_INSEM_FRAMES"))) : 5;
+	if (testInsem && testFrames < testAt && !testName.empty())
+		for (int i = 0; i < (int)donors.size(); i++)
+			if (donors[i].name == testName || donors[i].moniker == testName) {
+				pick = i;
+				pickKey = keyOf(donors[i]);
+				pickFrom = from;
+			}
+	auto label = [&](const InsemDonor& d) {
+		if (d.source == 2)
+			return d.name + ".gen";
+		std::string st = d.stage >= 0 && d.stage < 7 ? stages[d.stage] : "";
+		return fmt::format("{}  ({}), {}{}{}", d.name, d.moniker, d.female ? "female" : "male", st.empty() ? "" : " ", st);
+	};
+	ImGui::TextColored(gold, "Donor");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(300);
+	if (ImGui::BeginCombo("##donor", donors.empty() ? "(none)" : label(donors[pick]).c_str(), ImGuiComboFlags_HeightLarge)) {
+		for (int i = 0; i < (int)donors.size(); i++)
+			if (ImGui::Selectable(label(donors[i]).c_str(), i == pick)) {
+				pick = i;
+				pickKey = keyOf(donors[i]);
+				pickFrom = from;
+			}
+		ImGui::EndCombo();
+	}
+	ImGui::SameLine();
+	ImGui::TextDisabled("from");
+	ImGui::SameLine();
+	static const char* froms[] = {"Living creatures", "Departed creatures", "Genetics files"};
+	ImGui::SetNextItemWidth(170);
+	if (ImGui::Combo("##from", &from, froms, 3))
+		s_insemMessage.clear();
+	if (from == 2) {
+		ImGui::SameLine();
+		if (ImGui::SmallButton("Rescan"))
+			scanGenomeFiles();
+	}
+	if (donors.empty()) {
+		if (from == 0)
+			KitNote("No other %s old enough to give its genes (adolescent or older).", kind);
+		else if (from == 1)
+			KitNote("No departed %s's genes are kept yet: they are kept for creatures that die from now on.", kind);
+		else
+			KitNote("No %s genome files in the Genetics folders.", kind);
+		return;
+	}
+	InsemDonor& d = donors[pick];
+
+	// the donor's genes and traits
+	std::shared_ptr<genomeFile> dg;
+	Temperament dt;
+	bool hasT = false;
+	float dz = 0;
+	if (d.source == 0) {
+		dg = d.creature->getGenome();
+		dt = d.creature->temperament;
+		dz = d.creature->seasonalZ;
+		hasT = true;
+	} else if (d.source == 1) {
+		loadDepartedGenes(d.moniker, dg, dt, hasT, dz);
+	} else {
+		try {
+			dg = std::make_shared<genomeFile>();
+			FileReader f(d.file);
+			f >> *dg;
+		} catch (std::exception&) {
+			dg.reset();
+		}
+		hasT = Temperaments::load(d.name, dt);
+		float z;
+		if (SeasonalRhythm::load(d.name, z))
+			dz = z;
+		else
+			hasT = false;
+	}
+
+	// the two, side by side
+	const float colW = 270, PW = 120, PH = 90;
+	auto photoBox = [&](const std::string& photo) {
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+		ImVec2 p0 = ImGui::GetCursorScreenPos();
+		Texture t = photo.empty() ? Texture() : KitPhotoTexture(engine.currentworlddir / photo);
+		if (t)
+			dl->AddImage(t.as<ImTextureID>(), p0, p0 + ImVec2(PW, PH));
+		else {
+			dl->AddRectFilled(p0, p0 + ImVec2(PW, PH), IM_COL32(18, 18, 20, 255));
+			const char* none = d.source == 2 ? "genome file" : "no photo";
+			ImVec2 ns = ImGui::CalcTextSize(none);
+			dl->AddText(p0 + ImVec2((PW - ns.x) / 2, (PH - ns.y) / 2), IM_COL32(110, 110, 110, 255), none);
+		}
+		dl->AddRect(p0 - ImVec2(1, 1), p0 + ImVec2(PW + 1, PH + 1), IM_COL32(205, 170, 95, 255));
+		ImGui::Dummy(ImVec2(PW, PH));
+	};
+	ImGui::Spacing();
+	ImGui::BeginGroup();
+	KitCreaturePhoto(a, ImVec2(PW, PH));
+	ImGui::SameLine();
+	ImGui::BeginGroup();
+	ImGui::TextUnformatted(KitCreatureName(a).c_str());
+	ImGui::TextDisabled("%s", mumMon.c_str());
+	ImGui::Text("Female %s, %s", kind, stages[std::clamp((int)c->getStage(), 0, 6)]);
+	ImGui::TextColored(gold, "mother");
+	ImGui::EndGroup();
+	ImGui::EndGroup();
+	ImGui::SameLine(colW + 24);
+	ImGui::BeginGroup();
+	if (d.source == 0)
+		KitCreaturePhoto(d.agent, ImVec2(PW, PH));
+	else
+		photoBox(d.photo);
+	ImGui::SameLine();
+	ImGui::BeginGroup();
+	ImGui::TextUnformatted(d.source == 2 ? (d.name + ".gen").c_str() : d.name.c_str());
+	if (d.source == 2)
+		ImGui::TextDisabled("a genome file");
+	else
+		ImGui::TextDisabled("%s%s", d.moniker.c_str(), d.source == 1 ? ", departed" : "");
+	if (d.source != 2)
+		ImGui::Text("%s %s%s%s", d.female ? "Female" : "Male", kind, d.stage >= 0 && d.stage < 7 ? ", " : "", d.stage >= 0 && d.stage < 7 ? stages[d.stage] : "");
+	ImGui::TextColored(gold, "%s", d.source == 2 ? "donor (its genes)" : d.female ? "donor (her genes)" : "donor (his genes)");
+	ImGui::EndGroup();
+	ImGui::EndGroup();
+
+	KitHeading("Temperament, side by side");
+	for (int i = 0; i < NUM_TRAITS; i++) {
+		std::string trait = Temperaments::traitName(i);
+		trait[0] = (char)std::toupper((unsigned char)trait[0]);
+		int p1 = c->temperament.percent(i);
+		TraitBar(i, p1, fmt::format("{} {}%", trait, p1).c_str(), colW);
+		if (hasT) {
+			int p2 = dt.percent(i);
+			ImGui::SameLine(colW + 24);
+			TraitBar(i, p2, fmt::format("{} {}%", trait, p2).c_str(), colW);
+		} else if (i == 0) {
+			ImGui::SameLine(colW + 24);
+			ImGui::TextDisabled("No temperament on record:");
+		} else if (i == 1) {
+			ImGui::SameLine(colW + 24);
+			ImGui::TextDisabled("the donor's half is drawn at random.");
+		}
+	}
+	KitNote("The child takes after both: each trait lands near the middle of the two, with some chance.");
+
+	KitHeading("Kinship");
+	std::string kin = d.source == 2 ? std::string() : kinship(mumMon, d.moniker, d.female);
+	if (d.source == 2)
+		ImGui::TextDisabled("A genome file: no family records.");
+	else if (kin.empty())
+		ImGui::TextColored(green, "Not kin: no shared parents or grandparents on record.");
+	else
+		ImGui::TextColored(amber, "%s is %s.", d.name.c_str(), kin.c_str());
+
+	KitHeading("Insemination");
+	std::string block = inseminationBlock(mumAgent);
+	bool old = (int)c->getStage() >= 2, notPreg = c->getPregnant() == 0 && a->babymoniker == 0, fertile = fertileBySetting(c);
+	auto check = [&](bool ok, const char* t) {
+		ImGui::TextColored(ok ? green : red, "%s %s", ok ? "ok" : "--", t);
+		ImGui::SameLine(0, 18);
+	};
+	check(old, "old enough");
+	check(notPreg, "not pregnant");
+	check(fertile, "fertile");
+	check(dg != nullptr, "genes readable");
+	ImGui::NewLine();
+	ImGui::BeginDisabled(!block.empty() || !dg);
+	bool testPress = testInsem && ++testFrames == testAt;
+	if (testPress)
+		fmt::print("* TEST INSEMINATE: {} ({}) with {} [{}]\n", KitCreatureName(a), mumMon, d.name, froms[from]);
+	if (ImGui::Button("Inseminate", ImVec2(160, 0)) || (testPress && block.empty() && dg)) {
+		InseminationDonor donor;
+		donor.genome = dg;
+		donor.moniker = d.source == 2 ? std::string() : d.moniker;
+		donor.label = d.source == 2 ? d.name + ".gen" : d.name;
+		donor.temperament = hasT ? &dt : nullptr;
+		donor.seasonal = hasT ? &dz : nullptr;
+		std::string why;
+		s_insemOk = inseminate(mumAgent, donor, why);
+		s_insemMessage = s_insemOk ? fmt::format("{} is pregnant with {}'s genes. She lays her egg as usual.", KitCreatureName(a), donor.label)
+								   : fmt::format("Not done: {}.", why);
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	if (!block.empty())
+		ImGui::TextColored(amber, "Not now: %s.", block.c_str());
+	else if (d.source != 2 && d.female)
+		ImGui::TextDisabled("Two mothers: her egg crosses the two genomes as a mating does.");
+	else
+		ImGui::TextDisabled("Her egg crosses the two genomes as a mating does.");
+	if (testPress && (!block.empty() || !dg))
+		fmt::print("* TEST INSEMINATE: not pressed ({})\n", block.empty() ? "genes unreadable" : block);
+	if (!s_insemMessage.empty())
+		ImGui::TextColored(s_insemOk ? green : red, "%s", s_insemMessage.c_str());
+	KitNote("The donor is not touched: only a copy of its genes is used. She carries the egg and lays it as usual; the child's sex is chance.");
 }
 
 // ---- Aphrodisiacs ----------------------------------------------------------------
@@ -1407,6 +1806,10 @@ void DrawBreedersKit() {
 	if (ImGui::BeginTabBar("pages")) {
 		if (KitTab("Reproductive")) {
 			ReproductivePage();
+			ImGui::EndTabItem();
+		}
+		if (KitCreature() && KitCreature()->isFemale() && KitTab("Insemination")) {
+			InseminationPage();
 			ImGui::EndTabItem();
 		}
 		if (KitTab("Aphrodisiacs")) {

@@ -55,8 +55,15 @@ std::string sentence(const monikerData& self, const storyEntry& e) {
 			return fmt::format("Became {} {}.", vowel ? "an" : "a", stageNames[st]);
 		}
 		case storyEntry::pregnant:
+			// (the Breeder's Kit's Insemination: "inseminated", or
+			// "inseminated:LABEL" for a donor that is a genome file)
+			if (e.detail.rfind("inseminated", 0) == 0)
+				return e.detail.size() > 12 ? fmt::format("Was inseminated with the genes in {}.", e.detail.substr(12))
+											: fmt::format("Was inseminated with {}'s genes.", other);
 			return fmt::format("Became pregnant by {}.", other);
 		case storyEntry::fathered:
+			if (e.detail == "donor")
+				return fmt::format("Gave its genes for {}'s egg (insemination).", other);
 			return fmt::format("Fathered a baby with {}.", other);
 		case storyEntry::laidEgg:
 			return "Laid her egg.";

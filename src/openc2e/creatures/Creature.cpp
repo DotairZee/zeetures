@@ -38,6 +38,7 @@
 #include "oldCreature.h"
 #include "Temperament.h"
 #include "Relationships.h"
+#include "Breeding.h"
 #include "caosVM.h"
 #include "caosScript.h"
 #include "Scriptorium.h"
@@ -279,6 +280,10 @@ void Creature::die() {
 			m.died = true;
 			m.diedtick = world.worldtickcount;
 			m.diedstage = (int)stage;
+			// its genes, kept for the Breeder's Kit's Insemination (Breeding.h)
+			if (engine.version == 2 && genome)
+				if (auto* oc = dynamic_cast<oldCreature*>(this))
+					keepDepartedGenes(mon, *genome, oc->temperament, oc->seasonalZ, oc->isFemale());
 			// C2's nutrient cycle (World::tickNutrients; owner, 2026-11-17: the
 			// dead feed the soil): organic nutrient in the room where it died,
 			// more from a grown body (a baby 15, a child 25, an adolescent 35,

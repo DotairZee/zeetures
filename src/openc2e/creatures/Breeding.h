@@ -24,6 +24,7 @@
 
 class genomeFile;
 class CreatureAgent;
+struct Temperament;
 
 struct CrossReport {
 	int genes = 0; // in the child
@@ -61,6 +62,35 @@ std::string genomeNameFromInt(int value);
 // only. OPENC2E_TEST_CONCEIVE=1 skips the fertility checks. Returns whether
 // she conceived.
 bool tryConceive(CreatureAgent* a, CreatureAgent* b);
+
+// Insemination (Breeder's Kit, owner 2026-11-20): she conceives from a
+// donor's genes, any creature of her kind, male or female, living, departed
+// or a genome file. Her own readiness is checked (adolescent or older, not
+// pregnant, not set infertile; the donor its kind), not her fertility cycle
+// or any mating chance: the owner chose it. The genomes are crossed as a
+// mating does (crossGenomes), the child's temperament and seasonal rhythm
+// come from both (a donor without stored ones draws them at random), she
+// carries the egg as BABY and lays it as usual. donorMoniker is empty for a
+// genome file. Returns whether she conceived; why says why not.
+struct InseminationDonor {
+	std::shared_ptr<genomeFile> genome;
+	std::string moniker; // empty: a genome file, no creature
+	std::string label; // for the log and her life story when there is no moniker
+	const Temperament* temperament = nullptr; // or nullptr: drawn at random
+	const float* seasonal = nullptr; // or nullptr: drawn at random
+};
+bool inseminate(CreatureAgent* mum, const InseminationDonor& donor, std::string& why);
+// A departed creature's genes, for insemination later: its genome, its
+// temperament and seasonal rhythm, kept in the world's folder (departed/
+// MONIKER.gen and MONIKER.traits) when it dies. C2 only.
+void keepDepartedGenes(const std::string& moniker, genomeFile& g, const Temperament& t, float seasonal, bool female);
+// its sex as kept (1 female, 0 male, -1 not known)
+int departedSex(const std::string& moniker);
+// whether a departed creature's genes were kept (its traits too, if their file is there)
+bool departedGenesKept(const std::string& moniker);
+bool loadDepartedGenes(const std::string& moniker, std::shared_ptr<genomeFile>& g, Temperament& t, bool& hasTraits, float& seasonal);
+// what stops her from being inseminated now ("" if nothing)
+std::string inseminationBlock(CreatureAgent* mum);
 
 // Close kin (owner, 2026-11-11: no incest unless there is no other choice):
 // one descends from the other (parent, grandparent ...) or they share a
