@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 538 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 541 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.16.10](#version-01610): 3 commits, 20 November 2026
 - [0.16.9](#version-0169): 2 commits, 20 November 2026
 - [0.16.8](#version-0168): 3 commits, 19 November 2026 to 20 November 2026
 - [0.16.7](#version-0167): 3 commits, 19 November 2026
@@ -33,6 +34,30 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.16.10
+
+Fix: creatures share food with friends who are really hungry; a friend's hunger was read from a chemical that never changes in Creatures 2.
+
+### 20 November 2026
+
+#### Version 0.16.10
+
+[`5f417596`](https://github.com/DotairZee/zeetures/commit/5f41759602cd9ec5451c95a5106ee1f6a3bd3013)
+
+#### C2 sharing: judge a friend's hunger by its Hunger drive
+
+[`5c410e10`](https://github.com/DotairZee/zeetures/commit/5c410e10ec13557f1413bb0cbc387e28150748db)
+
+The mind read another creature's hunger from chemical 150. C2 keeps its
+drives apart from the chemicals: chemical 150 does not move there (about
+60% of Home's creatures sat at 248 for good, the rest at fixed lower
+values), so food was shared with whoever had a high stuck number. Read
+drive 2, as the census does.
+
+#### Changelog
+
+[`34af9721`](https://github.com/DotairZee/zeetures/commit/34af972157bbb41b69c34a852672b83a6c669cea)
 
 ## Version 0.16.9
 

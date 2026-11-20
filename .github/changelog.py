@@ -157,6 +157,9 @@ VERSIONS = [
     ("0.16.9", "67a78941",
      "Fix: creatures at the east end of the sandy tunnel under the west sea now pass behind the tunnel's "
      "bronze collar, not in front of it."),
+    ("0.16.10", "5f417596",
+     "Fix: creatures share food with friends who are really hungry; a friend's hunger was read from a "
+     "chemical that never changes in Creatures 2."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
