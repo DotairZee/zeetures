@@ -10,7 +10,7 @@
 * through the tube, which now slopes down from the dock to the gene lab's
 * floor (its new art: tube-walk pictures, placed below). The walking line
 * is the owner's: the dock's floor (y 1544) to x 4735, down over the dock's
-* collar to (4801, 1569), straight down to the lab's floor (1798) at x 6023.
+* collar to (4801, 1569), straight down to the lab's floor (1788) at x 6023.
 *
 * 1. The car, its watcher and its far caller, gone (transit.cos no longer
 *    makes them; the car is the world file's, made again at each load).
@@ -51,9 +51,13 @@ ssfc 252 2 0 40 185 5
 room 207 5735 1300 5900 1780 room 207 4 room 207 5 room 207 6 room 207 7 room 207 8 room 207 9 room 207 12 room 207 13 room 207 14 room 207 15 room 207 16 room 207 17 room 207 19
 ssfc 207 2 0 36 165 5
 room 158 5900 1470 6023 1798 room 158 4 room 158 5 room 158 6 room 158 7 room 158 8 room 158 9 room 158 12 room 158 13 room 158 14 room 158 15 room 158 16 room 158 17 room 158 19
-ssfc 158 2 0 23 123 0
+ssfc 158 2 0 23 123 10
 room 159 6023 1470 6895 1798 room 159 4 room 159 5 room 159 6 room 159 7 room 159 8 room 159 9 room 159 12 room 159 13 room 159 14 room 159 15 room 159 16 room 159 17 room 159 19
-ssfc 159 4 0 0 290 0 480 30 872 30
+*    The lab's west half on its drawn floor slab (owner, 2026-11-20: "a
+*    little lower than I'd like", marked picture): 1788, 10 px over the
+*    room's bottom, to x 6413, where the slab starts to rise, then up to
+*    the east half's 1768 at 6503 (was 1798 to 6313, up from there).
+ssfc 159 4 0 10 390 10 480 30 872 30
 *    The village under it: 38, 39, 42, 253 and 254 (new), their tops
 *    stepping down with the tube; the rock under the tube's end (160).
 room 38 4543 1599 4932 1858 room 38 4 room 38 5 room 38 6 room 38 7 room 38 8 room 38 9 room 38 12 room 38 13 room 38 14 room 38 15 room 38 16 room 38 17 room 38 19

@@ -1313,15 +1313,33 @@ endi
 * gene-lab-second-bush-mockup.png): the room's east end held about a fifth
 * of the world's hungry creatures, queuing for the one above (3 fruit at
 * most). In the room's west half, where the glass tube comes in, between
-* the teleporter dish and the machinery, on the floor at 1798.
+* the teleporter dish and the machinery, on the floor at 1788 (tube-walk.cos).
+* (first placed with its pot on 1798, 2026-11-20; the floor there is 1788
+* since, tube-walk.cos: a bush kept at the old place and the fruit growing
+* on it go up 10)
 setv var0 0
 enum 2 4 141
   doif posl eq 6140
-    doif post eq 1665 addv var0 1 endi
+    doif post eq 1665 mvto 6140 1655 setv var0 1 endi
+  endi
+next
+doif var0 eq 1
+  enum 2 25 0
+    doif attr eq 0
+      doif posx gt 6140 doif posx lt 6196 doif posy gt 1665 doif posy lt 1799
+        setv var1 posl setv var2 post subv var2 10 mvto var1 var2
+      endi endi endi endi
+    endi
+  next
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 6140
+    doif post eq 1655 addv var0 1 endi
   endi
 next
 doif var0 eq 0
-  inst new: simp zfom 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 6140 1665 setv ov05 1 setv ov07 2 setv ov00 2 setv ov01 150 setv ov02 1 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+  inst new: simp zfom 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 6140 1655 setv ov05 1 setv ov07 2 setv ov00 2 setv ov01 150 setv ov02 1 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
 endi
 
 * The upper-east deck's bush moves to the cave under the east dock (owner,
