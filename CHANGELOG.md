@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 546 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 550 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.18.0](#version-0180): 4 commits, 20 November 2026
 - [0.17.5](#version-0175): 2 commits, 20 November 2026
 - [0.17.4](#version-0174): 2 commits, 20 November 2026
 - [0.17.3](#version-0173): 3 commits, 20 November 2026
@@ -44,6 +45,119 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.18.0
+
+Install and play with no command line: a Windows installer, a Mac app in a disk image (Apple Silicon and Intel) and Linux AppImages. Zeetures finds Creatures 2 in the usual Steam and GOG folders, or asks for its folder once and remembers it (File > Creatures 2 Folder changes it). The nightly keeps a system's download from the night before when its build fails, so macOS no longer drops out.
+
+### 20 November 2026
+
+#### Version 0.18.0
+
+[`2d1670d4`](https://github.com/DotairZee/zeetures/commit/2d1670d4db9c760d603988e40b06fb4d6e90e848)
+
+#### README: Download and play without a command line
+
+[`b5efed89`](https://github.com/DotairZee/zeetures/commit/b5efed89f4d069b00ac1a60de2c972d583336b4b)
+
+Which file to download for each system (Zeetures-Setup.exe,
+Zeetures-macOS.dmg, the AppImages) and the one-time steps: SmartScreen's
+"Run anyway" for the unsigned installer, Privacy &amp; Security's "Open
+Anyway" for the unsigned Mac app (right-click, Open on macOS 14 and
+earlier), marking the AppImage executable. How Zeetures finds Creatures
+2 (Steam libraries, GOG, ~/Games on a Mac), the first-run folder window,
+File &gt; Creatures 2 Folder, game-folder.txt and Windows's
+zeetures-log.txt; -d is now optional. The On a Mac section runs the app
+instead of a command, and the archives' README-NIGHTLY.txt says the same.
+
+(Part of the section was already committed with 0.17.5.)
+
+#### Nightly: an installer, a Mac app and AppImages; macOS no longer drops out
+
+[`05f32d3f`](https://github.com/DotairZee/zeetures/commit/05f32d3ff8c668de2f3658a24c3fda86ef9e9011)
+
+Owner, 2026-11-20: a package players just install and start. The
+nightly release now carries, beside the plain archives:
+
+- Zeetures-Setup.exe (packaging/windows/zeetures.iss, Inno Setup, built
+  by the new windows-installer job from the 64- and 32-bit builds): one
+  installer for both, installing the 64-bit program on 64-bit Windows
+  (and Windows on Arm). It installs for the current user with no
+  administrator prompt (all users is offered), adds Start-menu and
+  desktop shortcuts and an uninstaller that leaves the player's worlds,
+  shows a notice page (bring your own Creatures 2, LGPL 2.1, the source
+  link), and can start Zeetures at the end.
+- Zeetures-macOS.dmg (packaging/macos/build.sh and make-dmg.sh): one
+  universal program (arm64 and x86_64, macOS 10.15 and later) as
+  Zeetures.app, the art in Contents/Resources (SDL_GetBasePath's folder
+  inside an app), the license and readme inside, signed ad hoc; the disk
+  image holds the app, a shortcut to Applications, a Read me (allowing
+  an unsigned app once) and the license. It replaces the two macOS zips.
+- Zeetures-x86_64.AppImage (packaging/linux/make-appimage.sh), built by
+  the new linux-appimage job on Ubuntu 22.04 with GCC 12 and a static
+  libstdc++, so it runs on systems as old as that (glibc 2.35); the
+  bundled SDL3 is static, so the program needs only libc, libz and what
+  SDL loads at run time. The AppImage runtime is the static type-2 one
+  (no libfuse2 needed). The linux job builds one on 24.04 as well, used
+  only if the 22.04 one fails. Zeetures-i686.AppImage from linux-32.
+
+macOS: the arm64 and Intel jobs failed for want of a runner on
+2026-11-19 and 11-20 ("The job was not acquired by Runner"), leaving the
+release without them. Now one job (macos-15) builds the universal app,
+and if it does not finish, macos-fallback builds the same on an Intel
+runner (macos-15-intel), a separate pool. The release job also keeps
+any of the downloads whose build failed from the previous nightly, and
+the release notes say which and why, so no system drops out.
+
+The release notes say which file to pick for each system. On another
+branch the workflow builds everything and publishes nothing.
+
+#### Zeetures finds the player's Creatures 2 folder by itself, or asks once
+
+[`c6afb27e`](https://github.com/DotairZee/zeetures/commit/c6afb27ec6fa5be3de61e982ea1794c3b7d0df2d)
+
+Owner, 2026-11-20: players should only have to start the program, with no
+command line. Before, Linux and macOS needed -d (without it the program
+looked for ./data and quit with a message only a terminal shows), and
+Windows opened openc2e's bare folder picker on every start, remembering
+nothing.
+
+GameFolder.cpp: without -d, the folder remembered from an earlier run
+(game-folder.txt in the user folder above the per-game ones:
+~/.openc2e, Documents\My Games, ~/Documents/openc2e Data); else ./data if
+it holds a game, as in openc2e; else the usual places: every Steam
+library (each Steam root, including Debian's ~/.steam/debian-installation,
+the Flatpak and Snap ones, and the Windows registry's SteamPath, plus the
+libraries its libraryfolders.vdf lists), GOG (the Windows registry's
+GOG.com\Games paths, C:\GOG Games, GOG Galaxy\Games, Program Files),
+~/Games and Wine's drive_c on Linux, and on a Mac ~/Games/Creatures The
+Albian Years and the folder Steam's download_depot fills. What is found
+is remembered. Either the Creatures 2 folder or the Creatures The Albian
+Years folder that holds it is accepted.
+
+If none is found, a first-run window (SDL3 message box) says Zeetures
+plays from the player's own copy and offers Choose Folder..., How to Get
+It (the README's Download and play section) and Quit; Choose Folder opens
+the system's folder chooser (SDL3, starting in Steam's games folder) and
+checks the choice (Creatures 1's folder or another folder gets a message
+and the chooser again). File &gt; Creatures 2 Folder... (in the toolbar
+since 0.17.5's commit) chooses another folder for the next start; its
+tooltip shows the current one. -d still comes first and is not
+remembered.
+
+main.cpp: a fatal error at startup is also shown in a message box when
+there is no terminal (started from a file manager, the Start menu or the
+Dock); SDL_SetAppMetadata names the program Zeetures
+(io.github.dotairzee.zeetures, the AppImage's desktop entry). The window
+is titled Zeetures for Creatures 2 from the start.
+
+Windows: the program is Zeetures.exe, a windowed program (no console
+window behind the game; /ENTRY:mainCRTStartup keeps main), with the egg
+icon (zeetures.rc). Started from a command prompt it writes there;
+otherwise its output goes to zeetures-log.txt in Documents\My Games.
+
+packaging/icons: zeetures.png, .ico and .icns, the window icon's egg
+(openc2e's 2008 logo) scaled up, for Windows, macOS and Linux.
 
 ## Version 0.17.5
 

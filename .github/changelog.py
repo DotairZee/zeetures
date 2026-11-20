@@ -195,6 +195,11 @@ VERSIONS = [
     ("0.17.5", "e26c1a31",
      "The Genetics folder is tidied when a world loads: babies' genomes that no world needs any more go "
      "to the system's Trash, so the folder no longer grows by hundreds of files a day."),
+    ("0.18.0", "2d1670d4",
+     "Install and play with no command line: a Windows installer, a Mac app in a disk image (Apple Silicon "
+     "and Intel) and Linux AppImages. Zeetures finds Creatures 2 in the usual Steam and GOG folders, or asks "
+     "for its folder once and remembers it (File > Creatures 2 Folder changes it). The nightly keeps a "
+     "system's download from the night before when its build fails, so macOS no longer drops out."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
