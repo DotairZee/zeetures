@@ -3080,6 +3080,56 @@ class HomeostatMind : public CreatureMind {
 				out.push_back(c);
 				return;
 			}
+		// or a lift (owner, 2026-11-20: "smarter lift use", for the west
+		// airlock's corridor, rooms 120-118, whose only ways out are two cage
+		// lifts): starving creatures there stayed for minutes at Hunger 255,
+		// their food memories thousands of px off and so worth too little for
+		// the floor-change steps, while this rule left lifts out. As a last
+		// resort it rides a lift that is here (a way it has not found
+		// futile; activate 1 and 2 go opposite ways), or calls one, or walks
+		// to one in sight on its floor. A ride is learned as any other
+		// (learnRide), so the way is remembered. OPENC2E_NO_STARVE_LIFT turns
+		// this part off.
+		static const bool noLift = getenv("OPENC2E_NO_STARVE_LIFT") != nullptr;
+		if (!noLift) {
+			const SeenAgent* lift = nullptr;
+			const SeenAgent* button = nullptr;
+			for (auto& sa : p.visible) {
+				if (sa.category == prm.liftCategory && std::fabs(sa.y - p.y) < prm.sameLevel && (!lift || sa.distance < lift->distance))
+					lift = &sa;
+				if (sa.category == prm.buttonCategory && sa.reachable && sa.activatable && std::fabs(sa.y - p.y) < prm.sameLevel && !dudButtonAt(p))
+					button = &sa;
+			}
+			bool liftHere = lift && std::fabs(dxTo(p, lift->x)) < prm.atPlace * 1.5f && lift->reachable;
+			if (liftHere) {
+				for (int dec : {1, 2})
+					if (!isFutile(p, prm.liftCategory, dec)) {
+						Candidate c{prm.liftCategory, dec, lift->distance, want * 0.7f, 0, want * 0.7f};
+						c.chain = true;
+						c.food = true;
+						c.place = "leave:Hunger";
+						out.push_back(c);
+						return;
+					}
+			} else if (button && !isFutile(p, prm.buttonCategory, 1)) {
+				Candidate c{prm.buttonCategory, 1, button->distance, want * 0.7f, 0, want * 0.7f};
+				c.chain = true;
+				c.food = true;
+				c.place = "leave:Hunger";
+				out.push_back(c);
+				return;
+			} else if (lift) {
+				int decision = dxTo(p, lift->x) < 0 ? 10 : 11;
+				if (!((decision == 10 && !canWest) || (decision == 11 && !canEast) || isBlocked(p, decision))) {
+					Candidate c{-1, decision, std::fabs(dxTo(p, lift->x)), want * 0.7f, 0, want * 0.7f};
+					c.seekCategory = prm.liftCategory;
+					c.food = true;
+					c.place = "leave:Hunger";
+					out.push_back(c);
+					return;
+				}
+			}
+		}
 		// or one out of view on this floor that it remembers: walk to it, and
 		// it is used when in view (above). The gene lab's lower room has its
 		// teleporter at the west end and starving creatures piled up at the
