@@ -89,6 +89,15 @@ int departedSex(const std::string& moniker);
 // whether a departed creature's genes were kept (its traits too, if their file is there)
 bool departedGenesKept(const std::string& moniker);
 bool loadDepartedGenes(const std::string& moniker, std::shared_ptr<genomeFile>& g, Temperament& t, bool& hasTraits, float& seasonal);
+// Tidying the player's Genetics folder (owner, 2026-11-20: "tidy at world
+// load"): every conception, NEW: GENE and splice writes a generated genome
+// there ("z" and three letters, with .season and .temperament beside it),
+// and most are needed only until the baby hatches (about 7,000 unused,
+// 300 MB, in Home's folder by then). After a world loads, a generated
+// genome that no world's save names, last changed over a day ago, goes to
+// the system's Trash with its side files. Only generated names, only in the
+// user data folder's Genetics. OPENC2E_NO_GENOME_TIDY turns it off. C2 only.
+void tidyGeneratedGenomes();
 // what stops her from being inseminated now ("" if nothing)
 std::string inseminationBlock(CreatureAgent* mum);
 

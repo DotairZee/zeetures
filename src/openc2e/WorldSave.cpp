@@ -1501,6 +1501,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 	int nkept = (int)std::count_if(eggs.begin(), eggs.end(), [](const SavedEgg& e) { return e.kept; });
 	fmt::print("* Restored saved world: {} creatures, {} eggs, {} kept objects, {} injected objects ({} add-ons)\n", creatures.size(), (int)eggs.size() - nkept, nkept,
 		injected.size(), world.injectedCobs.size());
+	// the player's Genetics folder tidied of genomes no world uses (Breeding.h)
+	tidyGeneratedGenomes();
 	if (hasWorldObjects)
 		fmt::print("* Restored world objects: {} from the world file as saved, {} gone during play removed, {} made during play made again\n", wmatched, wremoved, wmade);
 	return true;

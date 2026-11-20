@@ -36,7 +36,14 @@
 #include "common/io/VectorWriter.h"
 #include "fileformats/genomeFile.h"
 
+#if defined(_WIN32)
+#include <windows.h>
+#include <shellapi.h>
+#endif
 #include <algorithm>
+#include <cctype>
+#include <ctime>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -449,6 +456,135 @@ bool loadDepartedGenes(const std::string& moniker, std::shared_ptr<genomeFile>& 
 	}
 	hasTraits = s && te;
 	return true;
+}
+
+// a file to the system's Trash (recoverable); false if it could not be
+static bool moveToTrash(const fs::path& file) {
+	std::error_code ec;
+#if defined(_WIN32)
+	// the Recycle Bin (SHFileOperation with undo)
+	std::wstring from = file.wstring();
+	from.push_back(L'\0');
+	from.push_back(L'\0');
+	SHFILEOPSTRUCTW op{};
+	op.wFunc = FO_DELETE;
+	op.pFrom = from.c_str();
+	op.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
+	return SHFileOperationW(&op) == 0 && !op.fAnyOperationsAborted;
+#elif defined(__APPLE__)
+	const char* home = getenv("HOME");
+	if (!home)
+		return false;
+	fs::path trash = fs::path(home) / ".Trash";
+	fs::create_directories(trash, ec);
+	fs::path to = trash / file.filename();
+	for (int i = 1; fs::exists(to, ec) && i < 1000; i++)
+		to = trash / fmt::format("{} {}{}", file.stem().string(), i, file.extension().string());
+	fs::rename(file, to, ec);
+	return !ec;
+#else
+	// the freedesktop.org Trash ($XDG_DATA_HOME/Trash, or ~/.local/share/Trash)
+	fs::path base;
+	if (const char* x = getenv("XDG_DATA_HOME"); x && *x)
+		base = x;
+	else if (const char* home = getenv("HOME"))
+		base = fs::path(home) / ".local" / "share";
+	else
+		return false;
+	fs::path files = base / "Trash" / "files", info = base / "Trash" / "info";
+	fs::create_directories(files, ec);
+	fs::create_directories(info, ec);
+	std::string name = file.filename().string();
+	for (int i = 1; (fs::exists(files / name, ec) || fs::exists(info / (name + ".trashinfo"), ec)) && i < 1000; i++)
+		name = fmt::format("{}.{}{}", file.stem().string(), i, file.extension().string());
+	{
+		std::time_t now = std::time(nullptr);
+		char when[32];
+		std::strftime(when, sizeof when, "%Y-%m-%dT%H:%M:%S", std::localtime(&now));
+		std::ofstream ti(info / (name + ".trashinfo"));
+		ti << "[Trash Info]\nPath=" << fs::absolute(file).string() << "\nDeletionDate=" << when << "\n";
+	}
+	fs::rename(file, files / name, ec);
+	if (ec) {
+		// another drive: copy, then remove
+		std::error_code ec2;
+		fs::copy_file(file, files / name, ec2);
+		if (!ec2)
+			fs::remove(file, ec2);
+		if (ec2) {
+			fs::remove(info / (name + ".trashinfo"), ec2);
+			return false;
+		}
+	}
+	return true;
+#endif
+}
+
+static bool generatedName(const std::string& stem) {
+	if (stem.size() != 4 || stem[0] != 'z')
+		return false;
+	for (size_t i = 1; i < 4; i++)
+		if (!((stem[i] >= '0' && stem[i] <= '9') || (stem[i] >= 'a' && stem[i] <= 'z')))
+			return false;
+	return true;
+}
+
+void tidyGeneratedGenomes() {
+	if (engine.version != 2 || getenv("OPENC2E_NO_GENOME_TIDY") || engine.currentworlddir.empty())
+		return;
+	std::error_code ec;
+	fs::path genetics = getUserDataDir() / "Genetics";
+	fs::path worlds = engine.currentworlddir.parent_path();
+	if (!fs::is_directory(genetics, ec) || !fs::is_directory(worlds, ec))
+		return;
+	// every generated name any world's saved text mentions (an egg's genome,
+	// a pregnancy's baby, a record): read whole, the names picked out
+	std::set<std::string> used;
+	int savesRead = 0;
+	for (auto& w : fs::directory_iterator(worlds, ec)) {
+		std::error_code e2;
+		for (auto& f : fs::recursive_directory_iterator(w.path(), e2)) {
+			if (!f.is_regular_file(e2) || f.path().extension() != ".txt")
+				continue;
+			std::ifstream in(f.path(), std::ios::binary);
+			std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+			if (f.path().filename() == "state.txt")
+				savesRead++;
+			for (size_t i = 0; i + 4 <= text.size(); i++) {
+				if (text[i] != 'z' || (i > 0 && std::isalnum((unsigned char)text[i - 1])))
+					continue;
+				if (i + 4 < text.size() && std::isalnum((unsigned char)text[i + 4]))
+					continue;
+				std::string n = text.substr(i, 4);
+				if (generatedName(n))
+					used.insert(n);
+			}
+		}
+	}
+	if (savesRead == 0)
+		return; // nothing read: keep everything
+	auto cutoff = fs::file_time_type::clock::now() - std::chrono::hours(24);
+	std::vector<fs::path> gone;
+	for (auto& f : fs::directory_iterator(genetics, ec)) {
+		std::error_code e2;
+		if (!f.is_regular_file(e2))
+			continue;
+		std::string ext = f.path().extension().string(), stem = f.path().stem().string();
+		if ((ext != ".gen" && ext != ".season" && ext != ".temperament") || !generatedName(stem) || used.count(stem))
+			continue;
+		if (f.last_write_time(e2) > cutoff || e2)
+			continue;
+		gone.push_back(f.path());
+	}
+	if (gone.empty())
+		return;
+	auto t0 = std::chrono::steady_clock::now();
+	int moved = 0, failed = 0;
+	for (auto& f : gone)
+		(moveToTrash(f) ? moved : failed)++;
+	double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+	fmt::print("* Tidied the Genetics folder: {} unused generated genome files to the Trash ({} kept: named in a world's save; {} could not be moved; {:.1f} s)\n",
+		moved, used.size(), failed, secs);
 }
 
 std::string inseminationBlock(CreatureAgent* mumAgent) {
