@@ -1306,6 +1306,39 @@ void Agent::physicsTickC2() {
 		}
 	}
 
+	// C2: an object at rest with part of itself in the rock is set back
+	// inside. Physics looks for the rock only as an object moves (from the
+	// middle of each side of its box), so one that came to rest there was
+	// never looked at again: a 2 15 7 lay by the dome's dock bay (4550,1584)
+	// with its left, right and top in the rock, under room 38, for good
+	// (2026-11-20, a survey of every object's edges in a copy of Home). Now
+	// and then a resting object checks those four points; one in no room at
+	// all hands it to healOutOfRoomSystem, which sets it down at the nearest
+	// place it fits. (Not objects that only sit across a wall between two
+	// rooms, such as call buttons: each of their points is in a room.)
+	static const bool noRockCheck = getenv("OPENC2E_NO_ROCK_CHECK") != nullptr; // (to compare)
+	if (engine.version == 2 && !noRockCheck && !falling && !outofroomsystem && family == 2 && suffercollisions() &&
+		sufferphysics() && !carriedby && !invehicle && world.map && (world.tickcount + (unsigned int)getUNID() * 7) % 100 == 0) {
+		MetaRoom* m = world.map->metaRoomAt(x, y);
+		bool inRock = false;
+		for (unsigned int i = 0; i < 4 && m && !inRock; i++) {
+			Point p = boundingBoxPoint(i);
+			if (m->wraparound()) {
+				if (p.x >= m->x() + (int)m->width())
+					p.x -= m->width();
+				else if (p.x < m->x())
+					p.x += m->width();
+			}
+			if (!world.map->roomAt(p.x, p.y))
+				inRock = true;
+		}
+		if (inRock) {
+			fmt::print("* {} found resting in the rock at ({:.0f}, {:.0f})\n", identify(), x, y);
+			markOutOfRoomSystem();
+			return;
+		}
+	}
+
 	if (falling && sufferphysics()) {
 		dy += round(accg);
 	}
