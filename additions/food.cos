@@ -769,7 +769,11 @@ endm
 * heavy metals (140) are made from radiation over 48 and barely decay, and
 * EDTA, which nothing else in the world gives, is all that removes them,
 * one for one; it does nothing else in the standard genomes (owner,
-* 2026-11-21: "should the food growing in the volcano provide EDTA?"). After a while a fruit goes overripe, and later rots away.
+* 2026-11-21: "should the food growing in the volcano provide EDTA?"). It
+* also gives Pain Decrease (35), 60 ripe and 30 overripe: heavy metals are
+* felt as pain (Exposure.cpp), and the relief has to be felt at once for a
+* poisoned creature to learn the place (12 game days in a Home copy without
+* it: no pull toward the volcano at all). After a while a fruit goes overripe, and later rots away.
 * Spring: dewberries, light and juicy.
 scrp 2 25 141 12
   snde chwp
@@ -781,12 +785,14 @@ scrp 2 25 141 12
     stim writ from 30 255 0 0 37 30 70 30 97 30 151 20
   endi
   * a volcanic bush's fruit also gives EDTA (157), the only cure for heavy
-  * metals, which radiation by the volcano builds up (owner, 2026-11-21)
+  * metals, which radiation by the volcano builds up, and soothes their pain
+  * at once (35, Pain Decrease) so the place where it was eaten is felt to
+  * help (owner, 2026-11-21)
   doif ov02 eq 2
     doif var0 le 2
-      stim writ from 0 255 0 0 157 60 0 0 0 0 0 0
+      stim writ from 0 255 0 0 157 60 35 60 0 0 0 0
     else
-      stim writ from 0 255 0 0 157 30 0 0 0 0 0 0
+      stim writ from 0 255 0 0 157 30 35 30 0 0 0 0
     endi
   endi
   kill ownr
@@ -802,12 +808,14 @@ scrp 2 25 142 12
     stim writ from 30 255 0 0 37 40 70 45 97 20 36 20
   endi
   * a volcanic bush's fruit also gives EDTA (157), the only cure for heavy
-  * metals, which radiation by the volcano builds up (owner, 2026-11-21)
+  * metals, which radiation by the volcano builds up, and soothes their pain
+  * at once (35, Pain Decrease) so the place where it was eaten is felt to
+  * help (owner, 2026-11-21)
   doif ov02 eq 2
     doif var0 le 2
-      stim writ from 0 255 0 0 157 60 0 0 0 0 0 0
+      stim writ from 0 255 0 0 157 60 35 60 0 0 0 0
     else
-      stim writ from 0 255 0 0 157 30 0 0 0 0 0 0
+      stim writ from 0 255 0 0 157 30 35 30 0 0 0 0
     endi
   endi
   kill ownr
@@ -823,12 +831,14 @@ scrp 2 25 143 12
     stim writ from 30 255 0 0 37 45 73 55 74 15 150 15
   endi
   * a volcanic bush's fruit also gives EDTA (157), the only cure for heavy
-  * metals, which radiation by the volcano builds up (owner, 2026-11-21)
+  * metals, which radiation by the volcano builds up, and soothes their pain
+  * at once (35, Pain Decrease) so the place where it was eaten is felt to
+  * help (owner, 2026-11-21)
   doif ov02 eq 2
     doif var0 le 2
-      stim writ from 0 255 0 0 157 60 0 0 0 0 0 0
+      stim writ from 0 255 0 0 157 60 35 60 0 0 0 0
     else
-      stim writ from 0 255 0 0 157 30 0 0 0 0 0 0
+      stim writ from 0 255 0 0 157 30 35 30 0 0 0 0
     endi
   endi
   kill ownr
@@ -844,12 +854,14 @@ scrp 2 25 144 12
     stim writ from 30 255 0 0 37 40 74 45 79 45 73 20
   endi
   * a volcanic bush's fruit also gives EDTA (157), the only cure for heavy
-  * metals, which radiation by the volcano builds up (owner, 2026-11-21)
+  * metals, which radiation by the volcano builds up, and soothes their pain
+  * at once (35, Pain Decrease) so the place where it was eaten is felt to
+  * help (owner, 2026-11-21)
   doif ov02 eq 2
     doif var0 le 2
-      stim writ from 0 255 0 0 157 60 0 0 0 0 0 0
+      stim writ from 0 255 0 0 157 60 35 60 0 0 0 0
     else
-      stim writ from 0 255 0 0 157 30 0 0 0 0 0 0
+      stim writ from 0 255 0 0 157 30 35 30 0 0 0 0
     endi
   endi
   kill ownr

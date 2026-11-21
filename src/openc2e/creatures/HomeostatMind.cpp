@@ -433,6 +433,10 @@ struct Params {
 	float longingSeek = 0.15f; // enough to go looking
 	float longingWant = 0.12f; // what finding them is worth at full longing
 	float favouriteNeed = 0.4f; // a need this strong sends it to a room that eased it
+	// (pain, lower: a lasting ache, as heavy metals give, is about 0.25-0.35;
+	// owner, 2026-11-21: poisoned creatures should find their way back to
+	// where the volcano's fruit eased it)
+	float favouritePainNeed = 0.25f;
 	float favouriteMinEase = 0.0004f; // per tick better than usual, for a room to count as good for a need
 	float favouriteHorizon = 400.0f; // ticks of that easing it expects from going
 	float favouriteShare = 0.6f;
@@ -1058,7 +1062,7 @@ class HomeostatMind : public CreatureMind {
 			for (int i = 0; i < NUM_DRIVES && i < 17; i++)
 				pm.feel[i] = roomFeel(r, i) * prm.favouriteHorizon; // over a stay of favouriteHorizon ticks
 			pm.avoided = roomAvoided(r);
-			for (int need : {COLD, HOT, TIRED, SLEEPY, LONELY})
+			for (int need : {PAIN, COLD, HOT, TIRED, SLEEPY, LONELY})
 				if (-roomFeel(r, need) >= prm.favouriteMinEase && !pm.avoided && !r.water)
 					pm.goodFor.push_back(need);
 			for (auto& [category, sg] : r.seen)
@@ -4284,8 +4288,8 @@ class HomeostatMind : public CreatureMind {
 	// (3) Favourite places: a strong need, and a room known to ease it
 	// better than anywhere else (not this one, not one avoided): go there.
 	void addFavourites(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
-		for (int need : {COLD, HOT, TIRED, SLEEPY, LONELY}) {
-			if (d[need] < prm.favouriteNeed)
+		for (int need : {PAIN, COLD, HOT, TIRED, SLEEPY, LONELY}) {
+			if (d[need] < (need == PAIN ? prm.favouritePainNeed : prm.favouriteNeed))
 				continue;
 			if (auto here = rooms.find(p.room); here != rooms.end() && -roomFeel(here->second, need) >= prm.favouriteMinEase)
 				continue; // already somewhere good for it
