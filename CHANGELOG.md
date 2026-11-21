@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 557 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 559 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.18.4](#version-0184): 2 commits, 20 November 2026
 - [0.18.3](#version-0183): 2 commits, 20 November 2026
 - [0.18.2](#version-0182): 2 commits, 20 November 2026
 - [0.18.1](#version-0181): 3 commits, 20 November 2026
@@ -48,6 +49,39 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.18.4
+
+Creatures no longer fall through the upper-east deck over the lift's shaft, or out of the lift's cage at its top stop: a floor line running along a room's bottom now holds creatures and objects too big for it.
+
+### 20 November 2026
+
+#### Version 0.18.4
+
+[`c7ce359a`](https://github.com/DotairZee/zeetures/commit/c7ce359a6e3034878fa830dad36f1755df80c572)
+
+#### C2: a floor line along a room's bottom holds what it is solid for
+
+[`6d063955`](https://github.com/DotairZee/zeetures/commit/6d06395525e7e623579cfefb0163ec148f228359)
+
+The physics check for a room's floor line looked only at the room an
+agent had moved into, so where the line runs along the room's own
+bottom over an open door (255) a fall crossed into the room below
+before the line was looked at. Creatures put or stepping on the
+upper-east deck over the lift's shaft (room 143, line at its bottom,
+floor value 50) fell 213 px to the deck below, and one let go in the
+lift's cage at its top stop fell out of it (owner's screencast,
+2026-11-13). Falling out of a C2 room's bottom where its floor line
+is within 2 px of that bottom, at a size above the floor value and
+from above the line, is now a collision: the agent lands on the line.
+Rooms touched: the lines' ends at the walkways (65, 66, 192, 227,
+233), the treehouse platform (59) and the shaft's top (143).
+OPENC2E_OLD_BOTTOM_LINE restores the old check.
+
+Tests (copies of Home): norns dropped every 20 px across the shaft's
+top all land on the deck (before: 5 of 6 over the shaft fell); a norn
+in the cage at the top stop stands; riders stay in the cage the whole
+way up; 4-minute copies old/new: 30/29 falls, 1/1 deaths.
 
 ## Version 0.18.3
 

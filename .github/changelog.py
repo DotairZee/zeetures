@@ -209,6 +209,9 @@ VERSIONS = [
     ("0.18.3", "5ad16c0e",
      "Each creature ages at its own pace, 0.9 to 1.1 times its genome's lifespan, drawn at hatching: creatures "
      "of one genome no longer all die at the same age, and a hatching boom no longer becomes a wave of old-age deaths."),
+    ("0.18.4", "c7ce359a",
+     "Creatures no longer fall through the upper-east deck over the lift's shaft, or out of the lift's cage at its "
+     "top stop: a floor line running along a room's bottom now holds creatures and objects too big for it."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
