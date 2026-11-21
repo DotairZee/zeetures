@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 578 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 580 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.21.1](#version-0211): 2 commits, 21 November 2026
 - [0.21.0](#version-0210): 2 commits, 20 November 2026
 - [0.20.4](#version-0204): 2 commits, 20 November 2026
 - [0.20.3](#version-0203): 3 commits, 20 November 2026
@@ -57,6 +58,33 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.21.1
+
+The submarine no longer falls off the screen when a game is loaded. Creatures can no longer push it while it travels: that restarted its trip part-way, and over many trips it lost track of its own settings.
+
+### 21 November 2026
+
+#### Version 0.21.1
+
+[`3a233b58`](https://github.com/DotairZee/zeetures/commit/3a233b587fb04c68f572e372a85e7499db7933a5)
+
+#### Creatures cannot push a busy object; the submarine is repaired at load
+
+[`64c09282`](https://github.com/DotairZee/zeetures/commit/64c0928228f2de4fefef0748b4253fe60f3576dc)
+
+In C1/C2 a creature's activate 1 or 2 on an object that is not
+activateable (ATTR 4) is now refused, as the hand's click already is
+(switch OPENC2E_ACTIVATE_ANYTHING; OPENC2E_WATCH_REFUSED logs refusals).
+The submarine clears the bit for a trip; a creature's push part-way
+restarted its trip script, whose "subv attr 4" then ran again with no
+"addv attr 4" to match. In Home its ATTR had run down to -68 (every bit
+set, physics among them) and the airlock doors' to -60, so at launch it
+fell straight down through the world.
+
+At load the submarine's ATTR is set to its docked value from the game's
+Eden world (12) and the airlock doors' to 4; its callers now act only
+when it is activateable again, i.e. when its trip script has finished.
 
 ## Version 0.21.0
 

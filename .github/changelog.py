@@ -240,6 +240,9 @@ VERSIONS = [
      "Creatures learn by watching each other, from their own family most and when young most: what things are "
      "good for, where food is, and which places and drops hurt. They name the things they use, often for a young "
      "one of their family, and family pick up each other's words faster."),
+    ("0.21.1", "3a233b58",
+     "The submarine no longer falls off the screen when a game is loaded. Creatures can no longer push it while it "
+     "travels: that restarted its trip part-way, and over many trips it lost track of its own settings."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
