@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 592 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 595 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.26.0](#version-0260): 3 commits, 21 November 2026
 - [0.25.1](#version-0251): 2 commits, 21 November 2026
 - [0.25.0](#version-0250): 2 commits, 21 November 2026
 - [0.24.0](#version-0240): 2 commits, 21 November 2026
@@ -64,6 +65,66 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.26.0
+
+Creatures poisoned by heavy metals are now cared for like the sick and the young, and creatures learn the volcano's fruit as a medicine of its own: those who know it eases pain bring it to sufferers and go looking for it when they hurt. The Health Kit's Doctor shelf has the volcanic fruit, for heavy metals from radiation poisoning. Swarm bees stuck against walls now join their hive.
+
+### 21 November 2026
+
+#### Version 0.26.0
+
+[`0e6273fe`](https://github.com/DotairZee/zeetures/commit/0e6273fed8d4d1636d09f2d477e5cc6f9918d874)
+
+#### The poisoned are cared for; healing fruit learned apart; Doctor's volcanic fruit
+
+[`480cda63`](https://github.com/DotairZee/zeetures/commit/480cda6319eb43d8d0057f21fe92f0d99a3ccbd4)
+
+Owner, 2026-11-21: heavy-metal poisoning should prompt others to bring
+the cure as part of caring, and help creatures learn ("care + learned
+medicine"); and a volcanic fruit on the Health Kit's Doctor shelf,
+"clear it is for heavy metals from radiation poisoning".
+
+- Care: creatures with heavy metals over 50 give off their kind's care
+  scent (pheromones.txt "when 140&gt;50") and count as needing care, so
+  others tend them (tickle, bring food or a toy).
+- Healing fruit apart: the volcanic bushes' fruit (2 25 x, OV02 2) is
+  seen by the mind as its own kind, MIND_HEALING_FRUIT (40), past C2's
+  categories (to the engine it stays fruit; a choice of it names the
+  fruit itself), so what eating it does is learned apart, by the eater
+  and by watchers. Habituation widened to 41; thought pictures find it.
+- Bringing: a carer tending one in pain brings first what it has learned
+  eases pain when eaten (the healing fruit, once known), if in sight.
+- The cure trip: in lasting pain, knowing the healing fruit eases it,
+  go to the nearest place remembered finding some, for the pain relief.
+  Food places now keep their category in the save.
+- Doctor shelf: "Volcanic fruit", with a picture and a description that
+  opens "For heavy metals from radiation poisoning"; Add to the world
+  makes a ripe volcanic fruit beside the creature shown.
+
+Measured, 12-game-day Home copies (care runs dropped heavy metals 21,
+34, 42; without the poisoned care scent 30; with and without the
+healing kind, four at once, 14/22 against 21/18): no clear speed-up.
+Healing fruit was eaten 105-445 times with felt pain relief about -0.55,
+carers tended 300-470 times; but most of the poisoned live far from the
+volcano and had neither seen the fruit nor watched it eaten, and eaters
+learned little relief (the soothing lands as the meal ends), so the cure
+trip was rarely offered. Knowledge spreads over many days. Switches
+OPENC2E_NO_HEALING_KIND, OPENC2E_NO_CURE_SEEK, OPENC2E_WATCH_CURE.
+
+#### Stuck swarm bees join their hive
+
+[`dc2d6184`](https://github.com/DotairZee/zeetures/commit/dc2d618493577f85bd16fce187a8f0eb880d244e)
+
+When a hive dies out it sends a queen and 20 swarm bees (2 17 6) that
+fly to her new hive and join it on arrival. They bump into walls, and
+nothing in the game's scripts frees a pinned one: in Home fifteen hung
+still (three in the sea under the west dock, four stacked against rock)
+long after their queen was gone (owner, 2026-11-21). bee-swarm.cos: a
+watcher (2 1 165, every 100 ticks) sends a swarm bee that has not moved
+more than 2 px in four looks into its hive as on arrival (hive OV10 up
+5), or away if its hive is gone. A Home copy: all fifteen joined, the
+hive's strength 25 to 100.
 
 ## Version 0.25.1
 

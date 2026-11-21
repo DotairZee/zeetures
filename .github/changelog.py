@@ -269,6 +269,11 @@ VERSIONS = [
      "Creatures in lasting pain now go back to places where it eased, and the volcano's fruit soothes the pain of "
      "heavy metals as soon as it is eaten, so poisoned creatures find their cure: in a twelve-day test their heavy "
      "metals fell almost twice as far, with less pain."),
+    ("0.26.0", "0e6273fe",
+     "Creatures poisoned by heavy metals are now cared for like the sick and the young, and creatures learn the "
+     "volcano's fruit as a medicine of its own: those who know it eases pain bring it to sufferers and go looking "
+     "for it when they hurt. The Health Kit's Doctor shelf has the volcanic fruit, for heavy metals from radiation "
+     "poisoning. Swarm bees stuck against walls now join their hive."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
