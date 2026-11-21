@@ -981,19 +981,25 @@ enum 2 4 141 doif ov03 ne 2 kill targ endi next
 * genetics machine), all at plane 0 plus their parts' offsets, stand in
 * front of them. A bush from before that is made again in place, its
 * look, stage, age and picture kept.
+* Bushes put in front on purpose (plane 1000: the corridor and far west
+* workshop bushes) are left as they are.
 reps 40
   setv var0 0
   enum 2 4 141
     doif ov04 ne -10
-      setv var0 1 setv var1 posl setv var2 post setv var3 ov00 setv var4 ov01
-      setv var5 ov02 setv var6 pose
+      doif ov04 ne 1000
+        setv var0 1 setv var1 posl setv var2 post setv var3 ov00 setv var4 ov01
+        setv var5 ov02 setv var6 pose
+      endi
     endi
   next
   doif var0 eq 1
     enum 2 4 141
       doif ov04 ne -10
-        doif posl eq var1
-          doif post eq var2 kill targ endi
+        doif ov04 ne 1000
+          doif posl eq var1
+            doif post eq var2 kill targ endi
+          endi
         endi
       endi
     next
@@ -1203,8 +1209,28 @@ enum 2 4 141
   endi
 next
 doif var0 eq 0
-  inst new: simp zfps 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 2 2202 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+  inst new: simp zfps 12 0 1000 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 2 2202 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 1000 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
 endi
+* The far west workshop bush stands at the world's west edge, behind a
+* dark rock piece of the world's own scenery that hid its pot and most of
+* its leaves (owner, 2026-11-20: brought to the front). On plane 1000 (fruit 1001),
+* in front of the rock and behind creatures, with its fruit already on it.
+enum 2 4 141
+  doif posl eq 2
+    doif post eq 2202
+      doif ov04 eq -10 plne 1000 setv ov04 1000 endi
+    endi
+  endi
+next
+enum 2 25 0
+  doif posl lt 160
+    doif post gt 2190
+      doif posb lt 2340
+        doif plne eq -9 plne 1001 endi
+      endi
+    endi
+  endi
+next
 setv var0 0
 enum 2 4 141
   doif posl eq 4162
