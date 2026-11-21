@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 582 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 584 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.22.0](#version-0220): 2 commits, 21 November 2026
 - [0.21.2](#version-0212): 2 commits, 21 November 2026
 - [0.21.1](#version-0211): 2 commits, 21 November 2026
 - [0.21.0](#version-0210): 2 commits, 20 November 2026
@@ -59,6 +60,49 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.22.0
+
+Bacteria and disease, as in the original game: germs live in dark caves and rotting food and are carried by grendels; creatures catch them, sneeze, cough and run a fever, spread them by sneezing, and get better as their antibodies build up. Others look after the ill as they do the young. The Health Kit shows a creature's illness, and the Ecology Kit's map shows where the germs are. Each kit can now turn its own notices on the status bar on or off.
+
+### 21 November 2026
+
+#### Version 0.22.0
+
+[`0e4cbfc1`](https://github.com/DotairZee/zeetures/commit/0e4cbfc1b92b8c22c42cd6385a26e685d1f2dae1)
+
+#### Bacteria and disease; notice switches in each kit
+
+[`3231e3fa`](https://github.com/DotairZee/zeetures/commit/3231e3fa4de9efc1bd0d60718d07b3a2c92a1b99)
+
+C2's germs (the manual: bacteria in caves and carried by grendels;
+coughing, sneezing and fever; sneezing spreads it) were missing: no
+world script makes antigens, and SNEZ was a stub. The genomes already
+carry the body's side (antigens wear organs, the immune organ turns them
+into antibodies and fever toxin, histamine sets off sneezing and
+coughing). Disease.cpp adds the germs, our own design: strains with an
+antigen and a toxin; germs per room (dark caves keep them, rotting food
+feeds them, light kills them, they seep through doorways); grendels
+carry a strain for life without falling ill; a creature may catch a
+strain unless it has its antibody; while ill the germs feed antigen and
+toxin into it, and it is over when the antibody has built up; SNEZ
+passes illnesses to creatures in front; now and then a strain changes
+its antigen. Saved with the world. Tuned as a nuisance (owner): in
+eight-minute Home copies each creature fell ill 1-4 times in about four
+game hours, no deaths from illness. Switches OPENC2E_NO_DISEASE,
+OPENC2E_WATCH_DISEASE.
+
+The ill give off their kind's care scent and are tended like the young
+(pheromones.txt "when ill"). The Health Kit's Fitness page shows the
+illness and its antibodies; the Ecology Kit's map shows germs by strain
+with the ill ringed; "Ill" and "Recovered" notices; a death while ill
+is recorded as illness.
+
+Each kit has checkboxes for its own status-bar notices (kept in
+kits.ini): births, pregnancies and eggs in the Breeder's Kit, deaths in
+the Graveyard Kit, illness, recovery, fainting and coming round in the
+Health Kit, changes in the Owner's Kit. A notice switched off is still
+in the life log.
 
 ## Version 0.21.2
 

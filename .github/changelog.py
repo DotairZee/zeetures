@@ -246,6 +246,12 @@ VERSIONS = [
     ("0.21.2", "8b899577",
      "A creature that starves is recorded as starved, not as \"organ failure\", even when it fainted before its "
      "hunger had risen."),
+    ("0.22.0", "0e4cbfc1",
+     "Bacteria and disease, as in the original game: germs live in dark caves and rotting food and are carried by "
+     "grendels; creatures catch them, sneeze, cough and run a fever, spread them by sneezing, and get better as "
+     "their antibodies build up. Others look after the ill as they do the young. The Health Kit shows a creature's "
+     "illness, and the Ecology Kit's map shows where the germs are. Each kit can now turn its own notices on the "
+     "status bar on or off."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
