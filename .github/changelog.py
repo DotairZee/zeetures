@@ -212,6 +212,11 @@ VERSIONS = [
     ("0.18.4", "c7ce359a",
      "Creatures no longer fall through the upper-east deck over the lift's shaft, or out of the lift's cage at its "
      "top stop: a floor line running along a room's bottom now holds creatures and objects too big for it."),
+    ("0.19.0", "4e950b64",
+     "Old Creatures 2 COBs work as they did in the original game: speech commands (SAY$, SAY#), scenery objects, "
+     "scripts whose blocks do not nest, objects compared with numbers, and more; 115 of 116 objects from a large "
+     "archive of fan COBs now work. A COB that cannot be added says why instead of closing the game. Custom worlds "
+     "(not made from Eden) no longer get the additions written for Eden's map."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

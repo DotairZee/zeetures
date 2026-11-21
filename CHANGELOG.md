@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 559 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 563 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.19.0](#version-0190): 4 commits, 20 November 2026
 - [0.18.4](#version-0184): 2 commits, 20 November 2026
 - [0.18.3](#version-0183): 2 commits, 20 November 2026
 - [0.18.2](#version-0182): 2 commits, 20 November 2026
@@ -49,6 +50,72 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.19.0
+
+Old Creatures 2 COBs work as they did in the original game: speech commands (SAY$, SAY#), scenery objects, scripts whose blocks do not nest, objects compared with numbers, and more; 115 of 116 objects from a large archive of fan COBs now work. A COB that cannot be added says why instead of closing the game. Custom worlds (not made from Eden) no longer get the additions written for Eden's map.
+
+### 20 November 2026
+
+#### Version 0.19.0
+
+[`4e950b64`](https://github.com/DotairZee/zeetures/commit/4e950b6405793e4cc8799d602c9efd84a5a01a38)
+
+#### C2 Agent Injector: a COB that cannot be added says so
+
+[`628cee13`](https://github.com/DotairZee/zeetures/commit/628cee13a77fdd4a5715750c9a1d7ad6e292f065)
+
+Adding an object whose picture or sound is neither in its COB nor
+installed threw out of the injector and closed the game (six of the
+owner's old COBs, whose sprites came as separate files). It now shows
+"Couldn't add ..." under the lists. Import leaves out a Mac's
+"\_\_MACOSX/.\_name" files, and a COB file that cannot be read is passed
+over when the Objects folder is listed (a ".\_Desert Garden.cob" closed
+the game).
+
+#### C2: Eden's additions only on Eden's map; injected scripts' OWNR
+
+[`f6775ee0`](https://github.com/DotairZee/zeetures/commit/f6775ee02dcd14b4ba829f3766eaa4f64ea263ff)
+
+The world additions are written for the game's own world. On a custom
+world (The Albian Sea Bay, from the owner's COB archive) thirteen failed
+or changed rooms it does not have. They now run only when the world was
+started from Eden.sfc (its world.sfc the same file); six that change
+objects by kind are marked "\* any world" and run everywhere; a world
+folder's own Additions run anyway. Home, from Eden, runs all 47.
+
+A script injected for immediate execution (a COB's install script) has
+the selected creature as OWNR, and so TARG at the start (C2 CAOS guide):
+BunchaStuff's "Get Target!" is INST, EDIT.
+
+#### C2: old COBs run as they did in Creatures 2
+
+[`9ffbde82`](https://github.com/DotairZee/zeetures/commit/9ffbde82217c94c36c465424171058dfe9605549)
+
+The owner's archive of old COBs (2026-11-20), each imported and added by
+hand in a copy of Home: 71 of 109 objects worked before; 115 of 116 now
+(the last lacks a sprite its zip never had, and says so).
+
+Commands: SAY$ (the lexer takes "$" in words) and SAY# speak (SAY# also
+teaches the word to listeners); INS#; LCUS as a value; NEW: SCEN makes a
+scenery object (marked, saved with the world, as the world file's are)
+and ESCN enumerates them; WIND and SETV CLAS in C2 as in C1; species
+above 65535 wrap to 16 bits, as C2 files its scripts (Zora Castle).
+
+Blocks: the original engines ran DOIF, ELSE, ENDI, NEXT as they came, and
+COBs rely on it (NEXT inside DOIF, a second ELSE, DOIF open at ENDM: the
+Holo Doc, Coconut tree update, Ball Update, Flower Pack sunflower, the
+Mystic Gong, Raining Monarch Butterfly). A C1/C2 statement that will not
+compile nested is compiled again, flat, to its script's end
+(caosScript::compileFlat; ops FLATENUM and FLATNEXT, a loop stack in the
+VM); a command cut short by ENDM is left out (The Albian Sea Bay's own
+scripts). Unit tests: c2_flat_else_twice, c2_flat_doif_open_at_endm,
+c2_flat_next_in_doif.
+
+Values: in C1/C2 an agent orders against a number by its UNID ("doif targ
+gt 0"), and a number stands for the agent with that UNID where an agent
+is wanted. MATE with no creature in attention does nothing. A C2 part
+whose first picture is past its file's end shows the last (as poses do).
 
 ## Version 0.18.4
 
