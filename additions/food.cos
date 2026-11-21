@@ -1169,14 +1169,29 @@ next
 doif var0 eq 0
   inst new: simp zfbs 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 1993 2042 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
 endi
+* The gold-pot bush stands in a planter (owner, 2026-11-20, a marked
+* screenshot: "this bush should be potted"): zfpw, 20 px taller, so its top
+* is at 2194 and its base where it was. One planted bare before is made
+* again in its pot, keeping its stage, age and picture.
 setv var0 0
 enum 2 4 141
   doif posl eq 1972
-    doif post eq 2214 addv var0 1 endi
+    doif post eq 2214
+      setv var0 1 setv var3 ov00 setv var4 ov01 setv var6 pose kill targ
+    endi
+  endi
+next
+doif var0 eq 1
+  inst new: simp zfpw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 setv ov00 var3 setv ov01 var4 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov05 1 setv ov99 7461 mvto 1972 2194 pose var6 tick 250 slow
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 1972
+    doif post eq 2194 addv var0 1 endi
   endi
 next
 doif var0 eq 0
-  inst new: simp zfbw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 1972 2214 setv ov00 2 setv ov01 150 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+  inst new: simp zfpw 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 1972 2194 setv ov00 2 setv ov01 150 setv ov02 3 setv ov03 2 setv ov04 -10 setv ov05 1 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
 endi
 
 * Four bushes where hungry creatures gathered with no food in reach (owner
@@ -1202,35 +1217,44 @@ next
 doif var0 eq 0
   inst new: simp zfps 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 1102 1714 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
 endi
-setv var0 0
+* The far west workshop bush stands at the world's west edge, behind a
+* dark rock piece of the world's own scenery that hid its pot and most of
+* its leaves (owner, 2026-11-20: brought to the front, then "move it about
+* 30 pixels to the right"). At 32/2202, its base on the floor (2329, flat
+* from x 80); on plane 1000 (fruit 1001), in front of the rock and behind
+* creatures. One already planted (at 2, behind the rock) is brought forward
+* and moved, with the fruit on it, keeping its stage, age, look and picture.
+setv var1 0
 enum 2 4 141
   doif posl eq 2
+    doif post eq 2202
+      setv var1 1
+      doif ov04 eq -10 plne 1000 setv ov04 1000 endi
+      mvto 32 2202
+    endi
+  endi
+next
+doif var1 eq 1
+  enum 2 25 0
+    doif posl lt 160
+      doif post gt 2190
+        doif posb lt 2340
+          doif plne eq -9 plne 1001 endi
+          doif plne eq 1001 setv var2 posl addv var2 30 mvto var2 post endi
+        endi
+      endi
+    endi
+  next
+endi
+setv var0 0
+enum 2 4 141
+  doif posl eq 32
     doif post eq 2202 addv var0 1 endi
   endi
 next
 doif var0 eq 0
-  inst new: simp zfps 12 0 1000 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 2 2202 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 1000 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+  inst new: simp zfps 12 0 1000 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 32 2202 setv ov05 1 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 1000 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
 endi
-* The far west workshop bush stands at the world's west edge, behind a
-* dark rock piece of the world's own scenery that hid its pot and most of
-* its leaves (owner, 2026-11-20: brought to the front). On plane 1000 (fruit 1001),
-* in front of the rock and behind creatures, with its fruit already on it.
-enum 2 4 141
-  doif posl eq 2
-    doif post eq 2202
-      doif ov04 eq -10 plne 1000 setv ov04 1000 endi
-    endi
-  endi
-next
-enum 2 25 0
-  doif posl lt 160
-    doif post gt 2190
-      doif posb lt 2340
-        doif plne eq -9 plne 1001 endi
-      endi
-    endi
-  endi
-next
 setv var0 0
 enum 2 4 141
   doif posl eq 4162
