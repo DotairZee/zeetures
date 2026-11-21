@@ -386,8 +386,20 @@ struct Params {
 	float bedReach = 1200.0f;
 	float avoidFeel = 0.0006f; // per tick worse than usual (pain, cold, heat, fear, injury, suffocation)
 	float leaveNeed = 0.2f; // that need at least this high: leave the room
-	float exploreWant = 0.025f; // curiosity about an unvisited room next door
+	float exploreWant = 0.05f; // curiosity about an unvisited room next door (doubled with the novelty rules, owner 2026-11-20: 0.025 explored in ~0.5% of decisions)
 	float exploreReach = 1500.0f; // a known but unvisited room on this floor this near
+	// (owner, 2026-11-20: counts fade, novelty returns, the young explore
+	// most) a room's novelty is 1 / sqrt(1 + its visits), the visits fading
+	// with time away (by e in noveltyReturn ticks, about halving in a game
+	// hour), so rarely visited rooms keep drawing a bored creature and old
+	// haunts become worth a look again (count-based exploration: Strehl and
+	// Littman 2008, Bellemare et al. 2016; novelty and boredom: Berlyne
+	// 1960). Rooms less novel than noveltyMin are not explored.
+	float noveltyReturn = 52000.0f;
+	float noveltyMin = 0.25f;
+	// how much each life stage explores (baby .. senile): the young most
+	// (childhood as a time for exploring: Gopnik 2020)
+	std::array<float, 7> stageExplore{1.0f, 1.5f, 1.35f, 1.15f, 1.0f, 0.8f, 0.6f};
 	// a thought bubble of surprise when an action eases its needs this much
 	// more than it expected
 	float surpriseReward = 0.15f;
@@ -1988,7 +2000,8 @@ class HomeostatMind : public CreatureMind {
 		if (!env)
 			return;
 		std::map<std::string, float*> known = {{"hungerPatience", &prm.hungerPatience}, {"travelHalf", &prm.travelHalf},
-			{"floorChangeDistance", &prm.floorChangeDistance}, {"routeMaxCost", &prm.routeMaxCost}, {"seekDistanceCost", &prm.seekDistanceCost}};
+			{"floorChangeDistance", &prm.floorChangeDistance}, {"routeMaxCost", &prm.routeMaxCost}, {"seekDistanceCost", &prm.seekDistanceCost},
+			{"exploreWant", &prm.exploreWant}, {"noveltyMin", &prm.noveltyMin}, {"noveltyReturn", &prm.noveltyReturn}};
 		std::stringstream ss(env);
 		std::string item;
 		while (std::getline(ss, item, ',')) {
@@ -4116,8 +4129,17 @@ class HomeostatMind : public CreatureMind {
 		float survival = std::max({d[PAIN], d[HUNGER], d[COLD], d[HOT], d[INJURY], d[SUFFOCATE], d[THIRST]});
 		float want = prm.exploreWant * (0.5f + d[BORED]) * std::clamp(1.0f + 0.5f * appliedTemperament[1], 0.3f, 2.0f) *
 					 (1.0f - prm.survivalCuriosityDamp * std::clamp(survival, 0.0f, 1.0f));
+		static const bool oldExplore = getenv("OPENC2E_OLD_EXPLORE") != nullptr; // (to compare; it also halves the pull back to 0.025)
+		if (oldExplore)
+			want *= 0.5f;
+		if (!oldExplore && p.stage >= 0 && p.stage < 7)
+			want *= prm.stageExplore[(size_t)p.stage];
 		if (want < prm.seekMinWant)
 			return;
+		if (!oldExplore) {
+			addExploreByNovelty(p, d, want, canWest, canEast, out);
+			return;
+		}
 		const RoomMemory* target = nullptr;
 		int targetId = -1;
 		float bestDist = 1e9f;
@@ -4152,6 +4174,56 @@ class HomeostatMind : public CreatureMind {
 		if (target) {
 			exploreTarget = targetId;
 			addGoTo(p, want, target->x, target->floor - 40.0f, "explore", canWest, canEast, out, d[BORED]);
+		}
+	}
+
+	// a room's novelty: 1 / sqrt(1 + visits), the visits fading with time away
+	float roomNovelty(const RoomMemory& r, unsigned int tick) const {
+		float away = tick > r.last ? (float)(tick - r.last) : 0.0f;
+		float v = (float)r.visits * std::exp(-away / prm.noveltyReturn);
+		return 1.0f / std::sqrt(1.0f + v);
+	}
+
+	// the room to explore: of the rooms next door and the known rooms on this
+	// floor within reach, the one most novel for its distance (not the room
+	// it is in, nor one it failed to reach lately)
+	void addExploreByNovelty(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float want, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		auto blockedRoom = [&](int id) {
+			auto it = exploreBlockedUntil.find(id);
+			return it != exploreBlockedUntil.end() && p.tick < it->second;
+		};
+		const RoomMemory* target = nullptr;
+		int targetId = -1;
+		float best = 0.0f, bestNovelty = 0.0f;
+		auto consider = [&](int id, const RoomMemory& r) {
+			if (id == p.room || blockedRoom(id))
+				return;
+			float nov = roomNovelty(r, p.tick);
+			if (nov < prm.noveltyMin)
+				return;
+			float score = nov / (1.0f + std::fabs(dxTo(p, r.x)) / prm.travelHalf);
+			if (score > best) {
+				best = score;
+				bestNovelty = nov;
+				target = &r;
+				targetId = id;
+			}
+		};
+		for (auto& n : p.roomsNear) {
+			if ((n.side != 10 && n.side != 11) || (n.water && !p.inWater))
+				continue;
+			auto r = rooms.find(n.id);
+			if (r != rooms.end())
+				consider(n.id, r->second);
+		}
+		for (auto& [id, r] : rooms) {
+			if (r.water || std::fabs(r.floor - p.roomFloor) > prm.seekMaxHeight || std::fabs(dxTo(p, r.x)) > prm.exploreReach)
+				continue;
+			consider(id, r);
+		}
+		if (target) {
+			exploreTarget = targetId;
+			addGoTo(p, want * bestNovelty, target->x, target->floor - 40.0f, "explore", canWest, canEast, out, d[BORED]);
 		}
 	}
 
