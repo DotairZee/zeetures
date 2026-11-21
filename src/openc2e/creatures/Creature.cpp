@@ -1511,6 +1511,14 @@ void c2Creature::updateConsciousness() {
 				diedof = "drowning";
 			else if (drives[2] >= 216) // hunger (C2 drive 2) at 0.85 or more
 				diedof = "starvation";
+			// or its fuel stores spent (glycogen 72, fat 74, adipose tissue
+			// 75): once ATP is gone its chemistry stands still, Hunger with
+			// it, so a creature that starved can lie unconscious with the
+			// Hunger it had when it fainted, and a little glucose it could
+			// no longer burn (2026-11-21: three Home hatchlings recorded as
+			// "organ failure" at Hunger ~100, glycogen and fat at 0)
+			else if (chemicals[72] < 10 && chemicals[74] < 10 && chemicals[75] < 10)
+				diedof = "starvation";
 			else
 				diedof = "organ failure";
 			// where it died (its middle and room), to map where drownings
