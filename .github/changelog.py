@@ -252,6 +252,10 @@ VERSIONS = [
      "their antibodies build up. Others look after the ill as they do the young. The Health Kit shows a creature's "
      "illness, and the Ecology Kit's map shows where the germs are. Each kit can now turn its own notices on the "
      "status bar on or off."),
+    ("0.23.0", "aa0130fc",
+     "Air pressure moves between rooms and makes the wind, as in the original game: storms raise it, the weather "
+     "machines push it up or down, and the wind blows from high pressure to low, so the clouds drift with the "
+     "weather instead of always meeting the same wind. The Ecology Kit's pressure and wind maps show it change."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

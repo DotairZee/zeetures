@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 584 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 586 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.23.0](#version-0230): 2 commits, 21 November 2026
 - [0.22.0](#version-0220): 2 commits, 21 November 2026
 - [0.21.2](#version-0212): 2 commits, 21 November 2026
 - [0.21.1](#version-0211): 2 commits, 21 November 2026
@@ -60,6 +61,37 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.23.0
+
+Air pressure moves between rooms and makes the wind, as in the original game: storms raise it, the weather machines push it up or down, and the wind blows from high pressure to low, so the clouds drift with the weather instead of always meeting the same wind. The Ecology Kit's pressure and wind maps show it change.
+
+### 21 November 2026
+
+#### Version 0.23.0
+
+[`aa0130fc`](https://github.com/DotairZee/zeetures/commit/aa0130fc4a8a472f308b9f167fe3d86c83387abf)
+
+#### Air pressure spreads and makes the wind
+
+[`ccdfd1fe`](https://github.com/DotairZee/zeetures/commit/ccdfd1fe0c00e88c9cbdd3ab06c9dad4d6cb4de8)
+
+Rooms kept the world file's pressure and wind for good, so the storms'
+"addv pres 100" and the weather machines' pressure sources did nothing
+(the storms' pressure only piled up, past 500), and the clouds, which
+steer by WNDX/WNDY, always met the same wind. World::tickPressure, every
+10 ticks: pressure passes through doorways (1/32 of the difference at
+full openness), a pressure source adds PSRC/20, and each room settles
+toward the world file's pressure. The wind is made from the differences,
+as in the real game: the world file's wind (a snapshot of the real
+game's) blows from high toward low pressure in 209 of 216 rooms and
+fits the sum over doorways of the pressure difference times the
+doorway's openness along the line between the rooms' middles; scaled so
+its strength matches the snapshot (rooms' median about 17, 90th
+percentile about 50), with gusts near storms. Clears five rooms' junk
+wind values. Switch OPENC2E_NO_WIND. The Ecology Kit says pressure and
+wind now change. The room dump (OPENC2E_DUMP_ROOMS) also prints the
+sources and the wind.
 
 ## Version 0.22.0
 
