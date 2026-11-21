@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 574 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 576 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.20.4](#version-0204): 2 commits, 20 November 2026
 - [0.20.3](#version-0203): 3 commits, 20 November 2026
 - [0.20.2](#version-0202): 2 commits, 20 November 2026
 - [0.20.1](#version-0201): 2 commits, 20 November 2026
@@ -55,6 +56,39 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.20.4
+
+An object that came to rest half inside the rock is set back where it fits.
+
+### 20 November 2026
+
+#### Version 0.20.4
+
+[`2bc272b1`](https://github.com/DotairZee/zeetures/commit/2bc272b1df1d7f5b1d4c72d6c9780966aa474fa7)
+
+#### Objects resting half in the rock are set back inside
+
+[`757e3b1d`](https://github.com/DotairZee/zeetures/commit/757e3b1d6a7232ee1692b651ecd1b84106c8e58b)
+
+C2 physics looks for the rock only while an object moves, from the
+middle of each side of its box, so an object that came to rest partly in
+the rock was never looked at again. A survey of every object's box edges
+in a copy of Home (15 samples over 5 minutes, 15,332 sightings) found one:
+a 2 15 7 at 4550,1584 by the dome's dock bay, its left, right and top in
+the rock over room 38, there in every sample. Now and then a resting
+object checks those four points; one in no room at all is handed to
+healOutOfRoomSystem, which sets it down where it fits. Objects that only
+sit across a wall between two rooms (call buttons, plants) are left alone.
+Switch OPENC2E_NO_ROCK_CHECK.
+
+Rerun: that object was found once and set on the bay's floor (1518 top);
+nothing else was flagged.
+
+The survey also settles the corner-only collisions worry: apart from
+that object, no object had an edge in the rock away from the world's
+seam, and no big object straddled thin rock, so the four-point check
+stays as C2 has it.
 
 ## Version 0.20.3
 

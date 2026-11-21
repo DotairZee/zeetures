@@ -234,6 +234,8 @@ VERSIONS = [
      "The submarine no longer drifts off through the world after a game is loaded: saved mid-trip, it now waits "
      "at its last dock. The far west workshop's bush moved a little right, and the bush by the big gold pot under "
      "the domes stands in a planter."),
+    ("0.20.4", "2bc272b1",
+     "An object that came to rest half inside the rock is set back where it fits."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
