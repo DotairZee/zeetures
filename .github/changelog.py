@@ -265,6 +265,10 @@ VERSIONS = [
      "wear down one of its organs until, left for days, they can kill it; the volcano's fruit cures them. "
      "Radiation also lowers the chance of conceiving, and a baby exposed to it in its mother or its egg hatches "
      "with extra mutations, which its own children inherit."),
+    ("0.25.1", "6b5845be",
+     "Creatures in lasting pain now go back to places where it eased, and the volcano's fruit soothes the pain of "
+     "heavy metals as soon as it is eaten, so poisoned creatures find their cure: in a twelve-day test their heavy "
+     "metals fell almost twice as far, with less pain."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

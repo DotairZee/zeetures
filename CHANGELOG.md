@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 590 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 592 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.25.1](#version-0251): 2 commits, 21 November 2026
 - [0.25.0](#version-0250): 2 commits, 21 November 2026
 - [0.24.0](#version-0240): 2 commits, 21 November 2026
 - [0.23.0](#version-0230): 2 commits, 21 November 2026
@@ -63,6 +64,35 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.25.1
+
+Creatures in lasting pain now go back to places where it eased, and the volcano's fruit soothes the pain of heavy metals as soon as it is eaten, so poisoned creatures find their cure: in a twelve-day test their heavy metals fell almost twice as far, with less pain.
+
+### 21 November 2026
+
+#### Version 0.25.1
+
+[`6b5845be`](https://github.com/DotairZee/zeetures/commit/6b5845be91627412e7593efe57d581d8c4477383)
+
+#### Creatures in pain go back to places that eased it; volcanic fruit soothes
+
+[`1a58be95`](https://github.com/DotairZee/zeetures/commit/1a58be9500fce0a6fe0a39c574115fe397aed905)
+
+Twelve game days in a Home copy (46 creatures with heavy metals over 50)
+showed no learning of the volcano's cure: poisoned creatures were near
+the volcano 6% then 5% of the time (4% then 1% without the pain), their
+heavy metals fell no faster than without it (145 to 113 against 146 to
+109), and their pain stayed at 65-89. Pain was not among the needs the
+mind goes back to a helpful place for, and the fruit's relief was slow
+and small (EDTA takes the metals away gradually).
+
+The mind's favourite places now include pain, from a need of 0.25 (a
+lasting ache is about 0.25-0.35; the others still 0.4), and volcanic
+fruit also gives Pain Decrease (35), 60 ripe and 30 overripe, so eating
+it is felt to help at once. Same test: heavy metals 144 to 88 (the most
+poisoned 235 to 148, against 228 to 187), pain about 63 (79); pain was
+the commonest favourite-place reason; one death (illness), as before.
 
 ## Version 0.25.0
 
