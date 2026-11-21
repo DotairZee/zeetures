@@ -335,7 +335,14 @@ std::string Engine::translateWordlistWord(const std::string& s) {
 
 std::string Engine::executeNetwork(std::string in) {
 	// now parse and execute the CAOS we obtained
-	caosVM vm(0); // needs to be outside 'try' so we can reset outputstream on exception
+	// (C1/C2: OWNR, and so TARG at the start, is the selected creature in a
+	// script injected for immediate execution, as a COB's install script:
+	// C2 CAOS guide. BunchaStuff's "Get Target!" is just INST, EDIT: the
+	// hand picks up the selected creature)
+	AgentRef owner;
+	if (version < 3)
+		owner = world.selectedcreature;
+	caosVM vm(owner); // needs to be outside 'try' so we can reset outputstream on exception
 	try {
 		caosScript script(gametype, "<network>"); // XXX
 		script.parse(in);
@@ -2036,6 +2043,47 @@ void Engine::injectMissingBuiltinCobs() {
 	//   replace <text to put there>
 	// Lines starting with * or # are notes. A patch whose text is not found
 	// (already applied, or a different game version) is reported and skipped.
+
+// whether the open world started from the game's own world file (Eden.sfc;
+// Home and worlds made from it hold a byte-for-byte copy as world.sfc)
+static bool worldStartedFromEden(const std::string& worlddir) {
+	if (worlddir.empty())
+		return true;
+	fs::path mine = fs::path(worlddir) / "world.sfc";
+	fs::path eden = findMainDirectoryFile("Eden.sfc");
+	std::error_code ec;
+	if (eden.empty() || !fs::exists(mine, ec) || !fs::exists(eden, ec))
+		return true; // (nothing to compare: as before)
+	if (fs::file_size(mine, ec) != fs::file_size(eden, ec))
+		return false;
+	std::ifstream a(mine, std::ios::binary), b(eden, std::ios::binary);
+	std::istreambuf_iterator<char> ia(a), ib(b), end;
+	for (; ia != end && ib != end; ++ia, ++ib)
+		if (*ia != *ib)
+			return false;
+	return ia == end && ib == end;
+}
+
+// an addition marked "* any world" in its opening comment lines
+static bool anyWorldAddition(const std::string& text) {
+	size_t at = 0;
+	while (at < text.size()) {
+		size_t eol = text.find('\n', at);
+		std::string line = text.substr(at, eol == std::string::npos ? std::string::npos : eol - at);
+		size_t first = line.find_first_not_of(" \t\r");
+		if (first == std::string::npos) {
+			// (blank lines between comments)
+		} else if (line[first] != '*')
+			return false;
+		else if (line.find("* any world") != std::string::npos)
+			return true;
+		if (eol == std::string::npos)
+			break;
+		at = eol + 1;
+	}
+	return false;
+}
+
 void Engine::applyScriptPatches(bool quiet) {
 	if (version < 3) {
 		// the player's own (or the built-in) one, then the world folder's
@@ -2332,9 +2380,20 @@ bool Engine::initialSetup() {
 	// Additions.h), then the world folder's own.
 	// Objects they create are not saved, so they are made anew at each load.
 	if (version < 3) {
+		// They are written for the game's own world: Eden's map, rooms and
+		// objects. A world started from another world file (a custom world
+		// such as The Albian Sea Bay, owner's COBs, 2026-11-20: thirteen of
+		// them failed there, changing rooms it does not have) runs only
+		// those marked "* any world" in their opening comment; its own
+		// folder's additions (below) run anyway.
+		bool edenMap = worldStartedFromEden(currentworlddir);
 		for (auto& s : Additions::scripts()) {
 			if (s.text.find_first_not_of(" \t\r\n") == std::string::npos)
 				continue;
+			if (!edenMap && !anyWorldAddition(s.text)) {
+				fmt::print("* World addition {} skipped: written for Eden's map, and this world is not from Eden.sfc\n", s.name);
+				continue;
+			}
 			if (!s.missingArt.empty()) {
 				fmt::print("* World addition {} (built in) skipped: its art ({}) is not installed\n", s.name, s.missingArt);
 				continue;

@@ -5,4 +5,6 @@
 * (x 2715-2815) have no scripts: the world file gives each a looping
 * animation of frames 0 to 4. Played 4 to 0 instead, they turn the other
 * way, with the stream that now carries creatures east beneath them.
+* any world: it changes objects by kind, not Eden's map, so it runs on every
+* world (other Additions run only on worlds started from Eden.sfc).
 enum 2 3 11 anim [43210R] next

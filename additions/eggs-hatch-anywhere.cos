@@ -5,6 +5,8 @@
 * timer set again at every load (a running timer only loses part of one
 * step; CARR cannot be asked here, as it reads the script's owner). Eggs in
 * water still wait for dry land, as in C2.
+* any world: it changes objects by kind, not Eden's map, so it runs on every
+* world (other Additions run only on worlds started from Eden.sfc).
 enum 2 5 2
   doif pose lt 7
     tick 600

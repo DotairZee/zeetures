@@ -17,6 +17,8 @@
 * speed, then sank through every floor to the bottom of the map. A dead
 * ettin in the airlock did this (owner, 2026-11-10). So norns get our own
 * version too: their death record (EVNT) and sound as before.
+* any world: it changes objects by kind, not Eden's map, so it runs on every
+* world (other Additions run only on worlds started from Eden.sfc).
 scrp 4 1 0 72
   lock
   dde: died

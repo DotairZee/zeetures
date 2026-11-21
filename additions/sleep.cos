@@ -17,6 +17,8 @@
 * sleepy but not tired. C2's norn script also dreams after sleeping (DREA,
 * which works C2's own brain); our creatures run their own mind, so that
 * part is left out.
+* any world: it changes objects by kind, not Eden's map, so it runs on every
+* world (other Additions run only on worlds started from Eden.sfc).
 scrp 4 2 0 41
   doif driv 6 gt 96
     impt 15 pose 58 aslp 1

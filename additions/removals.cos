@@ -1,6 +1,8 @@
 * Objects taken out of the world (openc2e Creatures 2 project, our own
 * script). Run by openc2e after the world loads (Additions folder), every
 * load, and safe to repeat.
+* any world: it changes objects by kind, not Eden's map, so it runs on every
+* world (other Additions run only on worlds started from Eden.sfc).
 
 * The five power-up medallions, classifiers 2 9 16-20 (the game's sprite
 * powp): spinning game-state switches for features openc2e already has

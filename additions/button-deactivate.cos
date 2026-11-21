@@ -14,6 +14,8 @@
 * (2 2 22) and the callers our additions place (2 2 210-213, 216-219, 221,
 * 222). Deactivating them now does nothing, as for any other switch with
 * nothing to switch off; each is set back on its first picture.
+* any world: it changes objects by kind, not Eden's map, so it runs on every
+* world (other Additions run only on worlds started from Eden.sfc).
 scrp 2 2 21 0
 setv var0 0
 endm
