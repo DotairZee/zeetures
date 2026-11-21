@@ -512,6 +512,15 @@ static void restoreWorldObjects(std::vector<SavedInjected>& objects, int& matche
 		ag->setTimerPhase(o.since);
 		ag->velx = o.velx;
 		ag->vely = o.vely;
+		// A machine saved in the middle of a script is left still: the script
+		// that would have stopped it does not run on after a load, so one
+		// moving under its script kept that speed for good. The submarine
+		// (3 1 2), saved on its way between docks, went on west through the
+		// rock and across the world (owner's screencast, 2026-11-20)
+		if (o.busy) {
+			ag->velx = 0;
+			ag->vely = 0;
+		}
 		ag->accg = o.accg;
 		ag->aero = o.aero;
 		ag->rest = o.rest;

@@ -39,6 +39,30 @@
 * beneath the submarine (0), in front of the background and bushes (-10);
 * they were at 5000, as the lifts' callers are. The airlock one moved 6 px
 * east, clear of the airlock door (2 9 7, plane 1000, to x 6421).
+* A submarine away from its docks at load is set at the dock it last
+* stopped at, still (owner's screencast, 2026-11-20: saved on its way
+* between docks, it lost the script that stops it at the next turn, and
+* kept its speed west through the rock and across the world; Home's save
+* had it at 384,935 moving -10). No script of its is running at load, so
+* it is stopped wherever it is. OV00 names its last stop: 0 west (top-left
+* 6065,790), 2 east (7155,815); the airlock (1) needs its drain run, so
+* the west dock instead. Its riders come with it (the cabin keeps them in).
+enum 3 1 2
+  setv velx 0 setv vely 0
+  setv var3 -1
+  doif posl lt 6120 and post lt 850 setv var3 0 endi
+  doif posl gt 6400 and posl lt 6520 and post gt 1200 setv var3 1 endi
+  doif posl gt 7100 and post lt 860 setv var3 2 endi
+  doif var3 eq -1
+    doif ov00 eq 2
+      setv var1 7155 setv var2 815
+    else
+      setv var1 6065 setv var2 790 setv ov00 0
+    endi
+    subv var1 posl subv var2 post mvby var1 var2
+    part 4 pose 0 part 5 pose 0
+  endi
+next
 enum 3 1 2
   doif velx eq 0 and vely eq 0
     setv var1 attr andv var1 4
