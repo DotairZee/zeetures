@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 571 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 574 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.20.3](#version-0203): 3 commits, 20 November 2026
 - [0.20.2](#version-0202): 2 commits, 20 November 2026
 - [0.20.1](#version-0201): 2 commits, 20 November 2026
 - [0.20.0](#version-0200): 2 commits, 20 November 2026
@@ -54,6 +55,46 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.20.3
+
+The submarine no longer drifts off through the world after a game is loaded: saved mid-trip, it now waits at its last dock. The far west workshop's bush moved a little right, and the bush by the big gold pot under the domes stands in a planter.
+
+### 20 November 2026
+
+#### Version 0.20.3
+
+[`fdec90f4`](https://github.com/DotairZee/zeetures/commit/fdec90f459da9dbaf4d89bcb33742e3f2fbbf17b)
+
+#### The submarine no longer drifts away after a load
+
+[`68519eae`](https://github.com/DotairZee/zeetures/commit/68519eae1e6d5dfa7f8596597fc6813e37116142)
+
+Owner's screencast (2026-11-20): the submarine, a creature aboard, moved
+west through the rock and across the world. Its trips are scripts that set
+a speed and wait for each turning point; a save made mid-trip kept the
+speed, and after the load the script that stops it was gone, so it never
+stopped. Home's save had it at 384,935 moving -10.
+
+A machine saved in the middle of a script now loads standing still. At
+load, sub-callers.cos stops the submarine and, if it is away from its
+docks, sets it at the dock it last stopped at (OV00: west or east; the
+airlock, which needs its drain, sends it west instead), riders and all.
+
+Tested on a copy of Home's save: the submarine loaded at the east dock
+(7155,815) with its arrows back, and the west caller brought it over.
+
+#### Workshop bush 30 px right; the gold-pot bush in a planter
+
+[`4d50ae38`](https://github.com/DotairZee/zeetures/commit/4d50ae3894734461d713394af4cbe02c5d85afba)
+
+The far west workshop bush moves from x 2 to 32 (owner: "about 30 pixels
+to the right"), its base still on the floor; one already planted is moved
+with the fruit on it. The warm-rock bush in front of the big gold pot,
+under the domes (1972), stands in a planter (zfpw, top 20 px higher at
+2194, base unchanged; owner's marked screenshot: "this bush should be
+potted"); one planted bare is remade in its pot, keeping stage, age and
+picture.
 
 ## Version 0.20.2
 

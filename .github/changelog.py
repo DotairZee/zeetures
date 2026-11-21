@@ -230,6 +230,10 @@ VERSIONS = [
     ("0.20.2", "b213d294",
      "The far west workshop's fruit bush is no longer hidden behind the dark rock: it stands in front, pot "
      "and all."),
+    ("0.20.3", "fdec90f4",
+     "The submarine no longer drifts off through the world after a game is loaded: saved mid-trip, it now waits "
+     "at its last dock. The far west workshop's bush moved a little right, and the bush by the big gold pot under "
+     "the domes stands in a planter."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
