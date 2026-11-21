@@ -20,6 +20,7 @@
 #include "Profile.h"
 #include "creatures/Pheromones.h"
 #include "creatures/Breeding.h"
+#include "creatures/Disease.h"
 #include "CreatureAgent.h"
 #include "SkeletalCreature.h"
 #include "caosScript.h"
@@ -960,6 +961,7 @@ MindPerception oldCreature::buildPerception() {
 				// creatures stuck at 248, so sharing went to the wrong friends)
 				sa.hunger = oc->getDrive(2) / 255.0f;
 				sa.kin = closeKin(p.self, sa.who);
+				sa.ill = Disease::isIll(sa.who);
 				if (const Bond* b = Relationships::bondOf(this, sa.who)) {
 					sa.affinity = b->affinity;
 					sa.fear = b->fear;

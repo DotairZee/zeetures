@@ -4621,7 +4621,7 @@ class HomeostatMind : public CreatureMind {
 		bringBookkeeping(p);
 		const SeenAgent* tendee = nullptr;
 		for (auto& s : p.visible)
-			if (s.genus == p.genus && s.genus >= 0 && (s.stage == 0 || s.stage == 1 || s.stage == 6) && s.reachable && !s.who.empty() &&
+			if (s.genus == p.genus && s.genus >= 0 && (s.stage == 0 || s.stage == 1 || s.stage == 6 || s.ill) && s.reachable && !s.who.empty() &&
 				s.distance < prm.tendSee && (!tendee || s.distance < tendee->distance))
 				tendee = &s;
 		if (!tendee)

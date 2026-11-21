@@ -19,6 +19,7 @@
 
 #include "Profile.h"
 #include "Creature.h"
+#include "Disease.h"
 #include "GenomeTraits.h"
 
 #include "Catalogue.h"
@@ -1511,6 +1512,9 @@ void c2Creature::updateConsciousness() {
 				diedof = "drowning";
 			else if (drives[2] >= 216) // hunger (C2 drive 2) at 0.85 or more
 				diedof = "starvation";
+			// ill (Disease.h) and not starving: what it was ill with
+			else if (Disease::isIll(world.history->findMoniker(genome)) && !(chemicals[72] < 10 && chemicals[74] < 10 && chemicals[75] < 10))
+				diedof = "illness: " + Disease::illnessWords(world.history->findMoniker(genome));
 			// or its fuel stores spent (glycogen 72, fat 74, adipose tissue
 			// 75): once ATP is gone its chemistry stands still, Hunger with
 			// it, so a creature that starved can lie unconscious with the

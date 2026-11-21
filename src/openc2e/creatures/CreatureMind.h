@@ -59,6 +59,7 @@ struct SeenAgent {
 	// child or other descendant, a brother, sister or half-sibling:
 	// Breeding.h closeKin): who it learns most from by watching
 	bool kin = false;
+	bool ill = false; // ill (Disease.h): tended like the young (owner, 2026-11-21)
 };
 
 // An instinct from the genome, translated into neutral terms (see

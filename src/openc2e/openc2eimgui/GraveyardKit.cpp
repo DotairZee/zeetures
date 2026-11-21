@@ -63,6 +63,10 @@ void OpenGraveyardAt(const std::string& moniker) {
 	OpenC2Kit("graveyard");
 }
 
+static void graveyardNoticeSwitches() {
+	KitNoticeSwitches({{lifeLogEntry::death, "Deaths"}, {lifeLogEntry::together, "Grew old together"}});
+}
+
 void DrawGraveyardKit() {
 	// developer aid: OPENC2E_GRAVE=<moniker> opens at that creature's stone
 	static bool s_test = true;
@@ -76,6 +80,7 @@ void DrawGraveyardKit() {
 		ImGui::Dummy(ImVec2(360, 20));
 		KitNote("No creature has died in this world yet.");
 		ImGui::Dummy(ImVec2(360, 20));
+		graveyardNoticeSwitches();
 		return;
 	}
 	int idx = 0;
@@ -187,6 +192,7 @@ void DrawGraveyardKit() {
 			ImGui::EndCombo();
 		}
 	}
+	graveyardNoticeSwitches();
 }
 
 } // namespace Openc2eImgui

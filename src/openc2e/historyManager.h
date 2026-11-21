@@ -147,8 +147,10 @@ struct lifeLogEntry {
 		unconscious = 4, // out of energy, it fell unconscious (C2)
 		cameRound = 5, // and came round
 		changed = 6, // became something else, not a death (C2: a frog norn turned back into a frog); cause says what
-		together = 7 }; // four or more that hatched together died of old age together (the memorial stone's
-						// Easter egg): cause holds their names, stage how many, moniker the last of them
+		together = 7, // four or more that hatched together died of old age together (the memorial stone's
+					  // Easter egg): cause holds their names, stage how many, moniker the last of them
+		fellIll = 8, // caught an illness (Disease.h); cause names it
+		recovered = 9 }; // got over an illness; cause names it
 	int kind = birth;
 	unsigned int tick = 0; // world tick count
 	std::string moniker;

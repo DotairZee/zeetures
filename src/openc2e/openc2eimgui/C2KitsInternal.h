@@ -4,7 +4,9 @@
 
 #include "ImGuiUtils.h"
 
+#include <initializer_list>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <filesystem>
@@ -150,6 +152,15 @@ void KitAlarmsTick();
 void BreedPacksTick(); // BreedPacks.cpp: Zeetures's recommended breed packs, fetched and imported
 void KitAlarmsReadLine(const char* line);
 void KitAlarmsWrite(ImGuiTextBuffer* buf);
+
+// ---- which notices show on the status bar (owner, 2026-11-21: "there should
+// be a checkbox in the kit that determines whether the notification should
+// show in the status bar ... for all notices and respective kits") ----
+// kind: a lifeLogEntry kind. A notice switched off is still written in the
+// life log; it only does not appear on the status bar. Kept in kits.ini.
+bool KitNoticeShown(int kind);
+// a row of checkboxes at the bottom of a kit, one per kind it owns
+void KitNoticeSwitches(std::initializer_list<std::pair<int, const char*>> kinds);
 
 // a page tab (ImGui::BeginTabItem; the test aid can pick one)
 bool KitTab(const char* label);

@@ -349,6 +349,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/creatures/Breeding.cpp
 	src/openc2e/creatures/CreatureSpeech.cpp
 	src/openc2e/creatures/Pheromones.cpp
+	src/openc2e/creatures/Disease.cpp
 	src/openc2e/creatures/Thoughts.cpp
 	src/openc2e/creatures/Relationships.cpp
 	src/openc2e/creatures/Temperament.cpp

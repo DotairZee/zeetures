@@ -27,6 +27,7 @@
 #include "caosVM.h"
 #include "common/Random.h"
 #include "common/throw_ifnot.h"
+#include "creatures/Disease.h"
 #include "creatures/Breeding.h"
 #include "creatures/CompoundCreature.h"
 #include "creatures/SkeletalCreature.h"
@@ -1884,12 +1885,15 @@ CAOS_LVALUE_TARG_SIMPLE(BABY, vm->targ->babymoniker) // TODO
 
 	/**
  SNEZ (command)
- %status stub
+ %status maybe
  %variants c1 c2
+
+ The target creature sneezes: creatures in front of it may catch its
+ illnesses (C2: Disease.h; owner, 2026-11-21).
 */
-	void c_SNEZ(caosVM* vm) {
+void c_SNEZ(caosVM* vm) {
 	vm->getTargCreature();
-	// TODO
+	Disease::sneeze(vm->targ.get());
 }
 
 /**

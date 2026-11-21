@@ -30,6 +30,7 @@
 #include "World.h"
 #include "common/backend/Backend.h"
 #include "creatures/CreatureAgent.h"
+#include "creatures/Creature.h"
 #include "creatures/Pheromones.h"
 #include "fileformats/ImageUtils.h"
 #include "fileformats/peFile.h"
@@ -38,6 +39,7 @@
 #include <array>
 #include <cmath>
 #include <deque>
+#include "creatures/Disease.h"
 #include <fmt/format.h>
 #include <imgui.h>
 #include <map>
@@ -199,6 +201,19 @@ bool s_showCreatures = true, s_showFood = false;
 // (a channel of pheromones.txt), or -1; and whether the world view is
 // tinted by it too (World::showScent)
 int s_scent = -1;
+// germs (Disease.h; owner, 2026-11-21: "we should be able to see disease
+// spread in the Ecology Kit"): a strain's id, 0 every strain together, -1 none
+int s_germ = -1;
+
+float germsOf(const Room& r) {
+	if (s_germ == 0) {
+		float sum = 0;
+		for (auto& st : Disease::strains())
+			sum += Disease::germsIn((int)r.id, st.id);
+		return std::min(sum, 255.0f);
+	}
+	return Disease::germsIn((int)r.id, s_germ);
+}
 bool s_scentOnWorld = false;
 
 // a scent's level in a room (0-1); one past the last pheromones.txt
@@ -377,29 +392,47 @@ void showChooser(bool wind) {
 	int n = Pheromones::channelCount();
 	if (s_scent > n)
 		s_scent = -1;
-	std::string current = s_scent >= 0 ? "Scent: " + scentName(s_scent) : MEASURE_NAME[s_measure];
+	if (s_germ > 0 && !Disease::strain(s_germ))
+		s_germ = -1;
+	std::string current = s_germ == 0 ? std::string("Germs: every strain")
+		: s_germ > 0 ? "Germs: " + Disease::strain(s_germ)->name()
+		: s_scent >= 0 ? "Scent: " + scentName(s_scent) : MEASURE_NAME[s_measure];
 	ImGui::SetNextItemWidth(230);
 	if (ImGui::BeginCombo("##show", current.c_str(), ImGuiComboFlags_HeightLarge)) {
 		for (int m = 0; m < MEASURES; m++) {
 			if (m == WIND && !wind)
 				continue;
-			if (ImGui::Selectable(MEASURE_NAME[m], s_scent < 0 && s_measure == m))
-				s_measure = m, s_scent = -1;
+			if (ImGui::Selectable(MEASURE_NAME[m], s_scent < 0 && s_germ < 0 && s_measure == m))
+				s_measure = m, s_scent = -1, s_germ = -1;
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", MEASURE_TIP[m]);
 		}
 		ImGui::SeparatorText("Scents");
 		if (ImGui::Selectable("Food smell##scent", s_scent == n))
-			s_scent = n;
+			s_scent = n, s_germ = -1;
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("How strongly each room smells of food: food lying within reach gives it off, it spreads\nthrough doorways and fades, and hungry creatures follow it toward food out of sight");
 		if (n > 0) {
 			for (int ch = 0; ch < n; ch++) {
 				std::string name = Pheromones::channelName(ch);
 				if (ImGui::Selectable((name + "##scent").c_str(), s_scent == ch))
-					s_scent = ch;
+					s_scent = ch, s_germ = -1;
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("How much of the scent \"%s\" each room holds: creatures give it off\nand others follow or avoid it (the rules are in pheromones.txt)", name.c_str());
+			}
+		}
+		if (!Disease::strains().empty()) {
+			ImGui::SeparatorText("Germs");
+			if (ImGui::Selectable("Every strain##germ", s_germ == 0))
+				s_germ = 0, s_scent = -1;
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Germs of every strain in each room: dark caves keep them, rotting food feeds them,\nlight kills them, they seep through doorways; ill creatures and grendels shed them.\nOn the map, ill creatures are ringed in red");
+			for (auto& st : Disease::strains()) {
+				if (ImGui::Selectable((st.name() + "##germ").c_str(), s_germ == st.id))
+					s_germ = st.id, s_scent = -1;
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("%s: antigen %d; %s", st.name().c_str(), st.antigen,
+						st.home == 0 ? "lives on in dark caves" : st.home == 1 ? "feeds on rotting food" : "carried by grendels");
 			}
 		}
 		ImGui::EndCombo();
@@ -460,14 +493,20 @@ void MapPage() {
 	float wx = m->x() + (mouse.x - o.x) / sx, wy = m->y() + (mouse.y - o.y) / sy;
 
 	auto [lo, hi] = rangeOf(m, s_measure);
-	if (s_scent >= 0) { // a scent: from none to the strongest room (levels 0-1, shown as 0-100)
+	if (s_germ >= 0) { // germs: from none to the most in a room (0-255)
+		float peak = 0.0f;
+		for (auto& r : m->rooms)
+			peak = std::max(peak, germsOf(*r));
+		lo = 0.0f;
+		hi = std::max(peak, 5.0f);
+	} else if (s_scent >= 0) { // a scent: from none to the strongest room (levels 0-1, shown as 0-100)
 		float peak = 0.0f;
 		for (auto& r : m->rooms)
 			peak = std::max(peak, scentOf(*r, s_scent));
 		lo = 0.0f;
 		hi = std::max(peak, 0.05f) * 100.0f;
 	}
-	auto shown = [&](const Room& r) { return s_scent >= 0 ? scentOf(r, s_scent) * 100.0f : roomValue(r, s_measure); };
+	auto shown = [&](const Room& r) { return s_germ >= 0 ? germsOf(r) : s_scent >= 0 ? scentOf(r, s_scent) * 100.0f : roomValue(r, s_measure); };
 	std::shared_ptr<Room> under;
 	dl->PushClipRect(o, ImVec2(o.x + w, o.y + h), true);
 	for (auto& r : m->rooms) {
@@ -506,6 +545,10 @@ void MapPage() {
 			dl->AddCircle(c, 4.5f, IM_COL32(0, 0, 0, 255), 12, 1.5f);
 			if (a.get() == selected)
 				dl->AddCircle(c, 8, IM_COL32(255, 255, 255, 255), 16, 1.5f);
+			if (s_germ >= 0 && world.history)
+				if (auto* ca = dynamic_cast<CreatureAgent*>(a.get()))
+					if (Disease::isIll(world.history->findMoniker(ca->getCreature()->getGenome())))
+						dl->AddCircle(c, 6.5f, IM_COL32(255, 60, 60, 255), 14, 2.0f);
 			float dx = mouse.x - c.x, dy = mouse.y - c.y;
 			if (hovered && dx * dx + dy * dy < 49)
 				creatureUnder = a;
@@ -531,6 +574,12 @@ void MapPage() {
 				scents += fmt::format("\n  {}: {:.0f}", scentName(ch), sv * 100.0f);
 		if (!scents.empty())
 			tip += "\nScents (out of 100):" + scents;
+		std::string germs;
+		for (auto& st : Disease::strains())
+			if (float g = Disease::germsIn((int)under->id, st.id); g >= 0.5f)
+				germs += fmt::format("\n  {}: {:.0f}", st.name(), g);
+		if (!germs.empty())
+			tip += "\nGerms:" + germs;
 		Pin* p = pinOf(under);
 		tip += p ? "\n\nClick to go there; right-click to unpin it" : s_pins.size() < 7 ? "\n\nClick to go there; right-click to pin it for the Monitor" : "\n\nClick to go there (seven rooms are pinned already)";
 		ImGui::SetTooltip("%s", tip.c_str());
@@ -541,12 +590,13 @@ void MapPage() {
 	}
 
 	ImGui::BeginGroup();
-	legend(s_scent >= 0 ? LIGHT : s_measure, 260, lo, hi);
+	legend(s_scent >= 0 || s_germ >= 0 ? LIGHT : s_measure, 260, lo, hi);
 	ImGui::EndGroup();
 	ImGui::SameLine(0, 24);
 	ImGui::BeginGroup();
-	ImGui::TextDisabled(s_scent >= 0 ? "none to the strongest room (out of 100)" : "lowest room to highest");
-	ImGui::TextDisabled(s_scent == Pheromones::channelCount() ? "changes as food comes and goes"
+	ImGui::TextDisabled(s_germ >= 0 ? "none to the room with the most germs" : s_scent >= 0 ? "none to the strongest room (out of 100)" : "lowest room to highest");
+	ImGui::TextDisabled(s_germ >= 0 ? "changes as germs grow, die and spread"
+			: s_scent == Pheromones::channelCount() ? "changes as food comes and goes"
 			: s_scent >= 0 ? "changes as creatures give it off"
 			: s_measure == TEMPERATURE ? "changes as heat spreads"
 			: s_measure == LIGHT ? "changes with day and night outdoors"
@@ -873,6 +923,9 @@ void DrawEcologyKit() {
 			for (int ch = 0; ch <= Pheromones::channelCount(); ch++)
 				if (scentName(ch) == sc)
 					s_scent = ch, s_scentOnWorld = true;
+		// OPENC2E_ECO_GERMS=n shows strain n's germs (0 every strain)
+		if (const char* g = getenv("OPENC2E_ECO_GERMS"))
+			s_germ = atoi(g);
 	}
 	if (!world.map) {
 		KitNote("No world is loaded.");

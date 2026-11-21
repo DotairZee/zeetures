@@ -17,6 +17,7 @@
 #include "common/backend/Backend.h"
 #include "creatures/CreatureAgent.h"
 #include "creatures/oldCreature.h"
+#include "creatures/Disease.h"
 #include "AgentHelpers.h"
 #include "Room.h"
 #include "MetaRoom.h"
@@ -31,6 +32,7 @@
 #include <cfloat>
 #include <cctype>
 #include <filesystem>
+#include <set>
 #include <fstream>
 #include <tuple>
 
@@ -114,6 +116,32 @@ void OpenC2Kit(const char* id) {
 
 static int s_settings_entry; // stands for the [settings] section
 
+// notice kinds switched off (KitNoticeShown)
+static std::set<int> s_notices_off;
+
+bool KitNoticeShown(int kind) {
+	return s_notices_off.count(kind) == 0;
+}
+
+void KitNoticeSwitches(std::initializer_list<std::pair<int, const char*>> kinds) {
+	ImGui::Separator();
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextUnformatted("Notices on the status bar:");
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("Untick one to stop its notices appearing on the status bar.\nThe life log still records them.");
+	for (auto& [kind, label] : kinds) {
+		ImGui::SameLine();
+		bool on = KitNoticeShown(kind);
+		if (ImGui::Checkbox(fmt::format("{}##notice{}", label, kind).c_str(), &on)) {
+			if (on)
+				s_notices_off.erase(kind);
+			else
+				s_notices_off.insert(kind);
+			ImGui::MarkIniSettingsDirty();
+		}
+	}
+}
+
 static void* KitsReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name) {
 	if (std::strcmp(name, "settings") == 0)
 		return &s_settings_entry;
@@ -128,6 +156,8 @@ static void KitsReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, cons
 			s_fahrenheit = v != 0;
 		else if (std::strncmp(line, "Alarm=", 6) == 0)
 			KitAlarmsReadLine(line + 6);
+		else if (sscanf(line, "NoticeOff=%d", &v) == 1)
+			s_notices_off.insert(v);
 		return;
 	}
 	auto* st = (KitState*)entry;
@@ -140,6 +170,8 @@ static void KitsReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, cons
 static void KitsWriteAll(ImGuiContext*, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) {
 	buf->appendf("[%s][settings]\nFahrenheit=%d\n", handler->TypeName, s_fahrenheit ? 1 : 0);
 	KitAlarmsWrite(buf);
+	for (int kind : s_notices_off)
+		buf->appendf("NoticeOff=%d\n", kind);
 	buf->append("\n");
 	for (auto& k : s_kits) {
 		auto& st = s_state[k.id];
@@ -164,6 +196,15 @@ static void OpenTestKits() {
 			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
 			auto* oc = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
 			if (oc && a->genus == 1 && oc->isAlive() && oc->isFemale() && (int)oc->getStage() == 4 && oc->getPregnant() == 0 && a->babymoniker == 0) {
+				world.selectedcreature = a;
+				break;
+			}
+		}
+	// OPENC2E_TEST_SELECT=ill: the first creature that is ill (Disease.h)
+	if (const char* sel = getenv("OPENC2E_TEST_SELECT"); sel && std::string(sel) == "ill" && world.history)
+		for (auto& a : world.agents) {
+			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
+			if (ca && Disease::isIll(world.history->findMoniker(ca->getCreature()->getGenome()))) {
 				world.selectedcreature = a;
 				break;
 			}

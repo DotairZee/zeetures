@@ -24,6 +24,7 @@
 #include "Bubble.h"
 #include "creatures/Thoughts.h"
 #include "creatures/Pheromones.h"
+#include "creatures/Disease.h"
 #include "creatures/Relationships.h"
 #include "creatures/SkeletalCreature.h"
 #include "WorldSave.h"
@@ -437,6 +438,10 @@ void World::tick() {
 		{
 			PROFILE_SCOPE("world: pheromones");
 			Pheromones::tick();
+		}
+		{
+			PROFILE_SCOPE("world: disease");
+			Disease::tick();
 		}
 		tickBreathBubbles();
 		{

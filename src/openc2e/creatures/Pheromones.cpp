@@ -18,6 +18,7 @@
  */
 
 #include "Pheromones.h"
+#include "Disease.h"
 
 #include "Additions.h"
 
@@ -62,7 +63,7 @@ struct Channel {
 // a condition on the creature: a chemical above or below a level, carrying
 // something, dead, asleep or awake
 struct Condition {
-	enum Kind { ChemAbove, ChemBelow, Carrying, Dead, Asleep, Awake, HereAbove, HereBelow } kind = ChemAbove;
+	enum Kind { ChemAbove, ChemBelow, Carrying, Dead, Asleep, Awake, HereAbove, HereBelow, Ill } kind = ChemAbove;
 	int chem = 0, level = 0;
 	float strength = 0; // HereAbove/HereBelow: the rule's scent where the creature is, 0-1 (dose bands)
 };
@@ -179,7 +180,7 @@ bool parseWho(const std::string& tok, Who& w) {
 	return true;
 }
 
-// "13>64", "105<20", "carrying", "dead", "asleep", "awake"
+// "13>64", "105<20", "carrying", "dead", "asleep", "awake", "ill"
 bool parseCondition(const std::string& t, Condition& c) {
 	if (t == "carrying")
 		c.kind = Condition::Carrying;
@@ -187,6 +188,8 @@ bool parseCondition(const std::string& t, Condition& c) {
 		c.kind = Condition::Dead;
 	else if (t == "asleep")
 		c.kind = Condition::Asleep;
+	else if (t == "ill") // has an illness (Disease.h)
+		c.kind = Condition::Ill;
 	else if (t == "awake")
 		c.kind = Condition::Awake;
 	else if (t.rfind("here>", 0) == 0 || t.rfind("here<", 0) == 0) {
@@ -284,6 +287,10 @@ bool holds(const std::vector<Condition>& when, Agent* a, oldCreature* c, float h
 				break;
 			case Condition::Asleep:
 				if (!c || !c->isAsleep())
+					return false;
+				break;
+			case Condition::Ill:
+				if (!c || !world.history || !Disease::isIll(world.history->findMoniker(c->getGenome())))
 					return false;
 				break;
 			case Condition::Awake:

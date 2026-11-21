@@ -36,7 +36,7 @@
 #       without a drive fades as the creature's most pressing need (hunger,
 #       pain, cold, heat, tiredness, sleepiness, fear, injury, air, thirst)
 #       grows. "tend": with
-#       one of its own kind who needs care (a baby, a child, the senile) in
+#       one of its own kind who needs care (a baby, a child, the senile, the ill) in
 #       sight, the creature goes to it, tickles it, and brings it food or a
 #       toy (picks one up nearby, carries it over, drops it beside them).
 #   WHO mark harm|help|felt:N,N SCENT STRENGTH TICKS [when CONDITIONS]
@@ -47,7 +47,7 @@
 #   WHO: any, norn, grendel or ettin; then :female or :male; then @ and a
 #        life stage or range: baby child adolescent youth adult old senile
 #        (or 0-6). Examples: norn, norn:female, any@baby, grendel:male@youth-old
-#   CONDITIONS: CHEM>N, CHEM<N (body chemicals; a drive's own chemical is
+#   CONDITIONS: ill (has an illness), CHEM>N, CHEM<N (body chemicals; a drive's own chemical is
 #        its drive number plus one: 1 Pain ... 3 Hunger ... 8 Loneliness,
 #        10 Fear, 13 Sex Drive), carrying, dead, asleep, awake; joined with
 #        "and". For smell rules also here>X and here<X: the scent's strength
@@ -117,6 +117,11 @@ grendel@baby-child emit grendel-care 1
 grendel@senile emit grendel-care 1
 ettin@baby-child emit ettin-care 1
 ettin@senile emit ettin-care 1
+# The ill give it off too, so others tend them (owner, 2026-11-21: "pheromones
+# similar to those that babies give off ... when creatures are sick, so that
+# other creatures care for them"); grendels carry germs but are not ill.
+norn emit norn-care 1 when ill
+ettin emit ettin-care 1 when ill
 
 norn@adolescent-old smell norn-care follow 1 tend
 grendel@adolescent-old smell grendel-care follow 1 tend

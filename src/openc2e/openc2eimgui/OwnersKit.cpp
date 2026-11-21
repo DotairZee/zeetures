@@ -376,6 +376,8 @@ static const char* kindWord(int kind) {
 		case lifeLogEntry::cameRound: return "Came round";
 		case lifeLogEntry::changed: return "Changed";
 		case lifeLogEntry::together: return "Together";
+		case lifeLogEntry::fellIll: return "Ill";
+		case lifeLogEntry::recovered: return "Recovered";
 		default: return "Pregnant";
 	}
 }
@@ -415,6 +417,8 @@ static std::string entryDetail(const lifeLogEntry& e) {
 		case lifeLogEntry::cameRound: return fmt::format("a {}, {}: came round", who, stageWord(e.stage));
 		case lifeLogEntry::changed: return fmt::format("a {}, {}: {}", who, stageWord(e.stage), e.cause.empty() ? "changed into something else" : e.cause);
 		case lifeLogEntry::together: return fmt::format("{} hatched together, grew old together and reached the end together", e.cause);
+		case lifeLogEntry::fellIll: return fmt::format("a {}, {}: caught {}. Keep it warm and fed; the Health Kit shows how it is", who, stageWord(e.stage), e.cause.empty() ? "an illness" : e.cause);
+		case lifeLogEntry::recovered: return fmt::format("a {}, {}: got over {}", who, stageWord(e.stage), e.cause.empty() ? "an illness" : e.cause);
 		case lifeLogEntry::eggLaid: {
 			std::string s = fmt::format("laid by a {}, {}", who, stageWord(e.stage));
 			if (auto egg = KitEggOf(e.child))
@@ -560,8 +564,10 @@ void DrawLifeNotices(float room) {
 	// the notices on the bar: the world's own list, saved with it, so they
 	// last through relaunches (owner, 2026-11-15)
 	std::vector<lifeLogEntry>& s_notices = world.history->shownNotices;
+	// (each kind only if its kit's checkbox is ticked: KitNoticeShown)
 	for (auto& e : world.history->notices)
-		s_notices.push_back(e);
+		if (KitNoticeShown(e.kind))
+			s_notices.push_back(e);
 	world.history->notices.clear();
 	// developer aid: OPENC2E_TEST_NOTICES=1 announces one of each for the
 	// selected creature (not logged), =N that many; =follow also follows the
@@ -1645,6 +1651,7 @@ void DrawOwnersKit() {
 		}
 		ImGui::EndTabBar();
 	}
+	KitNoticeSwitches({{lifeLogEntry::changed, "Changes"}});
 }
 
 } // namespace Openc2eImgui

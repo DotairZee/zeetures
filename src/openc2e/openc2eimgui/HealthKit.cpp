@@ -12,6 +12,9 @@
 #include "creatures/CreatureMind.h"
 #include "creatures/oldCreature.h"
 #include "historyManager.h"
+#include "creatures/Disease.h"
+#include "Agent.h"
+#include "World.h"
 #include "fileformats/c2cobfile.h"
 #include "common/backend/Backend.h"
 
@@ -143,6 +146,41 @@ static void FitnessPage() {
 		KitStatTile("stage", "Life stage", st >= 0 && st < 7 ? stages[st] : "?", "", age.c_str(), IM_COL32(170, 200, 240, 255), tw);
 	}
 
+	// illness (Disease.h; owner, 2026-11-21): what it has, how far its
+	// antibodies have come, what it is immune to, or what a grendel carries
+	if (c->isAlive() && world.history && !Disease::strains().empty()) {
+		std::string mon = world.history->findMoniker(c->getGenome());
+		KitHeading("Illness");
+		auto ill = Disease::illnessesOf(mon);
+		if (a->genus == 2) {
+			if (const Disease::Strain* s = Disease::strain(Disease::carriedBy(mon)))
+				KitNote("Carries %s, which it spreads wherever it goes. Grendels do not fall ill from it.", s->name().c_str());
+			else
+				KitNote("Carries no germs.");
+		} else if (ill.empty())
+			KitNote("Not ill.");
+		for (auto& i : ill) {
+			const Disease::Strain* s = Disease::strain(i.strain);
+			if (!s)
+				continue;
+			unsigned int ticks = world.worldtickcount >= i.since ? world.worldtickcount - i.since : 0;
+			std::string howLong = KitAgeText(ticks, false);
+			KitNoteColored(ImVec4(1, 0.75f, 0.45f, 1), "Ill with %s for %s.", s->name().c_str(), howLong.c_str());
+			float ab = c->getChemical((unsigned char)(240 + s->antigen)) / 90.0f;
+			KitBar(std::min(1.0f, ab), fmt::format("antibodies {:.0f}%", std::min(1.0f, ab) * 100).c_str(), W);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Its body makes antibody %d against the germs' antigen; at 100%% the illness is over.\nWarmth, food and vitamin C help it along.", s->antigen);
+		}
+		if (a->genus != 2) {
+			std::string immune;
+			for (auto& s : Disease::strains())
+				if (c->getChemical((unsigned char)(240 + s.antigen)) >= 60)
+					immune += (immune.empty() ? "" : ", ") + s.name();
+			if (!immune.empty())
+				KitNote("Immune for now to %s.", immune.c_str());
+		}
+	}
+
 	// the weakest organs
 	KitHeading("Weakest organs");
 	auto& organs = c->getOrgans();
@@ -258,6 +296,8 @@ void DrawHealthKit() {
 		}
 		ImGui::EndTabBar();
 	}
+	KitNoticeSwitches({{lifeLogEntry::fellIll, "Illness"}, {lifeLogEntry::recovered, "Recovery"},
+		{lifeLogEntry::unconscious, "Fainting"}, {lifeLogEntry::cameRound, "Coming round"}});
 }
 
 } // namespace Openc2eImgui
