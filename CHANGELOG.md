@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 565 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 567 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.20.0](#version-0200): 2 commits, 20 November 2026
 - [0.19.1](#version-0191): 2 commits, 20 November 2026
 - [0.19.0](#version-0190): 4 commits, 20 November 2026
 - [0.18.4](#version-0184): 2 commits, 20 November 2026
@@ -51,6 +52,55 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.20.0
+
+Genes shape the mind: part of each creature's temperament comes from its own genes' chemistry (bred and custom lines can be bolder, calmer or quicker to anger), and eight mind settings are inherited: how fast it learns, how decisive and patient it is, how much it wanders, and how readily it learns about danger, food, water and company. Shown in the Owner's Kit; genes.csv tracks the population's averages over generations.
+
+### 20 November 2026
+
+#### Version 0.20.0
+
+[`3fbb1b63`](https://github.com/DotairZee/zeetures/commit/3fbb1b63efd159a30b8e046e5a01ece9cb127cfd)
+
+#### Genes shape the mind: temperament from C2 genes, mind genes, readinesses
+
+[`996529f1`](https://github.com/DotairZee/zeetures/commit/996529f178ddb3710e9eba4e0d2f0e9c1f5ea921)
+
+Owner's choices (2026-11-20), all three of the remaining gaps:
+
+Temperament from the creature's own C2 genes (GenomeTraits): each drive's
+chemistry against its species' standard genome (norn, gren, ettn.gen):
+how much its stimulus genes raise the drive (chemical 18 + drive), how
+much its emitters make its chemicals, its chemical's half-life (8 steps
+double it) and its receptors' gain on the drive locus, as summed log
+ratios. Traits move by 0.7 times those gains (at most 1.5): fear against
+boldness, boredom curiosity, tiredness and sleepiness against energy,
+loneliness (less half of crowding) sociability, anger temper, stress
+reactivity. The stock eggs read zero; of 1,721 genomes on disk 282
+differ (family lines: +0.79 temper, -0.53 sociability; Barbie and Sting
+bold and hot-tempered, Grendenile shy). temperament = born + drift +
+this; children take after born + drift (the genes go with the genome).
+OPENC2E_DUMP_GENE_TRAITS lists every genome; OPENC2E_NO_GENOME_TRAITS.
+
+Mind genes (MindGenes): learning, decisiveness, patience, wanderlust,
+and readiness to learn about danger, food, water and company (the
+Baldwin effect: nothing learned is passed on). Inherited as temperament
+(0.4 of the parents' average plus chance) in Genetics/NAME.mind, drawn
+for the game's eggs, saved with the world, kept by the Genetics tidy.
+They scale learningRate, temperature, travelHalf, exploreWant and, per
+drive, the learning rate (driveLearning). genes.csv beside census.csv
+keeps the population's averages every census. OPENC2E_NO_MIND_GENES.
+
+Owner's Kit, Temperament: what its genes' chemistry gives, and the eight
+mind genes as bars. Fixed: the younger-stage rebuild (Creatures menu,
+SetCreatureLifeStage) drew a new temperament, rhythm, pace of ageing
+and mind genes; OPENC2E_MIND_PARAMS was lost when temperament changed.
+
+Tests (copies of Home, 3 each, 8 minutes, on vs off): at Hunger 255
+22.8% vs 22.7%, deaths 2 vs 2, conceptions wrote .mind files, hatchlings
+log their gene shifts; 150 of 150 creatures keep every inherited value
+across a save and load.
 
 ## Version 0.19.1
 

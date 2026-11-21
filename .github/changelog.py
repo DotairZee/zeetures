@@ -220,6 +220,11 @@ VERSIONS = [
     ("0.19.1", "565e665d",
      "Creatures explore more, and more wisely: a place stays interesting until visited a few times and becomes "
      "interesting again after a long while away, and the young explore most."),
+    ("0.20.0", "3fbb1b63",
+     "Genes shape the mind: part of each creature's temperament comes from its own genes' chemistry (bred and "
+     "custom lines can be bolder, calmer or quicker to anger), and eight mind settings are inherited: how fast it "
+     "learns, how decisive and patient it is, how much it wanders, and how readily it learns about danger, food, "
+     "water and company. Shown in the Owner's Kit; genes.csv tracks the population's averages over generations."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
