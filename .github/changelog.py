@@ -225,6 +225,8 @@ VERSIONS = [
      "custom lines can be bolder, calmer or quicker to anger), and eight mind settings are inherited: how fast it "
      "learns, how decisive and patient it is, how much it wanders, and how readily it learns about danger, food, "
      "water and company. Shown in the Owner's Kit; genes.csv tracks the population's averages over generations."),
+    ("0.20.1", "0eb8ea82",
+     "A fruit bush grows in the west airlock's corridor, among the hungriest places with no food."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

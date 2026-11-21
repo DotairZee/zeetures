@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 567 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 569 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.20.1](#version-0201): 2 commits, 20 November 2026
 - [0.20.0](#version-0200): 2 commits, 20 November 2026
 - [0.19.1](#version-0191): 2 commits, 20 November 2026
 - [0.19.0](#version-0190): 4 commits, 20 November 2026
@@ -52,6 +53,33 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.20.1
+
+A fruit bush grows in the west airlock's corridor, among the hungriest places with no food.
+
+### 20 November 2026
+
+#### Version 0.20.1
+
+[`0eb8ea82`](https://github.com/DotairZee/zeetures/commit/0eb8ea8263b300b168b73ac984f828bfbb26832c)
+
+#### C2 food: a slender bush in the west airlock's corridor
+
+[`1d143126`](https://github.com/DotairZee/zeetures/commit/1d143126dcb25863ff17626f51f71f2ed6f3def8)
+
+A survey (two copies of Home, every creature and food item every 20 s,
+mapped to rooms) found room 120, the corridor whose only ways out are
+lifts, among the hungriest rooms with no food (about 2 very hungry
+creatures at a time). The owner chose this one of three mocked-up spots
+(food-spots-2026-11-20-mockup.png) and raised it 10 px: a slender mossy
+bush in the grass, top at 470,1412, on plane 1000 so it shows in front
+of the scenery (bushes on -10 at two other hungry spots, and the
+library's, are drawn behind machines and the throne statue).
+
+Before choosing spots: doubling regrowth (buds every 125 ticks, ripening
+in half the time) left 50% more ripe fruit standing but moved hunger
+little (at Hunger 255 24.3% vs 26.1%), and crops of 9 did nothing clear.
 
 ## Version 0.20.0
 
