@@ -65,6 +65,10 @@ static std::vector<uint8_t> readAllBytes(const fs::path& p) {
 
 // install one file by its kind; a line for the report
 static std::string installObjectFile(const std::string& name, const std::vector<uint8_t>& data) {
+	// (a zip made on a Mac carries "__MACOSX/._Name.cob" beside each file:
+	// its Finder data, not a COB; Desert Garden's, 2026-11-20)
+	if (name.find("__MACOSX/") != std::string::npos || fs::path(name).filename().string().rfind("._", 0) == 0)
+		return fmt::format("{}: left out (a Mac's file details, not part of the object)", name);
 	std::string ext = to_ascii_lowercase(fs::path(name).extension().string());
 	fs::path dir;
 	bool renameable = false;
@@ -172,6 +176,19 @@ static std::string todayText() {
 // each load. In this world, the ones the player added by hand become the
 // built-in ones (not saved with the world any more, so a load doesn't make
 // a second set); with none here, one is made now.
+// add one by hand: a COB that cannot be added (a picture or sound it needs is
+// neither in it nor installed, such as an old COB whose sprites came as
+// separate files) says so instead of stopping the game (owner's COBs,
+// 2026-11-20: six of them closed it)
+static void addByHand(const CobManager::CobFileInfo& o) {
+	try {
+		s_object_injector.inject(o, true);
+		CobManager::noteUsed(o.name);
+	} catch (std::exception& e) {
+		s_list_message = fmt::format("Couldn't add {}: {}", o.name, e.what());
+	}
+}
+
 static void buildIntoWorlds(const CobManager::CobFileInfo& o) {
 	if (!CobManager::addToNameList(CobManager::builtinListFile(), o.name, "added from the Agent Injector, " + todayText())) {
 		s_list_message = fmt::format("Couldn't write {}.", CobManager::builtinListFile().string());
@@ -392,8 +409,12 @@ void DrawAgentInjector() {
 			if (it == cobs.objects.end())
 				fmt::print("* Test inject: no object \"{}\"\n", name);
 			else {
-				cobs.inject(*it, true);
-				fmt::print("* Test inject: added \"{}\"\n", name);
+				try {
+					cobs.inject(*it, true);
+					fmt::print("* Test inject: added \"{}\"\n", name);
+				} catch (std::exception& e) {
+					fmt::print("* Test inject: \"{}\" failed: {}\n", name, e.what());
+				}
 			}
 			start = end + 1;
 		}
@@ -643,8 +664,7 @@ void DrawAgentInjector() {
 				if (ImGui::Selectable("##obj", i == s_object_selected_index, 0, ImVec2(0, 34)))
 					s_object_selected_index = i;
 				if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-					s_object_injector.inject(o, true);
-					CobManager::noteUsed(o.name);
+					addByHand(o);
 				}
 				ImGui::PopID();
 				drawThumb(dl, o, at + ImVec2(4, 2), 30);
@@ -672,8 +692,7 @@ void DrawAgentInjector() {
 					s_object_selected_index = i;
 				bool hov = ImGui::IsItemHovered();
 				if (hov && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-					s_object_injector.inject(o, true);
-					CobManager::noteUsed(o.name);
+					addByHand(o);
 				}
 				ImGui::PopID();
 				bool sel = i == s_object_selected_index;
@@ -741,8 +760,7 @@ void DrawAgentInjector() {
 			if (set == SET_INJECTOR) {
 				ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_ButtonActive]);
 				if (ImGui::Button("Add to world")) {
-					s_object_injector.inject(o, true);
-					CobManager::noteUsed(o.name);
+					addByHand(o);
 				}
 				ImGui::PopStyleColor();
 				ImGui::SameLine();

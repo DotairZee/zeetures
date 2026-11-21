@@ -152,7 +152,16 @@ void CobManager::update() {
 				objects.back().is_removable = true;
 			}
 		} else if (engine.version == 2) {
-			c2cobfile cobfile(cob);
+			// (one unreadable file in the folder is passed over, not the end
+			// of the game: a Mac's "._Desert Garden.cob" stopped it)
+			std::unique_ptr<c2cobfile> cobfileptr;
+			try {
+				cobfileptr = std::make_unique<c2cobfile>(cob);
+			} catch (std::exception& e) {
+				fmt::print("* COB {} passed over: {}\n", cob.string(), e.what());
+				continue;
+			}
+			c2cobfile& cobfile = *cobfileptr;
 
 			for (auto b : cobfile.blocks) {
 				if (b->type != "agnt")
