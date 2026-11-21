@@ -227,6 +227,9 @@ VERSIONS = [
      "water and company. Shown in the Owner's Kit; genes.csv tracks the population's averages over generations."),
     ("0.20.1", "0eb8ea82",
      "A fruit bush grows in the west airlock's corridor, among the hungriest places with no food."),
+    ("0.20.2", "b213d294",
+     "The far west workshop's fruit bush is no longer hidden behind the dark rock: it stands in front, pot "
+     "and all."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

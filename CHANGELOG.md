@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 569 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 571 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.20.2](#version-0202): 2 commits, 20 November 2026
 - [0.20.1](#version-0201): 2 commits, 20 November 2026
 - [0.20.0](#version-0200): 2 commits, 20 November 2026
 - [0.19.1](#version-0191): 2 commits, 20 November 2026
@@ -53,6 +54,35 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.20.2
+
+The far west workshop's fruit bush is no longer hidden behind the dark rock: it stands in front, pot and all.
+
+### 20 November 2026
+
+#### Version 0.20.2
+
+[`b213d294`](https://github.com/DotairZee/zeetures/commit/b213d2941a2ea6965d50c24ed244133fb1da619a)
+
+#### Workshop bush in front of the dark rock; front bushes kept as they are
+
+[`d8e95e32`](https://github.com/DotairZee/zeetures/commit/d8e95e321f660a82e634184b82e5f2b3bcecca77)
+
+The far west workshop bush (2,2202) had its pot and about 60% of its
+leaves behind a dark rock piece of the world's own scenery. It now stands
+on plane 1000 (fruit 1001), like the corridor bush: an existing one is
+moved forward in place (PLNE, OV04 1000), keeping its stage, age, look
+and picture, with the fruit already on it.
+
+The load-time repair that remakes bushes not on plane -10 would have
+rebuilt any bush on plane 1000 as a full bush behind the scenery (the
+corridor bush, once saved with the world). Plane 1000 is now left alone.
+
+A survey of all 26 bushes in Home, with creatures removed, found no other
+bush covered by scenery; what covers the rest at times is eggs, toys and
+creatures. The earlier note that the splicing room, lift landing and
+library bushes were hidden came from pictures taken at the wrong zoom.
 
 ## Version 0.20.1
 
