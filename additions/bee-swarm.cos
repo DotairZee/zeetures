@@ -1,0 +1,44 @@
+* Stuck swarm bees (openc2e Creatures 2 project, our own script). Run by
+* openc2e after the world loads (Additions folder); made anew each load.
+*
+* When a hive (2 16 2) dies out it sends out a queen (2 17 5) and 20 swarm
+* bees (2 17 6) that follow her; once she has built a new hive they fly to it
+* (OV00 1, OV01 the hive) and join it on arrival (its OV10 up 5, the bee gone).
+* Swarm bees bump into walls and floors, and nothing in the game's scripts
+* frees one that is pinned: in Home (owner, 2026-11-21: "fix these bees being
+* stuck here? they've been there for a while") fifteen hung still, three in
+* the sea under the west dock trying to fly up through it, four stacked
+* against the rock at 6610,1905, others in caves, their queen long gone.
+*
+* A watcher (2 1 165, every 100 ticks) looks at each swarm bee: one that has
+* not moved more than 2 px in four looks (about 40 seconds) joins its hive
+* as it would on arriving (OV01 a hive still there: its OV10 up 5), and goes.
+* A pinned one with no hive left just goes. OV60-OV62 are the watcher's
+* (last place, looks without moving); the game's bee scripts use OV00-OV11.
+enum 2 1 165 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 165 setv attr 16 mvto 5000 1350 tick 100 slow
+scrp 2 1 165 9
+  inst
+  enum 2 17 6
+    setv var1 posl subv var1 ov60
+    setv var2 post subv var2 ov61
+    setv var0 0
+    doif var1 le 2 and var1 ge -2 and var2 le 2 and var2 ge -2 setv var0 1 endi
+    doif var0 eq 1
+      addv ov62 1
+    else
+      setv ov62 0
+    endi
+    setv ov60 posl setv ov61 post
+    doif ov62 ge 4
+      setv var3 targ
+      setv var4 0
+      doif ov00 eq 1 setv var4 ov01 endi
+      enum 2 16 2
+        doif targ eq var4 addv ov10 5 endi
+      next
+      targ var3
+      kill targ
+    endi
+  next
+endm
