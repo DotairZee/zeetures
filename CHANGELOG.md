@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 576 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 578 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.21.0](#version-0210): 2 commits, 20 November 2026
 - [0.20.4](#version-0204): 2 commits, 20 November 2026
 - [0.20.3](#version-0203): 3 commits, 20 November 2026
 - [0.20.2](#version-0202): 2 commits, 20 November 2026
@@ -56,6 +57,47 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.21.0
+
+Creatures learn by watching each other, from their own family most and when young most: what things are good for, where food is, and which places and drops hurt. They name the things they use, often for a young one of their family, and family pick up each other's words faster.
+
+### 20 November 2026
+
+#### Version 0.21.0
+
+[`db545f0c`](https://github.com/DotairZee/zeetures/commit/db545f0c19a1c064be6550ae8bb29b25db8675f5)
+
+#### Creatures learn by watching others, family most
+
+[`ec9f8f09`](https://github.com/DotairZee/zeetures/commit/ec9f8f09401e738b523777faf6f736f43f75f1f1)
+
+Owner, 2026-11-20 (inheritance talk, "learning from parents"): family
+most, the young most, about a third as strong as doing it oneself; what
+things do, where food is, danger, and words.
+
+Each mind posts what it has just done to a shared board (not saved): the
+outcome of using a thing (what each felt drive did), a meal and where,
+being hurt in a room (pain, injury, fear, suffocation risen 0.04 over 10
+ticks), a painful fall and where it stepped off. Every mind reads the
+posts since its last tick and takes in those from creatures it can see,
+at weight watchShare (1/3) x kin 1 / others 0.35 x its life stage (1, 1,
+0.8, 0.6, 0.45, 0.35, 0.25): outcomes into its expectation for that thing
+and action (its own readiness genes apply), meals as a remembered food
+place (confidence up to 0.6), hurt as the room's feel, falls as a painful
+drop. Kin are close kin (Breeding.h closeKin), now marked on each seen
+creature (SeenAgent::kin, MindPerception::self).
+
+Words: a child or older that has just used a thing names it now and then
+("look fruit"; meaning name:C, C2's noun 16 + C), half the time when a
+baby or child of its family is in sight; family hear each other's words
+twice as strongly. Switch OPENC2E_NO_WATCHING; OPENC2E_WATCH_WATCHING
+logs each thing learned by watching.
+
+Three matched pairs of 8-minute copies of Home: at Hunger 250+ 22.4% vs
+25.0%, deaths 11.7 vs 12.3 a copy, words learned 144 vs 105 (fruit 57,
+button 38 and lift 37 vs 0, 0 and 9); creatures spoke 36% more. ASan run
+clean (only the old brain's leaks at exit).
 
 ## Version 0.20.4
 

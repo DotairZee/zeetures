@@ -236,6 +236,10 @@ VERSIONS = [
      "the domes stands in a planter."),
     ("0.20.4", "2bc272b1",
      "An object that came to rest half inside the rock is set back where it fits."),
+    ("0.21.0", "db545f0c",
+     "Creatures learn by watching each other, from their own family most and when young most: what things are "
+     "good for, where food is, and which places and drops hurt. They name the things they use, often for a young "
+     "one of their family, and family pick up each other's words faster."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
