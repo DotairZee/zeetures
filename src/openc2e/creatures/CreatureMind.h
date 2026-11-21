@@ -35,6 +35,14 @@
 #include <string>
 #include <vector>
 
+// A category of the mind's own, past C2's 40 (owner, 2026-11-21: "care +
+// learned medicine"): the volcanic bushes' fruit (2 25 x with OV02 2), which
+// gives EDTA and soothes heavy metals' pain. To the engine it is fruit (25);
+// the mind sees it apart so what eating it does is learned apart (by the eater
+// and by watchers), and carers can bring it on purpose. A choice of it always
+// names the fruit itself (MindOutput::attentionAgent).
+const int MIND_HEALING_FRUIT = 40;
+
 struct SeenAgent {
 	int category; // world category index (0-39 for C1/C2)
 	AgentRef agent;
@@ -60,6 +68,8 @@ struct SeenAgent {
 	// Breeding.h closeKin): who it learns most from by watching
 	bool kin = false;
 	bool ill = false; // ill (Disease.h): tended like the young (owner, 2026-11-21)
+	bool poisoned = false; // heavy metals over 50 (Exposure.h): tended too
+	float pain = 0; // its Pain drive, 0-1, as a carer can see it hurting
 };
 
 // An instinct from the genome, translated into neutral terms (see

@@ -861,6 +861,7 @@ std::vector<std::string> KitAppletDataFiles(const std::string& sub, const std::s
 struct ShelfItem {
 	std::string name, description, file;
 	Texture picture;
+	bool volcanicFruit = false; // Zeetures's own: made by script, not a COB (see below)
 };
 
 static std::vector<ShelfItem>& shelfItems(const std::string& sub) {
@@ -889,7 +890,44 @@ static std::vector<ShelfItem>& shelfItems(const std::string& sub) {
 			fmt::print("Kits: couldn't read {}: {}\n", f, e.what());
 		}
 	}
+	// the volcanic bushes' fruit on the Doctor's shelf (owner, 2026-11-21:
+	// "add a fruit from that bush to the Doctor tab ... make it clear it is
+	// for heavy metals from radiation poisoning"): Zeetures's own fruit
+	// (food.cos, sprite zfrt), made where it is wanted
+	if (sub == "Medicine" && engine.version == 2) {
+		ShelfItem m;
+		m.name = "Volcanic fruit";
+		m.description = "For heavy metals from radiation poisoning. The fruit of the ember-red bushes by the volcano carries "
+						"EDTA, the only cure for the heavy metals that radiation (and some poisoned foods) leave in a creature, "
+						"and it soothes the pain they cause at once. One ripe fruit clears about a seventh of the most a creature "
+						"can carry; a badly poisoned one needs several. It is ordinary food too.";
+		m.volcanicFruit = true;
+		const auto& frames = KitSprites("Images/zfrt.s16");
+		int frame = (int)std::min(3u, world.season) * 6 + 2; // this season's ripe fruit
+		if (frame < (int)frames.size())
+			m.picture = frames[frame];
+		list.push_back(m);
+	}
 	return list;
+}
+
+// a ripe volcanic fruit beside the creature the kit is showing (else in the
+// middle of the view), as the bushes make theirs (food.cos)
+static void makeVolcanicFruit() {
+	float x, y;
+	if (Agent* a = KitCreatureAgent()) {
+		x = a->x + a->getWidth() / 2.0f + 30.0f;
+		y = a->y;
+	} else if (engine.camera) {
+		x = (float)engine.camera->getXCentre();
+		y = (float)engine.camera->getYCentre();
+	} else
+		return;
+	int season = (int)std::min(3u, world.season);
+	world.executeInitScriptText("Health Kit: volcanic fruit",
+		fmt::format("inst new: simp zfrt 6 {} 1600 0 setv cls2 2 25 {} setv ov02 2 pose 2 setv attr 195 bhvr 0 64 "
+					"setv accg 3 setv rest 30 setv grav 1 tick 6000 mvto {:.0f} {:.0f} slow",
+			season * 6, 141 + season, x, y));
 }
 
 void KitCobShelf(const char* subfolder, const char* hint, const char* added) {
@@ -946,8 +984,12 @@ void KitCobShelf(const char* subfolder, const char* hint, const char* added) {
 		ImGui::PopTextWrapPos();
 		if (ImGui::Button("Add to the world")) {
 			try {
-				CobManager cm;
-				cm.inject(CobManager::CobFileInfo(m.name, m.file));
+				if (m.volcanicFruit)
+					makeVolcanicFruit();
+				else {
+					CobManager cm;
+					cm.inject(CobManager::CobFileInfo(m.name, m.file));
+				}
 				message = fmt::format(fmt::runtime(added), m.name);
 			} catch (std::exception& e) {
 				message = fmt::format("Couldn't add {}: {}", m.name, e.what());

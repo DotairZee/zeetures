@@ -311,7 +311,7 @@ struct Params {
 	// pressing need grows
 	float defendWant = 0.10f;
 	float tendCalmPower = 2.0f; // a tend urge without a drive: times (1 - most pressing need)^this
-	std::vector<int> bringCategories{6, 25, 13}; // food, fruit, toys
+	std::vector<int> bringCategories{6, 25, 13, MIND_HEALING_FRUIT}; // food, fruit, toys, healing fruit
 	float pheromoneWantScale = 0.1f;
 	// Following a scent persists (owner chose this, 2026-11-13): mates apart
 	// never met, as each follow was one 12-tick step re-weighed from scratch
@@ -437,6 +437,9 @@ struct Params {
 	// owner, 2026-11-21: poisoned creatures should find their way back to
 	// where the volcano's fruit eased it)
 	float favouritePainNeed = 0.25f;
+	// how much easing of pain a kind of food must be known to bring, to be
+	// carried to one in pain first (a meal's learned Pain change)
+	float painCureKnown = 0.01f;
 	float favouriteMinEase = 0.0004f; // per tick better than usual, for a room to count as good for a need
 	float favouriteHorizon = 400.0f; // ticks of that easing it expects from going
 	float favouriteShare = 0.6f;
@@ -680,7 +683,7 @@ struct FoodPlace {
 	int meals = 0;
 	unsigned int checked = 0; // last time arriving there was judged
 	unsigned int cooldownUntil = 0; // out of reach from here: not tried until then
-	int category = -1; // what was seen or eaten there (for a thought's picture; not saved)
+	int category = -1; // what was seen or eaten there (a thought's picture; the cure trip, MIND_HEALING_FRUIT)
 };
 
 struct Candidate {
@@ -1768,7 +1771,7 @@ class HomeostatMind : public CreatureMind {
 		for (auto& [category, edible] : scents)
 			s += fmt::format("scent {} {}\n", category, edible);
 		for (auto& fp : foodPlaces)
-			s += fmt::format("food {} {} {} {} {}\n", fp.x, fp.y, fp.tick, fp.confidence, fp.meals);
+			s += fmt::format("food {} {} {} {} {} {}\n", fp.x, fp.y, fp.tick, fp.confidence, fp.meals, fp.category);
 		s += fmt::format("restless {}\n", hungryTicks);
 		if (gaitWalk)
 			s += "gaitwalk 1\n";
@@ -1930,8 +1933,12 @@ class HomeostatMind : public CreatureMind {
 			} else if (what == "food") {
 				FoodPlace fp;
 				l >> fp.x >> fp.y >> fp.tick >> fp.confidence >> fp.meals;
-				if (l && foodPlaces.size() < prm.foodPlaceMax)
+				if (l && foodPlaces.size() < prm.foodPlaceMax) {
+					int cat;
+					if (l >> cat) // (saves from before 2026-11-21 have none)
+						fp.category = cat;
 					foodPlaces.push_back(fp);
+				}
 			} else if (what == "link") {
 				Link lk;
 				l >> lk.x >> lk.fromY >> lk.toY >> lk.decision >> lk.uses;
@@ -2298,7 +2305,7 @@ class HomeostatMind : public CreatureMind {
 	bool riding = false;
 	float rideFromX = 0, rideFromY = 0;
 	int lastLiftDecision = -1;
-	std::array<float, 40> habituation;
+	std::array<float, 41> habituation; // (C2's 40 categories and MIND_HEALING_FRUIT)
 	float valence = 0.0f;
 	std::mt19937 rng;
 
@@ -2582,6 +2589,9 @@ class HomeostatMind : public CreatureMind {
 				c.target = who->agent;
 				c.who = who->who;
 			}
+			// the healing fruit: always that very fruit (the engine knows it as fruit)
+			if (category == MIND_HEALING_FRUIT && who)
+				c.target = who->agent;
 			const Expectation& e = blend;
 			c.want = predictedRelief(d, D, e);
 			// What does not smell of food is not expected to ease hunger (a
@@ -2640,7 +2650,7 @@ class HomeostatMind : public CreatureMind {
 			if (a.needsObject) {
 				for (auto& s : p.visible)
 					if (s.reachable && (s.activatable || (a.decision != 1 && a.decision != 2 && a.decision != 3)))
-						add(s.category, a.decision, s.distance, s.edible, s.who.empty() ? nullptr : &s);
+						add(s.category, a.decision, s.distance, s.edible, (s.who.empty() && s.category != MIND_HEALING_FRUIT) ? nullptr : &s);
 			} else {
 				// plain wandering never walks off dry land into water (food,
 				// forage and seeking trips already check; the pond's new ramp let
@@ -4285,6 +4295,57 @@ class HomeostatMind : public CreatureMind {
 		return out;
 	}
 
+	// (3b) The cure (owner, 2026-11-21: "care + learned medicine"): in lasting
+	// pain, having learned that the healing fruit (MIND_HEALING_FRUIT) eases
+	// it (by eating it or watching it eaten), go to the nearest place it
+	// remembers finding some, for what easing the pain is worth. In 12-day
+	// Home copies (2026-11-21) it was seldom offered: most of the poisoned
+	// live far from the volcano and had neither seen the fruit nor watched it
+	// eaten, and those who ate it learned little relief (the soothing comes
+	// as the meal ends). Knowledge spreads as creatures meet the fruit and
+	// watch each other, over many days. OPENC2E_NO_CURE_SEEK turns it off.
+	void addCureTrip(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
+		static const bool off = getenv("OPENC2E_NO_CURE_SEEK") != nullptr;
+		if (off || d[PAIN] < prm.favouritePainNeed)
+			return;
+		// (OPENC2E_WATCH_CURE: why a creature in pain is or is not offered the trip)
+		static const bool watch = getenv("OPENC2E_WATCH_CURE") != nullptr;
+		auto why = [&](const char* w) {
+			if (watch && p.tick % 50 == 0)
+				fmt::print("* CURE creature {} pain {:.2f}: {}\n", p.creatureId, d[PAIN], w);
+		};
+		auto known = expectations.find((MIND_HEALING_FRUIT + 1) * 64 + prm.eatDecision);
+		// (known from its own meals or from watching others eat it: watching
+		// teaches what a thing does without counting as having tried it)
+		if (known == expectations.end())
+			return why("never ate it");
+		if (known->second.delta[PAIN] > -prm.painCureKnown)
+			return why(fmt::format("not known to ease pain ({:+.3f})", known->second.delta[PAIN]).c_str());
+		for (auto& s : p.visible)
+			if (s.category == MIND_HEALING_FRUIT && s.reachable)
+				return why("in sight"); // in sight: eating it is offered already
+		const FoodPlace* best = nullptr;
+		float bestDist = 1e9f;
+		for (auto& fp : foodPlaces) {
+			if (fp.category != MIND_HEALING_FRUIT || fp.confidence < 0.2f || p.tick < fp.cooldownUntil)
+				continue;
+			float dist = std::fabs(dxTo(p, fp.x)) + std::fabs(fp.y - p.y);
+			if (dist < bestDist) {
+				bestDist = dist;
+				best = &fp;
+			}
+		}
+		if (!best)
+			return why("no place known");
+		// worth what easing the pain would be (not the rest of a meal, which
+		// a creature not hungry may not want)
+		Expectation ease;
+		ease.delta[PAIN] = known->second.delta[PAIN];
+		float want = predictedRelief(d, D, ease) * prm.favouriteShare;
+		why(fmt::format("trip offered, want {:.3f}", want).c_str());
+		addGoTo(p, want, best->x, best->y - 40.0f, "cure", canWest, canEast, out, d[PAIN]);
+	}
+
 	// (3) Favourite places: a strong need, and a room known to ease it
 	// better than anywhere else (not this one, not one avoided): go there.
 	void addFavourites(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
@@ -4534,6 +4595,7 @@ class HomeostatMind : public CreatureMind {
 		addStarveLeave(p, d, D, canWest, canEast, out);
 		addMateSeek(p, d, D, canWest, canEast, out);
 		addFavourites(p, d, D, canWest, canEast, out);
+		addCureTrip(p, d, D, canWest, canEast, out);
 		addLeave(p, d, D, canWest, canEast, out);
 		addExplore(p, d, canWest, canEast, out);
 	}
@@ -4625,7 +4687,7 @@ class HomeostatMind : public CreatureMind {
 		bringBookkeeping(p);
 		const SeenAgent* tendee = nullptr;
 		for (auto& s : p.visible)
-			if (s.genus == p.genus && s.genus >= 0 && (s.stage == 0 || s.stage == 1 || s.stage == 6 || s.ill) && s.reachable && !s.who.empty() &&
+			if (s.genus == p.genus && s.genus >= 0 && (s.stage == 0 || s.stage == 1 || s.stage == 6 || s.ill || s.poisoned) && s.reachable && !s.who.empty() &&
 				s.distance < prm.tendSee && (!tendee || s.distance < tendee->distance))
 				tendee = &s;
 		if (!tendee)
@@ -4673,15 +4735,27 @@ class HomeostatMind : public CreatureMind {
 		}
 		if (p.carryingCategory >= 0)
 			return false; // holding something else
+		// for one in pain, what this creature has learned eases pain when
+		// eaten comes first: the healing fruit, once its use is known (owner,
+		// 2026-11-21: carers bring the cure as part of caring)
+		auto easesPain = [&](int category) { return expectation(category, prm.eatDecision).delta[PAIN] <= -prm.painCureKnown; };
+		bool forPain = to.pain >= prm.favouritePainNeed;
 		const SeenAgent* item = nullptr;
 		for (auto& s : p.visible)
 			if (ok(s.category) && s.carryable && s.reachable && s.distance < prm.bringSearch && s.edible >= 0.0f &&
-				p.tick >= bringFailUntil[s.category] && (!item || s.distance < item->distance))
-				item = &s;
+				p.tick >= bringFailUntil[s.category]) {
+				bool better = !item || s.distance < item->distance;
+				if (forPain && item && easesPain(s.category) != easesPain(item->category))
+					better = easesPain(s.category);
+				if (better)
+					item = &s;
+			}
 		if (!item)
 			return false;
 		Candidate c{item->category, 6, item->distance, bw, 0, 0}; // pick it up to bring
 		c.score = bw - prm.distanceCost * item->distance;
+		if (item->category == MIND_HEALING_FRUIT)
+			c.target = item->agent;
 		c.chain = true;
 		c.urge = prefix + to.who;
 		out.push_back(c);

@@ -1,6 +1,8 @@
 // Thought bubbles: see Thoughts.h.
 
 #include "Thoughts.h"
+#include "caosValue.h"
+#include "creatures/CreatureMind.h"
 
 #include "Agent.h"
 #include "EmbeddedFiles.h"
@@ -100,7 +102,11 @@ AgentRef thingOf(Agent* creature, int category) {
 	AgentRef best;
 	float bestd = 1e18f;
 	for (auto& a : world.agents) {
-		if (!a || a->category != category || a->isDying() || dynamic_cast<CreatureAgent*>(a.get()))
+		// (the mind's own healing fruit: the volcanic bushes' fruit, 2 25 x OV02 2)
+		bool match = category == MIND_HEALING_FRUIT
+			? (a && a->family == 2 && a->genus == 25 && a->var[2].hasInt() && a->var[2].getInt() == 2)
+			: (a && a->category == category);
+		if (!a || !match || a->isDying() || dynamic_cast<CreatureAgent*>(a.get()))
 			continue;
 		if (!dynamic_cast<SpritePart*>(a->part(0)))
 			continue;

@@ -122,6 +122,11 @@ ettin@senile emit ettin-care 1
 # other creatures care for them"); grendels carry germs but are not ill.
 norn emit norn-care 1 when ill
 ettin emit ettin-care 1 when ill
+# And the poisoned (heavy metals, 140, over 50; owner, 2026-11-21): those
+# caring for them bring what they have learned eases pain, the volcanic
+# bushes' fruit once its use is known.
+norn emit norn-care 1 when 140>50
+ettin emit ettin-care 1 when 140>50
 
 norn@adolescent-old smell norn-care follow 1 tend
 grendel@adolescent-old smell grendel-care follow 1 tend

@@ -21,6 +21,7 @@
 #include "creatures/Pheromones.h"
 #include "creatures/Breeding.h"
 #include "creatures/Disease.h"
+#include "caosValue.h"
 #include "CreatureAgent.h"
 #include "SkeletalCreature.h"
 #include "caosScript.h"
@@ -962,6 +963,8 @@ MindPerception oldCreature::buildPerception() {
 				sa.hunger = oc->getDrive(2) / 255.0f;
 				sa.kin = closeKin(p.self, sa.who);
 				sa.ill = Disease::isIll(sa.who);
+				sa.poisoned = oc->getChemical(140) > 50;
+				sa.pain = oc->getDrive(0) / 255.0f;
 				if (const Bond* b = Relationships::bondOf(this, sa.who)) {
 					sa.affinity = b->affinity;
 					sa.fear = b->fear;
@@ -970,9 +973,35 @@ MindPerception oldCreature::buildPerception() {
 			}
 		p.visible.push_back(sa);
 	};
+	// the volcanic bushes' fruit is seen apart (MIND_HEALING_FRUIT): the one
+	// noticed as fruit, if it is one, and else the nearest in sight
+	// (OPENC2E_NO_HEALING_KIND: the fruit stays plain fruit to the mind, to compare)
+	static const bool noHealingKind = getenv("OPENC2E_NO_HEALING_KIND") != nullptr;
+	auto healing = [](Agent* a) {
+		return !noHealingKind && engine.version == 2 && a && a->family == 2 && a->genus == 25 && a->var[2].hasInt() && a->var[2].getInt() == 2;
+	};
+	bool healingSeen = false;
 	for (unsigned int i = 0; i < chosenagents.size(); i++)
-		if (chosenagents[i])
-			see(chosenagents[i], i);
+		if (chosenagents[i]) {
+			bool h = mind && healing(chosenagents[i].get());
+			see(chosenagents[i], h ? (unsigned int)MIND_HEALING_FRUIT : i);
+			healingSeen = healingSeen || h;
+		}
+	if (mind && engine.version == 2 && !healingSeen) {
+		AgentRef best;
+		float bestd = 1e18f;
+		for (auto& a : world.agents) {
+			if (!a || a->isDying() || !healing(a.get()) || a->carriedby)
+				continue;
+			float d = std::hypot(a->x - cx, a->y - cy);
+			if (d < bestd && agentInSight(AgentRef(a))) {
+				bestd = d;
+				best = AgentRef(a);
+			}
+		}
+		if (best)
+			see(best, (unsigned int)MIND_HEALING_FRUIT);
+	}
 	// C2: every other creature in sight too, not only the one noticed for
 	// its kind, so the mind can tell individuals apart
 	if (engine.version == 2 && mind)
