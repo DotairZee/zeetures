@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 563 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 565 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.19.1](#version-0191): 2 commits, 20 November 2026
 - [0.19.0](#version-0190): 4 commits, 20 November 2026
 - [0.18.4](#version-0184): 2 commits, 20 November 2026
 - [0.18.3](#version-0183): 2 commits, 20 November 2026
@@ -50,6 +51,38 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.19.1
+
+Creatures explore more, and more wisely: a place stays interesting until visited a few times and becomes interesting again after a long while away, and the young explore most.
+
+### 20 November 2026
+
+#### Version 0.19.1
+
+[`565e665d`](https://github.com/DotairZee/zeetures/commit/565e665dbbfc983d2fc9c8c6ba219a5183d26c24)
+
+#### Mind: exploring by novelty that fades with visits and returns with time
+
+[`ecc7b81f`](https://github.com/DotairZee/zeetures/commit/ecc7b81fec7d34fba0c40d82b0f21464f0b580da)
+
+Owner's choices (2026-11-20): counts fade, novelty returns, the young
+explore most; twice the old pull. A room's novelty is 1 / sqrt(1 +
+visits), its visits fading with time away (by e in 52,000 ticks), so
+rarely visited rooms keep drawing a bored creature and old haunts become
+worth a look again (count-based exploration: Strehl and Littman 2008,
+Bellemare et al. 2016; Berlyne 1960). Before, a room's pull ended at its
+first visit. The explore trip goes to the room next door or the known
+room within reach on this floor most novel for its distance (not the
+room it is in; none under novelty 0.25), its want times that novelty.
+Each life stage weighs it (baby 1, child 1.5, adolescent 1.35, youth
+1.15, adult 1, old 0.8, senile 0.6; Gopnik 2020).
+
+Tests (copies of Home, 3 each, 8 minutes): explore choices per 1,000
+decisions 4.5 (old) / 5.2 (1x) / 12.7 (2x) / 34 (4x); places covered
+16-19 map cells in all; at maximum Hunger 16.4% / 15.7% / 17.3% / 17.2%;
+deaths 1 a copy. OPENC2E_OLD_EXPLORE restores the old rule and pull;
+OPENC2E_MIND_PARAMS takes exploreWant, noveltyMin, noveltyReturn.
 
 ## Version 0.19.0
 

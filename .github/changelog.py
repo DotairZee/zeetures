@@ -217,6 +217,9 @@ VERSIONS = [
      "scripts whose blocks do not nest, objects compared with numbers, and more; 115 of 116 objects from a large "
      "archive of fan COBs now work. A COB that cannot be added says why instead of closing the game. Custom worlds "
      "(not made from Eden) no longer get the additions written for Eden's map."),
+    ("0.19.1", "565e665d",
+     "Creatures explore more, and more wisely: a place stays interesting until visited a few times and becomes "
+     "interesting again after a long while away, and the young explore most."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
