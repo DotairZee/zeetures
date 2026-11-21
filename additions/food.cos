@@ -1424,3 +1424,18 @@ enum 2 4 141
     endi
   endi
 next
+* A slender mossy bush in the west airlock's corridor (owner, 2026-11-20:
+* "let's just do 3. raise it higher by 10 pixels"; food-spots-2026-11-20-
+* mockup.png): a survey that day found it among the hungriest rooms with no
+* food (room 120, about 2 very hungry creatures at a time, its only ways out
+* being lifts). In the grass on the corridor's floor, its top at 1412; on
+* plane 1000 (fruit 1001), in front of the scenery and behind creatures.
+setv var0 0
+enum 2 4 141
+  doif posl eq 470
+    doif post eq 1412 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfns 12 0 1000 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 470 1412 setv ov05 0 setv ov07 2 setv ov00 2 setv ov01 150 setv ov02 0 setv ov03 2 setv ov04 1000 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
