@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 586 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 588 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.24.0](#version-0240): 2 commits, 21 November 2026
 - [0.23.0](#version-0230): 2 commits, 21 November 2026
 - [0.22.0](#version-0220): 2 commits, 21 November 2026
 - [0.21.2](#version-0212): 2 commits, 21 November 2026
@@ -61,6 +62,38 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.24.0
+
+Radiation spreads out from the volcano and the sky as in the original game, following doors as they open and close. The fruit of the volcano's ember-red bushes now carries EDTA, the only cure for the heavy metals that radiation builds up in a creature.
+
+### 21 November 2026
+
+#### Version 0.24.0
+
+[`1cd1e5b2`](https://github.com/DotairZee/zeetures/commit/1cd1e5b2b03630166ad6f88a9db43f3be11b9852)
+
+#### Radiation spreads from its sources; volcanic fruit gives EDTA
+
+[`6736654d`](https://github.com/DotairZee/zeetures/commit/6736654d4b30ee5a38203aa13cabde8e69f1fb40)
+
+Rooms kept the world file's radiation whatever opened or closed.
+World::tickRadiation, every 10 ticks: radiation passes through doorways
+(1/8 of the difference at full openness, as heat), a source adds 0.35 x
+RSRC, and every room loses a tenth. Fitted to the world file's values
+(a snapshot of the real game's: the volcano's chamber 45-179 from
+sources 20-100, the sky rooms 17-55 from sources 5-30): the rule's
+steady state explains 85% of them. Over five minutes of a Home copy:
+55 rooms above 5 (66 before), the volcano's peak 185 (179); creatures'
+heavy metals hardly changed (median 46, 49 with the old fixed values).
+Switch OPENC2E_NO_RADIATION_SPREAD.
+
+Heavy metals (140), made from radiation over 48 by every standard
+genome, barely decay (half-life 248), and EDTA (157), which nothing in
+the world gave, is all that removes them; it does nothing else. The
+fruit of the volcanic bushes now gives EDTA, 60 ripe and 30 overripe
+(owner): one ripe fruit took a norn's heavy metals from 222 to 188,
+an uneating norn's stayed at 218.
 
 ## Version 0.23.0
 

@@ -256,6 +256,10 @@ VERSIONS = [
      "Air pressure moves between rooms and makes the wind, as in the original game: storms raise it, the weather "
      "machines push it up or down, and the wind blows from high pressure to low, so the clouds drift with the "
      "weather instead of always meeting the same wind. The Ecology Kit's pressure and wind maps show it change."),
+    ("0.24.0", "1cd1e5b2",
+     "Radiation spreads out from the volcano and the sky as in the original game, following doors as they open "
+     "and close. The fruit of the volcano's ember-red bushes now carries EDTA, the only cure for the heavy metals "
+     "that radiation builds up in a creature."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
