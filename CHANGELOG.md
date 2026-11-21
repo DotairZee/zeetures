@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 580 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 582 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.21.2](#version-0212): 2 commits, 21 November 2026
 - [0.21.1](#version-0211): 2 commits, 21 November 2026
 - [0.21.0](#version-0210): 2 commits, 20 November 2026
 - [0.20.4](#version-0204): 2 commits, 20 November 2026
@@ -58,6 +59,28 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.21.2
+
+A creature that starves is recorded as starved, not as "organ failure", even when it fainted before its hunger had risen.
+
+### 21 November 2026
+
+#### Version 0.21.2
+
+[`8b899577`](https://github.com/DotairZee/zeetures/commit/8b8995779bc36430ee68bd85d9f832480382896c)
+
+#### A creature that starved with Hunger frozen low is recorded as starved
+
+[`9c9e0953`](https://github.com/DotairZee/zeetures/commit/9c9e0953310121d44dfd19635849c883ff1a3dc4)
+
+Once ATP is gone a C2 creature's chemistry stands still, Hunger with it,
+so a starving creature could faint and die with the Hunger it had when
+it crashed (about 100) and a little glucose it could no longer burn, and
+was recorded as dying of "organ failure". Three Home hatchlings (5RYI,
+6DOB, 1RIS) were; their genomes hatched again in a copy starved the
+same way, with glycogen, fat and adipose tissue all at 0. A death with
+those three stores spent now counts as starvation.
 
 ## Version 0.21.1
 

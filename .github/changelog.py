@@ -243,6 +243,9 @@ VERSIONS = [
     ("0.21.1", "3a233b58",
      "The submarine no longer falls off the screen when a game is loaded. Creatures can no longer push it while it "
      "travels: that restarted its trip part-way, and over many trips it lost track of its own settings."),
+    ("0.21.2", "8b899577",
+     "A creature that starves is recorded as starved, not as \"organ failure\", even when it fainted before its "
+     "hunger had risen."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
