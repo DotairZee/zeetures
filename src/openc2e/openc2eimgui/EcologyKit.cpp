@@ -64,11 +64,11 @@ const char* const MEASURE_NAME[MEASURES] = {"Light", "Temperature", "Air pressur
 const char* const MEASURE_TIP[MEASURES] = {
 	"How bright each room is: outdoors it follows day and night (lamp-lit rooms,\ncaves and indoor rooms keep their light); the dark makes creatures sleepy",
 	"How warm each room is (this changes: heat spreads through doorways\nand comes from fires, the volcano and heaters)",
-	"The air pressure in each room",
+	"The air pressure in each room: it spreads through doorways and settles\nback; storms raise it, and the weather's own machines push it up or down",
 	"How much radiation there is in each room",
 	"Organic nutrients in each room's soil: rotting food and the dead add them,\nthey break down into minerals (faster where warm) and seep downhill",
 	"Inorganic nutrients in each room's soil (minerals): fruit bushes grow\nfaster where there are more, and draw them up",
-	"How hard the wind blows in each room",
+	"How hard the wind blows in each room: from high air pressure toward low,\nso it changes as storms come and go; the clouds drift with it",
 };
 
 int rawValueOf(const Room& r, int m) {
@@ -601,6 +601,7 @@ void MapPage() {
 			: s_measure == TEMPERATURE ? "changes as heat spreads"
 			: s_measure == LIGHT ? "changes with day and night outdoors"
 			: (s_measure == ORGANIC || s_measure == INORGANIC) ? "changes as things rot, break down and grow"
+			: (s_measure == PRESSURE || s_measure == WIND) ? "changes as air pressure spreads and storms pass"
 			: "stays as the world began");
 	ImGui::EndGroup();
 	ImGui::EndGroup();

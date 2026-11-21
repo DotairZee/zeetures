@@ -150,6 +150,7 @@ class World {
 	void tickFoodScent(); // C2: food smell spreading through the room system
 	void tickBreathBubbles(); // C2: creatures' breath bubbles rise and pop at the surface
 	void tickClimate(); // C2: room temperatures (heat spreading, heat sources)
+	void tickPressure(); // C2: air pressure spreading, pressure sources, and the wind it makes
 	void tickNutrients(); // C2: the nutrient cycle (breakdown, seeping downhill, settling)
 	void tickDaylight(); // C2: outdoor rooms' light following day and night
 	// only_creature: draw no creature but this one, nor anything another

@@ -75,6 +75,10 @@ class Room {
 	// Creatures 2
 	int temp = 0, lite = 0, radn = 0, ontr = 0, intr = 0, pres = 0, hsrc = 0, lsrc = 0, rsrc = 0, psrc = 0;
 	float tempf = -1.0f; // C2 climate (World::tickClimate): temperature with fractions; -1 until first step
+	// C2 air (World::tickPressure): pressure with fractions (-1 until first
+	// step) and the world file's pressure it settles back toward
+	float presf = -1.0f;
+	int presBase = -1;
 	// C2 nutrient cycle (World::tickNutrients): organic and inorganic
 	// nutrients with fractions (-1 until first step), and the levels the
 	// world file gave the room, which each settles back toward (-1: not yet

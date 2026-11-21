@@ -1225,10 +1225,10 @@ bool Engine::tick() {
 					found++;
 					if ((int)r->x_right < x0 || (int)r->x_left > x1 || (int)std::max(r->y_left_floor, r->y_right_floor) < y0 || (int)std::min(r->y_left_ceiling, r->y_right_ceiling) > y1)
 						continue;
-					fmt::print("* Room {} type {}: x {}-{}, ceiling {}/{}, floor {}/{}, floorvalue {}, dropstatus {}, floorpoints {}, temp {} lite {} radn {} pres {} ontr {} intr {}\n",
+					fmt::print("* Room {} type {}: x {}-{}, ceiling {}/{}, floor {}/{}, floorvalue {}, dropstatus {}, floorpoints {}, temp {} lite {} radn {} pres {} ontr {} intr {} sources heat {} light {} radiation {} pressure {} wind {},{}\n",
 						r->id, r->type, r->x_left, r->x_right, r->y_left_ceiling, r->y_right_ceiling,
 						r->y_left_floor, r->y_right_floor, r->floorvalue, r->dropstatus, r->floorpoints.size(),
-						r->temp, r->lite, r->radn, r->pres, r->ontr, r->intr);
+						r->temp, r->lite, r->radn, r->pres, r->ontr, r->intr, r->hsrc, r->lsrc, r->rsrc, r->psrc, r->windx, r->windy);
 					if (r->floorpoints.size()) {
 						std::string fp;
 						for (auto& pt : r->floorpoints)

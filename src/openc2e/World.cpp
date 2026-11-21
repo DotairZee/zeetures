@@ -451,6 +451,7 @@ void World::tick() {
 		{
 			PROFILE_SCOPE("world: climate");
 			tickClimate();
+			tickPressure();
 		}
 		{
 			PROFILE_SCOPE("world: nutrients");
@@ -1327,6 +1328,80 @@ void World::tickClimate() {
 	for (size_t i = 0; i < rooms.size(); i++) {
 		rooms[i]->tempf = next[i];
 		rooms[i]->temp = (int)std::lround(next[i]);
+	}
+}
+
+// C2 air pressure and wind (owner, 2026-11-21, from the creatures.wiki survey:
+// rooms kept the world file's pressure and wind for good, so the storms'
+// "addv pres 100", the evaporators' and clouds' pressure sources (PSRC, set
+// like thermostats: "doif pres gt 80 setv psrc -60") did nothing, and the
+// clouds, which steer by WNDX/WNDY, always met the same wind). Every 10 ticks,
+// each doorway passes perm/255 * 1/32 of the pressure difference; a pressure
+// source adds PSRC/20 a step (the scripts' -60 is 3 a step); every room
+// settles toward the world file's pressure (2% of the gap a step). The wind is
+// then made from the differences, as the real game's is: the world file's
+// wind (a snapshot of the real game's) blows from high toward low pressure in
+// 209 of 216 rooms, and fits best (62%) as the sum over doorways of (this
+// room's pressure - the neighbour's) * perm/255 along the line from this
+// room's middle to the neighbour's. Scaled by 1.6 so the wind is as strong as
+// the snapshot's (rooms' median 17, 90th percentile 49; at 1/8 spread and no
+// scaling it was 5 and 17). (Five rooms' wind in the world file was junk,
+// 1819178284.) Switch OPENC2E_NO_WIND keeps the old fixed values (and the
+// storms' pressure, which went on rising past 500 there).
+void World::tickPressure() {
+	static unsigned int counter = 0;
+	static const bool off = getenv("OPENC2E_NO_WIND") != nullptr;
+	if (off || ++counter % 10 != 0 || !map || engine.version != 2)
+		return;
+	const float spread = 1.0f / 32.0f, sourceRate = 1.0f / 20.0f, basePull = 0.02f, windScale = 1.6f;
+	const auto& rooms = map->getRooms();
+	static float wrapWidth = -1.0f;
+	if (wrapWidth < 0.0f) {
+		wrapWidth = 0.0f;
+		for (unsigned int i = 0; i < map->getMetaRoomCount(); i++)
+			if (MetaRoom* m = map->getMetaRoom(i); m && m->wraparound())
+				wrapWidth = std::max(wrapWidth, (float)m->fullwidth());
+	}
+	for (auto& r : rooms) {
+		if (r->presBase < 0)
+			r->presBase = std::clamp(r->pres, 0, 255);
+		if (r->presf < 0.0f || (int)std::lround(r->presf) != r->pres)
+			r->presf = (float)std::clamp(r->pres, 0, 255); // first step, or a script changed it
+	}
+	auto middle = [](const Room& r) {
+		return std::make_pair((r.x_left + r.x_right) / 2.0f,
+			(std::min(r.y_left_ceiling, r.y_right_ceiling) + std::max(r.y_left_floor, r.y_right_floor)) / 2.0f);
+	};
+	std::vector<float> next(rooms.size());
+	for (size_t i = 0; i < rooms.size(); i++) {
+		Room& r = *rooms[i];
+		float p = r.presf;
+		float wx = 0, wy = 0;
+		auto [rx, ry] = middle(r);
+		for (auto& [n, door] : r.getDoors()) {
+			if (!n || door.perm <= 0 || n.get() == &r)
+				continue;
+			float open = std::min(door.perm, 255) / 255.0f;
+			p += spread * open * (n->presf - r.presf);
+			auto [nx, ny] = middle(*n);
+			float dx = nx - rx, dy = ny - ry;
+			if (wrapWidth > 0 && std::fabs(dx) > wrapWidth / 2) // across the world's seam
+				dx -= dx > 0 ? wrapWidth : -wrapWidth;
+			float d = std::hypot(dx, dy);
+			if (d > 0) {
+				wx += (r.presf - n->presf) * open * dx / d;
+				wy += (r.presf - n->presf) * open * dy / d;
+			}
+		}
+		p += sourceRate * (float)r.psrc;
+		p += basePull * ((float)r.presBase - r.presf);
+		next[i] = std::clamp(p, 0.0f, 255.0f);
+		r.windx = (int)std::lround(std::clamp(windScale * wx, -127.0f, 127.0f));
+		r.windy = (int)std::lround(std::clamp(windScale * wy, -127.0f, 127.0f));
+	}
+	for (size_t i = 0; i < rooms.size(); i++) {
+		rooms[i]->presf = next[i];
+		rooms[i]->pres = (int)std::lround(next[i]);
 	}
 }
 
