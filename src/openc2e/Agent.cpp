@@ -340,6 +340,23 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 	if (engine.version >= 3 && (event <= 3 || event == 4 || event == 12 || event == 13 || event == 14))
 		c = dynamic_cast<CreatureAgent*>(from);
 
+	// C1/C2: a creature cannot push or pull an object that is not
+	// activateable (ATTR 4), as the hand cannot click one (handleClick).
+	// Objects clear the bit while busy: the submarine (3 1 2) clears it for
+	// a trip and sets it again at the dock; a creature's push between docks
+	// restarted the trip script part-way, its "subv attr 4" ran again with no
+	// "addv attr 4" to match, and in Home the submarine's ATTR ran down past
+	// zero (-68: every bit set, physics among them), so it fell through the
+	// world (owner, 2026-11-21). Switch OPENC2E_ACTIVATE_ANYTHING.
+	if (engine.version <= 2 && (event == 1 || event == 2) && !activateable() && dynamic_cast<CreatureAgent*>(from)) {
+		static const bool anything = getenv("OPENC2E_ACTIVATE_ANYTHING") != nullptr;
+		static const bool watchRefused = getenv("OPENC2E_WATCH_REFUSED") != nullptr;
+		if (watchRefused)
+			fmt::print("* REFUSED activate {} on {} {} {} (attr {})\n", (int)event, (int)family, (int)genus, species, (int)attr);
+		if (!anything)
+			return false;
+	}
+
 	switch (event) {
 		case 0: // deactivate
 			if (c && !cr_can_stop)

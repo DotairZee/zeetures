@@ -17,14 +17,17 @@
 * Its scripts clear its ATTR 4 (activateable) while it travels and set it
 * again when it docks; Home's submarine was docked at the airlock with ATTR
 * 8, without it (a save mid-trip, likely), so its own arrows did nothing and
-* the next trip's "subv attr 4" would have cleared another bit. A
-* submarine found still at its dock without it gets it back at load.
+* the next trip's "subv attr 4" would have cleared another bit. Its ATTR
+* is set to its docked value at load (below).
 *
 * A caller at each stop (2 2 223 west, 224 airlock, 225 east; the game's
 * capsule caller picture, lbtn, as the lifts' callers; OV01 its stop): a
 * press, by the hand or a creature, brings the submarine to its stop from
 * wherever it is docked, by the one leg that goes there; while it is
-* travelling, or already there, nothing happens.
+* travelling, or already there, nothing happens. Docked means still, at a
+* dock, and activateable again (ATTR 4): its trip script sets that last,
+* so a press while it is still at a dock but its script is still running
+* (fading in, or waiting to leave the airlock) does nothing.
 *   west    x 6280, on the sea-cave walkway's floor (y 892), on the cave wall
 *           right of the docked submarine (the owner's spot)
 *   airlock x 6422, in the chamber between its west door and the docked
@@ -62,13 +65,19 @@ enum 3 1 2
     subv var1 posl subv var2 post mvby var1 var2
     part 4 pose 0 part 5 pose 0
   endi
+* Its ATTR (and the airlock doors', 2 9 7 and 2 9 8) set as the game's
+* Eden world has them while it is docked: 12 (container, activateable),
+* the doors 4 (owner, 2026-11-21: it fell off the screen at launch). Its
+* trip scripts take 4 from its ATTR and the doors' at the start and add it
+* back at the end, by arithmetic; a creature's push part-way through a trip
+* restarted the trip (the engine now refuses that, as it refuses the hand),
+* each restart took 4 more, and Home's submarine had run down to -68 (every
+* bit set: it suffered physics and fell through the world), the doors to
+* -60. No trip is running at load, so these are its docked values.
+  setv attr 12
 next
-enum 3 1 2
-  doif velx eq 0 and vely eq 0
-    setv var1 attr andv var1 4
-    doif var1 eq 0 addv attr 4 endi
-  endi
-next
+enum 2 9 7 setv attr 4 next
+enum 2 9 8 setv attr 4 next
 * The submarine in front of creatures (owner, 2026-11-20): plane 1600, over
 * creatures' 1500 (it was at 0); its riders are drawn at its plane plus its
 * cabin's (1), so they stay in front of its hull, and the front scenery
@@ -86,7 +95,8 @@ scrp 2 2 223 1
   setv var0 ov01
   enum 3 1 2
     setv var3 -1
-    doif velx eq 0 and vely eq 0
+    setv var4 attr andv var4 4
+    doif velx eq 0 and vely eq 0 and var4 ne 0
       doif posl lt 6120 and post lt 850 setv var3 0 endi
       doif posl gt 6400 and posl lt 6520 and post gt 1200 setv var3 1 endi
       doif posl gt 7100 and post lt 860 setv var3 2 endi
@@ -115,7 +125,8 @@ scrp 2 2 224 1
   setv var0 ov01
   enum 3 1 2
     setv var3 -1
-    doif velx eq 0 and vely eq 0
+    setv var4 attr andv var4 4
+    doif velx eq 0 and vely eq 0 and var4 ne 0
       doif posl lt 6120 and post lt 850 setv var3 0 endi
       doif posl gt 6400 and posl lt 6520 and post gt 1200 setv var3 1 endi
       doif posl gt 7100 and post lt 860 setv var3 2 endi
@@ -144,7 +155,8 @@ scrp 2 2 225 1
   setv var0 ov01
   enum 3 1 2
     setv var3 -1
-    doif velx eq 0 and vely eq 0
+    setv var4 attr andv var4 4
+    doif velx eq 0 and vely eq 0 and var4 ne 0
       doif posl lt 6120 and post lt 850 setv var3 0 endi
       doif posl gt 6400 and posl lt 6520 and post gt 1200 setv var3 1 endi
       doif posl gt 7100 and post lt 860 setv var3 2 endi
