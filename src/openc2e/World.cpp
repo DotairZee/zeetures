@@ -452,6 +452,7 @@ void World::tick() {
 			PROFILE_SCOPE("world: climate");
 			tickClimate();
 			tickPressure();
+			tickRadiation();
 		}
 		{
 			PROFILE_SCOPE("world: nutrients");
@@ -1402,6 +1403,45 @@ void World::tickPressure() {
 	for (size_t i = 0; i < rooms.size(); i++) {
 		rooms[i]->presf = next[i];
 		rooms[i]->pres = (int)std::lround(next[i]);
+	}
+}
+
+// C2 radiation (owner, 2026-11-21, the last item of the creatures.wiki survey:
+// rooms kept the world file's radiation, whatever opened or closed). Every 10
+// ticks: each doorway passes perm/255 * 1/8 of the difference (as heat), a
+// radiation source adds 0.35 * RSRC a step, and every room loses a tenth a
+// step. Fitted to the world file (a snapshot of the real game's: sources in
+// the volcano's chamber, 20-100, and a small one in every sky room, 5-30;
+// 66 rooms above 5): the rule's steady state explains 85% of it (3/16 spread
+// 86%, 1/4 75-81%; less loss fits worse), the volcano's rooms 48-185 against
+// 45-179, the sky rooms about half theirs. Creatures sense their room's
+// radiation (Creature.cpp, sense 6) and every genome turns that into heavy
+// metals. Switch OPENC2E_NO_RADIATION_SPREAD keeps the old fixed values.
+void World::tickRadiation() {
+	static unsigned int counter = 0;
+	static const bool off = getenv("OPENC2E_NO_RADIATION_SPREAD") != nullptr;
+	if (off || ++counter % 10 != 0 || !map || engine.version != 2)
+		return;
+	const float spread = 1.0f / 8.0f, sourceRate = 0.354f, loss = 0.1f;
+	const auto& rooms = map->getRooms();
+	for (auto& r : rooms)
+		if (r->radnf < 0.0f || (int)std::lround(r->radnf) != r->radn)
+			r->radnf = (float)std::clamp(r->radn, 0, 255); // first step, or a script changed it
+	std::vector<float> next(rooms.size());
+	for (size_t i = 0; i < rooms.size(); i++) {
+		Room& r = *rooms[i];
+		float v = r.radnf;
+		for (auto& [n, door] : r.getDoors()) {
+			if (!n || door.perm <= 0 || n.get() == &r)
+				continue;
+			v += spread * (std::min(door.perm, 255) / 255.0f) * (n->radnf - r.radnf);
+		}
+		v += sourceRate * (float)r.rsrc - loss * r.radnf;
+		next[i] = std::clamp(v, 0.0f, 255.0f);
+	}
+	for (size_t i = 0; i < rooms.size(); i++) {
+		rooms[i]->radnf = next[i];
+		rooms[i]->radn = (int)std::lround(next[i]);
 	}
 }
 

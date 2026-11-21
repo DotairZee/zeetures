@@ -79,6 +79,8 @@ class Room {
 	// step) and the world file's pressure it settles back toward
 	float presf = -1.0f;
 	int presBase = -1;
+	// C2 radiation (World::tickRadiation): with fractions (-1 until first step)
+	float radnf = -1.0f;
 	// C2 nutrient cycle (World::tickNutrients): organic and inorganic
 	// nutrients with fractions (-1 until first step), and the levels the
 	// world file gave the room, which each settles back toward (-1: not yet
