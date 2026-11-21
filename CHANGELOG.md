@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 588 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 590 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.25.0](#version-0250): 2 commits, 21 November 2026
 - [0.24.0](#version-0240): 2 commits, 21 November 2026
 - [0.23.0](#version-0230): 2 commits, 21 November 2026
 - [0.22.0](#version-0220): 2 commits, 21 November 2026
@@ -62,6 +63,41 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.25.0
+
+Heavy metals now matter: a creature carrying them feels a dull pain that grows with the amount, and they slowly wear down one of its organs until, left for days, they can kill it; the volcano's fruit cures them. Radiation also lowers the chance of conceiving, and a baby exposed to it in its mother or its egg hatches with extra mutations, which its own children inherit.
+
+### 21 November 2026
+
+#### Version 0.25.0
+
+[`2da71d25`](https://github.com/DotairZee/zeetures/commit/2da71d255cf65c4d73ddf7827f152516850bf309)
+
+#### Heavy metals hurt; radiation lowers fertility and mutates the unborn
+
+[`d321e4f4`](https://github.com/DotairZee/zeetures/commit/d321e4f460238dbd3a2a3af84333097a7099580b)
+
+Owner, 2026-11-21: make heavy metals matter, "slow but serious, as
+pain", and radiation should affect fertility and mutation in offspring
+in utero and in the egg. Exposure.cpp, our own design:
+
+- Heavy metals (140) above 16 are felt as pain (chemical 1, 1/10 a
+  heavy metal every 10 ticks) and wear the organ the genome marks for
+  them (its heavy-metals receptor) in proportion. A norn held at 255:
+  pain about 145, the organ down to 9% in about 4.7 game days; at 120,
+  pain about 60. EDTA from volcanic fruit cures it.
+- Radiation dose: radiation above 10 a creature stands in adds to its
+  dose (radiation-minutes), halving in a game day; the chance to
+  conceive is divided by 1 + dose/1000 for each partner.
+- Before birth: a baby's genome gathers the radiation above 10 around
+  it, in its mother and then its egg; at hatching each 1500 of dose is
+  one more mutation (at most 10), written to its genome file so its
+  children inherit them (Breeding.cpp mutatedCopy). Eggs at the
+  volcano's mouth (radiation 56) gain about one a game day.
+
+Doses are saved with the world. Switches OPENC2E_NO_EXPOSURE,
+OPENC2E_WATCH_EXPOSURE, OPENC2E_EXPOSURE_MUTATION_DOSE (tests).
 
 ## Version 0.24.0
 

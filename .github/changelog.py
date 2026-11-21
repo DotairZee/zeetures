@@ -260,6 +260,11 @@ VERSIONS = [
      "Radiation spreads out from the volcano and the sky as in the original game, following doors as they open "
      "and close. The fruit of the volcano's ember-red bushes now carries EDTA, the only cure for the heavy metals "
      "that radiation builds up in a creature."),
+    ("0.25.0", "2da71d25",
+     "Heavy metals now matter: a creature carrying them feels a dull pain that grows with the amount, and they slowly "
+     "wear down one of its organs until, left for days, they can kill it; the volcano's fruit cures them. "
+     "Radiation also lowers the chance of conceiving, and a baby exposed to it in its mother or its egg hatches "
+     "with extra mutations, which its own children inherit."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
