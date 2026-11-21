@@ -18,6 +18,7 @@
  */
 
 #include "caosVM.h"
+#include "Engine.h"
 
 #include "Agent.h"
 
@@ -29,6 +30,7 @@
 #include "common/io/Writer.h"
 #include "common/throw_ifnot.h"
 
+#include <algorithm>
 #include <cassert>
 #include <climits>
 #include <fmt/core.h>
@@ -44,6 +46,10 @@ void dumpStack(caosVM* vm) {
 	else
 		fmt::print(stderr, "END");
 	fmt::print(stderr, "\n");
+}
+
+int oldSpeciesWrap(int species) {
+	return (engine.version < 3 && species > 65535) ? (species & 0xFFFF) : species;
 }
 
 caosVM::caosVM(const AgentRef& o)
@@ -283,6 +289,54 @@ inline void caosVM::runOpCore(script* s, caosOp op) {
 			}
 			break;
 		}
+		case CAOS_FLATENUM: {
+			flatLoop loop;
+			loop.start = nip;
+			for (;;) {
+				VM_PARAM_VALUE(v);
+				if (v.isEmpty())
+					break;
+				if (!v.hasAgent()) {
+					dumpStack(this);
+					throw caosException(std::string("Stack item type mismatch: ") + v.dump());
+				}
+				loop.agents.push_back(v.getAgentRef());
+			}
+			// (popped first to last; the rest kept last first, to pop)
+			std::reverse(loop.agents.begin(), loop.agents.end());
+			while (!loop.agents.empty()) {
+				AgentRef r = loop.agents.back();
+				loop.agents.pop_back();
+				if (!r || r->isDying())
+					continue;
+				targ = r;
+				flatLoops.push_back(std::move(loop));
+				goto flatenum_done;
+			}
+			safeJMP(op.argument);
+		flatenum_done:
+			break;
+		}
+		case CAOS_FLATNEXT: {
+			if (flatLoops.empty())
+				break;
+			flatLoop& loop = flatLoops.back();
+			bool more = false;
+			while (!loop.agents.empty()) {
+				AgentRef r = loop.agents.back();
+				loop.agents.pop_back();
+				if (!r || r->isDying())
+					continue;
+				targ = r;
+				more = true;
+				break;
+			}
+			if (more)
+				safeJMP(loop.start);
+			else
+				flatLoops.pop_back();
+			break;
+		}
 		default:
 			throw Exception(fmt::format("Illegal opcode {}", (int)op.opcode));
 	}
@@ -389,6 +443,7 @@ void caosVM::resetCore() {
 	valueStack.clear();
 	auxStack.clear();
 	callStack.clear();
+	flatLoops.clear();
 
 	inst = lock = 0;
 	timeslice = 0;

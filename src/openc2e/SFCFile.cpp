@@ -1054,6 +1054,7 @@ void SFCSimpleObject::copyToWorld() {
 		ourAgent = new SimpleAgent(family, genus, species, entity->zorder, sprite->filename, sprite->firstimg, sprite->noframes);
 	}
 	SimpleAgent* a = ourAgent;
+	a->scenery = true;
 
 	a->finishInit();
 	//a->moveTo(entity->x - (a->part(0)->getWidth() / 2), entity->y - (a->part(0) -> getHeight() / 2));

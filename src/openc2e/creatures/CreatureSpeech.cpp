@@ -361,6 +361,16 @@ void hearMachineWord(Agent* machine, int word, bool aloud) {
 	}
 }
 
+Utterance wordUtterance(Agent* creature, oldCreature* c, int word) {
+	Utterance u;
+	if (!isWord(word))
+		return u;
+	u.spoken = trim(engine.wordlist[word]);
+	u.shown = showWord(creature, c, word);
+	u.learned.push_back(word);
+	return u;
+}
+
 Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c) {
 	Utterance u;
 	if (!creature || !c)

@@ -93,7 +93,7 @@ void c_RTAR(caosVM* vm) {
 	VM_VERIFY_SIZE(3)
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -136,7 +136,7 @@ void c_TTAR(caosVM* vm) {
 	VM_VERIFY_SIZE(3)
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -183,7 +183,7 @@ void c_STAR(caosVM* vm) {
 	VM_VERIFY_SIZE(3)
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -231,7 +231,7 @@ void c_NEW_SIMP(caosVM* vm) {
 	VM_PARAM_STRING(sprite_file)
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -264,6 +264,29 @@ void c_NEW_SIMP_c2(caosVM* vm) {
 	inheritInjected(vm, a);
 	vm->setTarg(a);
 	vm->part = 0; // TODO: correct?
+}
+
+/**
+ NEW: SCEN (command) sprite_file (bareword) image_count (integer) first_image (integer) plane (integer)
+ %status maybe
+ %variants c2
+
+ Makes a scenery object: a picture with no classifier of its own needed
+ (C2 CAOS guide), which ESCN enumerates. COBs use it for backdrops (the
+ Plato Project's walkways, Volcano Garden's pond edge at plane 9000).
+*/
+void c_NEW_SCEN(caosVM* vm) {
+	VM_PARAM_INTEGER(plane)
+	VM_PARAM_INTEGER(first_image)
+	VM_PARAM_INTEGER(image_count)
+	VM_PARAM_STRING(sprite_file)
+
+	SimpleAgent* a = new SimpleAgent(0, 0, 0, plane, sprite_file, first_image, image_count);
+	a->scenery = true;
+	a->finishInit();
+	inheritInjected(vm, a);
+	vm->setTarg(a);
+	vm->part = 0;
 }
 
 /**
@@ -383,7 +406,7 @@ void c_NEW_COMP(caosVM* vm) {
 	VM_PARAM_STRING(sprite_file)
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -431,7 +454,7 @@ void c_NEW_VHCL(caosVM* vm) {
 	VM_PARAM_STRING(sprite_file)
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -1114,7 +1137,7 @@ void v_TOTL(caosVM* vm) {
 	VM_VERIFY_SIZE(3)
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -2097,7 +2120,7 @@ void s_GRAV(caosVM* vm) {
 void c_SETV_CLS2(caosVM* vm) {
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -2175,9 +2198,11 @@ void c_BHVR_c2(caosVM* vm) {
 /**
  SETV CLAS (command) identifier (integer)
  %status maybe
- %variants c1
+ %variants c1 c2
 
- Set family, genus and species of the target agent. Creatures 1 era command.
+ Set family, genus and species of the target agent. Creatures 1 era command,
+ which C2 COBs still use (the C2 Space Heater: SETV CLAS 34329600 is 2 11
+ 212, the classifier its own scripts are written for).
 */
 void c_SETV_CLAS(caosVM* vm) {
 	VM_PARAM_INTEGER(identifier)

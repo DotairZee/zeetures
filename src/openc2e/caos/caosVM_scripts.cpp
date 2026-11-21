@@ -143,7 +143,7 @@ void c_SCRX(caosVM* vm) {
 	THROW_IFNOT(event <= 65535);
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);

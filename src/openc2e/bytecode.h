@@ -90,6 +90,13 @@ enum opcode_t {
 	 * Argument: How many places to move it down
 	 */
 	CAOS_STACK_ROT,
+	/* C1/C2 scripts compiled flat (unbalanced blocks, as the original
+	 * engines ran them): go on with the newest flat loop (FLATENUM) at its
+	 * next live agent, at the op after its FLATENUM, or, at its end, drop
+	 * it and continue. With no flat loop running, nothing.
+	 * Argument: ignored
+	 */
+	CAOS_FLATNEXT,
 	/* Pseudo-instructions; marks the beginning of relocated ops. */
 	CAOS_NONRELOC_END,
 	CAOS_RELOCATABLE_BEGIN = 0x40,
@@ -121,6 +128,13 @@ enum opcode_t {
 	 * Cost: 0
 	 */
 	CAOS_ENUMPOP,
+	/* C1/C2 flat loop start: pop the agents an enumeration pushed (down to
+	 * its null marker); with a live one, set targ to it and start a flat
+	 * loop over the rest (FLATNEXT); with none, go to the given address
+	 * (after the loop's NEXT).
+	 * Argument: A bytecode location (relocated).
+	 */
+	CAOS_FLATENUM,
 
 	CAOS_INVALID
 };

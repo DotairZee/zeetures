@@ -92,6 +92,13 @@ class caosVM {
 	std::vector<caosValue> valueStack;
 	std::vector<caosValue> auxStack;
 	std::vector<callStackItem> callStack;
+	// C1/C2 scripts compiled flat: the loops running (CAOS_FLATENUM), each
+	// its first op and the agents still to come
+	struct flatLoop {
+		int start;
+		std::vector<AgentRef> agents;
+	};
+	std::vector<flatLoop> flatLoops;
 
 	Reader* inputstream;
 	Writer* outputstream;
@@ -225,6 +232,15 @@ inline auto vmparamhelper<AgentRef>(const caosValue& val) {
 #define VM_PARAM_FLOAT(name) VM_PARAM_OF_TYPE(name, float)
 #define VM_PARAM_VECTOR(name) VM_PARAM_OF_TYPE(name, Vector<float>)
 #define VM_PARAM_AGENT(name) VM_PARAM_OF_TYPE(name, std::shared_ptr<Agent>)
+
+// a species from a script: C1/C2 keep species in 16 bits (world files store
+// it so, and the scriptorium files scripts so), so a larger one wraps rather
+// than failing: COBs use them (Zora Castle's 2 8 66672 is 2 8 1136, as its
+// SCRP 2 8 66672 scripts are filed)
+int oldSpeciesWrap(int species);
+#define VM_CHECK_SPECIES(name) \
+	name = oldSpeciesWrap(name); \
+	THROW_IFNOT(name <= 65535);
 
 #define VM_PARAM_VALUE_UNUSED(name) \
 	VM_PARAM_VALUE(name##_); \

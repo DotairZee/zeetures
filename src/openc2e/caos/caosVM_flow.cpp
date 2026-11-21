@@ -217,7 +217,7 @@ void c_ENUM(caosVM* vm) {
 	VM_VERIFY_SIZE(3)
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -260,7 +260,7 @@ void c_ESEE(caosVM* vm) {
 	VM_VERIFY_SIZE(3)
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -299,7 +299,7 @@ void c_ETCH(caosVM* vm) {
 	VM_VERIFY_SIZE(3)
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -350,7 +350,7 @@ void c_EPAS(caosVM* vm) {
 	VM_VERIFY_SIZE(3)
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -403,16 +403,19 @@ void c_ECON(caosVM* vm) {
 /**
  ESCN (command) family (integer) genus (integer) species (integer)
  %stackdelta any
- %status stub
+ %status maybe
  %variants c2
 
- Enumerate all specified scenery objects.
+ Enumerate the scenery objects (the world file's, and those made with NEW:
+ SCEN) with the given classifier, 0 a wildcard, as ENUM does; the loop body
+ ends with NSCN. Volcano Garden's timer clears the volcano pit's scenery
+ with it.
 */
 void c_ESCN(caosVM* vm) {
 	VM_VERIFY_SIZE(3)
 	VM_PARAM_INTEGER(species)
 	THROW_IFNOT(species >= 0);
-	THROW_IFNOT(species <= 65535);
+	VM_CHECK_SPECIES(species)
 	VM_PARAM_INTEGER(genus)
 	THROW_IFNOT(genus >= 0);
 	THROW_IFNOT(genus <= 255);
@@ -420,12 +423,24 @@ void c_ESCN(caosVM* vm) {
 	THROW_IFNOT(family >= 0);
 	THROW_IFNOT(family <= 255);
 
-	// TODO: should implement this. C2 has a concept of "scenery objects" created
-	// with NEW: SCEN.
-
 	caosValue nullv;
 	nullv.reset();
 	vm->valueStack.push_back(nullv);
+
+	for (auto& agent : world.agents) {
+		std::shared_ptr<Agent> a = agent;
+		if (!a || !a->scenery)
+			continue;
+		if (species && species != a->species)
+			continue;
+		if (genus && genus != a->genus)
+			continue;
+		if (family && family != a->family)
+			continue;
+		caosValue v;
+		v.setAgent(a);
+		vm->valueStack.push_back(v);
+	}
 }
 
 /**

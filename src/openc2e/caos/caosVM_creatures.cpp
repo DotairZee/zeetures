@@ -1460,9 +1460,11 @@ void c_LTCY(caosVM* vm) {
 void c_MATE(caosVM* vm) {
 	CreatureAgent* a = dynamic_cast<CreatureAgent*>(vm->targ.get());
 	THROW_IFNOT(a);
-	THROW_IFNOT(vm->_it_);
+	// with no creature in attention, nothing (BunchaStuff's "Sex it up"
+	// sends every norn the kiss message, whatever it is looking at)
 	CreatureAgent* b = dynamic_cast<CreatureAgent*>(vm->_it_.get());
-	THROW_IFNOT(b);
+	if (!b)
+		return;
 	tryConceive(a, b);
 }
 
@@ -1786,6 +1788,44 @@ void c_DONE(caosVM* vm) {
 }
 
 /**
+ INS# (integer)
+ %status maybe
+ %variants c2
+
+ The number of instincts the target creature has still to take in (C2:
+ they are taken in the egg and during sleep). Used by the Bedtime COB to
+ tell when a sleeper has finished.
+*/
+void v_INSN(caosVM* vm) {
+	Creature* c = vm->getTargCreature();
+	vm->result.setInt(c ? (int)c->getNoUnprocessedInstincts() : 0);
+}
+
+/**
+ LCUS (integer) type (integer) organ (integer) tissue (integer) locus (integer)
+ %status maybe
+ %variants c2
+
+ The value of one of the target creature's loci, numbered as C2's DDE: LCUS
+ (type 0 receptor, 1 emitter; organ 0 brain, 1 creature; tissue a lobe or
+ body system; the locus within it). 0 for a locus it does not have. Used as
+ a value by C2 COBs (BunchaStuff's Grendel Scarey Mask).
+*/
+void v_LCUS(caosVM* vm) {
+	VM_PARAM_INTEGER(locus)
+	VM_PARAM_INTEGER(tissue)
+	VM_PARAM_INTEGER(organ)
+	VM_PARAM_INTEGER(type)
+
+	vm->result.setInt(0);
+	auto* oc = dynamic_cast<oldCreature*>(vm->getTargCreature());
+	if (!oc || organ < 0 || organ > 255 || tissue < 0 || tissue > 255 || locus < 0 || locus > 255)
+		return;
+	if (unsigned char* p = oc->getLocusPointer(type == 0, (unsigned char)organ, (unsigned char)tissue, (unsigned char)locus))
+		vm->result.setInt(*p);
+}
+
+/**
  SAYN (command)
  %status maybe
  %variants c1 c2 cv c3
@@ -1953,14 +1993,47 @@ void c_INJR(caosVM* vm) {
 
 /**
  SAY$ (command) string (string)
- %status stub
+ %status maybe
  %variants c1 c2
+
+ The target creature says the string, in a speech bubble and its voice; no
+ word is sent to the creatures in earshot (C2 CAOS guide). Used by COBs
+ (the Holo Doc's "Elf needs food!", the Flower Pack's "pretty flower").
 */
 void c_SAY(caosVM* vm) {
-	VM_PARAM_STRING_UNUSED(string)
+	VM_PARAM_STRING(string)
 
 	valid_agent(vm->targ);
-	// TODO
+	Creature* c = vm->getTargCreature();
+	if (!c || string.empty())
+		return;
+	Utterance u;
+	u.shown = string;
+	u.spoken = string;
+	creatureSays(vm->targ.get(), (int)c->getStage(), u);
+}
+
+/**
+ SAY# (command) word (integer)
+ %status maybe
+ %variants c1 c2
+
+ The target creature says word number `word` of the game's word list, in a
+ speech bubble and its voice (as it knows the word, or in its own tongue),
+ and the creatures in earshot hear it (C2 CAOS guide: "send that word as a
+ signal message to creatures in earshot").
+*/
+void c_SAYNUM(caosVM* vm) {
+	VM_PARAM_INTEGER(word)
+
+	valid_agent(vm->targ);
+	Creature* c = vm->getTargCreature();
+	if (!c)
+		return;
+	Utterance u = wordUtterance(vm->targ.get(), dynamic_cast<oldCreature*>(c), word);
+	if (u.shown.empty())
+		return;
+	creatureSays(vm->targ.get(), (int)c->getStage(), u);
 }
 
 /**

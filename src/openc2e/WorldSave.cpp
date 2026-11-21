@@ -174,7 +174,7 @@ static void savePart(std::ostream& out, CompoundPart* cp) {
 static void writeObjectBody(std::ostream& out, Agent* ag, std::map<Agent*, int>& ids) {
 	CompoundAgent* comp = dynamic_cast<CompoundAgent*>(ag);
 	Vehicle* vhcl = dynamic_cast<Vehicle*>(ag);
-		out << "kind " << (vhcl ? "vhcl" : comp ? "comp" : "simp") << "\n";
+		out << "kind " << (vhcl ? "vhcl" : comp ? "comp" : ag->scenery ? "scen" : "simp") << "\n";
 		out << "classifier " << (int)ag->family << " " << (int)ag->genus << " " << ag->species << "\n";
 		out << "plane " << (int)ag->zorder << "\n";
 		out << fmt::format("pos {} {}\n", ag->x, ag->y);
@@ -589,9 +589,10 @@ static void restoreInjected(std::vector<SavedInjected>& objects, std::map<int, A
 			if (o.parts.empty())
 				continue;
 			Agent* ag = nullptr;
-			if (o.kind == "simp") {
+			if (o.kind == "simp" || o.kind == "scen") {
 				const SavedPart& p0 = o.parts[0];
 				SimpleAgent* a = new SimpleAgent(o.family, o.genus, o.species, o.plane, p0.sprite, p0.firstimg, 0);
+				a->scenery = o.kind == "scen";
 				a->finishInit();
 				if (auto* sp = dynamic_cast<SpritePart*>(a->part(0)))
 					applyPart(sp, p0);

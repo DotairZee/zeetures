@@ -150,6 +150,22 @@ class script {
 	void fixRelocation(int r) {
 		fixRelocation(r, getNextIndex());
 	}
+	bool relocationFixed(int r) const { return relocations[(size_t)-r] != 0; }
+
+	// a point to roll the code back to (a C1/C2 statement compiled again, flat)
+	// (the relocations whole: a SUBR in the statement fixes a label's
+	// relocation made before it, by a GSUB earlier in the script)
+	struct Mark {
+		size_t ops;
+		std::vector<int> relocations;
+		std::map<std::string, int> labels;
+	};
+	Mark mark() const { return Mark{ops.size(), relocations, labels}; }
+	void rollback(const Mark& m) {
+		ops.erase(ops.begin() + (long)m.ops, ops.end());
+		relocations = m.relocations;
+		labels = m.labels;
+	}
 
 	// find the address of the given label, could be a relocation
 	int getLabel(const std::string& label) {
@@ -231,6 +247,12 @@ class caosScript { //: Collectable {
 	void emitExpr(std::shared_ptr<CAOSExpression> ce);
 	const cmdinfo* readCommand(caostoken* t, const std::string& prefix, bool except = true);
 	void parseloop(int state, void* info);
+	// C1/C2: a statement at a script's top level; one whose blocks do not
+	// nest (as the original engines allowed) is compiled flat to the end
+	// of its script
+	bool oldDialect() const;
+	void parseOldStatement(caostoken* t);
+	void compileFlat();
 
 	caosValue asConst(const caostoken& token);
 	[[noreturn]] void unexpectedToken(const caostoken& token);

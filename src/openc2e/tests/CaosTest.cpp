@@ -57,6 +57,56 @@ TEST(caos, assert) {
 	}
 }
 
+// C1/C2 scripts whose blocks do not nest, compiled flat as the original
+// engines ran them (caosScript::compileFlat; COBs written for C2 rely on it)
+TEST(caos, c2_flat_else_twice) {
+	// true: the first ELSE jumps past the ENDI
+	run_script("c2", "setv va00 0 doif 1 eq 1 addv va00 1 else addv va00 10 else addv va00 100 endi dbg: asrt va00 eq 1 endm");
+	// false: on after the first ELSE; the second, run, jumps past the ENDI
+	run_script("c2", "setv va00 0 doif 1 eq 2 addv va00 1 else addv va00 10 else addv va00 100 endi dbg: asrt va00 eq 10 endm");
+}
+
+TEST(caos, c2_flat_doif_open_at_endm) {
+	run_script("c2", "doif 1 eq 2 dbg: fail endm");
+	run_script("c2", "setv va00 0 doif 1 eq 1 setv va00 3 dbg: asrt va00 eq 3 endm");
+	run_script("c2", "endi endi setv va00 1 dbg: asrt va00 eq 1 endm"); // (stray ENDIs do nothing)
+}
+
+TEST(caos, c2_flat_next_in_doif) {
+	auto sprite = Openc2eTestHelper::addBlnkSprite();
+	run_script("c2", "reps 3 new: simp blnk 2 0 0 0 setv cls2 2 1 1000 repe endm");
+	// NEXT inside a DOIF goes on with the loop (skipping the rest)
+	run_script("c2", R"(
+		setv va00 0 setv va01 0
+		enum 2 1 1000
+			addv va00 1
+			doif va00 eq 2
+				next
+			endi
+			addv va01 1
+		next
+		dbg: asrt va00 eq 3
+		dbg: asrt va01 eq 2
+		endm)");
+	// and when it ends the loop, on after it (as C2's NEXT fell through)
+	run_script("c2", R"(
+		setv va00 0 setv va01 0
+		enum 2 1 1000
+			addv va00 1
+			doif va00 eq 3
+				next
+			endi
+			addv va01 1
+		next
+		dbg: asrt va00 eq 3
+		dbg: asrt va01 eq 3
+		endm)");
+	// an enumeration of nothing goes on after its NEXT
+	run_script("c2", "setv va00 0 enum 2 1 999 doif 1 eq 1 addv va00 1 next endi dbg: asrt va00 eq 0 endm");
+	run_script("c2", "enum 2 1 1000 kill targ next endm");
+	world.gallery = std::make_unique<imageManager>();
+}
+
 TEST(caos, barewords) {
 	auto sprite = Openc2eTestHelper::addBlnkSprite();
 	run_script("c3", R"(

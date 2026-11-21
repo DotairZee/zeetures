@@ -232,6 +232,9 @@ class Agent : public std::enable_shared_from_this<Agent> {
 	int actv = 0;
 	int thrt = 0;
 	int size = 0;
+	// C2: a scenery object (the world file's, or one made with NEW: SCEN),
+	// which ESCN enumerates; saved with the world
+	bool scenery = false;
 	// the Agent Injector object (its COB agent name) this was added by hand
 	// from, or that made the agent which made this one: such objects are
 	// saved with the world (WorldSave). Empty for everything else.

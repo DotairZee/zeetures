@@ -21,6 +21,7 @@
 
 #include "Engine.h" // version
 #include "World.h" // unid
+#include "Agent.h" // getUNID
 
 #include <fmt/core.h>
 
@@ -230,13 +231,18 @@ const AgentRef& caosValue::getAgentRef() const {
 	if (auto* a = value.get_if<AgentRef>()) {
 		return *a;
 	} else if (auto* i = value.get_if<int>()) {
-		// TODO: muh
-		if (engine.version == 2) {
-			if (*i == 0) {
+		// C1/C2: agents are numbers (their UNIDs; 0 none), and scripts keep
+		// them in variables as such: a custom world's own fish (The Albian
+		// Sea Bay, 2 20 113) TARGs a number it stored. A number no agent has
+		// is none. (Kept in a few slots, as the reference is returned.)
+		if (engine.version < 3) {
+			if (*i == 0)
 				return nullagentref;
-			}
-
-			// TODO: unid magic?
+			static AgentRef looked[16];
+			static unsigned int next = 0;
+			AgentRef& r = looked[next++ % 16];
+			r = AgentRef(world.lookupUNID(*i));
+			return r;
 		}
 	}
 	throw wrongCaosValueTypeException(fmt::format("Wrong caosValue type: Expected agent, got {}", dump()));
@@ -300,7 +306,7 @@ bool caosValue::operator==(const caosValue& v) const {
 		return this->getVector() == v.getVector();
 	} else if (engine.version < 3) {
 		// C1/C2 allow you to compare agents to an integer (unid), since agents are integers..
-		// TODO: do this for >/< too?
+		// (and >/< too: oldAgentNumbers)
 
 		if (this->hasInt() && v.hasAgent()) {
 			return world.lookupUNID(this->getInt()) == v.getAgent();
@@ -310,6 +316,26 @@ bool caosValue::operator==(const caosValue& v) const {
 	}
 
 	throw caosException(std::string("caosValue operator == couldn't compare ") + this->dump() + "and " + v.dump());
+}
+
+// C1/C2: an agent is a number (its UNID; no agent 0), so ordering compares
+// it with integers too: "doif targ gt 0" (COBs: the Holo Doc, Gnat Be-Gone)
+static bool oldAgentNumbers(const caosValue& a, const caosValue& b, int& x, int& y) {
+	if (engine.version >= 3 || !(a.hasAgent() || b.hasAgent()))
+		return false;
+	auto num = [](const caosValue& v, int& out) {
+		if (v.hasAgent()) {
+			std::shared_ptr<Agent> ag = v.getAgent();
+			out = ag ? ag->getUNID() : 0;
+			return true;
+		}
+		if (v.hasInt()) {
+			out = v.getInt();
+			return true;
+		}
+		return false;
+	};
+	return num(a, x) && num(b, y);
 }
 
 bool caosValue::operator>(const caosValue& v) const {
@@ -331,6 +357,9 @@ bool caosValue::operator>(const caosValue& v) const {
 			return false;
 	}
 
+	int x, y;
+	if (oldAgentNumbers(*this, v, x, y))
+		return x > y;
 	throw caosException(std::string("caosValue operator > couldn't compare ") + this->dump() + "and " + v.dump());
 }
 
@@ -343,6 +372,9 @@ bool caosValue::operator<(const caosValue& v) const {
 		return (*this != v) && !(*this > v);
 	}
 
+	int x, y;
+	if (oldAgentNumbers(*this, v, x, y))
+		return x < y;
 	throw caosException(std::string("caosValue operator < couldn't compare ") + this->dump() + "and " + v.dump());
 }
 

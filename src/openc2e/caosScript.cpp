@@ -157,6 +157,7 @@ enum {
 	ST_ESCN,
 	ST_LOOP,
 	ST_REPS,
+	ST_ONE, // one statement, then return (C1/C2: see parseOldStatement)
 	ST_INVALID
 };
 
@@ -568,8 +569,23 @@ void caosScript::parseCondition() {
 
 void caosScript::parseloop(int state, void* info) {
 	caostoken* t;
+	bool oneDone = false;
 	while ((t = getToken(ANYTOKEN))) {
 		traceindex = errindex;
+		if (state == ST_ONE) {
+			if (oneDone || logicalType(t) == EOI) {
+				putBackToken(t);
+				return;
+			}
+			oneDone = true;
+		}
+		// C1/C2: each statement of a script's top level on its own, so one
+		// whose blocks do not nest can be compiled again, flat
+		if ((state == ST_INSTALLER || state == ST_BODY || state == ST_REMOVAL) && logicalType(t) == TOK_WORD && oldDialect() &&
+			t->word() != "scrp" && t->word() != "rscr" && t->word() != "iscr" && t->word() != "endm") {
+			parseOldStatement(t);
+			continue;
+		}
 		if (logicalType(t) == EOI) {
 			switch (state) {
 				case ST_INSTALLER:
@@ -845,6 +861,181 @@ void caosScript::parseloop(int state, void* info) {
 			emitOp(CAOS_YIELD, 0);
 		}
 	}
+}
+
+bool caosScript::oldDialect() const {
+	return d && (d->name == "c1" || d->name == "c2");
+}
+
+void caosScript::parseOldStatement(caostoken* t) {
+	int at = curindex - 1; // t's index
+	script::Mark m = current->mark();
+	int depth = enumdepth;
+	putBackToken(t);
+	try {
+		parseloop(ST_ONE, NULL);
+	} catch (parseException& e) {
+		// only the blocks: NEXT, ELSE, ENDI, REPE, UNTL, EVER or NSCN with no
+		// block of its own open, a second ELSE, or a block still open at
+		// ENDM. The original engines did not check: each flow word acted
+		// when it ran (DOIF skipping on to its ELSE or ENDI, NEXT going on
+		// with the loop running), and COBs written for them rely on it
+		// (the Holo Doc, the Coconut tree update, the Ball Update, the
+		// Flower Pack's sunflower, the Mystic Gong; owner's COBs, 2026-11-20)
+		std::string what = e.what();
+		// a command cut short by the script's end ("setv var1,endm": a
+		// custom world's own scripts, The Albian Sea Bay's 2 20 3 12 and
+		// 2 1 26 1, stored so in its world file): left out, as C2 must have
+		if (what.find("expr endm") != std::string::npos) {
+			current->rollback(m);
+			enumdepth = depth;
+			int i = at;
+			while ((size_t)i < tokens->size() && !((*tokens)[(size_t)i].type == caostoken::TOK_WORD && (*tokens)[(size_t)i].word() == "endm") &&
+				   (*tokens)[(size_t)i].type != caostoken::TOK_EOI)
+				i++;
+			curindex = i;
+			errindex = i;
+			fmt::print("* CAOS {}: a command cut short by ENDM left out (token {})\n", filename.string(), at);
+			return;
+		}
+		bool blocks = what.find("Duplicate ELSE") != std::string::npos ||
+					  (what.find("Unexpected") != std::string::npos && what.find("non-word") == std::string::npos);
+		if (!blocks)
+			throw;
+		current->rollback(m);
+		enumdepth = depth;
+		curindex = at;
+		errindex = at;
+		if (getenv("OPENC2E_WATCH_FLAT"))
+			fmt::print("* CAOS {}: compiled flat from token {} ({})\n", filename.string(), at, what);
+		compileFlat();
+	}
+}
+
+// The original C1/C2 way, from the current token to its script's end (ENDM,
+// SCRP, ISCR, RSCR or the end of input): DOIF goes on, when false, after its
+// matching ELSE or ENDI (counting only DOIF and ENDI between); ELSE, run,
+// jumps past its matching ENDI; ENDI does nothing; an enumeration with no
+// agents goes on after its matching NEXT, and NEXT goes on with whichever
+// loop is running (CAOS_FLATENUM, CAOS_FLATNEXT); REPE and UNTL/EVER belong
+// to the nearest REPS and LOOP before them not yet closed.
+void caosScript::compileFlat() {
+	auto wordAt = [&](int i) -> std::string {
+		const caostoken& tk = (*tokens)[(size_t)i];
+		return tk.type == caostoken::TOK_WORD ? tk.word() : std::string();
+	};
+	auto isEnum = [](const std::string& w) { return w == "enum" || w == "esee" || w == "etch" || w == "epas" || w == "econ" || w == "escn"; };
+	int start = curindex, end = start;
+	while ((size_t)end < tokens->size()) {
+		const caostoken& tk = (*tokens)[(size_t)end];
+		if (tk.type == caostoken::TOK_EOI)
+			break;
+		std::string w = wordAt(end);
+		if (w == "endm" || w == "scrp" || w == "iscr" || w == "rscr")
+			break;
+		end++;
+	}
+	std::map<int, int> after; // token index -> relocation for the op after its statement
+	auto afterTok = [&](int i) {
+		auto it = after.find(i);
+		if (it != after.end())
+			return it->second;
+		return after[i] = current->newRelocation();
+	};
+	int endReloc = current->newRelocation();
+	// a forward match from i: the first `close` with no `open` pending
+	auto match = [&](int from, auto isOpen, auto isClose, bool elseToo) {
+		int depth = 0;
+		for (int i = from; i < end; i++) {
+			std::string w = wordAt(i);
+			if (isOpen(w))
+				depth++;
+			else if (isClose(w)) {
+				if (depth == 0)
+					return i;
+				depth--;
+			} else if (elseToo && depth == 0 && w == "else")
+				return i;
+		}
+		return -1;
+	};
+	auto isDoif = [](const std::string& w) { return w == "doif"; };
+	auto isEndi = [](const std::string& w) { return w == "endi"; };
+	std::map<int, int> repsJnz, repsLoop, loopStart; // keyed by the REPE / UNTL or EVER token
+	while (curindex < end) {
+		caostoken* t = getToken(ANYTOKEN);
+		int at = curindex - 1;
+		traceindex = errindex;
+		std::string w = logicalType(t) == TOK_WORD ? t->word() : std::string();
+		if (w == "doif") {
+			int ok = current->newRelocation();
+			parseCondition();
+			emitCmd("cmd doif");
+			emitOp(CAOS_CJMP, ok);
+			int target = match(curindex, isDoif, isEndi, true);
+			emitOp(CAOS_JMP, target < 0 ? endReloc : afterTok(target));
+			current->fixRelocation(ok);
+		} else if (w == "else") {
+			int target = match(curindex, isDoif, isEndi, false);
+			emitOp(CAOS_JMP, target < 0 ? endReloc : afterTok(target));
+		} else if (w == "endi" || w == "elif") {
+			if (w == "elif")
+				throw parseException("ELIF in a script compiled flat");
+		} else if (isEnum(w)) {
+			putBackToken(t);
+			emitExpr(readExpr(CI_COMMAND));
+			emitOp(CAOS_YIELD, 0);
+			int target = match(curindex, isEnum, [](const std::string& x) { return x == "next" || x == "nscn"; }, false);
+			emitOp(CAOS_FLATENUM, target < 0 ? endReloc : afterTok(target));
+		} else if (w == "next" || w == "nscn") {
+			emitCmd(w == "next" ? "cmd next" : "cmd nscn");
+			emitOp(CAOS_FLATNEXT, 0);
+		} else if (w == "reps") {
+			putBackToken(t);
+			emitExpr(readExpr(CI_COMMAND));
+			emitOp(CAOS_YIELD, 0);
+			int repe = match(curindex, [](const std::string& x) { return x == "reps"; }, [](const std::string& x) { return x == "repe"; }, false);
+			int jnz = current->newRelocation();
+			emitOp(CAOS_JMP, jnz);
+			if (repe >= 0) {
+				repsJnz[repe] = jnz;
+				repsLoop[repe] = current->getNextIndex();
+			} else
+				current->fixRelocation(jnz); // (no REPE: the body once, the count left on the stack)
+		} else if (w == "repe") {
+			if (repsJnz.count(at)) {
+				current->fixRelocation(repsJnz[at]);
+				emitOp(CAOS_DECJNZ, repsLoop[at]);
+				emitCmd("cmd repe");
+			}
+		} else if (w == "loop") {
+			int close = match(curindex, [](const std::string& x) { return x == "loop"; }, [](const std::string& x) { return x == "untl" || x == "ever"; }, false);
+			if (close >= 0)
+				loopStart[close] = current->getNextIndex();
+			emitCmd("cmd loop");
+		} else if (w == "untl") {
+			int out = current->newRelocation();
+			parseCondition();
+			emitCmd("cmd untl");
+			emitOp(CAOS_CJMP, out);
+			if (loopStart.count(at))
+				emitOp(CAOS_JMP, loopStart[at]);
+			current->fixRelocation(out);
+		} else if (w == "ever") {
+			if (loopStart.count(at))
+				emitOp(CAOS_JMP, loopStart[at]);
+		} else {
+			putBackToken(t);
+			parseloop(ST_ONE, NULL);
+		}
+		if (after.count(at))
+			current->fixRelocation(after[at]);
+	}
+	current->fixRelocation(endReloc);
+	// (a match found past what was compiled: to the end)
+	for (auto& [tok, reloc] : after)
+		if (!current->relocationFixed(reloc))
+			current->fixRelocation(reloc);
 }
 
 void caosScript::emitCmd(const char* name) {

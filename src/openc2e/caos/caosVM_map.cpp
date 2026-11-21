@@ -871,9 +871,11 @@ void c_CACL(caosVM* vm) {
 /**
  WIND (integer)
  %status stub
- %variants c1
+ %variants c1 c2
 
- Always returns zero, since this command was stubbed in C1.
+ Always returns zero, since this command was stubbed in C1. C2 COBs still
+ use it (Wind Chimes' "doif wind eq 1"); C2's engine grew from C1's, so
+ the same.
 */
 void v_WIND(caosVM* vm) {
 	vm->result.setInt(0);

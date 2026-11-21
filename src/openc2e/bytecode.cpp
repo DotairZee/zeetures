@@ -66,6 +66,8 @@ std::string dumpOp(const Dialect* d, caosOp op) {
 			return "YIELD";
 		case CAOS_STACK_ROT:
 			return fmt::format("STACK ROT {}", arg);
+		case CAOS_FLATNEXT:
+			return "FLATNEXT";
 
 		case CAOS_CJMP:
 			return fmt::format("CJMP {:08d}", arg);
@@ -77,6 +79,8 @@ std::string dumpOp(const Dialect* d, caosOp op) {
 			return fmt::format("GSUB {:08d}", arg);
 		case CAOS_ENUMPOP:
 			return fmt::format("ENUMPOP {:08d}", arg);
+		case CAOS_FLATENUM:
+			return fmt::format("FLATENUM {:08d}", arg);
 		default:
 			return fmt::format("UNKNOWN {:02x} {:06x}", fmt::underlying(op.opcode), arg);
 	}

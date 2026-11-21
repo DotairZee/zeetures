@@ -30,6 +30,12 @@ SpritePart::SpritePart(Agent* p, unsigned int _id, std::string spritefile, unsig
 			spriteno = 0;
 		} else if (engine.bmprenderer) {
 			// BLCK hasn't been called yet, so we can't check validity yet
+		} else if (engine.version == 2 && sprite->numframes() > 0) {
+			// C2: the file's last picture, as it shows a pose past the end
+			// (partRender). COBs ask for pictures their files lack: the
+			// Storage Area's invisible vehicle (part 1 of blnk, one picture),
+			// Flood Volcano v2.0 (picture 3 of its flod, which has two)
+			spriteno = sprite->numframes() - 1;
 		} else {
 			throw Exception(fmt::format("Failed to create sprite part: first sprite {} is beyond {} sprite(s) in file {}", firstimg, sprite->numframes(), sprite->getName()));
 		}

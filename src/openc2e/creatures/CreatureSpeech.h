@@ -83,6 +83,9 @@ struct Utterance {
 	std::vector<int> learned; // the learned words in it, for listeners
 };
 Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c);
+// One word of the game's word list (C2's SAY#): shown as the creature knows
+// it (or in its own tongue), and heard by those in earshot.
+Utterance wordUtterance(Agent* creature, oldCreature* c, int word);
 
 // View > Speech Bubbles: whether creatures' speech shows in bubbles (the
 // voice and learning go on either way). Remembered in the user data
