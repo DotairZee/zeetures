@@ -55,6 +55,10 @@ struct SeenAgent {
 	int stage = -1;
 	// how hungry it looks (its hunger, 0-1: it says so and shows it)
 	float hunger = 0;
+	// close kin of this creature (a parent, grandparent or other forebear, a
+	// child or other descendant, a brother, sister or half-sibling:
+	// Breeding.h closeKin): who it learns most from by watching
+	bool kin = false;
 };
 
 // An instinct from the genome, translated into neutral terms (see
@@ -101,6 +105,7 @@ struct MindAction {
 
 struct MindPerception {
 	int creatureId = 0; // the creature agent's UNID, for logging
+	std::string self; // its moniker (C2), or empty
 	unsigned int tick = 0; // creature age in brain ticks
 	lifestage stage = baby;
 	bool asleep = false;

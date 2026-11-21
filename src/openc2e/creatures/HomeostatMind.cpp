@@ -100,6 +100,43 @@ std::string actionName(int decision) {
 	}
 }
 
+// Watching others (owner, 2026-11-20): each creature posts what it has just
+// done here; every mind reads what was posted since its last tick and takes
+// in what came from creatures it can see (watchOthers). Not saved: what was
+// learned from it is.
+struct Demo {
+	enum Kind { OUTCOME, MEAL, HURT, FALL } kind = OUTCOME;
+	unsigned long seq = 0;
+	std::string who; // the one seen
+	int category = -1, decision = -1; // OUTCOME, MEAL: what it acted on, and how
+	std::array<float, NUM_DRIVES> delta{}; // OUTCOME: what it got; HURT: the change over `ticks`
+	std::array<bool, NUM_DRIVES> felt{};
+	float x = 0, y = 0; // where (MEAL: the place; FALL: where it stepped off)
+	int room = -1, metaroom = -1; // HURT
+	float roomX = 0, roomFloor = 0, ticks = 0;
+	bool water = false;
+	int dir = 0; // FALL
+	float hurt = 0;
+};
+struct DemoBoard {
+	std::deque<Demo> demos;
+	unsigned long seq = 0;
+	void post(Demo d) {
+		d.seq = ++seq;
+		demos.push_back(std::move(d));
+		while (demos.size() > 2048)
+			demos.pop_front();
+	}
+};
+DemoBoard& demoBoard() {
+	static DemoBoard b;
+	return b;
+}
+bool watchingOff() {
+	static const bool off = getenv("OPENC2E_NO_WATCHING") != nullptr; // (to compare)
+	return off;
+}
+
 // Every tunable number in one place, so they can become genes later.
 struct Params {
 	float driveExpN = 3.0f; // D = (sum w_i d_i^n)^(1/m), n > m
@@ -122,6 +159,22 @@ struct Params {
 	// readiness to learn about each need (MindGenes.h: danger, food, water,
 	// company), times the learning rate for changes in that drive
 	std::array<float, 17> driveLearning{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+	// Watching others (owner, 2026-11-20: learning from parents; "family
+	// most", "young most", "about a third"): what another creature in sight
+	// was seen to get from a thing, where it ate, where it was hurt and what
+	// drop hurt it are learned as from its own doing, at this share
+	float watchShare = 1.0f / 3.0f;
+	float watchStranger = 0.35f; // one not of its family: this share of kin
+	std::array<float, 7> watchStage{1.0f, 1.0f, 0.8f, 0.6f, 0.45f, 0.35f, 0.25f}; // by the watcher's life stage
+	// pain, injury, fear and suffocation risen this much over watchHurtTicks
+	// in one room: others in sight see it hurt there
+	float watchHurtMin = 0.04f;
+	float watchHurtTicks = 10.0f;
+	// naming: a child or older that has just used a thing says its name now
+	// and then, and often when a young one of its family (a baby or child)
+	// is in sight (CreatureSpeech "name:C"; hearers learn the word)
+	float nameChance = 0.08f, nameTeachChance = 0.5f;
+	unsigned int nameGap = 150, nameFresh = 25;
 	// Felt effects: stimuli tell the body directly what an interaction did
 	// (C2 chemicals 18-34 raise drive 1-17, 35-51 lower it), like a taste.
 	// A drive an action's stimuli touched is learned from what was felt; the
@@ -743,7 +796,13 @@ class HomeostatMind : public CreatureMind {
 				say = "love";
 			else if (d[ANGER] > 0.7f && rose(ANGER, 0.03f) && ready("grr", 150))
 				say = "grr";
-			else {
+			else if (lastUsedCategory >= 0 && t <= lastUsedTick + prm.nameFresh && (int)p.stage >= 1 && ready("name", prm.nameGap) && !watchingOff() &&
+					 std::uniform_real_distribution<float>(0, 1)(rng) <
+						 (std::any_of(p.visible.begin(), p.visible.end(), [](const SeenAgent& v) { return v.kin && v.stage >= 0 && v.stage <= 1; }) ? prm.nameTeachChance : prm.nameChance)) {
+				// names the thing it has just used: often for a young one of its family
+				say = fmt::format("name:{}", lastUsedCategory);
+				lastUsedCategory = -1;
+			} else {
 				for (auto& [cat, yes] : seenNow) {
 					auto it = s.lastSeenKind.find(cat);
 					bool newcomer = it == s.lastSeenKind.end() || t > it->second + 600;
@@ -1109,6 +1168,7 @@ class HomeostatMind : public CreatureMind {
 		updatePlaceMap(p);
 		updatePlaces(p, d);
 		learnFromFall(p);
+		watchOthers(p);
 		if (lastTick != 0 && p.tick > lastTick) {
 			if (d[HUNGER] >= prm.restlessHunger)
 				hungryTicks += (float)(p.tick - lastTick);
@@ -3452,6 +3512,116 @@ class HomeostatMind : public CreatureMind {
 		}
 		fmt::print("[homeostat] creature {} t{}: fell {:.0f} px and it hurt ({:.2f}); keeps away from that drop (and from falls like it: {:.4f} a px)\n",
 			p.creatureId, p.tick, p.fellHeight, p.fellHurt, fallHurtPerPx);
+		if (!p.self.empty() && !watchingOff()) {
+			Demo dm;
+			dm.kind = Demo::FALL;
+			dm.who = p.self;
+			dm.x = p.fellFromX;
+			dm.y = p.fellFromY - 40.0f;
+			dm.dir = dir;
+			dm.hurt = p.fellHurt;
+			demoBoard().post(std::move(dm));
+		}
+	}
+	// a drop another was seen to fall from and be hurt (watchOthers)
+	void learnSeenFall(const Demo& dm, float w) {
+		float hurt = dm.hurt * w;
+		if (hurt <= 0.0f)
+			return;
+		for (auto& f : painfulDrops)
+			if (f.dir == dm.dir && std::fabs(wrapD(f.x - dm.x)) < prm.fallSpotNear && std::fabs(f.y - dm.y) < prm.sameLevel) {
+				f.hurt = std::max(f.hurt, hurt);
+				return;
+			}
+		if (painfulDrops.size() >= 32)
+			painfulDrops.erase(painfulDrops.begin());
+		painfulDrops.push_back({dm.x, dm.y, dm.dir, hurt});
+	}
+
+	// ---- Watching others (owner, 2026-11-20) ----
+	std::array<float, NUM_DRIVES> hurtSum{}; // its own hurt in this room lately, to post
+	float hurtTicks = 0;
+	int hurtRoom = -1;
+	int lastUsedCategory = -1; // a thing it has just used (to name it)
+	unsigned int lastUsedTick = 0;
+	unsigned long demoSeen = 0; // the board's last post read
+	bool demoStarted = false;
+	// What creatures in sight were seen to do, since the last tick, learned
+	// as from its own doing at a share (Params::watchShare): kin count most
+	// (watchStranger for the rest), the young most (watchStage). Its own
+	// readiness to learn about each need (mind genes) applies as to its own
+	// experience. Nothing from before it woke or was loaded.
+	void watchOthers(const MindPerception& p) {
+		DemoBoard& board = demoBoard();
+		if (!demoStarted || p.asleep || p.self.empty() || watchingOff()) {
+			demoStarted = true;
+			demoSeen = board.seq;
+			return;
+		}
+		if (board.seq == demoSeen)
+			return;
+		static const bool watch = getenv("OPENC2E_WATCH_WATCHING") != nullptr;
+		int stage = std::clamp((int)p.stage, 0, 6);
+		for (auto& dm : board.demos) {
+			if (dm.seq <= demoSeen || dm.who == p.self)
+				continue;
+			const SeenAgent* sa = nullptr;
+			for (auto& v : p.visible)
+				if (v.who == dm.who) {
+					sa = &v;
+					break;
+				}
+			if (!sa)
+				continue;
+			float w = prm.watchShare * (sa->kin ? 1.0f : prm.watchStranger) * prm.watchStage[(size_t)stage];
+			switch (dm.kind) {
+				case Demo::OUTCOME: {
+					Expectation& e = expectation(dm.category, dm.decision);
+					for (int i = 0; i < NUM_DRIVES; i++)
+						if (dm.felt[i])
+							e.delta[i] += w * prm.learningRate * prm.driveLearning[i] * (dm.delta[i] > e.delta[i] ? prm.worseLearning : prm.betterLearning) *
+										  (dm.delta[i] - e.delta[i]);
+					break;
+				}
+				case Demo::MEAL: {
+					float confidence = std::min(0.6f, 1.8f * w);
+					if (confidence >= 0.1f)
+						rememberFood(dm.x, dm.y, p.tick, confidence, false, dm.category);
+					break;
+				}
+				case Demo::HURT: {
+					if (dm.room < 0 || (!rooms.count(dm.room) && rooms.size() >= prm.roomMemoryMax))
+						break;
+					bool known = rooms.count(dm.room) > 0;
+					RoomMemory& r = rooms[dm.room];
+					if (!known) {
+						r.x = dm.roomX;
+						r.floor = dm.roomFloor;
+						r.metaroom = dm.metaroom;
+						r.water = dm.water;
+					}
+					// the hurt seen, over the time seen; its other needs as they go
+					// anywhere (so the room reads neither better nor worse for them)
+					float seenTicks = w * dm.ticks;
+					for (int i = 0; i < NUM_DRIVES; i++) {
+						if (dm.felt[i])
+							r.feelSum[i] += w * prm.driveLearning[i] * dm.delta[i];
+						else if (feelBaseTicks > 0.0f)
+							r.feelSum[i] += feelBase[i] / feelBaseTicks * seenTicks;
+					}
+					r.feelTicks += seenTicks;
+					break;
+				}
+				case Demo::FALL:
+					learnSeenFall(dm, w * prm.driveLearning[PAIN]);
+					break;
+			}
+			if (watch)
+				fmt::print("[homeostat] creature {} t{}: saw {} ({}) {} (weight {:.2f})\n", p.creatureId, p.tick, dm.who, sa->kin ? "kin" : "not kin",
+					dm.kind == Demo::OUTCOME ? fmt::format("use {} on category {}", dm.decision, dm.category) : dm.kind == Demo::MEAL ? std::string("eat") : dm.kind == Demo::HURT ? fmt::format("hurt in room {}", dm.room) : std::string("fall"),
+					w);
+		}
+		demoSeen = board.seq;
 	}
 	bool waterAhead(const MindPerception& p, int dir) const {
 		return !p.inWater && ((dir == 10 && p.waterWest) || (dir == 11 && p.waterEast));
@@ -3800,6 +3970,42 @@ class HomeostatMind : public CreatureMind {
 			}
 			r.feelTicks += 1.0f;
 			feelBaseTicks += 1.0f;
+			// others in sight see it hurt here (pain, injury, fear, suffocation)
+			if (!watchingOff() && !p.self.empty()) {
+				if (hurtRoom != p.room) {
+					hurtSum = {};
+					hurtTicks = 0;
+					hurtRoom = p.room;
+				}
+				for (int i : {PAIN, INJURY, FEAR, SUFFOCATE})
+					hurtSum[i] += d[i] - placePrevD[i];
+				hurtTicks += 1.0f;
+				if (hurtTicks >= prm.watchHurtTicks) {
+					float rise = 0;
+					for (int i : {PAIN, INJURY, FEAR, SUFFOCATE})
+						rise += std::max(0.0f, hurtSum[i]);
+					if (rise >= prm.watchHurtMin) {
+						Demo dm;
+						dm.kind = Demo::HURT;
+						dm.who = p.self;
+						dm.x = p.x;
+						dm.y = p.y;
+						dm.room = p.room;
+						dm.metaroom = p.metaroom;
+						dm.roomX = p.roomX;
+						dm.roomFloor = p.roomFloor;
+						dm.water = p.inWater;
+						dm.ticks = hurtTicks;
+						for (int i : {PAIN, INJURY, FEAR, SUFFOCATE}) {
+							dm.felt[i] = true;
+							dm.delta[i] = hurtSum[i];
+						}
+						demoBoard().post(std::move(dm));
+					}
+					hurtSum = {};
+					hurtTicks = 0;
+				}
+			}
 			if (r.feelTicks > prm.feelKeepTicks) {
 				for (float& f : r.feelSum)
 					f *= 0.5f;
@@ -4866,6 +5072,19 @@ class HomeostatMind : public CreatureMind {
 		{
 			rememberFood(p.x, p.y, p.tick, 1.0f, true, current.category); // a meal here eased hunger
 			hungryTicks = 0;
+			if (!p.self.empty() && !watchingOff()) {
+				Demo dm;
+				dm.kind = Demo::MEAL;
+				dm.who = p.self;
+				dm.category = current.category;
+				dm.x = p.x;
+				dm.y = p.y;
+				demoBoard().post(std::move(dm));
+			}
+		}
+		if (current.category >= 0 && current.category < 36 && current.seekCategory < 0) {
+			lastUsedCategory = current.category; // a thing it may name (not a creature)
+			lastUsedTick = p.tick;
 		}
 		inEpisode = false;
 		inEpisodeJustEnded = true;
@@ -5044,6 +5263,22 @@ class HomeostatMind : public CreatureMind {
 				}
 			}
 			e.count++;
+			// others in sight see what it got from the thing
+			if (current.category >= 0 && !p.self.empty() && !watchingOff()) {
+				Demo dm;
+				dm.kind = Demo::OUTCOME;
+				dm.who = p.self;
+				dm.category = current.category;
+				dm.decision = current.decision;
+				dm.x = p.x;
+				dm.y = p.y;
+				for (int i = 0; i < NUM_DRIVES; i++)
+					if (feltAny[i]) {
+						dm.felt[i] = true;
+						dm.delta[i] = std::clamp(startDrives[i] + felt[i], 0.0f, 1.0f) - startDrives[i];
+					}
+				demoBoard().post(std::move(dm));
+			}
 			// and from the particular creature acted on
 			if (!current.who.empty() && current.target) {
 				Expectation& own = individuals[current.who][current.decision];

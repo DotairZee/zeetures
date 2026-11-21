@@ -27,6 +27,7 @@
 #include "historyManager.h"
 #include "common/Random.h"
 #include "creatures/CreatureAgent.h"
+#include "creatures/Breeding.h"
 #include "creatures/oldCreature.h"
 
 #include <algorithm>
@@ -315,14 +316,22 @@ void hearWords(Agent* speaker, const std::vector<int>& heard, int amount) {
 	if (!speaker || heard.empty() || engine.version >= 3)
 		return;
 	float sx = centreX(speaker), sy = centreY(speaker);
+	// family heard twice as well (owner, 2026-11-20: learning from parents,
+	// "family most")
+	oldCreature* sc = creatureOf(speaker);
+	std::string from = sc ? world.history->findMoniker(sc->getGenome()) : std::string();
+	static const bool noWatching = getenv("OPENC2E_NO_WATCHING") != nullptr; // (to compare)
 	for (auto& a : world.agents) {
 		if (!a || a.get() == speaker || a->isDying())
 			continue;
 		oldCreature* c = creatureOf(a.get());
 		if (!c || !inEarshot(a.get(), sx, sy))
 			continue;
+		int got = amount;
+		if (!noWatching && !from.empty() && closeKin(from, world.history->findMoniker(c->getGenome())))
+			got = amount * 2;
 		for (int w : heard)
-			hearWord(c, w, amount);
+			hearWord(c, w, got);
 	}
 }
 
@@ -449,6 +458,14 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 		if (a < 1 || a > 3)
 			return u;
 		ways = {{{W_NORN + a - 1}, 0}, {{W_LOOK, W_NORN + a - 1}, 1}};
+		end = "!";
+	} else if (kind == "name") {
+		// a thing's name (owner, 2026-11-20: the young learn words by hearing
+		// others name things): C2's noun for category a follows its 16 verbs
+		int w = 16 + a;
+		if (a < 0 || a > 39 || !isWord(w))
+			return u;
+		ways = {{{w}, 0}, {{W_LOOK, w}, 1}};
 		end = "!";
 	} else {
 		// nothing in particular: trying out a word it knows, or chatter in

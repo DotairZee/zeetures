@@ -903,6 +903,8 @@ void oldCreature::buildMindActions() {
 MindPerception oldCreature::buildPerception() {
 	MindPerception p;
 	p.creatureId = parentagent->getUNID();
+	if (engine.version == 2)
+		p.self = world.history->findMoniker(getGenome());
 	p.temperament = temperament.z;
 	static const bool noMindGenes = getenv("OPENC2E_NO_MIND_GENES") != nullptr; // (to compare: every mind gene average)
 	if (!noMindGenes)
@@ -957,6 +959,7 @@ MindPerception oldCreature::buildPerception() {
 				// there and does not move (2026-11-20: about 60% of Home's
 				// creatures stuck at 248, so sharing went to the wrong friends)
 				sa.hunger = oc->getDrive(2) / 255.0f;
+				sa.kin = closeKin(p.self, sa.who);
 				if (const Bond* b = Relationships::bondOf(this, sa.who)) {
 					sa.affinity = b->affinity;
 					sa.fear = b->fear;
