@@ -34,6 +34,7 @@
 #include "Blackboard.h"
 #include "creatures/Pheromones.h"
 #include "creatures/Disease.h"
+#include "creatures/Exposure.h"
 #include "historyManager.h"
 #include "creatures/Breeding.h"
 
@@ -2357,6 +2358,7 @@ bool Engine::initialSetup() {
 	// C1/C2 worlds: apply the world folder's saved state, if any
 	if (version < 3 && !currentworlddir.empty()) {
 		Disease::reset(); // (the save, if any, then fills it)
+		Exposure::reset();
 		WorldSave::LoadWorldState(currentworlddir);
 		worldready = true;
 	}

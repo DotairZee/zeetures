@@ -18,6 +18,7 @@
  */
 
 #include "Breeding.h"
+#include "Exposure.h"
 #include "Temperament.h"
 #include "Relationships.h"
 #include <set>
@@ -243,6 +244,36 @@ int genomeNameToInt(const std::string& name) {
 
 std::string genomeNameFromInt(int value) {
 	return std::string((char*)&value, 4);
+}
+
+std::shared_ptr<genomeFile> mutatedCopy(genomeFile& g, int count, int* applied) {
+	int version = g.getVersion();
+	std::vector<Record> recs = records(g);
+	std::vector<size_t> can;
+	for (size_t i = 0; i < recs.size(); i++)
+		if ((recs[i].flags() & 1) && !isGenus(recs[i]) && recs[i].weighting(version) > 0)
+			can.push_back(i);
+	int made = 0;
+	for (int k = 0; k < count && !can.empty(); k++) {
+		Record& r = recs[can[rand_size_t(0, can.size() - 1)]];
+		// a gene weighted to mutate less is hit less often
+		if (rand_float(0, 1) < r.weighting(version) / 255.0f) {
+			mutate(r, version);
+			made++;
+		}
+	}
+	VectorWriter w;
+	char majic[4] = {'d', 'n', 'a', static_cast<char>(version + 48)};
+	w.write(majic, 4);
+	for (auto& r : recs)
+		w.write(reinterpret_cast<const char*>(r.bytes.data()), r.bytes.size());
+	w.write("gend", 4);
+	auto out = std::make_shared<genomeFile>();
+	SpanReader rd(std::span<const uint8_t>(w.vector().data(), w.vector().size()));
+	rd >> *out;
+	if (applied)
+		*applied = made;
+	return out;
 }
 
 std::string storeGenome(genomeFile& g) {
@@ -697,7 +728,10 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 											   Relationships::mateFactor(a, b) *
 											   // the breeding season (Temperament.h, SeasonalRhythm)
 											   SeasonalRhythm::fertilityFactor((int)world.season, mum->seasonalZ, (int)mum->getStage(),
-												   dad->seasonalZ, (int)dad->getStage()))
+												   dad->seasonalZ, (int)dad->getStage()) *
+											   // radiation (Exposure.h; owner, 2026-11-21)
+											   Exposure::fertilityFactor(world.history->findMoniker(mum->getGenome())) *
+											   Exposure::fertilityFactor(world.history->findMoniker(dad->getGenome())))
 		why = "chance";
 	std::string mumMon = world.history->findMoniker(mum->getGenome());
 	std::string dadMon = world.history->findMoniker(dad->getGenome());

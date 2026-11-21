@@ -25,6 +25,7 @@
 #include "creatures/Thoughts.h"
 #include "creatures/Pheromones.h"
 #include "creatures/Disease.h"
+#include "creatures/Exposure.h"
 #include "creatures/Relationships.h"
 #include "creatures/SkeletalCreature.h"
 #include "WorldSave.h"
@@ -443,6 +444,7 @@ void World::tick() {
 			PROFILE_SCOPE("world: disease");
 			Disease::tick();
 		}
+		Exposure::tick();
 		tickBreathBubbles();
 		{
 			PROFILE_SCOPE("world: relationships");

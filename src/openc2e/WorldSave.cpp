@@ -24,6 +24,7 @@
 
 #include "WorldSave.h"
 #include "creatures/Disease.h"
+#include "creatures/Exposure.h"
 #include "creatures/Relationships.h"
 #include "creatures/Breeding.h"
 
@@ -722,6 +723,8 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 				out << fmt::format("nutrients {} {:.2f} {:.2f} {} {}\n", r->id, r->ontrf >= 0 ? r->ontrf : (float)r->ontr, r->intrf >= 0 ? r->intrf : (float)r->intr, r->ontrBase, r->intrBase);
 	// bacteria and disease (Disease.h): strains, germs in rooms, who is ill
 	Disease::save(out);
+	// radiation doses (Exposure.h): creatures', and babies' before birth
+	Exposure::save(out);
 	// the life log (Owner's Kit): kind, tick, genus, female, stage, age, age
 	// known, old age, moniker, then the name
 	auto entry = [&](const char* key, const lifeLogEntry& e) {
@@ -1262,6 +1265,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 			l >> namesgiven;
 		} else if (key.rfind("disease-", 0) == 0) {
 			Disease::readLine(key, l);
+		} else if (key.rfind("exposure-", 0) == 0) {
+			Exposure::readLine(key, l);
 		} else if (key == "nutrients") {
 			SavedNutrients n;
 			if (l >> n.room >> n.ontr >> n.intr >> n.ontrBase >> n.intrBase)

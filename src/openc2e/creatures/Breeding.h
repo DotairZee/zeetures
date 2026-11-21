@@ -48,6 +48,11 @@ std::shared_ptr<genomeFile> crossGenomes(genomeFile& mum, genomeFile& dad, const
 // it could not be written.
 std::string storeGenome(genomeFile& g);
 
+// A copy of a genome with `count` more mutations (as a child's: a small
+// change to one byte of a gene that may mutate, its generation counted up),
+// for radiation before birth (Exposure.h). `applied`: how many were made.
+std::shared_ptr<genomeFile> mutatedCopy(genomeFile& g, int count, int* applied = nullptr);
+
 // A four-letter genome name as the integer C2 scripts carry it (BABY, an
 // egg's OV00, NEW: CREA), and back.
 int genomeNameToInt(const std::string& name);

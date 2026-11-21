@@ -28,6 +28,7 @@
 #include "common/Random.h"
 #include "common/throw_ifnot.h"
 #include "creatures/Disease.h"
+#include "creatures/Exposure.h"
 #include "creatures/Breeding.h"
 #include "creatures/CompoundCreature.h"
 #include "creatures/SkeletalCreature.h"
@@ -1291,6 +1292,9 @@ void c_NEW_CREA_c1(caosVM* vm) {
 	std::shared_ptr<genomeFile> genome = world.loadGenome(realmoniker);
 	if (!genome)
 		throw Exception("failed to find genome file '" + realmoniker + "'");
+	// radiation before birth, in its mother and its egg (Exposure.h)
+	if (engine.version == 2)
+		genome = Exposure::atHatching(realmoniker, genome);
 
 	THROW_IFNOT(genome->getVersion() == engine.version);
 
