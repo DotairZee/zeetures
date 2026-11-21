@@ -1148,8 +1148,30 @@ void Agent::findCollisionInDirection(unsigned int i, class MetaRoom* m, Point sr
 
 			bool collision = false;
 
+			// C2: a floor line along the room's own bottom holds what it is
+			// solid for (size above the floor value) even where the door
+			// below is open. The check after this loop looks only at the
+			// room moved into, so a fall went through the line here before
+			// it was looked at: creatures stepping or put on the upper-east
+			// deck over the lift's shaft (room 143, line at its bottom, floor
+			// value 50, door 255 to the deck below) fell 213 px, and one let
+			// go in the lift's cage at its top stop fell out of it (owner's
+			// screencast, 2026-11-13; 2026-11-20)
+			static const bool oldBottomLine = getenv("OPENC2E_OLD_BOTTOM_LINE") != nullptr; // (to compare)
+			bool bottomLine = false;
+			if (engine.version == 2 && !oldBottomLine && i == 3 && dy > 0 && room->floorpoints.size() && size > room->floorvalue &&
+				src.y + p.y > room->y_left_floor) {
+				float fx = src.x + p.x;
+				float floory = room->floorYatX(fx);
+				float roomBottom = room->bottom.pointAtX(fx).y;
+				Point top = boundingBoxPoint(2);
+				bottomLine = floory >= roomBottom - 2.0f && top.y < floory;
+			}
+
 			// collide if we're out of the room system
-			if (!newroom) {
+			if (bottomLine) {
+				collision = true;
+			} else if (!newroom) {
 				collision = true;
 			}
 			// collide if there's no new room connected to this one
