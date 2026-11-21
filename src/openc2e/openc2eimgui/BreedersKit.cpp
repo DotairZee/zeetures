@@ -406,7 +406,7 @@ static void InseminationPage() {
 	float dz = 0;
 	if (d.source == 0) {
 		dg = d.creature->getGenome();
-		dt = d.creature->temperament;
+		dt = d.creature->inheritableTemperament();
 		dz = d.creature->seasonalZ;
 		hasT = true;
 	} else if (d.source == 1) {

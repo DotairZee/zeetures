@@ -177,6 +177,10 @@ struct MindPerception {
 	// boldness, curiosity, energy, sociability, temper, reactivity,
 	// steadiness; 0 is average
 	std::array<float, 7> temperament{};
+	// the mind's own heritable settings (creatures/MindGenes.h): learning,
+	// decisiveness, patience, wanderlust, then readiness to learn about
+	// danger, food, water and company; z-scores, 0 average
+	std::array<float, 8> mindGenes{};
 	// the season (0 spring, 1 summer, 2 autumn, 3 winter) and how strongly
 	// this creature follows it (SeasonalRhythm::strength: 1 average)
 	int season = -1;

@@ -904,6 +904,9 @@ MindPerception oldCreature::buildPerception() {
 	MindPerception p;
 	p.creatureId = parentagent->getUNID();
 	p.temperament = temperament.z;
+	static const bool noMindGenes = getenv("OPENC2E_NO_MIND_GENES") != nullptr; // (to compare: every mind gene average)
+	if (!noMindGenes)
+		p.mindGenes = mindGenes.z;
 	p.season = (int)world.season;
 	p.timeOfDay = (int)world.timeofday;
 	p.seasonalStrength = SeasonalRhythm::strength(seasonalZ);
@@ -1357,15 +1360,26 @@ MindPerception oldCreature::buildPerception() {
 // this creature's life stage. Its temperament is its inborn one plus the
 // drift; the mind takes it up on its next tick. A shift of another 0.1 in
 // any trait is logged.
+void oldCreature::refreshTemperament() {
+	temperament = Temperaments::withDrift(temperamentBorn, temperamentDrift);
+	for (int i = 0; i < NUM_TRAITS; i++)
+		temperament.z[i] = std::clamp(temperament.z[i] + geneShift[i], -2.0f, 2.0f);
+}
+
+Temperament oldCreature::inheritableTemperament() const {
+	return Temperaments::withDrift(temperamentBorn, temperamentDrift);
+}
+
 void oldCreature::temperamentExperience(int kind, float size) {
 	static const bool off = getenv("OPENC2E_NO_TEMPERAMENT_DRIFT") != nullptr; // (A/B testing)
 	if (off || engine.version != 2 || size == 0.0f)
 		return;
 	if (!Temperaments::experience(temperamentDrift, kind, size, (int)stage))
 		return;
-	temperament = Temperaments::withDrift(temperamentBorn, temperamentDrift);
+	refreshTemperament();
+	Temperament drifted = Temperaments::withDrift(temperamentBorn, temperamentDrift);
 	for (int i = 0; i < NUM_TRAITS; i++) {
-		float moved = temperament.z[i] - temperamentBorn.z[i];
+		float moved = drifted.z[i] - temperamentBorn.z[i];
 		if (std::fabs(moved - driftLogged[i]) >= 0.1f) {
 			driftLogged[i] = moved;
 			std::string who = world.history ? world.history->findMoniker(genome) : std::string();
@@ -1427,7 +1441,7 @@ void oldCreature::updateBrainCells(MindPerception& p) {
 	if (temperamentDrift.fightRecent != 0.0f) {
 		Temperaments::fadeFights(temperamentDrift);
 		if (ticks % 200 == 0)
-			temperament = Temperaments::withDrift(temperamentBorn, temperamentDrift);
+			refreshTemperament();
 	}
 
 	std::array<float, 32> s{};

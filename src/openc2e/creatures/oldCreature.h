@@ -24,6 +24,7 @@
 #include "CreatureMind.h"
 #include "Relationships.h"
 #include "Temperament.h"
+#include "MindGenes.h"
 
 #include <cassert>
 #include <map>
@@ -172,6 +173,15 @@ class oldCreature : public Creature {
 	// (Temperament.h, TemperamentDrift); temperament is the two together
 	Temperament temperamentBorn;
 	TemperamentDrift temperamentDrift;
+	// the part its own C2 genes give (GenomeTraits.h), read from its genome
+	// when it is made; temperament = born + drift + this, within +-2
+	std::array<float, NUM_TRAITS> geneShift{};
+	// the mind's own heritable settings (MindGenes.h); saved
+	MindGenes mindGenes;
+	void refreshTemperament();
+	// the part a child takes after (born + drift; the genes' part travels
+	// with the genome itself)
+	Temperament inheritableTemperament() const;
 	std::array<float, NUM_TRAITS> driftLogged{};
 	void temperamentExperience(int kind, float size); // CreatureAI.cpp
 	// how strongly it fattens in autumn and saves in winter, inherited

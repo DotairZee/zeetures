@@ -21,6 +21,7 @@
 #include "creatures/SkeletalCreature.h"
 #include <chrono>
 #include "Engine.h"
+#include "creatures/GenomeTraits.h"
 #include <ctime>
 
 #include "Additions.h"
@@ -1012,6 +1013,10 @@ void Engine::update() {
 		if (every > 0 && world.tickcount >= lastCensus + (unsigned int)every) {
 			lastCensus = world.tickcount;
 			int creatures = 0, hungry = 0, starving = 0, adults = 0, adultsHungry = 0, eggs = 0, food = 0;
+			// the population's mind genes and gene-given temperament, on
+			// average (genes.csv: to watch them drift over generations)
+			std::array<double, NUM_MIND_GENES> mindSum{};
+			std::array<double, 6> shiftSum{};
 			for (auto& a : world.agents) {
 				if (!a || a->isDying())
 					continue;
@@ -1024,6 +1029,10 @@ void Engine::update() {
 					if (!c || !c->isAlive())
 						continue;
 					creatures++;
+					for (int i = 0; i < NUM_MIND_GENES; i++)
+						mindSum[i] += c->mindGenes.z[i];
+					for (int i = 0; i < 6; i++)
+						shiftSum[i] += c->geneShift[i];
 					int h = c->getDrive(2);
 					bool adult = (int)c->getStage() == 4;
 					adults += adult;
@@ -1062,6 +1071,25 @@ void Engine::update() {
 			std::strftime(stamp, sizeof stamp, "%Y-%m-%d %H:%M", std::localtime(&now));
 			out << fmt::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n", stamp, world.worldtickcount, world.season, world.year, creatures, hungry, starving,
 				adults, adultsHungry, eggs, food, dStarve, dDrown, dOld, dOther);
+			{
+				std::filesystem::path gcsv = currentworlddir / "genes.csv";
+				bool gfresh = !std::filesystem::exists(gcsv, ec);
+				std::ofstream gout(gcsv, std::ios::app | std::ios::binary);
+				if (gfresh) {
+					gout << "time,world tick,season,year,creatures";
+					for (int i = 0; i < NUM_MIND_GENES; i++)
+						gout << "," << MindGeneSet::name(i);
+					for (int i = 0; i < 6; i++)
+						gout << ",genes: " << Temperaments::traitName(i);
+					gout << "\n";
+				}
+				gout << stamp << "," << world.worldtickcount << "," << world.season << "," << world.year << "," << creatures;
+				for (int i = 0; i < NUM_MIND_GENES; i++)
+					gout << fmt::format(",{:.3f}", creatures ? mindSum[i] / creatures : 0.0);
+				for (int i = 0; i < 6; i++)
+					gout << fmt::format(",{:.3f}", creatures ? shiftSum[i] / creatures : 0.0);
+				gout << "\n";
+			}
 			fmt::print("* CENSUS season {} year {}: {} creatures, {} hungry ({:.0f}%), {} starving; adults {} ({} hungry); {} eggs; {} food in reach; died: {} starving, {} drowning, {} old, {} other\n",
 				world.season, world.year, creatures, hungry, creatures ? 100.0 * hungry / creatures : 0.0, starving, adults, adultsHungry, eggs, food, dStarve, dDrown, dOld, dOther);
 		}
@@ -2440,6 +2468,7 @@ bool Engine::initialSetup() {
 		fmt::print("* Dumped world scripts to {}\n", dumppath);
 	}
 	MadeArt::dumpIfAsked();
+	GenomeTraits::dumpIfAsked();
 	fmt::print("* Done startup.\n");
 
 	if (cmdline_norun) {

@@ -1321,10 +1321,21 @@ void c_NEW_CREA_c1(caosVM* vm) {
 		if (SeasonalRhythm::load(realmoniker, z))
 			c->seasonalZ = z;
 		// and its temperament (MATE), in place of the one drawn at random
+		// and its mind's own settings (MindGenes.h)
+		MindGenes mg;
+		if (MindGeneSet::load(realmoniker, mg))
+			c->mindGenes = mg;
+		// what its own genes' chemistry does to its temperament (GenomeTraits.h)
+		std::string geneWords;
+		for (int i = 0; i < NUM_TRAITS; i++)
+			if (std::fabs(c->geneShift[i]) >= 0.05f)
+				geneWords += fmt::format("{}{} {:+.2f}", geneWords.empty() ? "" : ", ", Temperaments::traitName(i), c->geneShift[i]);
+		if (!geneWords.empty())
+			fmt::print("* {}'s genes shift its temperament: {}\n", realmoniker, geneWords);
 		Temperament t;
 		if (Temperaments::load(realmoniker, t)) {
-			c->temperament = t;
 			c->temperamentBorn = t;
+			c->refreshTemperament();
 			fmt::print("* {} hatched with a temperament from its parents: {} ({})\n", realmoniker, Temperaments::describe(t), Temperaments::toLine(t));
 		}
 	}

@@ -1529,8 +1529,9 @@ static void TemperamentPage() {
 	{
 		std::string shifts;
 		int n = 0;
+		Temperament drifted = c->inheritableTemperament();
 		for (int i = 0; i < NUM_TRAITS; i++) {
-			float moved = t.z[i] - c->temperamentBorn.z[i];
+			float moved = drifted.z[i] - c->temperamentBorn.z[i];
 			if (std::fabs(moved) < 0.05f)
 				continue;
 			shifts += fmt::format("{}{} ({:+.2f})", n++ ? ", " : "", moved > 0 ? Temperaments::highWord(i) : Temperaments::lowWord(i), moved);
@@ -1541,6 +1542,22 @@ static void TemperamentPage() {
 				name.c_str(), shifts.c_str());
 		else
 			KitNote("Its temperament is still the one it hatched with. Young creatures are shaped by being hurt or frightened, comforted and played with, fights, and how trying new things turns out; from youth on it is settled.");
+	}
+	// what its own C2 genes give (GenomeTraits.h; owner, 2026-11-20)
+	{
+		std::string parts;
+		int n = 0;
+		for (int i = 0; i < NUM_TRAITS; i++) {
+			float g = c->geneShift[i];
+			if (std::fabs(g) < 0.05f)
+				continue;
+			parts += fmt::format("{}{} ({:+.2f})", n++ ? ", " : "", g > 0 ? Temperaments::highWord(i) : Temperaments::lowWord(i), g);
+		}
+		ImGui::Spacing();
+		if (n)
+			KitNote("Its genes' chemistry (how strongly its body raises fear, boredom, tiredness, loneliness, anger and stress, against its species' usual genome) makes it more %s.", parts.c_str());
+		else
+			KitNote("Its genes' chemistry is its species' usual, so they leave its temperament as it is; bred, mutated and custom genomes can make a creature bolder, calmer, lonelier and so on.");
 	}
 	// the seasonal rhythm (Temperament.h, SeasonalRhythm): inherited, unlike
 	// the traits above (owner, 2026-11-16)
@@ -1565,6 +1582,37 @@ static void TemperamentPage() {
 			ImGui::SetTooltip("lives the same all year ... fattens up in autumn, saves itself in winter");
 		KitNote("%s has %s. Passed on from its parents (a mix of theirs, with some chance); a creature from the game's own eggs has its own by chance.",
 			name.c_str(), SeasonalRhythm::describe(c->seasonalZ));
+	}
+	// the mind's own heritable settings (MindGenes.h; owner, 2026-11-20):
+	// two columns of four, each where it stands among creatures
+	ImGui::Spacing();
+	ImGui::Spacing();
+	{
+		const float h = ImGui::GetTextLineHeight() + 6, width = 180, gap = 10;
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+		ImVec2 origin = ImGui::GetCursorScreenPos();
+		for (int i = 0; i < NUM_MIND_GENES; i++) {
+			float z = c->mindGenes.z[i];
+			int pc = (int)std::lround(50.0 * (1.0 + std::erf(z / std::sqrt(2.0))));
+			std::string gname = MindGeneSet::name(i);
+			gname[0] = (char)std::toupper((unsigned char)gname[0]);
+			std::string label = fmt::format("{} {}%", gname, pc);
+			int col = i % 2, row = i / 2;
+			ImVec2 p(origin.x + col * (width + gap), origin.y + row * (h + 4));
+			ImU32 fill = i < 4 ? IM_COL32(60, 140, 150, 255) : IM_COL32(120, 100, 170, 255); // settings teal, readinesses violet
+			dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), IM_COL32(45, 45, 50, 255), 3);
+			dl->AddRectFilled(p, ImVec2(p.x + width * std::clamp(pc, 0, 100) / 100.0f, p.y + h), fill, 3);
+			dl->AddLine(ImVec2(p.x + width / 2, p.y), ImVec2(p.x + width / 2, p.y + h), IM_COL32(255, 255, 255, 140), 1.0f);
+			dl->AddRect(p, ImVec2(p.x + width, p.y + h), IM_COL32(110, 110, 120, 255), 3);
+			ImVec2 ts = ImGui::CalcTextSize(label.c_str());
+			ImVec2 tp(p.x + 6, p.y + (h - ts.y) / 2);
+			dl->AddText(ImVec2(tp.x + 1, tp.y + 1), IM_COL32(0, 0, 0, 200), label.c_str());
+			dl->AddText(tp, IM_COL32(255, 255, 255, 255), label.c_str());
+			if (ImGui::IsMouseHoveringRect(p, ImVec2(p.x + width, p.y + h)))
+				ImGui::SetTooltip("%s ... %s", MindGeneSet::lowWord(i), MindGeneSet::highWord(i));
+		}
+		ImGui::Dummy(ImVec2(2 * width + gap, 4 * (h + 4)));
+		KitNote("Its mind's own settings (teal) and how readily it learns about danger, food, water and company (violet). Passed on like its seasonal rhythm; what it learns is not passed on, but a line quick to learn what keeps it alive tends to last.");
 	}
 }
 

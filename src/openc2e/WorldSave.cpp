@@ -768,6 +768,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 				out << "temperament-drift " << Temperaments::driftLine(c->temperamentDrift) << "\n";
 			out << "seasonal " << fmt::format("{:.3f}", c->seasonalZ) << "\n";
 			out << "lifespan-scale " << fmt::format("{:.3f}", c->lifespanScale) << "\n";
+			out << "mind-genes " << MindGeneSet::toLine(c->mindGenes) << "\n";
 			if (c->fertilityOverride >= 0)
 				out << "fertility " << c->fertilityOverride << "\n"; // the owner's setting (Breeder's Kit)
 			// what it feels about the creatures it has met (Relationships.h)
@@ -905,6 +906,7 @@ struct SavedCreature {
 	std::string temperamentBorn, temperamentDrift; // (saves before 2026-11-17 have neither: born is the temperament)
 	std::string seasonal; // its seasonal rhythm (SeasonalRhythm); empty: keep the one it has
 	std::string lifespanScale; // its own pace of ageing; empty (saves before 0.18.3): keep the one drawn now
+	std::string mindGenes; // MindGenes.h; empty (saves before 0.20.0): keep the ones drawn now
 	int fertility = -1; // the owner's setting: -1 the world's, 0 fertile, 1 infertile
 	float x = 0, y = 0;
 	float foot = -1; // where its feet were (y), or -1 (older saves)
@@ -1028,10 +1030,14 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 		Temperaments::fromLine(s.temperamentBorn, c->temperamentBorn);
 	if (!s.temperamentDrift.empty())
 		Temperaments::driftFromLine(s.temperamentDrift, c->temperamentDrift);
+	// (saves before 0.20.0 have no born line: the saved temperament is it)
+	c->refreshTemperament();
 	if (!s.seasonal.empty())
 		c->seasonalZ = std::clamp((float)std::atof(s.seasonal.c_str()), -2.0f, 2.0f);
 	if (!s.lifespanScale.empty())
 		c->lifespanScale = std::clamp((float)std::atof(s.lifespanScale.c_str()), 0.5f, 2.0f);
+	if (!s.mindGenes.empty())
+		MindGeneSet::fromLine(s.mindGenes, c->mindGenes);
 	c->fertilityOverride = s.fertility;
 	for (auto& line : s.bonds) {
 		std::string other;
@@ -1324,6 +1330,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 				std::getline(l, c->seasonal);
 			else if (key == "lifespan-scale")
 				l >> c->lifespanScale;
+			else if (key == "mind-genes")
+				std::getline(l, c->mindGenes);
 			else if (key == "fertility")
 				l >> c->fertility;
 			else if (key == "bond") {
@@ -1582,6 +1590,17 @@ bool SetCreatureLifeStage(std::shared_ptr<Agent>& agent, int stage, std::string&
 			s.mind = m->name();
 			s.mindstate = m->saveState();
 		}
+		// and what it inherited (a child restored past its saved stage is
+		// rebuilt here at load: its temperament, rhythm, pace of ageing and
+		// mind genes were drawn afresh; found 2026-11-20)
+		s.temperament = Temperaments::toLine(c->temperament);
+		s.temperamentBorn = Temperaments::toLine(c->temperamentBorn);
+		if (c->temperamentDrift.any())
+			s.temperamentDrift = Temperaments::driftLine(c->temperamentDrift);
+		s.seasonal = fmt::format("{:.3f}", c->seasonalZ);
+		s.lifespanScale = fmt::format("{:.3f}", c->lifespanScale);
+		s.mindGenes = MindGeneSet::toLine(c->mindGenes);
+		s.fertility = c->fertilityOverride;
 		std::shared_ptr<genomeFile> genome = c->getGenome();
 		std::string moniker = world.history->findMoniker(genome);
 		agent->kill();

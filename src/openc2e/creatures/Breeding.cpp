@@ -570,7 +570,7 @@ void tidyGeneratedGenomes() {
 		if (!f.is_regular_file(e2))
 			continue;
 		std::string ext = f.path().extension().string(), stem = f.path().stem().string();
-		if ((ext != ".gen" && ext != ".season" && ext != ".temperament") || !generatedName(stem) || used.count(stem))
+		if ((ext != ".gen" && ext != ".season" && ext != ".temperament" && ext != ".mind") || !generatedName(stem) || used.count(stem))
 			continue;
 		if (f.last_write_time(e2) > cutoff || e2)
 			continue;
@@ -639,8 +639,12 @@ bool inseminate(CreatureAgent* mumAgent, const InseminationDonor& donor, std::st
 	float childSeasonal = SeasonalRhythm::child(mum->seasonalZ, donorZ);
 	SeasonalRhythm::store(name, childSeasonal);
 	Temperament donorT = donor.temperament ? *donor.temperament : Temperaments::roll();
-	Temperament childTemperament = Temperaments::child(mum->temperament, donorT);
+	Temperament childTemperament = Temperaments::child(mum->inheritableTemperament(), donorT);
 	Temperaments::store(name, childTemperament);
+	MindGenes donorM;
+	if (donor.moniker.empty() || !MindGeneSet::load(donor.moniker, donorM))
+		donorM = MindGeneSet::roll();
+	MindGeneSet::store(name, MindGeneSet::child(mum->mindGenes, donorM));
 	mumBody->babymoniker = genomeNameToInt(name);
 	mum->setPregnant(255);
 	// her life story: pregnant, marked inseminated (the Chronicles Kit words
@@ -712,8 +716,10 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	float childSeasonal = SeasonalRhythm::child(mum->seasonalZ, dad->seasonalZ);
 	SeasonalRhythm::store(name, childSeasonal);
 	// and its temperament, partly from them (Temperament.h)
-	Temperament childTemperament = Temperaments::child(mum->temperament, dad->temperament);
+	Temperament childTemperament = Temperaments::child(mum->inheritableTemperament(), dad->inheritableTemperament());
 	Temperaments::store(name, childTemperament);
+	// and its mind's own settings, the same way (MindGenes.h)
+	MindGeneSet::store(name, MindGeneSet::child(mum->mindGenes, dad->mindGenes));
 	mumBody->babymoniker = genomeNameToInt(name);
 	mum->setPregnant(255);
 	Relationships::conceived(mumAgent, dadAgent);

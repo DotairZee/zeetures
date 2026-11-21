@@ -119,6 +119,9 @@ struct Params {
 	// temperament (reactivity): outcomes worse than expected are learned at
 	// this share of the rate, better ones at this share
 	float worseLearning = 1.0f, betterLearning = 1.0f;
+	// readiness to learn about each need (MindGenes.h: danger, food, water,
+	// company), times the learning rate for changes in that drive
+	std::array<float, 17> driveLearning{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 	// Felt effects: stimuli tell the body directly what an interaction did
 	// (C2 chemicals 18-34 raise drive 1-17, 35-51 lower it), like a taste.
 	// A drive an action's stimuli touched is learned from what was felt; the
@@ -682,7 +685,7 @@ class HomeostatMind : public CreatureMind {
 			brainSettings = *p.brainSettings;
 			temperamentApplied = false;
 		}
-		applyTemperament(p.temperament, p.creatureId);
+		applyTemperament(p.temperament, p.mindGenes, p.creatureId);
 		rng.seed((unsigned int)p.creatureId);
 		std::string acts;
 		for (auto& a : *p.actions)
@@ -779,13 +782,34 @@ class HomeostatMind : public CreatureMind {
 	// settings by exp(k z). Survival needs are left alone; fear keeps at
 	// least half its weight however bold the creature.
 	std::array<float, 7> appliedTemperament{};
+	std::array<float, 8> appliedMindGenes{};
 	bool temperamentApplied = false;
-	void applyTemperament(const std::array<float, 7>& z, int creatureId = 0) {
-		if (temperamentApplied && z == appliedTemperament)
+	void applyTemperament(const std::array<float, 7>& z, const std::array<float, 8>& mg, int creatureId = 0) {
+		if (temperamentApplied && z == appliedTemperament && mg == appliedMindGenes)
 			return;
 		temperamentApplied = true;
 		appliedTemperament = z;
+		appliedMindGenes = mg;
 		prm = Params();
+		// (a test's settings again: they were lost when a young creature's
+		// temperament drifted and this ran again)
+		if (getenv("OPENC2E_MIND_PARAMS"))
+			overrideParams();
+		// the mind's own heritable settings (MindGenes.h), each exp(k z)
+		{
+			auto g = [&](int i, float k) { return std::exp(k * mg[(size_t)i]); };
+			prm.learningRate *= g(0, 0.3f); // learning
+			prm.temperature *= g(1, -0.3f); // decisiveness
+			prm.travelHalf *= g(2, 0.25f); // patience
+			prm.exploreWant *= g(3, 0.35f); // wanderlust
+			for (int d : {PAIN, INJURY, FEAR})
+				prm.driveLearning[d] = g(4, 0.35f); // danger
+			for (int d : {HUNGER, THIRST})
+				prm.driveLearning[d] = g(5, 0.35f); // food
+			prm.driveLearning[SUFFOCATE] = g(6, 0.35f); // water
+			for (int d : {LONELY, CROWDED, ANGER})
+				prm.driveLearning[d] = g(7, 0.35f); // company
+		}
 		auto f = [&](int t, float k) { return std::exp(k * z[t]); };
 		// boldness (0): less fear, more drawn to the new
 		prm.weights[FEAR] *= std::max(0.5f, f(0, -0.3f));
@@ -855,7 +879,7 @@ class HomeostatMind : public CreatureMind {
 			brainSettings = *p.brainSettings;
 			temperamentApplied = false;
 		}
-		applyTemperament(p.temperament, p.creatureId);
+		applyTemperament(p.temperament, p.mindGenes, p.creatureId);
 		MindOutput out = tickChoose(p);
 		out.noveltyOutcome = pendingNovelty;
 		pendingNovelty = 0;
@@ -5013,9 +5037,9 @@ class HomeostatMind : public CreatureMind {
 				if (feltAny[i]) {
 					// a drive cannot go below empty or above full
 					float target = std::clamp(startDrives[i] + felt[i], 0.0f, 1.0f) - startDrives[i];
-					e.delta[i] += rate * (target > e.delta[i] ? prm.worseLearning : prm.betterLearning) * (target - e.delta[i]);
+					e.delta[i] += rate * prm.driveLearning[i] * (target > e.delta[i] ? prm.worseLearning : prm.betterLearning) * (target - e.delta[i]);
 				} else {
-					e.delta[i] += rate * (effect[i] > e.delta[i] ? prm.worseLearning : prm.betterLearning) * prm.unfeltLearningShare *
+					e.delta[i] += rate * prm.driveLearning[i] * (effect[i] > e.delta[i] ? prm.worseLearning : prm.betterLearning) * prm.unfeltLearningShare *
 								  (effect[i] - e.delta[i]);
 				}
 			}
@@ -5028,7 +5052,7 @@ class HomeostatMind : public CreatureMind {
 				for (int i = 0; i < NUM_DRIVES; i++) {
 					float target = feltAny[i] ? std::clamp(startDrives[i] + felt[i], 0.0f, 1.0f) - startDrives[i] : effect[i];
 					float share = feltAny[i] ? 1.0f : prm.unfeltLearningShare;
-					own.delta[i] += r * share * (target > own.delta[i] ? prm.worseLearning : prm.betterLearning) * (target - own.delta[i]);
+					own.delta[i] += r * share * prm.driveLearning[i] * (target > own.delta[i] ? prm.worseLearning : prm.betterLearning) * (target - own.delta[i]);
 				}
 				own.count++;
 			}

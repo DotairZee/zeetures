@@ -19,6 +19,7 @@
 
 #include "Profile.h"
 #include "Creature.h"
+#include "GenomeTraits.h"
 
 #include "Catalogue.h"
 #include "Engine.h"
@@ -283,7 +284,7 @@ void Creature::die() {
 			// its genes, kept for the Breeder's Kit's Insemination (Breeding.h)
 			if (engine.version == 2 && genome)
 				if (auto* oc = dynamic_cast<oldCreature*>(this))
-					keepDepartedGenes(mon, *genome, oc->temperament, oc->seasonalZ, oc->isFemale());
+					keepDepartedGenes(mon, *genome, oc->inheritableTemperament(), oc->seasonalZ, oc->isFemale());
 			// C2's nutrient cycle (World::tickNutrients; owner, 2026-11-17: the
 			// dead feed the soil): organic nutrient in the room where it died,
 			// more from a grown body (a baby 15, a child 25, an adolescent 35,
@@ -340,8 +341,12 @@ void Creature::tick() {
 oldCreature::oldCreature(std::shared_ptr<genomeFile> g, bool is_female, unsigned char _variant, CreatureAgent* a)
 	: Creature(g, is_female, _variant, a) {
 	// each creature its own temperament (a saved world puts back its own)
-	temperament = Temperaments::roll();
-	temperamentBorn = temperament;
+	temperamentBorn = Temperaments::roll();
+	// and the part its C2 genes give (GenomeTraits.h)
+	if (engine.version == 2 && g)
+		geneShift = GenomeTraits::shift(*g);
+	refreshTemperament();
+	mindGenes = MindGeneSet::roll();
 	// its own pace of ageing, 0.9-1.1 and most often near 1 (the sum of two
 	// draws); OPENC2E_NO_LIFE_SPREAD keeps every creature at its genome's
 	if (engine.version == 2 && !getenv("OPENC2E_NO_LIFE_SPREAD"))
