@@ -277,6 +277,8 @@ VERSIONS = [
     ("0.26.1", "1e0c2adb",
      "The Breeder's Kit's Breeds page shows each breed as a whole creature facing you, male and female, instead of "
      "just their faces, and its list of breeds grows to match."),
+    ("0.26.2", "e98cf280",
+     "The program icon's egg is now tipped as if rolling, its heartbeat still level, to match the new Zeetures logo."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

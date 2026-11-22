@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 597 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 600 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.26.2](#version-0262): 3 commits, 21 November 2026
 - [0.26.1](#version-0261): 2 commits, 21 November 2026
 - [0.26.0](#version-0260): 3 commits, 21 November 2026
 - [0.25.1](#version-0251): 2 commits, 21 November 2026
@@ -66,6 +67,46 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.26.2
+
+The program icon's egg is now tipped as if rolling, its heartbeat still level, to match the new Zeetures logo.
+
+### 21 November 2026
+
+#### Version 0.26.2
+
+[`e98cf280`](https://github.com/DotairZee/zeetures/commit/e98cf2805dc6ce0be023668e79c8ab413c107235)
+
+#### The program icon's egg tipped as if rolling, its heartbeat level
+
+[`19cb0f96`](https://github.com/DotairZee/zeetures/commit/19cb0f9679161fb7f53d4553d193147a1c1b75fc)
+
+app_icon.py design F8 draws F7's heartbeat egg tipped 16 degrees, top to
+the right, to match the Zeetures logo: the shell's light, the core's glow
+and the highlight turn with the egg (only for symmetric designs; at tilt 0
+they are where they were, so F7 renders unchanged), and pulse_level redraws
+the pulse line level, its beat centered on the core's width at the line's
+height, its ends still under the shell's inner edge. F8 is now CHOSEN;
+--install rewrote packaging/icons (png, ico, icns) and the window icon.
+
+#### Trailer tools: frame recording and a shot director
+
+[`e5b4ad2e`](https://github.com/DotairZee/zeetures/commit/e5b4ad2eead604499cc90629b98065f2b12f6a47)
+
+Developer aids for making the Zeetures trailer (owner, 2026-11-21); they
+do nothing unless switched on.
+
+- OPENC2E_RECORD=FILE.mp4 pipes every drawn frame to ffmpeg at 30
+  frames a second of real time (late frames repeated, early ones
+  skipped); OPENC2E_RECORD_SECONDS=N finishes the file after N seconds.
+  With OPENC2E_WINDOW_SIZE=1920x1080 and the offscreen video driver it
+  records 1080p from a test copy: 10 s gave 301 frames.
+- OPENC2E_DIRECTOR=FILE: timed instructions ("SECONDS INSTRUCTION"):
+  zoom, cam (jump) and pan (glide) to a world point, follow a creature,
+  select one, bars off/on (the toolbar, status bar and scroll bars
+  hidden and the world filling the window), open a kit at a page, close
+  the kits, run CAOS.
 
 ## Version 0.26.1
 
