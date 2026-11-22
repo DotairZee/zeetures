@@ -1697,15 +1697,9 @@ static void BreedsPage() {
 		ImGui::TextDisabled("Pick a breed to see it.");
 		ImGui::TextDisabled("* marks breeds in your own data folder.");
 	} else {
-		ImGui::TextUnformatted(BreedLabel(*b).c_str());
-		ImGui::TextDisabled("%s", b->inOverrides ? (b->inGame ? "Installed in your data folder, in place of the game's" : "Installed in your data folder")
-														 : b->inGame ? (b->jointsAdjusted ? "In the game's folders (joints corrected in your data folder)" : "In the game's folders")
-																	 : "Installed in your data folder");
 		// the whole adult (or the oldest there is), each sex, facing the
 		// camera; just the face when the body cannot be put together
 		int stage = b->stages.empty() ? 0 : std::min(4, *b->stages.rbegin());
-		ImVec2 p = ImGui::GetCursorScreenPos();
-		float x = 0, tallest = 0;
 		ImDrawList* dl = ImGui::GetWindowDrawList();
 		// measure both at their own size first (drawn clipped away), then
 		// draw them as large as fits beside each other, up to twice their size
@@ -1715,8 +1709,33 @@ static void BreedsPage() {
 			own[k] = drawFullBody(*b, k == 1, stage, ImVec2(-10000, -10000), 1.0f);
 			dl->PopClipRect();
 		}
-		float fit = (ImGui::GetContentRegionAvail().x - 40.0f) / std::max(1.0f, own[0].x + own[1].x);
-		float scale = std::clamp(fit, 1.0f, 2.0f);
+		float scale = std::clamp(256.0f / std::max(1.0f, own[0].x + own[1].x), 1.0f, 2.0f);
+		// this side is as wide as the two pictures and a little more, and its
+		// text wraps to that (owner, 2026-11-21: one long line widened the
+		// kit, leaving it empty beside the pictures); wide enough at least
+		// for the buttons below
+		float pictures = 0;
+		for (int k = 0; k < 2; k++) {
+			float w = 0;
+			if (own[k].x > 0)
+				w = std::max((float)(scale * own[k].x), 60.0f * scale);
+			else {
+				std::string f = partFile(*b, 'a', k == 1, stage);
+				if (Texture t = f.empty() ? Texture() : breedPicture(f, 8); t)
+					w = t.width * 2.0f;
+			}
+			if (w > 0)
+				pictures += w + 16;
+		}
+		const float paneW = std::max(pictures + 8.0f, 274.0f);
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + paneW);
+		ImGui::TextUnformatted(BreedLabel(*b).c_str());
+		ImGui::TextDisabled("%s", b->inOverrides ? (b->inGame ? "Installed in your data folder, in place of the game's" : "Installed in your data folder")
+														 : b->inGame ? (b->jointsAdjusted ? "In the game's folders (joints corrected in your data folder)" : "In the game's folders")
+																	 : "Installed in your data folder");
+		ImGui::PopTextWrapPos();
+		ImVec2 p = ImGui::GetCursorScreenPos();
+		float x = 0, tallest = 0;
 		float boxH = 95.0f * scale; // room for the tallest adult
 		for (bool female : {false, true}) {
 			ImVec2 size = (double)scale * own[female ? 1 : 0];
@@ -1741,7 +1760,7 @@ static void BreedsPage() {
 			tallest = std::max(tallest, h + 8);
 		}
 		if (x > 0)
-			ImGui::Dummy(ImVec2(x, tallest + 22));
+			ImGui::Dummy(ImVec2(paneW, tallest + 22));
 		std::set<std::string> parts;
 		for (char c : b->parts)
 			parts.insert(partName(c));
@@ -1751,7 +1770,7 @@ static void BreedsPage() {
 		const char* stages[] = {"baby", "child", "adolescent", "youth", "adult", "old", "senile"};
 		for (int s : b->stages)
 			ss += fmt::format("{}{}", ss.empty() ? "" : ", ", s >= 0 && s < 7 ? stages[s] : "?");
-		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 300);
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + paneW);
 		ImGui::Text("Parts: %s", ps.c_str());
 		ImGui::Text("Ages: %s", ss.c_str());
 		ImGui::Text("%s%s%s", b->male ? "male" : "", b->male && b->female ? " and " : "", b->female ? "female" : "");
@@ -1920,7 +1939,7 @@ static void BreedsPage() {
 	s_detailHeight = ImGui::GetItemRectSize().y;
 
 	if (!s_breed_message.empty())
-		ImGui::TextUnformatted(s_breed_message.c_str());
+		ImGui::TextWrapped("%s", s_breed_message.c_str());
 	if (s_plan) {
 		ImportReview();
 		return;

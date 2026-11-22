@@ -679,16 +679,37 @@ void PlacesPage(const MindView& v) {
 		return;
 	}
 	std::sort(been.begin(), been.end(), [](auto* a, auto* b) { return a->here != b->here ? a->here : a->ticks > b->ticks; });
-	KitNoteColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "The rooms it remembers, where it spent most time first. How it felt there is against how it feels anywhere.");
+	// the page's own width, its text wrapped to it (owner, 2026-11-21: the
+	// list of who it longs for, on one line, made the kit as wide as the
+	// screen)
+	const float pageW = 660;
+	ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + pageW);
+	ImGui::TextColored(ImVec4(0.6f, 0.62f, 0.68f, 1), "The rooms it remembers, where it spent most time first. How it felt there is against how it feels anywhere.");
 	if (!v.longing.empty()) {
 		auto longing = v.longing;
 		std::sort(longing.begin(), longing.end(), [](auto& a, auto& b) { return a.second > b.second; });
-		std::string who;
-		for (auto& [m, L] : longing)
-			who += fmt::format("{}{} ({})", who.empty() ? "" : ", ", nameOf(m), L > 0.6f ? "strongly" : L > 0.15f ? "enough to look" : "a little");
+		// the strongest by name, the rest counted (all of them on hover)
+		const size_t shown = 8;
+		std::string who, all;
+		for (size_t k = 0; k < longing.size(); k++) {
+			auto& [m, L] = longing[k];
+			std::string one = fmt::format("{} ({})", nameOf(m), L > 0.6f ? "strongly" : L > 0.15f ? "enough to look" : "a little");
+			if (k < shown)
+				who += (who.empty() ? "" : ", ") + one;
+			all += (all.empty() ? "" : ", ") + one;
+		}
+		if (longing.size() > shown)
+			who += fmt::format(", and {} more", longing.size() - shown);
 		ImGui::TextColored(ImVec4(0.89f, 0.67f, 0.82f, 1), "Longs to find again: %s", who.c_str());
+		if (longing.size() > shown && ImGui::BeginItemTooltip()) {
+			ImGui::PushTextWrapPos(ImGui::GetFontSize() * 45);
+			ImGui::TextUnformatted(all.c_str());
+			ImGui::PopTextWrapPos();
+			ImGui::EndTooltip();
+		}
 	}
-	ImGui::BeginChild("places", ImVec2(0, 380), false);
+	ImGui::PopTextWrapPos();
+	ImGui::BeginChild("places", ImVec2(pageW, 380), false);
 	const ImVec4 green(0.55f, 0.85f, 0.55f, 1), red(0.92f, 0.5f, 0.45f, 1), pink(0.89f, 0.67f, 0.82f, 1);
 	for (auto* pm : been) {
 		float dx = pm->x - v.x, dy = pm->floor - v.y;
