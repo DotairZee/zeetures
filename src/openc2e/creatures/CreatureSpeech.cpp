@@ -556,6 +556,112 @@ void handSays(const std::string& text) {
 	b->setTimeout(35);
 	hearSpeech(hand, text, HEAR_HAND);
 	recordSpeech(hand, text);
+	answerHand(text);
+}
+
+void handSaysAgain() {
+	for (auto& line : s_history)
+		if (line.speaker && line.speaker.get() == (Agent*)world.hand()) {
+			std::string text = line.text;
+			handSays(text);
+			return;
+		}
+}
+
+// Being spoken to (a player, 2026-11-22: "the baby not looking at me, and
+// there being no response to anything I say"; C2's manual has norns look,
+// repeat and obey). Words are learned in hearWords, before this.
+void answerHand(const std::string& text) {
+	Agent* hand = (Agent*)world.hand();
+	if (!hand || engine.version != 2 || engine.wordlist.empty())
+		return;
+	std::string t = " ";
+	for (char ch : lower(text))
+		t += std::isalnum((unsigned char)ch) || (unsigned char)ch >= 128 ? ch : ' ';
+	t += " ";
+	// the list's words in it, in the order said
+	std::vector<std::pair<size_t, int>> said;
+	for (size_t w = 0; w < engine.wordlist.size(); w++) {
+		std::string word = lower(trim(engine.wordlist[w]));
+		if (word.empty())
+			continue;
+		if (size_t at = t.find(" " + word + " "); at != std::string::npos)
+			said.push_back({at, (int)w});
+	}
+	std::sort(said.begin(), said.end());
+
+	struct Listener {
+		Agent* a;
+		oldCreature* c;
+		float distance;
+		bool named;
+	};
+	std::vector<Listener> all, named;
+	const float hx = centreX(hand), hy = centreY(hand);
+	for (auto& a : world.agents) {
+		if (!a || a->isDying())
+			continue;
+		oldCreature* c = creatureOf(a.get());
+		if (!c || !c->isAlive() || c->isAsleep() || c->isUnconscious() || !inEarshot(a.get(), hx, hy))
+			continue;
+		Listener l{a.get(), c, std::hypot(centreX(a.get()) - hx, centreY(a.get()) - hy), false};
+		std::string mon = world.history->findMoniker(c->getGenome());
+		std::string name = mon.empty() || !world.history->hasMoniker(mon) ? std::string() : lower(trim(world.history->getMoniker(mon).name));
+		if (name.size() >= 2 && t.find(" " + name + " ") != std::string::npos) {
+			l.named = true;
+			named.push_back(l);
+		}
+		all.push_back(l);
+	}
+	// spoken to by name: only they are meant
+	std::vector<Listener>& meant = named.empty() ? all : named;
+	std::sort(meant.begin(), meant.end(), [](const Listener& a, const Listener& b) { return a.distance < b.distance; });
+	int rank = 0;
+	for (auto& l : meant) {
+		oldCreature::Spoken s;
+		for (auto& [at, w] : said) {
+			if (!knowsWord(l.c, w))
+				continue;
+			if (w <= 13)
+				s.verb = w;
+			else if (w >= 16 && w < 16 + 40)
+				s.noun = w - 16; // the noun's category
+		}
+		s.named = l.named;
+		s.tick = world.tickcount;
+		l.c->spoken = s;
+		l.c->callTo(s.noun >= 0 ? s.noun : 1); // the thing, or the hand
+		// the nearest two (or those named) say it back
+		if (rank < 2 || l.named) {
+			l.c->replyWord = said.empty() ? -1 : said.back().second;
+			l.c->replyAt = world.tickcount + 8 + 9 * rank + rand_int32(0, 5);
+		}
+		rank++;
+	}
+	if (watching())
+		fmt::print("* HAND SAYS \"{}\": {} listening{}\n", text, meant.size(), named.empty() ? "" : " (named)");
+}
+
+void tickReply(Agent* creature, oldCreature* c) {
+	if (c->replyAt == 0 || world.tickcount < c->replyAt)
+		return;
+	c->replyAt = 0;
+	if (!c->isAlive() || c->isAsleep() || c->isUnconscious())
+		return;
+	int stage = (int)c->getStage();
+	if (c->replyWord < 0 || !isWord(c->replyWord)) {
+		creatureSays(creature, stage, phraseFor("babble", creature, c));
+		return;
+	}
+	// in its own tongue until it has learned the word (a baby always: it has
+	// no words yet)
+	Utterance u;
+	u.spoken = trim(engine.wordlist[c->replyWord]);
+	bool knows = stage > 0 && knowsWord(c, c->replyWord);
+	u.shown = knows ? u.spoken : nativeWord(creature, u.spoken);
+	if (knows)
+		u.learned.push_back(c->replyWord);
+	creatureSays(creature, stage, u);
 }
 
 void creatureSays(Agent* creature, int stage, const Utterance& u) {

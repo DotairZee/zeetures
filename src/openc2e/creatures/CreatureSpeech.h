@@ -126,6 +126,14 @@ void recordSpeech(Agent* speaker, const std::string& text);
 // The hand says a line again (Speech History's "say" button): a bubble, and
 // creatures in earshot hear it (HEAR_HAND).
 void handSays(const std::string& text);
+// the last line the hand said (Ctrl+S, as in C2); nothing if none yet
+void handSaysAgain();
+// The hand has said something: creatures in earshot, or those it names, turn
+// to the hand (or to a thing it names that they know the word for), weigh a
+// verb they know (HomeostatMind, Params::obey), and the nearest say it back.
+void answerHand(const std::string& text);
+// what a creature says back, when it is due (called each mind tick)
+void tickReply(Agent* creature, oldCreature* c);
 
 // A life stage's voice: pitch (playback rate, 1 = as recorded) and pace
 // (syllables per usual time, 1 = as the voice file says).

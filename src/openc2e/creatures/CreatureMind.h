@@ -226,6 +226,16 @@ struct MindPerception {
 	// landed), 0-255, as set for the genome's emitters (oldCreature::
 	// updateBrainCells). Instincts that name a sense wait for it.
 	std::array<unsigned char, 32> senses{};
+	// The hand's speech (owner, 2026-11-22: creatures "look at you and
+	// answer"; known verbs are weighed): the verb and the thing it knows the
+	// words for, -1 none, and mind ticks since (-1: nothing lately)
+	int heardVerb = -1, heardNoun = -1, heardAge = -1;
+	bool heardNamed = false;
+	// called to look at a thing (the hand that spoke or touched it, or what
+	// it named): its category, and mind ticks since
+	int calledCategory = -1, calledAge = -1;
+	// the hand has just patted or slapped it
+	bool handPat = false, handSlap = false;
 	// the chemicals this genome rewards and punishes learning with (those
 	// its decision lobe's first two chemical slots take: 52 and 53 in the
 	// game's genomes)

@@ -152,6 +152,20 @@ class oldCreature : public Creature {
 	// (engine.wordlist), how familiar it is, 0-255 (known at WORD_KNOWN); see
 	// CreatureSpeech.h. Empty until the first word is heard.
 	std::vector<unsigned char> vocab;
+	// what the hand last said to it (answerHand, CreatureSpeech.cpp): the
+	// verb (0-13) and the thing (a category) it knows the words for, -1 none
+	struct Spoken {
+		int verb = -1, noun = -1;
+		bool named = false; // by its name
+		unsigned int tick = 0; // world ticks (0: never)
+	} spoken;
+	// something it was called to look at, or has just been touched by: a
+	// category, and when
+	int calledCategory = -1;
+	unsigned int calledTick = 0;
+	void callTo(int category);
+	int replyWord = -1; // what it will say back (-1: something of its own)
+	unsigned int replyAt = 0; // and when (0: nothing)
 	// what it feels about each creature it has met, by moniker
 	// (creatures/Relationships.h); saved with the world
 	std::map<std::string, Bond> bonds;

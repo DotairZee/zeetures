@@ -34,12 +34,17 @@ void DrawHelpWindow() {
 	Section("The hand",
 		"Left-click: use things (press a button, start a lesson on a teaching machine, tickle or slap a creature with the teach hand).\n"
 		"Right-click: pick something up, and right-click again to put it down.\n"
-		"Type while a creature is near: the hand speaks, and creatures that hear it learn the words.\n"
+		"Type while a creature is near, then press Return: the hand speaks, and creatures that hear it learn the words. Ctrl+S says it again.\n"
 		"Ctrl+wheel zooms; Ctrl+0 is actual size.");
 	Section("Creatures' words",
 		"Creatures are born knowing no words. They speak their own tongue (Nornish, and the grendel and ettin dialects) until they learn yours: "
 		"from the teaching machines and laptops, from the hand's words, from each other, or all at once from the Stone of Knowledge (kissed by a norn). "
-		"Being taught, a creature repeats the word, in its tongue at first and then the word itself. View > Speech Bubbles hides their bubbles; "
+		"Being taught, a creature repeats the word, in its tongue at first and then the word itself (babies only in their tongue).\n"
+		"Speak to creatures, or tickle one, and they look at the hand; say one's name, and only it is meant. Say the name of a thing they know the "
+		"word for, and they look at the thing. Verbs they know are for them to consider: stay, push, pull, stop, come, run, get, drop, rest, left, "
+		"right, eat and hit, with a thing's name or without (\"push toy\"). The older they are the more they follow, and the good-tempered follow more. "
+		"Tickle one that does as it was told and it will again; unpraised, it heeds you less and less.\n"
+		"View > Speech Bubbles hides their bubbles; "
 		"Speech History lists what was said lately.");
 	Section("Temperament and relationships",
 		"Every creature is born with its own temperament: some of each of boldness, curiosity, energy, sociability, temper, reactivity and steadiness "

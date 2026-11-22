@@ -272,6 +272,20 @@ struct Params {
 	// chemical falling; decision 1 of 2026-11-07), so a nudge that brings no
 	// approval fades as experience outweighs it, and one that does holds.
 	float innateNudge = 0.12f;
+	// Spoken to by the hand (owner, 2026-11-22: creatures look at you and
+	// answer; known verbs are "suggestions its mind weighs"). Called, it
+	// looks round at what it was called to (decision 0, watch it) for about
+	// callTicks; a heard verb it knows adds to its action's score through the
+	// genome's own obedience instincts (hearing a verb: do it, rewarded),
+	// fading over heardTicks, more to the good-tempered and sociable. Praise
+	// (a pat) or a slap within praiseTicks of doing as it was told is what
+	// that instinct is judged by, as the nudges above: unpraised, obeying
+	// fades; slapped for not listening, it listens better next time.
+	float callPull = 0.25f;
+	int callTicks = 8; // mind ticks, about 3 s
+	float obey = 0.15f;
+	int heardTicks = 24; // about 10 s
+	int praiseTicks = 30;
 	float approvalScale = 32.0f; // a change of this much reward minus punishment chemical is full approval
 	unsigned char senseOn = 64; // a sense cell at least this lit counts as the situation holding
 
@@ -721,6 +735,7 @@ struct Candidate {
 	bool boatCall = false; // pressing a button to call a boat
 	bool blindPress = false; // pressing a call button with no lift in view or known
 	bool route = false; // a step along a route on the place map
+	bool looking = false; // looking round at what it was called to
 	std::string place; // a trip from the sense of place: "mate:<moniker>", "favourite:<need>", "leave:<need>", "explore"
 };
 
@@ -1531,9 +1546,38 @@ class HomeostatMind : public CreatureMind {
 			}
 		}
 
+		// Spoken to, or touched by the hand: think again what to do (a choice
+		// like any other: a starving creature may well go on eating)
+		if (p.heardAge < 0 || p.heardAge < lastHeardAge)
+			heardDone = 0; // something new said
+		lastHeardAge = p.heardAge;
+		if (p.calledAge < 0 || p.calledAge > 2)
+			calledIn = false;
+		else if (!calledIn) {
+			calledIn = true;
+			if (inEpisode && !p.riding && !p.inWater && !p.asleep && !(current.category < 0 && current.decision == prm.sleepDecision))
+				endEpisode(p, d, D, "called");
+		}
+		// praise and blame for doing as it was told, or for not listening
+		if (p.handPat || p.handSlap) {
+			if (!obeyed.empty() && p.tick < obeyedTick + prm.praiseTicks) {
+				for (size_t i : obeyed)
+					if (i < nudges.size())
+						nudges[i].approvalSum += p.handPat ? 1.0f : -1.0f;
+				obeyed.clear();
+			} else if (p.handSlap && p.heardVerb >= 0 && p.heardAge >= 0 && p.heardAge < prm.praiseTicks)
+				for (auto& n : nudges)
+					if (std::find(n.verbs.begin(), n.verbs.end(), p.heardVerb) != n.verbs.end())
+						n.approvalSum += 0.5f;
+		}
+
 		// Is the current episode over?
 		if (inEpisode) {
 			episodeTicks++;
+			if (current.looking && (p.calledAge < 0 || p.calledAge >= prm.callTicks))
+				endEpisode(p, d, D, "looked");
+		}
+		if (inEpisode) {
 			bool objectGone = current.category >= 0 && !isVisible(p, current.category);
 			// or another of its kind in its place: the engine sees one thing
 			// of each kind, and when the one acted on is gone (eaten) or out
@@ -1701,8 +1745,20 @@ class HomeostatMind : public CreatureMind {
 		fellAsleep = false;
 		episodeNudges.clear();
 		for (size_t i = 0; i < nudges.size(); i++)
-			if (nudgeHolds(nudges[i], p, choice.category, choice.decision))
+			if (nudgeHolds(nudges[i], p, choice.category, choice.decision)) {
 				episodeNudges.push_back(i);
+				if (!nudges[i].verbs.empty()) {
+					if (obeyedTick != p.tick)
+						obeyed.clear();
+					obeyed.push_back(i);
+					obeyedTick = p.tick;
+					if (devenv("OPENC2E_WATCH_OBEY"))
+						fmt::print("[homeostat] creature {} t{}: OBEYS {} (effect {:+.2f}, {} tries)\n", p.creatureId, p.tick, actionName(choice.decision), nudges[i].effect(), nudges[i].tries);
+				}
+			}
+		current.looking = choice.decision == 0 && choice.category >= 0 && choice.category == p.calledCategory && p.calledAge >= 0 && p.calledAge < prm.callTicks;
+		if (current.looking && devenv("OPENC2E_WATCH_OBEY"))
+			fmt::print("[homeostat] creature {} t{}: LOOKS at category {}\n", p.creatureId, p.tick, choice.category);
 		episodeApprovalStart = approvalNow(p);
 		if (choice.blindPress && !blindPending) {
 			blindPending = true;
@@ -1778,7 +1834,7 @@ class HomeostatMind : public CreatureMind {
 	// (learned numbers are written to 4 significant figures: at 9, with 145
 	// creatures, the save was 28 MB; 2026-11-13)
 	std::string saveState() const override {
-		std::string s = fmt::format("statever 8\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
+		std::string s = fmt::format("statever 9\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
 		s += "drift";
 		for (float f : drift)
 			s += fmt::format(" {:.4g}", f);
@@ -2095,6 +2151,21 @@ class HomeostatMind : public CreatureMind {
 				fmt::print("[homeostat] relearning sleep (learned while sleep could be refused or cut short)\n");
 			}
 		}
+		if (version < 9) {
+			// Saved while instincts naming heard words waited (dormant), marked
+			// read all the same. Unmark them, so they are read again.
+			for (auto it = appliedInstincts.begin(); it != appliedInstincts.end();) {
+				int v[6] = {0, 0, 0, 0, 0, 0};
+				bool words = false;
+				if (std::sscanf(it->c_str(), "%d.%d.%d.%d.%d.%d", &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]) == 6)
+					for (int i = 0; i < 3; i++)
+						words |= v[2 * i] == 3 || v[2 * i] == 4;
+				if (words)
+					it = appliedInstincts.erase(it);
+				else
+					++it;
+			}
+		}
 		if (version < 7) {
 			// Saved while lobe 7 was read as heard nouns (it is attention):
 			// its instincts waited. Unmark them, so they are read again.
@@ -2193,6 +2264,7 @@ class HomeostatMind : public CreatureMind {
 		int decision = 0;
 		std::vector<int> categories; // empty: whatever it acts on (or nothing)
 		std::vector<int> senses; // situation senses that must all be lit
+		std::vector<int> verbs, nouns; // words just heard from the hand (verbs, categories)
 		float value = 0; // +strength rewarded, -strength punished
 		float weight = 1; // in remembered tries
 		int tries = 0;
@@ -2210,8 +2282,31 @@ class HomeostatMind : public CreatureMind {
 		float q = (p.punishChem > 0 && p.punishChem < 256) ? p.chemicals[p.punishChem] : 0.0f;
 		return r - q;
 	}
+	std::vector<size_t> obeyed; // the nudges of the last thing done as told, and when
+	unsigned int obeyedTick = 0;
+	int heardDone = 0, lastHeardAge = -1; // times it has done what was last said
+	bool calledIn = false; // this call has been answered (looked round, or not)
+	// the action a heard verb names, for this decision (the walks the world
+	// lends go for left and right, its sleep for rest)
+	static int wordOf(int decision) { return decision == 26 ? 10 : decision == 27 ? 11 : decision == 25 ? 9 : decision; }
 	bool nudgeHolds(const Nudge& n, const MindPerception& p, int category, int decision) const {
-		if (n.decision != decision)
+		if (!n.verbs.empty() || !n.nouns.empty()) {
+			if (p.heardAge < 0 || p.heardAge >= prm.heardTicks)
+				return false;
+			if (!n.verbs.empty() && std::find(n.verbs.begin(), n.verbs.end(), p.heardVerb) == n.verbs.end())
+				return false;
+			if (!n.nouns.empty() && std::find(n.nouns.begin(), n.nouns.end(), p.heardNoun) == n.nouns.end())
+				return false;
+			// to the thing named; "come" with none named, to the hand; nothing
+			// else is done to the hand unasked
+			if (category >= 0) {
+				const int meant = p.heardNoun >= 0 ? p.heardNoun : p.heardVerb == 4 ? 1 : -1;
+				if (meant >= 0 ? category != meant : category == 1)
+					return false;
+			}
+			if (wordOf(decision) != n.decision)
+				return false;
+		} else if (n.decision != decision)
 			return false;
 		if (!n.categories.empty() && std::find(n.categories.begin(), n.categories.end(), category) == n.categories.end())
 			return false;
@@ -2709,10 +2804,18 @@ class HomeostatMind : public CreatureMind {
 			}
 			if (inEpisodeJustEnded && category == current.category && decision == current.decision)
 				c.score += prm.commitment;
-			for (auto& n : nudges)
-				if (nudgeHolds(n, p, category, decision))
-					c.score += prm.innateNudge * n.effect();
 			const auto& z = appliedTemperament;
+			for (auto& n : nudges)
+				if (nudgeHolds(n, p, category, decision)) {
+					if (n.verbs.empty() && n.nouns.empty())
+						c.score += prm.innateNudge * n.effect();
+					else // told to: fading, and by its temper and sociability
+						c.score += prm.obey * n.effect() * (1.0f - (float)p.heardAge / prm.heardTicks) * (p.heardNamed ? 1.25f : 1.0f) * (heardDone > 0 ? 0.25f : 1.0f) * std::clamp(1.0f - 0.25f * z[4] + 0.15f * z[3], 0.3f, 1.6f);
+				}
+			// called: to look at what it was called to
+			if (decision == 0 && category >= 0 && category == p.calledCategory && p.calledAge >= 0 && p.calledAge < prm.callTicks)
+				// (told to do something it knows the word for: less)
+				c.score += prm.callPull * (p.heardVerb >= 0 && p.heardAge >= 0 && p.heardAge <= p.calledAge + 1 ? 0.35f : 1.0f) * (1.0f - 0.5f * p.calledAge / prm.callTicks) * (p.heardNamed ? 1.25f : 1.0f) * std::clamp(1.0f + 0.2f * z[3], 0.5f, 1.5f);
 			if (who && !who->who.empty()) {
 				c.score += prm.strangerBias * z[0] * (1.0f - who->familiarity); // boldness
 				if (decision == prm.hitDecision)
@@ -2723,7 +2826,11 @@ class HomeostatMind : public CreatureMind {
 		for (auto& a : *p.actions) {
 			if (a.needsObject) {
 				for (auto& s : p.visible)
-					if (s.reachable && (s.activatable || (a.decision != 1 && a.decision != 2 && a.decision != 3)))
+					if ((s.reachable && (s.activatable || (a.decision != 1 && a.decision != 2 && a.decision != 3))) ||
+						// (called to look at it, or told to come to it: over its
+						// head too, as the hand mostly is)
+						(a.decision == 0 && s.category == p.calledCategory && p.calledAge >= 0 && p.calledAge < prm.callTicks) ||
+						(a.decision == 4 && p.heardVerb == 4 && p.heardAge >= 0 && p.heardAge < prm.heardTicks && s.category == (p.heardNoun >= 0 ? p.heardNoun : 1) && std::fabs(s.y - p.y) < 160.0f))
 						add(s.category, a.decision, s.distance, s.edible, (s.who.empty() && s.category != MIND_HEALING_FRUIT && s.category != MIND_ROTTEN_FRUIT) ? nullptr : &s);
 			} else {
 				// plain wandering never walks off dry land into water (food,
@@ -5059,7 +5166,7 @@ class HomeostatMind : public CreatureMind {
 		if (appliedInstincts.count(inst.signature))
 			return;
 		appliedInstincts.insert(inst.signature);
-		std::vector<int> drives, categories, senses;
+		std::vector<int> drives, categories, senses, verbs, nouns;
 		bool dormant = false;
 		for (auto& c : inst.conditions) {
 			if (c.kind == InnateCondition::Drive && c.index >= 0 && c.index < NUM_DRIVES)
@@ -5068,12 +5175,19 @@ class HomeostatMind : public CreatureMind {
 				categories.push_back(c.index);
 			else if (c.kind == InnateCondition::Sense)
 				senses.push_back(c.index);
+			else if (c.kind == InnateCondition::HeardVerb)
+				verbs.push_back(c.index);
+			else if (c.kind == InnateCondition::HeardNoun)
+				nouns.push_back(c.index);
 			else
-				dormant = true; // heard words: waiting for language
+				dormant = true;
 		}
 		// (OPENC2E_NO_GENOME_BRIDGE: senses and no drive wait, as before)
 		static const bool oldWay = devenv("OPENC2E_NO_GENOME_BRIDGE") != nullptr;
 		if (oldWay && (drives.empty() || !senses.empty()))
+			dormant = true;
+		// (words with a drive, no such instinct in the game's genomes)
+		if (!drives.empty() && (!verbs.empty() || !nouns.empty()))
 			dormant = true;
 		if (dormant) {
 			dormantInstincts++;
@@ -5088,6 +5202,8 @@ class HomeostatMind : public CreatureMind {
 			n.decision = inst.decision;
 			n.categories = categories;
 			n.senses = senses;
+			n.verbs = verbs;
+			n.nouns = nouns;
 			n.value = (inst.reward ? 1.0f : -1.0f) * inst.strength;
 			n.weight = 1.0f + (prm.legacyInstinctResilience - 1.0f) * inst.strength * inst.strength;
 			if (auto it = savedNudges.find(inst.signature); it != savedNudges.end()) {
@@ -5202,6 +5318,8 @@ class HomeostatMind : public CreatureMind {
 			static const bool watch = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 			for (size_t i : episodeNudges)
 				if (i < nudges.size()) {
+					if (!nudges[i].verbs.empty())
+						heardDone++; // (once is doing as it was told)
 					nudges[i].tries++;
 					nudges[i].approvalSum += approval;
 					if (watch)

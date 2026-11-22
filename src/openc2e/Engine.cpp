@@ -1188,6 +1188,7 @@ void Engine::update() {
 //   bars off|on       the toolbar, status bar and scroll bars hidden or shown
 //   kit ID [PAGE]     opens a kit (health, breeders, owners, ecology...) at a page
 //   kits off          closes the kits
+//   say X Y TEXT      the hand goes to world X, Y and says it
 //   caos TEXT         runs CAOS (as the world's additions run)
 // For recording scripted shots with OPENC2E_RECORD.
 static void runDirector() {
@@ -1268,6 +1269,16 @@ static void runDirector() {
 			Openc2eImgui::OpenC2KitAt(id.c_str(), page.empty() ? nullptr : page.c_str());
 		} else if (cmd == "kits") {
 			Openc2eImgui::CloseC2Kits();
+		} else if (cmd == "say") {
+			float sx = 0, sy = 0;
+			std::string text;
+			l >> sx >> sy;
+			std::getline(l, text);
+			text.erase(0, text.find_first_not_of(" \t"));
+			if (world.hand()) {
+				world.hand()->moveTo(sx, sy);
+				handSays(text);
+			}
 		} else if (cmd == "caos") {
 			std::string text;
 			std::getline(l, text);
@@ -1777,6 +1788,17 @@ void Engine::handleRawKeyDown(BackendEvent& event) {
 	// C1/C2: F12 switches full screen on and off
 	if (version <= 2 && event.key == OPENC2E_KEY_F12)
 		get_backend()->setFullscreen(!get_backend()->isFullscreen());
+	// C2: Ctrl+S says the last thing typed again (its manual: "CTRL and S:
+	// Repeat the last piece of text you typed in"; a player, 2026-11-22), at
+	// most twice a second (a key held down repeats)
+	if (version == 2 && event.key == OPENC2E_KEY_S && get_backend()->keyDown(OPENC2E_KEY_CTRL)) {
+		static unsigned int said = 0;
+		if (world.tickcount - said >= 5 || world.tickcount < said) {
+			said = world.tickcount;
+			handSaysAgain();
+		}
+		return;
+	}
 	switch (event.key) {
 		case OPENC2E_KEY_W:
 			w_down = true;

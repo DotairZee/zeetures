@@ -913,6 +913,13 @@ void oldCreature::applyStimulusChemistry(StimulusEvent& s) {
 
 // Lists the decision scripts (events 16-47) the world defines for this
 // creature, and whether each acts on the attended object.
+// Something calls for its attention: the hand that speaks to it or touches
+// it, or a thing the hand names.
+void oldCreature::callTo(int category) {
+	calledCategory = category;
+	calledTick = std::max(1u, world.tickcount);
+}
+
 void oldCreature::buildMindActions() {
 	mindactions.clear();
 	for (int n = 0; n < 32; n++) {
@@ -1064,6 +1071,23 @@ MindPerception oldCreature::buildPerception() {
 		}
 
 	p.stimuli = pendingstimuli;
+	// the hand's pats and slaps (C2's stimuli 1 and 3, by the creatures' own
+	// scripts: "doif from eq pntr stm# writ targ 1"): it looks round at the hand
+	for (auto& s : pendingstimuli)
+		if (engine.version == 2 && s.numbered && (s.id == 1 || s.id == 3)) {
+			(s.id == 1 ? p.handPat : p.handSlap) = true;
+			callTo(1);
+		}
+	if (spoken.tick != 0 && world.tickcount >= spoken.tick && world.tickcount - spoken.tick < 400) {
+		p.heardVerb = spoken.verb;
+		p.heardNoun = spoken.noun;
+		p.heardNamed = spoken.named;
+		p.heardAge = (int)(world.tickcount - spoken.tick) / 4;
+	}
+	if (calledTick != 0 && world.tickcount >= calledTick && world.tickcount - calledTick < 100) {
+		p.calledCategory = calledCategory;
+		p.calledAge = (int)(world.tickcount - calledTick) / 4;
+	}
 	p.actions = &mindactions;
 	p.actionFinished = parentagent->vmStopped();
 	p.currentAttention = attn;
@@ -1713,6 +1737,7 @@ void oldCreature::tickMind() {
 				(int)out.passOver->genus, out.passOver->species, out.passOver->x, out.passOver->y);
 	}
 
+	tickReply(parentagent, this);
 	if (!out.say.empty())
 		creatureSays(parentagent, (int)stage, phraseFor(out.say, parentagent, this));
 	if (!out.thought.empty())
@@ -1766,6 +1791,15 @@ void oldCreature::tickMind() {
 				fmt::print("* WATCH LIFT USE t{} unid {} decision {} on lift {} {} {} at {:.0f},{:.0f} obv0 {} yvec {} creature at {:.0f},{:.0f}\n", world.tickcount,
 					parentagent->getUNID(), decn, (int)lift->family, (int)lift->genus, lift->species, lift->x, lift->y, lift->var[0].hasInt() ? lift->var[0].getInt() : -1,
 					lift->yvec, parentagent->x, parentagent->y);
+		// called to look at it: it turns to face it (the world's pose for
+		// watching, 12, faces the way the creature does)
+		if (engine.version == 2 && decn == 0 && attention && attn == p.calledCategory && p.calledAge >= 0) {
+			float dx = (attention->x + attention->getWidth() / 2.0f) - (parentagent->x + parentagent->getWidth() / 2.0f);
+			if (p.wrapWidth > 0 && std::fabs(dx) > p.wrapWidth / 2.0f)
+				dx -= dx > 0 ? p.wrapWidth : -p.wrapWidth;
+			if (auto* ca = dynamic_cast<CreatureAgent*>(parentagent); ca && std::fabs(dx) > 14.0f)
+				ca->setDirection(dx > 0 ? 2 : 3);
+		}
 		parentagent->queueScript(decn + 16);
 	}
 }
