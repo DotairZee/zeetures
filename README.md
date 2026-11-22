@@ -1,4 +1,6 @@
-# Zeetures
+<!-- TRAILER -->
+
+<h1 align="center"><img src="art/logo/zeetures.png" alt="Zeetures: a labor of love by DotairZee" width="720"></h1>
 
 > **Zeetures: a fan fork of openc2e, focused on Creatures 2** (forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2), 7 October 2026). It adds an original creature mind (the "homeostat" mind), a C2-style interface with the kits, world saving, scents and many fixes; see the `creature-mind` branch. Nightly builds are under [Releases](../../releases/tag/nightly) (they contain no game data: you need your own copy of Creatures 2). A noncommercial labor of love by an old fan, not affiliated with Gameware Europe or the openc2e developers. Every change is in the [changelog](CHANGELOG.md). See [Built on openc2e](#built-on-openc2e) below.
 
@@ -27,7 +29,7 @@ Download the file for your system from the [nightly release](../../releases/tag/
 
 The `.zip` and `.tar.gz` files in the release are the same programs unpacked, for anyone who prefers them: unpack and start `Zeetures.exe` (Windows) or `openc2e` (Linux). Started from a terminal, they still take `-d "<Creatures 2 folder>"` (see [Command-line options](#command-line-options)).
 
-The creatures use Zeetures's own mind (`--mind original` gives them openc2e's unfinished copy of the original brain, which does very little). Zeetures's world additions (map fixes, script fixes and new objects) are built into the program and applied to every Creatures 2 world as it loads. All 42 run on a fresh install. Their pictures that Zeetures draws itself (walkways, lifts, bushes, the memorial stone and more) come with the download, in its `zeetures-art` folder: keep it beside the program. The pictures that are cut from the game's own (the waterwheel stream, the west sea airlock's rock, the volcano passage and trunk, the treehouse lift, the waterfall path, a pillar's foot) are made by Zeetures on your machine, from your own copy of the game, when it starts.
+The creatures use Zeetures's own mind (`--mind original` gives them openc2e's unfinished copy of the original brain, which does very little). Zeetures's world additions (map fixes, script fixes and new objects) are built into the program and applied to every Creatures 2 world as it loads. Their pictures that Zeetures draws itself (walkways, lifts, bushes, the memorial stone and more) come with the download, in its `zeetures-art` folder: keep it beside the program. The pictures that are cut from the game's own (the waterwheel stream, the west sea airlock's rock, the volcano passage and trunk, the treehouse lift, the waterfall path, a pillar's foot) are made by Zeetures on your machine, from your own copy of the game, when it starts.
 
 Your worlds, saves and settings are kept in the user folder, never in the game's folder:
 
@@ -62,26 +64,32 @@ Linux is where Zeetures is played and tested every day; the Windows and macOS bu
 
 ## Status
 
-Zeetures is at version 0.27.0 (shown in Help > About). It is a work in progress, but Creatures 2 is playable from start to finish: creatures hatch, eat, learn, talk, breed, grow old and die, and worlds are saved. The published research behind the creatures' mind and behaviors is listed in [CITATIONS.md](CITATIONS.md) (also in Help > About).
+Zeetures is at version 0.27.0 (shown in Help > About), after about 175 hours of work (7-21 November 2026). It is a work in progress, but Creatures 2 is playable from start to finish: creatures hatch, eat, learn, talk, breed, grow old and die, and worlds are saved. The published research behind the creatures' mind and behaviors is listed in [CITATIONS.md](CITATIONS.md) (also in Help > About).
 
 ### What works
 
-* **A new creature mind.** In stock openc2e, C2 creatures hatch but do almost nothing, because the original brain was never finished. Zeetures adds a small "creature mind" interface to the engine and an entirely new mind behind it (the "homeostat" mind): an original design, not a recreation of the C2 brain. Creatures learn what each action does to their needs, remember where food is, follow smells, learn a map of the world (lifts, boats, teleporters), hold their breath underwater, avoid dangerous drops and show their thoughts in picture bubbles. They are curious about what they are still learning, eat ahead of a long time without food, and find food less pleasant the fuller they are.
-* **Personality and language.** Seven inborn temperament traits, partly passed on from the parents and shifted by what happens to a creature while it is young, and an inherited seasonal rhythm (how strongly a creature fattens in autumn and saves itself in winter); relationships with friends, enemies and mates; creatures born knowing no words, who learn them from the learning machines, the hand, each other and the Stone of Knowledge, and babble in "Nornish" until they do.
+* **A new creature mind.** In stock openc2e, C2 creatures hatch but do almost nothing, because the original brain was never finished. Zeetures adds a small "creature mind" interface to the engine and an entirely new mind behind it (the "homeostat" mind): an original design, not a recreation of the C2 brain. Creatures learn what each action does to their needs, remember where food is, follow smells, learn a map of the world (lifts, boats, teleporters), hold their breath underwater, avoid dangerous drops and show their thoughts in picture bubbles. They learn by watching one another (family most, and the young most of all), go back to places that eased their pain, learn which fruit is a medicine, and bring things to the sick and the young. They are curious about what they are still learning, eat ahead of a long time without food, and find food less pleasant the fuller they are.
+* **Personality and language.** Seven inborn temperament traits and eight mind genes, inherited with mutation, so minds evolve over the generations; temperament also comes partly from a creature's own Creatures 2 genes, and is shifted by what happens to a creature while it is young, and an inherited seasonal rhythm (how strongly a creature fattens in autumn and saves itself in winter); relationships with friends, enemies and mates; creatures born knowing no words, who learn them from the learning machines, the hand, each other and the Stone of Knowledge, and babble in "Nornish" until they do.
 * **The life cycle.** Courtship, genetic crossover with mutation, pregnancy, eggs and hatching; aging, deaths with real causes, and grown creatures who tend babies, children and the senile. Breed import from zips, COBs, old installers and .exp files.
 * **Old custom genomes.** Genome packs made for the original game (genomes, eggs, exported creatures) hatch and work: their chemistry and instincts run as written, including those tied to the original brain's cells, and lobes they add to the brain (Nova Subterra's, Canny Norns', and others read from their wiring) get matching roles in the new mind, listed in `brain-profiles.txt`.
-* **Saving.** Multiple worlds with a chooser and autosave. Creatures, their minds, eggs, family records and every object in the world are saved.
+* **Made for your old add-ons.** Zeetures takes Creatures 2 breeds, genomes and COBs, and has been tested on dozens of packages: of the objects in one large archive of old COBs, 115 of 116 ran cleanly, each tried in the game; breed packs (Midsummer Norns by Martina Hilsenbeck (Nimue) and Amanora, genome by Katira; Goat Norns by Angela Allan; Kai Norns by Wafuru, genome by Lis Morris; Scorpio Norns by Wafuru, genome by Mannkind; Boney Grendels by Creature Labs, updated by Lis Morris; Frog Norns V3 by Alex (Norns of the Round Table), from Nornenmeister's V2) and custom genomes (Nova Subterra by Lummox JR, Canny Norns by Lis Morris and Chris Double) import and live.
+* **Illness and medicine.** Germs live in dark caves and rotting food, spread from room to room and creature to creature by sneezes and coughs, slowly make new strains, and are fought by antibodies; the ill are tended like the young. Heavy metals from radiation hurt and wear the body, the volcano's fruit clears them, and radiation lowers fertility and adds mutations before birth.
+* **Saving.** Multiple worlds with a chooser and autosave. Creatures, their minds, eggs, family records and every object in the world are saved. Worlds saved by earlier versions load in later ones, and a save that cannot be read is kept aside, never overwritten.
 * **The interface.** Every C2 kit rebuilt inside the game window (Health, Science, Breeder's, Owner's, Observation, Mind, Graveyard, Chronicles, Ecology, the Agent Injector and the Hatchery), status-bar notices, a Creature's View seen through the creature's own eye (its pupil, lids and coloring, centered on what it is looking at), a speed control, zoom from 50% to 300%, pinch to zoom, scroll bars and full screen.
-* **The world.** Dozens of map fixes, new routes and objects (seasonal fruit bushes, airlocks, walkways, a lab lift), ways out of the seas for swimmers (the submarine picks them up, the west sea's airlock draws in everyone near it, the sea jump pads throw them onto the shore), scents that drift between rooms, a nutrient cycle in the soil (the dead feed it, and it seeps downhill), outdoor light that follows day and night, and seasons that change creatures' appetite and metabolism, breeding, bonds, rest and play, shaped by their life stage.
+* **The world.** Dozens of map fixes, new routes and objects (seasonal fruit bushes, airlocks, walkways, a lab lift), ways out of the seas for swimmers (the submarine picks them up, the west sea's airlock draws in everyone near it, the sea jump pads throw them onto the shore), scents that drift between rooms, a nutrient cycle in the soil (the dead feed it, and it seeps downhill), air pressure that spreads between rooms and makes the wind, radiation that spreads from its sources, outdoor light that follows day and night, and seasons that change creatures' appetite and metabolism, breeding, bonds, rest and play, shaped by their life stage.
 * **Stability.** Fixes for an audio deadlock, several crashes and hangs, a game tick about seven times faster in a crowded world, and about half the CPU use of 0.8.0.
 
 ### Not done yet
 
-* Lifts, boats and the hand start each session as the world file has them.
-* Inherited mind traits and evolution.
 * Hunger in very crowded worlds (about 150 creatures in a world built for 16).
 * Windows and macOS are built every night but played far less than Linux.
 * Creatures 2 is the focus. Creatures 1, Creatures 3 and Docking Station run as they do in upstream openc2e, and have not been tested in Zeetures.
+
+### What's coming
+
+* **A Breed Builder Kit**, inside the game: make new breeds.
+* **A COB Builder Kit**, inside the game: make new objects.
+* **Full emotion sprites for the Creatures 1 breeds**, several of which have only a neutral face in Creatures 2.
 
 Every change, in technical detail, is in the [changelog](CHANGELOG.md).
 
