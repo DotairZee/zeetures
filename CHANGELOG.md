@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 604 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 605 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [Unreleased](#unreleased): 1 commits, 21 November 2026
 - [0.27.0](#version-0270): 4 commits, 21 November 2026
 - [0.26.2](#version-0262): 3 commits, 21 November 2026
 - [0.26.1](#version-0261): 2 commits, 21 November 2026
@@ -68,6 +69,21 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Unreleased
+
+Changes since the last version.
+
+### 21 November 2026
+
+#### check_saves.py compares creatures, eggs and kept objects exactly
+
+[`a5c8003c`](https://github.com/DotairZee/zeetures/commit/a5c8003c4f9eb1ce4eea49699664b9af0223090d)
+
+The first version counted kept objects as eggs and passed anything at or
+above the save's egg count, so a lost egg could have gone unseen (Home read
+"87 eggs (save lists 56)"). Home: 101 creatures, 56 eggs and 31 kept
+objects, each as its save lists; AtpTest and EatTest 8, 21 and 0.
 
 ## Version 0.27.0
 
