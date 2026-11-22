@@ -1365,6 +1365,17 @@ bool Engine::tick() {
 			engine.zoom = (float)atof(z);
 		// move the camera first whenever this snapshot is somewhere new
 		static int camx = INT_MIN, camy = INT_MIN;
+		// -2,-2: at a sleeping creature (found once, then stayed at)
+		if (sx == -2 && sy == -2)
+			for (auto& a : world.agents)
+				if (auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr; ca && ca->getCreature() && ca->getCreature()->isAlive() && ca->getCreature()->isAsleep()) {
+					for (auto& snap : snapshots)
+						if (std::get<0>(snap) == -2)
+							std::get<0>(snap) = std::max(0, (int)a->x - 375), std::get<1>(snap) = (int)a->y - 300;
+					break;
+				}
+		if (sx == -2 && sy == -2)
+			return false;
 		if (sx == -1 && sy == -1) // -1,-1: wherever the view is
 			camx = sx, camy = sy;
 		if (sx != camx || sy != camy) {
