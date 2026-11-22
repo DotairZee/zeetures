@@ -62,21 +62,12 @@ jobs:
     - name: "Create distribution artifact"
       if: runner.os == 'Windows'
       run: cmake --install build --config RelWithDebInfo --prefix "openc2e-${{ github.sha }}-${{ runner.os }}"
-    - name: "Create distribution artifact"
-      if: runner.os == 'Windows'
-      run: cmake --install build --config RelWithDebInfo --prefix "mngplayer2-${{ github.sha }}-${{ runner.os }}" --component mngplayer2
     - name: "Upload distribution artifact"
       if: runner.os == 'Windows'
       uses: actions/upload-artifact@v4
       with:
         name: openc2e-${{ github.sha }}-${{ runner.os }}
         path: openc2e-${{ github.sha }}-${{ runner.os }}
-    - name: "Upload distribution artifact"
-      if: runner.os == 'Windows'
-      uses: actions/upload-artifact@v4
-      with:
-        name: MNGPlayer2-${{ github.sha }}-${{ runner.os }}
-        path: mngplayer2-${{ github.sha }}-${{ runner.os }}
 
   # 32-bit builds (this fork, 2026-11-15): upstream builds only 64-bit, so
   # these catch code that assumes 64-bit pointers or longs
