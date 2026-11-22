@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 605 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 606 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 1 commits, 21 November 2026
+- [Unreleased](#unreleased): 2 commits, 21 November 2026
 - [0.27.0](#version-0270): 4 commits, 21 November 2026
 - [0.26.2](#version-0262): 3 commits, 21 November 2026
 - [0.26.1](#version-0261): 2 commits, 21 November 2026
@@ -75,6 +75,23 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 21 November 2026
+
+#### README: the Zeetures logo, what works now, what is coming, hours so far
+
+[`38c9e9af`](https://github.com/DotairZee/zeetures/commit/38c9e9afc74144f5b2a32655d6e213a6f0250bd0)
+
+- The logo at the top (art/logo/zeetures.png, our own drawing; Fredoka,
+  SIL OFL), with a marked place above it for the trailer.
+- What works, brought up to date: learning by watching, pain places and
+  learned medicine, inherited mind genes, illness, radiation and heavy
+  metals, air pressure and wind, old worlds kept; old add-ons tested, with
+  each pack's authors credited.
+- What's coming: the Breed Builder Kit, the COB Builder Kit, and full
+  emotion sprites for the Creatures 1 breeds.
+- Out of "Not done yet": inherited mind traits (0.20.0), and lifts and
+  boats starting as the world file has them (saved since 2026-11-19). The
+  count of additions, long out of date, is gone.
+- The hours spent so far, in total.
 
 #### check_saves.py compares creatures, eggs and kept objects exactly
 
