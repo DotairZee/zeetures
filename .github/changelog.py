@@ -316,6 +316,9 @@ VERSIONS = [
     ("0.29.2", "1a1f7ddd",
      "Smooth walking without pauses or sudden turns, a world opened at every launch if you like, and creatures put "
      "down on the volcano's catwalk."),
+    ("0.30.0", "6a7941e0",
+     "Creatures that answer when spoken to: they look at you, try your words, look at what you name, and weigh the "
+     "verbs they know; and Ctrl+S says your last words again."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

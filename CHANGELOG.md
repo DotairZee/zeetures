@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 634 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 635 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.30.0](#version-0300): 1 commits, 22 November 2026
 - [0.29.2](#version-0292): 1 commits, 22 November 2026
 - [0.29.1](#version-0291): 2 commits, 22 November 2026
 - [0.29.0](#version-0290): 1 commits, 22 November 2026
@@ -77,6 +78,30 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.30.0
+
+Creatures that answer when spoken to: they look at you, try your words, look at what you name, and weigh the verbs they know; and Ctrl+S says your last words again.
+
+### 22 November 2026
+
+#### Version 0.30.0: creatures that answer when spoken to
+
+[`6a7941e0`](https://github.com/DotairZee/zeetures/commit/6a7941e09d427f01a87b54c691ea9ddee59aa6ec)
+
+Spoken to (or tickled or slapped) by the hand, a creature looks round at it,
+and the nearest two try the last word back, in their own tongue until they
+have learned it (babies always). Called by name, only that one. A thing's
+name it knows turns its look to the thing. A verb it knows adds to that
+action's score through the genome's own obedience instincts (hearing a verb:
+do it, rewarded), which had lain dormant: by age (babies have six, children
+thirteen), temper, sociability and need, fading as it ages, and judged by
+praise: a pat soon after doing as it was told keeps it up, unpraised it
+fades, a slap for not listening makes it listen better. Saved minds read
+those instincts again.
+
+Ctrl+S says the last thing typed again, as in C2. OPENC2E_WATCH_OBEY, and
+the director's "say X Y TEXT".
 
 ## Version 0.29.2
 
