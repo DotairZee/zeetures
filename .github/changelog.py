@@ -279,6 +279,11 @@ VERSIONS = [
      "just their faces, and its list of breeds grows to match."),
     ("0.26.2", "e98cf280",
      "The program icon's egg is now tipped as if rolling, its heartbeat still level, to match the new Zeetures logo."),
+    ("0.27.0", "a204085e",
+     "Lighter and safer: the creature mind no longer writes a running commentary to the log (about 70 MB an hour "
+     "in a world of a hundred creatures; now a few kilobytes), each sound is decoded once instead of at every play, "
+     "and the game uses about 100 MB less memory. A save the game cannot read is kept aside rather than "
+     "overwritten. The downloads carry only the game: no developer tools, and 2.7 MB of unused pictures gone."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

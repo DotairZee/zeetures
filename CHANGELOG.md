@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 600 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 604 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.27.0](#version-0270): 4 commits, 21 November 2026
 - [0.26.2](#version-0262): 3 commits, 21 November 2026
 - [0.26.1](#version-0261): 2 commits, 21 November 2026
 - [0.26.0](#version-0260): 3 commits, 21 November 2026
@@ -67,6 +68,88 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.27.0
+
+Lighter and safer: the creature mind no longer writes a running commentary to the log (about 70 MB an hour in a world of a hundred creatures; now a few kilobytes), each sound is decoded once instead of at every play, and the game uses about 100 MB less memory. A save the game cannot read is kept aside rather than overwritten. The downloads carry only the game: no developer tools, and 2.7 MB of unused pictures gone.
+
+### 21 November 2026
+
+#### Version 0.27.0
+
+[`a204085e`](https://github.com/DotairZee/zeetures/commit/a204085ec592c498963de81d699c70ca0da0cc13)
+
+#### Saves: one that cannot be read is kept aside, never overwritten; a check for old saves
+
+[`9b89b7e0`](https://github.com/DotairZee/zeetures/commit/9b89b7e09626b037614704d540ae8fc37e5a043b)
+
+Saves have kept the same format line since 2026-11-07 and load keyed
+lines with defaults for what an older save lacks, so every version has
+loaded the worlds before it (Home has loaded on every one). But a save the
+loader could not read (an unknown format line) only printed a note and
+started the world from its world file, and the next autosave then
+replaced the old save for good; an exception part way through the load
+would have stopped the game.
+
+- WorldSave::SetAsideUnreadableSave moves such a save to
+  save.unreadable-DATE in the world folder and says so; LoadWorldState
+  calls it for an unknown format, and Engine catches a load that throws
+  part way and does the same (the world goes on from what loaded).
+- scripts/check_saves.py ENGINE C2_FOLDER WORLDS: copies each saved world
+  into a throwaway home folder, loads it without autosave, and compares
+  "Restored saved world" with the creatures and eggs its save lists. On
+  2026-11-21: AtpTest and EatTest (saved 2026-11-08) 8/8 creatures and 21
+  eggs each, Home 101/101; a save with its format line changed was set
+  aside as save.unreadable-DATE and the world started fresh.
+
+#### Downloads carry only the game; 14 bush pictures nothing plants removed
+
+[`ef2c09b4`](https://github.com/DotairZee/zeetures/commit/ef2c09b423cc0d301add9e34f3ac108abe363b62)
+
+- CMakeLists.txt: cmake --install puts in the game, its art and AUTHORS,
+  COPYING and README. The developer tools (cobdumper, mngdumper,
+  praybuilder, praydumper, spritedumper) and the CAOS reference
+  (caosdocs.html, commandinfo.json) are in the devtools component,
+  installed only with --component devtools; mngplayer2 only with its own.
+  The Windows zip and installer and the Linux tar.gz carried all of them.
+- art/sprites: the compact, slender and potted bush forms in looks no
+  place uses (zfcm zfcs zfcv zfcw zfnd zfnv zfnw zfod zfos zfow zfqd zfqm
+  zfqs zfqv; no version of the additions ever planted them) are gone: 2.7
+  MB of every download (art/sprites 8.7 MB to 6.0 MB). zfnm stays: an
+  earlier food.cos planted it, so older saves may hold one.
+  art/fruitbush.py makes only the forms in SMALL_FORMS_USED.
+
+#### A quieter, lighter game: the mind's commentary off, sounds decoded once
+
+[`12c1432d`](https://github.com/DotairZee/zeetures/commit/12c1432da42181adcc2e9eabb4c280029f5eb4eb)
+
+Measured on a copy of Home (101 creatures), the engine wrote 1.4 MB of
+output a minute, 94% of it the creature mind's running commentary: about
+six lines for every decision of every creature (Home's last log was
+280 MB). On Windows that went to zeetures-log.txt one disk write a line,
+with no cap.
+
+- HomeostatMind: the 28 commentary prints that had no switch (choices,
+  outcomes, stimuli, faces, what is learned, born, died) go through
+  MIND_LOG, on only with OPENC2E_MIND_LOG=1; the arguments are not worked
+  out when it is off. logChoice no longer copies and sorts the candidates,
+  and endEpisode no longer builds its log text, unless something prints
+  (the outcome the Mind Kit shows is kept as before). The WATCH_ switches
+  print their own lines as before.
+- Sounds: each sound file is decoded once and kept (up to 64 MB; a
+  Creatures 2 Sounds folder is about 25 MB) instead of reopened and decoded
+  at every play (in 150 s of Home the cough alone played 340 times). The
+  "Playing" line for each sound only with OPENC2E_WATCH_SOUND.
+- The render-target created/destroyed lines are gone; BIG MOVE keeps its
+  one line but walks the stack only with OPENC2E_WATCH_MOVES; "Creature
+  out of room system", "no down foot room" and the physics-bug lines print
+  at most 20 times a run.
+- Windows log: buffered (64 KB), written out once a second, and started
+  afresh if it passes 20 MB in a session.
+
+Output in 90 s of Home: 2.0 MB before, 23 KB after; memory 565 MB before,
+454 MB after. CPU unchanged (about 36% of a core at 1280x720 on the
+laptop): the commentary's cost was output, not reckoning.
 
 ## Version 0.26.2
 
