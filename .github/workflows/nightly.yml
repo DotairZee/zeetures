@@ -61,7 +61,7 @@ jobs:
           libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev
     - name: Build
       run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DOPENC2E_DEV_HOOKS=OFF -DOPENC2E_BUNDLED_SDL=ON
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DCMAKE_POLICY_DEFAULT_CMP0069=NEW -DOPENC2E_ASAN=OFF -DOPENC2E_DEV_HOOKS=OFF -DOPENC2E_BUNDLED_SDL=ON
         cmake --build build
     - name: Package
       run: |
@@ -102,7 +102,7 @@ jobs:
           libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev
     - name: Build
       run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DOPENC2E_DEV_HOOKS=OFF -DOPENC2E_BUNDLED_SDL=ON \
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DCMAKE_POLICY_DEFAULT_CMP0069=NEW -DOPENC2E_ASAN=OFF -DOPENC2E_DEV_HOOKS=OFF -DOPENC2E_BUNDLED_SDL=ON \
           -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 "-DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc"
         cmake --build build
     - name: Package

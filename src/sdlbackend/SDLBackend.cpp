@@ -851,7 +851,7 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 							std::string cmd = fmt::format("ffmpeg -y -loglevel error -f rawvideo -pix_fmt rgb24 -s {}x{} -r 30 -i - "
 														  "-c:v libx264 -preset veryfast -crf 14 -pix_fmt yuv420p \"{}\"",
 								rw, rh, out);
-							#ifdef _WIN32
+#ifdef _WIN32
 							rec = _popen(cmd.c_str(), "wb");
 #else
 							rec = popen(cmd.c_str(), "w");

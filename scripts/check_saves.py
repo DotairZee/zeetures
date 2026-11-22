@@ -44,7 +44,7 @@ def check(engine, c2, world_dir):
         worlds = os.path.join(home, ".openc2e", "Creatures 2", "Worlds")
         os.makedirs(worlds)
         shutil.copytree(world_dir, os.path.join(worlds, name))
-        env = dict(os.environ, HOME=home, SDL_VIDEO_DRIVER="offscreen", SDL_AUDIO_DRIVER="dummy", OPENC2E_NO_GENOME_TIDY="1")
+        env = dict(os.environ, HOME=home, SDL_VIDEO_DRIVER="offscreen", SDL_AUDIO_DRIVER="dummy", OPENC2E_NO_GENOME_TIDY="1", OPENC2E_NO_BREED_PACKS="1")
         # (read until the load is reported, then stop the engine: it would
         # otherwise run on; CHECK_SAVES_TIMEOUT seconds at most)
         limit = float(os.environ.get("CHECK_SAVES_TIMEOUT", "300"))
