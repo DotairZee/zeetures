@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 606 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 607 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 2 commits, 21 November 2026
+- [Unreleased](#unreleased): 3 commits, 21 November 2026
 - [0.27.0](#version-0270): 4 commits, 21 November 2026
 - [0.26.2](#version-0262): 3 commits, 21 November 2026
 - [0.26.1](#version-0261): 2 commits, 21 November 2026
@@ -76,6 +76,10 @@ Changes since the last version.
 
 ### 21 November 2026
 
+#### README: the logo at the left
+
+[`a8757e57`](https://github.com/DotairZee/zeetures/commit/a8757e579c07478777df2e3e88816a39f6ebdc3d)
+
 #### README: the Zeetures logo, what works now, what is coming, hours so far
 
 [`38c9e9af`](https://github.com/DotairZee/zeetures/commit/38c9e9afc74144f5b2a32655d6e213a6f0250bd0)
@@ -104,7 +108,7 @@ objects, each as its save lists; AtpTest and EatTest 8, 21 and 0.
 
 ## Version 0.27.0
 
-Lighter and safer: the creature mind no longer writes a running commentary to the log (about 70 MB an hour in a world of a hundred creatures; now a few kilobytes), each sound is decoded once instead of at every play, and the game uses about 100 MB less memory. A save the game cannot read is kept aside rather than overwritten. The downloads carry only the game: no developer tools, and 2.7 MB of unused pictures gone.
+Lighter and safer: the creature mind no longer writes a running commentary to the log (about 70 MB an hour in a world of a hundred creatures; now a few kilobytes), and each sound is decoded once instead of at every play. (An earlier version of this note also claimed about 100 MB less memory; measured again, the difference was the moment it was measured, not the change.) A save the game cannot read is kept aside rather than overwritten. The downloads carry only the game: no developer tools, and 2.7 MB of unused pictures gone.
 
 ### 21 November 2026
 
