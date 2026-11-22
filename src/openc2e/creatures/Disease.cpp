@@ -17,6 +17,7 @@
  */
 
 #include "Disease.h"
+#include "common/devenv.h"
 
 #include "Agent.h"
 #include "Engine.h"
@@ -55,16 +56,17 @@ const unsigned int longestIllness = 36000; // ticks (an hour): over by then what
 const int antigenDose = 3, toxinDose = 16; // a step, while ill (histamine A must pass 58 to set off a sneeze: 12 never did)
 const int mostAtOnce = 2; // illnesses one creature can have at once
 const float sneezeReach = 160.0f, sneezeHeight = 90.0f, sneezeCatch = 0.015f;
+const float rottenCatch = 0.3f; // chance of catching a rot strain from eating one rotten fruit, without antibodies
 const unsigned int newStrainEvery = 30000; // ticks between chances of a new strain
 const float newStrainChance = 0.3f;
 const size_t mostStrains = 8, fewestStrains = 4;
 
 bool off() {
-	static const bool o = getenv("OPENC2E_NO_DISEASE") != nullptr;
+	static const bool o = devenv("OPENC2E_NO_DISEASE") != nullptr;
 	return o;
 }
 bool watching() {
-	static const bool w = getenv("OPENC2E_WATCH_DISEASE") != nullptr;
+	static const bool w = devenv("OPENC2E_WATCH_DISEASE") != nullptr;
 	return w;
 }
 
@@ -368,6 +370,23 @@ void tick() {
 		it = (!alive.count(it->first) || it->second.empty()) ? s_ill.erase(it) : std::next(it);
 	for (auto it = s_carrier.begin(); it != s_carrier.end();)
 		it = !alive.count(it->first) ? s_carrier.erase(it) : std::next(it);
+}
+
+void ateRotten(Agent* eater) {
+	if (off() || engine.version != 2 || !eater || !world.history || !world.map)
+		return;
+	for (auto& b : livingCreatures()) {
+		if (b.agent != eater)
+			continue;
+		for (auto& s : s_strains) {
+			if (s.home != 1 || !canCatch(b.c, b.agent, b.moniker, s))
+				continue;
+			float ab = (float)b.c->getChemical((unsigned char)antibodyChem(s));
+			if (rand_float(0, 1) < rottenCatch * (1.0f - ab / (float)immuneAntibody))
+				catchIt(b, s, "from rotten fruit");
+		}
+		return;
+	}
 }
 
 void sneeze(Agent* sneezer) {

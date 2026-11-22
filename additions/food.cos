@@ -4,9 +4,9 @@
 * patches that keep regrowing the game's berries; none of his files are
 * used. Sprites zfbs (the bush, one picture per season) and zfrt (four
 * fruits, each bud, half-grown, ripe, overripe, then ripe and overripe
-* lying on the ground) are drawn by tools/sprites/fruitbush.py (the bush in four looks: zfbs, zfbm,
+* lying on the ground) are drawn by art/fruitbush.py (the bush in four looks: zfbs, zfbm,
 * zfbv, zfbw), and its sea look (zfbk, a kelp clump) and sea fruits
-* (zfrk) by tools/sprites/seaplant.py.
+* (zfrk) by art/seaplant.py.
 * Run by openc2e after the world loads (Additions folder); everything here
 * is made anew each load, so the script is safe to repeat.
 
@@ -163,8 +163,8 @@ endm
 * A fruit's life (pictures: 0 bud, 1 half-grown, 2 ripe, 3 overripe; 4
 * and 5 are ripe and overripe lying on the ground, see event 6 below):
 * it swells on the bush, drops when ripe, goes overripe on the ground, and
-* rots away; now and then a rotting fruit sprouts a seedling bush where it
-* lay, if no bush stands within 200 px and there are fewer than 36 (16
+* rots (2 25 149, below); now and then a rotted fruit sprouts a seedling bush
+* where it lay, if no bush stands within 200 px and there are fewer than 36 (16
 * until 2026-11-16, when all 15 left no room to spread).
 scrp 2 25 141 9
   doif pose eq 0
@@ -179,132 +179,20 @@ scrp 2 25 141 9
       doif pose eq 2 pose 3 tick 3000 setv var9 1 endi
       doif pose eq 4 pose 5 tick 3000 setv var9 1 endi
       doif var9 eq 0
-        rndv var0 0 4
-        doif var0 eq 0
-          setv var1 0 enum 2 4 141 addv var1 1 next
-          setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
-          doif var1 lt 36
-            * (nor in the dead-end pocket at the east end of the lava
-            * corridor, room 167: a bush there drew hungry creatures into a
-            * corner with one way out; owner, 2026-11-12)
-            doif posl gt 8030
-              doif posb gt 2100
-                doif posb lt 2260 setv var2 1 endi
-              endi
-            endi
-            * (never on a built platform: decks and ledges get potted bushes only)
-            doif posl gt 7100
-              doif posl lt 7700
-                doif posb gt 850
-                  doif posb lt 915 setv var2 1 endi
-                endi
-              endi
-            endi
-            * (nor in the grendel egg chamber, nor on the long platform by
-            * the upper-east lift; owner, 2026-11-09)
-            doif posl gt 6900
-              doif posl lt 7230
-                doif posb gt 1150
-                  doif posb lt 1360 setv var2 1 endi
-                endi
-              endi
-            endi
-            doif posl gt 7220
-              doif posl lt 7940
-                doif posb gt 1290
-                  doif posb lt 1365 setv var2 1 endi
-                endi
-              endi
-            endi
-            doif posl gt 4800
-              doif posl lt 5700
-                doif posb gt 2230
-                  doif posb lt 2310 setv var2 1 endi
-                endi
-              endi
-            endi
-            doif posl gt 7950
-              doif posl lt 8400
-                doif posb gt 1250
-                  doif posb lt 1310 setv var2 1 endi
-                endi
-                doif posb gt 1790
-                  doif posb lt 1850 setv var2 1 endi
-                endi
-              endi
-            endi
-            * (nor on the water's surface: a fruit floating on the sea, with
-            * a sea room's top near its base (the room starts about 30 px
-            * above the waterline drawn), sprouts nothing; owner,
-            * 2026-11-18, a bush had grown on the sea by the boats)
-            setv var7 posl addv var7 posr divv var7 2
-            setv var6 0
-            reps 400
-              doif room var6 4 eq 2
-                doif room var6 0 le var7
-                  doif room var6 2 ge var7
-                    setv var8 room var6 1 subv var8 posb
-                    doif var8 gt -45
-                      doif var8 lt 12 setv var2 1 endi
-                    endi
-                  endi
-                endi
-              endi
-              addv var6 1
-            repe
-            * (nor in a lift's shaft, between 250 px above its top stop and
-            * its bottom stop, judged by the fruit's middle: a bush grew between
-            * the cage lift's cables at its middle stop, in the cabin's way;
-            * owner, 2026-11-19. The lifts' spans and stops are the world's.)
-            setv var3 posl addv var3 posr divv var3 2
-            doif var3 ge 1534 doif var3 le 1637 doif posb ge 89 doif posb le 971 setv var2 1 endi endi endi endi
-            doif var3 ge 1546 doif var3 le 1649 doif posb ge 1245 doif posb le 2153 setv var2 1 endi endi endi endi
-            doif var3 ge 2334 doif var3 le 2458 doif posb ge 715 doif posb le 1705 setv var2 1 endi endi endi endi
-            doif var3 ge 3188 doif var3 le 3312 doif posb ge 1034 doif posb le 2000 setv var2 1 endi endi endi endi
-            doif var3 ge 3526 doif var3 le 3650 doif posb ge 1294 doif posb le 2265 setv var2 1 endi endi endi endi
-            doif var3 ge 4172 doif var3 le 4275 doif posb ge 342 doif posb le 1165 setv var2 1 endi endi endi endi
-            doif var3 ge 4549 doif var3 le 4673 doif posb ge 1826 doif posb le 2259 setv var2 1 endi endi endi endi
-            doif var3 ge 5116 doif var3 le 5240 doif posb ge 1364 doif posb le 1862 setv var2 1 endi endi endi endi
-            doif var3 ge 5705 doif var3 le 5829 doif posb ge 1607 doif posb le 2259 setv var2 1 endi endi endi endi
-            doif var3 ge 5759 doif var3 le 5862 doif posb ge 211 doif posb le 1179 setv var2 1 endi endi endi endi
-            doif var3 ge 2220 doif var3 le 2324 doif posb ge 1898 doif posb le 2325 setv var2 1 endi endi endi endi
-            doif var3 ge 302 doif var3 le 406 doif posb ge 1264 doif posb le 1845 setv var2 1 endi endi endi endi
-            doif var3 ge 60 doif var3 le 164 doif posb ge 784 doif posb le 1507 setv var2 1 endi endi endi endi
-            doif var3 ge 7525 doif var3 le 7629 doif posb ge 442 doif posb le 2156 setv var2 1 endi endi endi endi
-            doif var3 ge 8118 doif var3 le 8222 doif posb ge 1053 doif posb le 1849 setv var2 1 endi endi endi endi
-            doif var3 ge 1320 doif var3 le 1479 doif posb ge 1049 doif posb le 1845 setv var2 1 endi endi endi endi
-            doif var2 eq 0
-              setv var3 posl subv var3 70 setv var4 posb subv var4 107
-              setv var5 ov02
-              doif posl gt 6400
-                doif posb gt 1780 setv var5 2 endi
-              endi
-              * (in the desert above the incubator: the desert look)
-              doif posl gt 4300
-                doif posl lt 5735
-                  doif posb lt 650 setv var5 4 endi
-                endi
-              endi
-              * (under water: kelp; a sea fruit ashore: mossy)
-              doif rtyp eq 2
-                setv var5 5
-              else
-                doif var5 eq 5 setv var5 0 endi
-              endi
-              inst
-              doif var5 eq 0 new: simp zfbs 12 0 -10 0 endi
-              doif var5 eq 1 new: simp zfbm 12 0 -10 0 endi
-              doif var5 eq 2 new: simp zfbv 12 0 -10 0 endi
-              doif var5 eq 3 new: simp zfbw 12 0 -10 0 endi
-              doif var5 eq 4 new: simp zfbd 12 0 -10 0 endi
-              doif var5 eq 5 new: simp zfbk 12 0 -10 0 endi
-              setv cls2 2 4 141 setv attr 0 setv rnge 150
-              setv ov00 0 setv ov01 0 setv ov02 var5 setv ov03 2 setv ov04 -10 setv ov99 7461
-              mvto var3 var4 pose sean tick 250
-              slow
-            endi
-          endi
-        endi
+        * rotten: another object takes its place (the new picture's bottom
+        * where the old one's was)
+        setv var1 0
+        doif ov02 eq 5 addv var1 4 endi
+        mulv var1 2
+        setv var2 posl setv var3 post setv var4 ov02
+        inst new: simp zfrr 2 var1 1400 0
+        setv cls2 2 25 149
+        setv attr 195 bhvr 0 64
+        setv accg 3 setv rest 30
+        setv ov00 141 setv ov03 var4 setv ov01 0
+        mvto var2 var3 setv grav 1
+        tick 900
+        slow
         kill ownr
       endi
     endi
@@ -323,132 +211,20 @@ scrp 2 25 142 9
       doif pose eq 2 pose 3 tick 3000 setv var9 1 endi
       doif pose eq 4 pose 5 tick 3000 setv var9 1 endi
       doif var9 eq 0
-        rndv var0 0 4
-        doif var0 eq 0
-          setv var1 0 enum 2 4 141 addv var1 1 next
-          setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
-          doif var1 lt 36
-            * (nor in the dead-end pocket at the east end of the lava
-            * corridor, room 167: a bush there drew hungry creatures into a
-            * corner with one way out; owner, 2026-11-12)
-            doif posl gt 8030
-              doif posb gt 2100
-                doif posb lt 2260 setv var2 1 endi
-              endi
-            endi
-            * (never on a built platform: decks and ledges get potted bushes only)
-            doif posl gt 7100
-              doif posl lt 7700
-                doif posb gt 850
-                  doif posb lt 915 setv var2 1 endi
-                endi
-              endi
-            endi
-            * (nor in the grendel egg chamber, nor on the long platform by
-            * the upper-east lift; owner, 2026-11-09)
-            doif posl gt 6900
-              doif posl lt 7230
-                doif posb gt 1150
-                  doif posb lt 1360 setv var2 1 endi
-                endi
-              endi
-            endi
-            doif posl gt 7220
-              doif posl lt 7940
-                doif posb gt 1290
-                  doif posb lt 1365 setv var2 1 endi
-                endi
-              endi
-            endi
-            doif posl gt 4800
-              doif posl lt 5700
-                doif posb gt 2230
-                  doif posb lt 2310 setv var2 1 endi
-                endi
-              endi
-            endi
-            doif posl gt 7950
-              doif posl lt 8400
-                doif posb gt 1250
-                  doif posb lt 1310 setv var2 1 endi
-                endi
-                doif posb gt 1790
-                  doif posb lt 1850 setv var2 1 endi
-                endi
-              endi
-            endi
-            * (nor on the water's surface: a fruit floating on the sea, with
-            * a sea room's top near its base (the room starts about 30 px
-            * above the waterline drawn), sprouts nothing; owner,
-            * 2026-11-18, a bush had grown on the sea by the boats)
-            setv var7 posl addv var7 posr divv var7 2
-            setv var6 0
-            reps 400
-              doif room var6 4 eq 2
-                doif room var6 0 le var7
-                  doif room var6 2 ge var7
-                    setv var8 room var6 1 subv var8 posb
-                    doif var8 gt -45
-                      doif var8 lt 12 setv var2 1 endi
-                    endi
-                  endi
-                endi
-              endi
-              addv var6 1
-            repe
-            * (nor in a lift's shaft, between 250 px above its top stop and
-            * its bottom stop, judged by the fruit's middle: a bush grew between
-            * the cage lift's cables at its middle stop, in the cabin's way;
-            * owner, 2026-11-19. The lifts' spans and stops are the world's.)
-            setv var3 posl addv var3 posr divv var3 2
-            doif var3 ge 1534 doif var3 le 1637 doif posb ge 89 doif posb le 971 setv var2 1 endi endi endi endi
-            doif var3 ge 1546 doif var3 le 1649 doif posb ge 1245 doif posb le 2153 setv var2 1 endi endi endi endi
-            doif var3 ge 2334 doif var3 le 2458 doif posb ge 715 doif posb le 1705 setv var2 1 endi endi endi endi
-            doif var3 ge 3188 doif var3 le 3312 doif posb ge 1034 doif posb le 2000 setv var2 1 endi endi endi endi
-            doif var3 ge 3526 doif var3 le 3650 doif posb ge 1294 doif posb le 2265 setv var2 1 endi endi endi endi
-            doif var3 ge 4172 doif var3 le 4275 doif posb ge 342 doif posb le 1165 setv var2 1 endi endi endi endi
-            doif var3 ge 4549 doif var3 le 4673 doif posb ge 1826 doif posb le 2259 setv var2 1 endi endi endi endi
-            doif var3 ge 5116 doif var3 le 5240 doif posb ge 1364 doif posb le 1862 setv var2 1 endi endi endi endi
-            doif var3 ge 5705 doif var3 le 5829 doif posb ge 1607 doif posb le 2259 setv var2 1 endi endi endi endi
-            doif var3 ge 5759 doif var3 le 5862 doif posb ge 211 doif posb le 1179 setv var2 1 endi endi endi endi
-            doif var3 ge 2220 doif var3 le 2324 doif posb ge 1898 doif posb le 2325 setv var2 1 endi endi endi endi
-            doif var3 ge 302 doif var3 le 406 doif posb ge 1264 doif posb le 1845 setv var2 1 endi endi endi endi
-            doif var3 ge 60 doif var3 le 164 doif posb ge 784 doif posb le 1507 setv var2 1 endi endi endi endi
-            doif var3 ge 7525 doif var3 le 7629 doif posb ge 442 doif posb le 2156 setv var2 1 endi endi endi endi
-            doif var3 ge 8118 doif var3 le 8222 doif posb ge 1053 doif posb le 1849 setv var2 1 endi endi endi endi
-            doif var3 ge 1320 doif var3 le 1479 doif posb ge 1049 doif posb le 1845 setv var2 1 endi endi endi endi
-            doif var2 eq 0
-              setv var3 posl subv var3 70 setv var4 posb subv var4 107
-              setv var5 ov02
-              doif posl gt 6400
-                doif posb gt 1780 setv var5 2 endi
-              endi
-              * (in the desert above the incubator: the desert look)
-              doif posl gt 4300
-                doif posl lt 5735
-                  doif posb lt 650 setv var5 4 endi
-                endi
-              endi
-              * (under water: kelp; a sea fruit ashore: mossy)
-              doif rtyp eq 2
-                setv var5 5
-              else
-                doif var5 eq 5 setv var5 0 endi
-              endi
-              inst
-              doif var5 eq 0 new: simp zfbs 12 0 -10 0 endi
-              doif var5 eq 1 new: simp zfbm 12 0 -10 0 endi
-              doif var5 eq 2 new: simp zfbv 12 0 -10 0 endi
-              doif var5 eq 3 new: simp zfbw 12 0 -10 0 endi
-              doif var5 eq 4 new: simp zfbd 12 0 -10 0 endi
-              doif var5 eq 5 new: simp zfbk 12 0 -10 0 endi
-              setv cls2 2 4 141 setv attr 0 setv rnge 150
-              setv ov00 0 setv ov01 0 setv ov02 var5 setv ov03 2 setv ov04 -10 setv ov99 7461
-              mvto var3 var4 pose sean tick 250
-              slow
-            endi
-          endi
-        endi
+        * rotten: another object takes its place (the new picture's bottom
+        * where the old one's was)
+        setv var1 1
+        doif ov02 eq 5 addv var1 4 endi
+        mulv var1 2
+        setv var2 posl setv var3 post setv var4 ov02
+        inst new: simp zfrr 2 var1 1400 0
+        setv cls2 2 25 149
+        setv attr 195 bhvr 0 64
+        setv accg 3 setv rest 30
+        setv ov00 142 setv ov03 var4 setv ov01 0
+        mvto var2 var3 setv grav 1
+        tick 900
+        slow
         kill ownr
       endi
     endi
@@ -467,132 +243,20 @@ scrp 2 25 143 9
       doif pose eq 2 pose 3 tick 3000 setv var9 1 endi
       doif pose eq 4 pose 5 tick 3000 setv var9 1 endi
       doif var9 eq 0
-        rndv var0 0 4
-        doif var0 eq 0
-          setv var1 0 enum 2 4 141 addv var1 1 next
-          setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
-          doif var1 lt 36
-            * (nor in the dead-end pocket at the east end of the lava
-            * corridor, room 167: a bush there drew hungry creatures into a
-            * corner with one way out; owner, 2026-11-12)
-            doif posl gt 8030
-              doif posb gt 2100
-                doif posb lt 2260 setv var2 1 endi
-              endi
-            endi
-            * (never on a built platform: decks and ledges get potted bushes only)
-            doif posl gt 7100
-              doif posl lt 7700
-                doif posb gt 850
-                  doif posb lt 915 setv var2 1 endi
-                endi
-              endi
-            endi
-            * (nor in the grendel egg chamber, nor on the long platform by
-            * the upper-east lift; owner, 2026-11-09)
-            doif posl gt 6900
-              doif posl lt 7230
-                doif posb gt 1150
-                  doif posb lt 1360 setv var2 1 endi
-                endi
-              endi
-            endi
-            doif posl gt 7220
-              doif posl lt 7940
-                doif posb gt 1290
-                  doif posb lt 1365 setv var2 1 endi
-                endi
-              endi
-            endi
-            doif posl gt 4800
-              doif posl lt 5700
-                doif posb gt 2230
-                  doif posb lt 2310 setv var2 1 endi
-                endi
-              endi
-            endi
-            doif posl gt 7950
-              doif posl lt 8400
-                doif posb gt 1250
-                  doif posb lt 1310 setv var2 1 endi
-                endi
-                doif posb gt 1790
-                  doif posb lt 1850 setv var2 1 endi
-                endi
-              endi
-            endi
-            * (nor on the water's surface: a fruit floating on the sea, with
-            * a sea room's top near its base (the room starts about 30 px
-            * above the waterline drawn), sprouts nothing; owner,
-            * 2026-11-18, a bush had grown on the sea by the boats)
-            setv var7 posl addv var7 posr divv var7 2
-            setv var6 0
-            reps 400
-              doif room var6 4 eq 2
-                doif room var6 0 le var7
-                  doif room var6 2 ge var7
-                    setv var8 room var6 1 subv var8 posb
-                    doif var8 gt -45
-                      doif var8 lt 12 setv var2 1 endi
-                    endi
-                  endi
-                endi
-              endi
-              addv var6 1
-            repe
-            * (nor in a lift's shaft, between 250 px above its top stop and
-            * its bottom stop, judged by the fruit's middle: a bush grew between
-            * the cage lift's cables at its middle stop, in the cabin's way;
-            * owner, 2026-11-19. The lifts' spans and stops are the world's.)
-            setv var3 posl addv var3 posr divv var3 2
-            doif var3 ge 1534 doif var3 le 1637 doif posb ge 89 doif posb le 971 setv var2 1 endi endi endi endi
-            doif var3 ge 1546 doif var3 le 1649 doif posb ge 1245 doif posb le 2153 setv var2 1 endi endi endi endi
-            doif var3 ge 2334 doif var3 le 2458 doif posb ge 715 doif posb le 1705 setv var2 1 endi endi endi endi
-            doif var3 ge 3188 doif var3 le 3312 doif posb ge 1034 doif posb le 2000 setv var2 1 endi endi endi endi
-            doif var3 ge 3526 doif var3 le 3650 doif posb ge 1294 doif posb le 2265 setv var2 1 endi endi endi endi
-            doif var3 ge 4172 doif var3 le 4275 doif posb ge 342 doif posb le 1165 setv var2 1 endi endi endi endi
-            doif var3 ge 4549 doif var3 le 4673 doif posb ge 1826 doif posb le 2259 setv var2 1 endi endi endi endi
-            doif var3 ge 5116 doif var3 le 5240 doif posb ge 1364 doif posb le 1862 setv var2 1 endi endi endi endi
-            doif var3 ge 5705 doif var3 le 5829 doif posb ge 1607 doif posb le 2259 setv var2 1 endi endi endi endi
-            doif var3 ge 5759 doif var3 le 5862 doif posb ge 211 doif posb le 1179 setv var2 1 endi endi endi endi
-            doif var3 ge 2220 doif var3 le 2324 doif posb ge 1898 doif posb le 2325 setv var2 1 endi endi endi endi
-            doif var3 ge 302 doif var3 le 406 doif posb ge 1264 doif posb le 1845 setv var2 1 endi endi endi endi
-            doif var3 ge 60 doif var3 le 164 doif posb ge 784 doif posb le 1507 setv var2 1 endi endi endi endi
-            doif var3 ge 7525 doif var3 le 7629 doif posb ge 442 doif posb le 2156 setv var2 1 endi endi endi endi
-            doif var3 ge 8118 doif var3 le 8222 doif posb ge 1053 doif posb le 1849 setv var2 1 endi endi endi endi
-            doif var3 ge 1320 doif var3 le 1479 doif posb ge 1049 doif posb le 1845 setv var2 1 endi endi endi endi
-            doif var2 eq 0
-              setv var3 posl subv var3 70 setv var4 posb subv var4 107
-              setv var5 ov02
-              doif posl gt 6400
-                doif posb gt 1780 setv var5 2 endi
-              endi
-              * (in the desert above the incubator: the desert look)
-              doif posl gt 4300
-                doif posl lt 5735
-                  doif posb lt 650 setv var5 4 endi
-                endi
-              endi
-              * (under water: kelp; a sea fruit ashore: mossy)
-              doif rtyp eq 2
-                setv var5 5
-              else
-                doif var5 eq 5 setv var5 0 endi
-              endi
-              inst
-              doif var5 eq 0 new: simp zfbs 12 0 -10 0 endi
-              doif var5 eq 1 new: simp zfbm 12 0 -10 0 endi
-              doif var5 eq 2 new: simp zfbv 12 0 -10 0 endi
-              doif var5 eq 3 new: simp zfbw 12 0 -10 0 endi
-              doif var5 eq 4 new: simp zfbd 12 0 -10 0 endi
-              doif var5 eq 5 new: simp zfbk 12 0 -10 0 endi
-              setv cls2 2 4 141 setv attr 0 setv rnge 150
-              setv ov00 0 setv ov01 0 setv ov02 var5 setv ov03 2 setv ov04 -10 setv ov99 7461
-              mvto var3 var4 pose sean tick 250
-              slow
-            endi
-          endi
-        endi
+        * rotten: another object takes its place (the new picture's bottom
+        * where the old one's was)
+        setv var1 2
+        doif ov02 eq 5 addv var1 4 endi
+        mulv var1 2
+        setv var2 posl setv var3 post setv var4 ov02
+        inst new: simp zfrr 2 var1 1400 0
+        setv cls2 2 25 149
+        setv attr 195 bhvr 0 64
+        setv accg 3 setv rest 30
+        setv ov00 143 setv ov03 var4 setv ov01 0
+        mvto var2 var3 setv grav 1
+        tick 900
+        slow
         kill ownr
       endi
     endi
@@ -611,136 +275,177 @@ scrp 2 25 144 9
       doif pose eq 2 pose 3 tick 3000 setv var9 1 endi
       doif pose eq 4 pose 5 tick 3000 setv var9 1 endi
       doif var9 eq 0
-        rndv var0 0 4
-        doif var0 eq 0
-          setv var1 0 enum 2 4 141 addv var1 1 next
-          setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
-          doif var1 lt 36
-            * (nor in the dead-end pocket at the east end of the lava
-            * corridor, room 167: a bush there drew hungry creatures into a
-            * corner with one way out; owner, 2026-11-12)
-            doif posl gt 8030
-              doif posb gt 2100
-                doif posb lt 2260 setv var2 1 endi
-              endi
-            endi
-            * (never on a built platform: decks and ledges get potted bushes only)
-            doif posl gt 7100
-              doif posl lt 7700
-                doif posb gt 850
-                  doif posb lt 915 setv var2 1 endi
-                endi
-              endi
-            endi
-            * (nor in the grendel egg chamber, nor on the long platform by
-            * the upper-east lift; owner, 2026-11-09)
-            doif posl gt 6900
-              doif posl lt 7230
-                doif posb gt 1150
-                  doif posb lt 1360 setv var2 1 endi
-                endi
-              endi
-            endi
-            doif posl gt 7220
-              doif posl lt 7940
-                doif posb gt 1290
-                  doif posb lt 1365 setv var2 1 endi
-                endi
-              endi
-            endi
-            doif posl gt 4800
-              doif posl lt 5700
-                doif posb gt 2230
-                  doif posb lt 2310 setv var2 1 endi
-                endi
-              endi
-            endi
-            doif posl gt 7950
-              doif posl lt 8400
-                doif posb gt 1250
-                  doif posb lt 1310 setv var2 1 endi
-                endi
-                doif posb gt 1790
-                  doif posb lt 1850 setv var2 1 endi
-                endi
-              endi
-            endi
-            * (nor on the water's surface: a fruit floating on the sea, with
-            * a sea room's top near its base (the room starts about 30 px
-            * above the waterline drawn), sprouts nothing; owner,
-            * 2026-11-18, a bush had grown on the sea by the boats)
-            setv var7 posl addv var7 posr divv var7 2
-            setv var6 0
-            reps 400
-              doif room var6 4 eq 2
-                doif room var6 0 le var7
-                  doif room var6 2 ge var7
-                    setv var8 room var6 1 subv var8 posb
-                    doif var8 gt -45
-                      doif var8 lt 12 setv var2 1 endi
-                    endi
-                  endi
-                endi
-              endi
-              addv var6 1
-            repe
-            * (nor in a lift's shaft, between 250 px above its top stop and
-            * its bottom stop, judged by the fruit's middle: a bush grew between
-            * the cage lift's cables at its middle stop, in the cabin's way;
-            * owner, 2026-11-19. The lifts' spans and stops are the world's.)
-            setv var3 posl addv var3 posr divv var3 2
-            doif var3 ge 1534 doif var3 le 1637 doif posb ge 89 doif posb le 971 setv var2 1 endi endi endi endi
-            doif var3 ge 1546 doif var3 le 1649 doif posb ge 1245 doif posb le 2153 setv var2 1 endi endi endi endi
-            doif var3 ge 2334 doif var3 le 2458 doif posb ge 715 doif posb le 1705 setv var2 1 endi endi endi endi
-            doif var3 ge 3188 doif var3 le 3312 doif posb ge 1034 doif posb le 2000 setv var2 1 endi endi endi endi
-            doif var3 ge 3526 doif var3 le 3650 doif posb ge 1294 doif posb le 2265 setv var2 1 endi endi endi endi
-            doif var3 ge 4172 doif var3 le 4275 doif posb ge 342 doif posb le 1165 setv var2 1 endi endi endi endi
-            doif var3 ge 4549 doif var3 le 4673 doif posb ge 1826 doif posb le 2259 setv var2 1 endi endi endi endi
-            doif var3 ge 5116 doif var3 le 5240 doif posb ge 1364 doif posb le 1862 setv var2 1 endi endi endi endi
-            doif var3 ge 5705 doif var3 le 5829 doif posb ge 1607 doif posb le 2259 setv var2 1 endi endi endi endi
-            doif var3 ge 5759 doif var3 le 5862 doif posb ge 211 doif posb le 1179 setv var2 1 endi endi endi endi
-            doif var3 ge 2220 doif var3 le 2324 doif posb ge 1898 doif posb le 2325 setv var2 1 endi endi endi endi
-            doif var3 ge 302 doif var3 le 406 doif posb ge 1264 doif posb le 1845 setv var2 1 endi endi endi endi
-            doif var3 ge 60 doif var3 le 164 doif posb ge 784 doif posb le 1507 setv var2 1 endi endi endi endi
-            doif var3 ge 7525 doif var3 le 7629 doif posb ge 442 doif posb le 2156 setv var2 1 endi endi endi endi
-            doif var3 ge 8118 doif var3 le 8222 doif posb ge 1053 doif posb le 1849 setv var2 1 endi endi endi endi
-            doif var3 ge 1320 doif var3 le 1479 doif posb ge 1049 doif posb le 1845 setv var2 1 endi endi endi endi
-            doif var2 eq 0
-              setv var3 posl subv var3 70 setv var4 posb subv var4 107
-              setv var5 ov02
-              doif posl gt 6400
-                doif posb gt 1780 setv var5 2 endi
-              endi
-              * (in the desert above the incubator: the desert look)
-              doif posl gt 4300
-                doif posl lt 5735
-                  doif posb lt 650 setv var5 4 endi
-                endi
-              endi
-              * (under water: kelp; a sea fruit ashore: mossy)
-              doif rtyp eq 2
-                setv var5 5
-              else
-                doif var5 eq 5 setv var5 0 endi
-              endi
-              inst
-              doif var5 eq 0 new: simp zfbs 12 0 -10 0 endi
-              doif var5 eq 1 new: simp zfbm 12 0 -10 0 endi
-              doif var5 eq 2 new: simp zfbv 12 0 -10 0 endi
-              doif var5 eq 3 new: simp zfbw 12 0 -10 0 endi
-              doif var5 eq 4 new: simp zfbd 12 0 -10 0 endi
-              doif var5 eq 5 new: simp zfbk 12 0 -10 0 endi
-              setv cls2 2 4 141 setv attr 0 setv rnge 150
-              setv ov00 0 setv ov01 0 setv ov02 var5 setv ov03 2 setv ov04 -10 setv ov99 7461
-              mvto var3 var4 pose sean tick 250
-              slow
-            endi
-          endi
-        endi
+        * rotten: another object takes its place (the new picture's bottom
+        * where the old one's was)
+        setv var1 3
+        doif ov02 eq 5 addv var1 4 endi
+        mulv var1 2
+        setv var2 posl setv var3 post setv var4 ov02
+        inst new: simp zfrr 2 var1 1400 0
+        setv cls2 2 25 149
+        setv attr 195 bhvr 0 64
+        setv accg 3 setv rest 30
+        setv ov00 144 setv ov03 var4 setv ov01 0
+        mvto var2 var3 setv grav 1
+        tick 900
+        slow
         kill ownr
       endi
     endi
   endi
+endm
+
+* Rotten fruit (2 25 149; owner, 2026-11-21: "given that rotten fruit
+* spreads disease, should we consider whether the fruits from the plants we
+* made should have a rotten state--and sprite set?"). Pictures zfrr
+* (art/rottenfruit.py): kind * 2 (the sea's fruits from 4), rotten then
+* collapsed. OV00 is the fruit it was, OV03 its bush's look (not OV02, which
+* would make a volcanic one the healing fruit to the mind). It lies for five
+* steps of 900 ticks (about seven and a half minutes), giving the room one
+* organic nutrient a step, as the game's own fruit gives five when it rots:
+* the soil is fed, and the germs that live in rotting food. Then it is gone,
+* and now and then a seedling stands where it lay.
+scrp 2 25 149 9
+  addv ov01 1
+  addv ontr 1
+  doif ov01 eq 3 pose 1 endi
+  doif ov01 ge 5
+    rndv var0 0 4
+    doif var0 eq 0
+      setv var1 0 enum 2 4 141 addv var1 1 next
+      setv var2 0 setv rnge 200 esee 2 4 141 addv var2 1 next
+      doif var1 lt 36
+        * (nor in the dead-end pocket at the east end of the lava
+        * corridor, room 167: a bush there drew hungry creatures into a
+        * corner with one way out; owner, 2026-11-12)
+        doif posl gt 8030
+          doif posb gt 2100
+            doif posb lt 2260 setv var2 1 endi
+          endi
+        endi
+        * (never on a built platform: decks and ledges get potted bushes only)
+        doif posl gt 7100
+          doif posl lt 7700
+            doif posb gt 850
+              doif posb lt 915 setv var2 1 endi
+            endi
+          endi
+        endi
+        * (nor in the grendel egg chamber, nor on the long platform by
+        * the upper-east lift; owner, 2026-11-09)
+        doif posl gt 6900
+          doif posl lt 7230
+            doif posb gt 1150
+              doif posb lt 1360 setv var2 1 endi
+            endi
+          endi
+        endi
+        doif posl gt 7220
+          doif posl lt 7940
+            doif posb gt 1290
+              doif posb lt 1365 setv var2 1 endi
+            endi
+          endi
+        endi
+        doif posl gt 4800
+          doif posl lt 5700
+            doif posb gt 2230
+              doif posb lt 2310 setv var2 1 endi
+            endi
+          endi
+        endi
+        doif posl gt 7950
+          doif posl lt 8400
+            doif posb gt 1250
+              doif posb lt 1310 setv var2 1 endi
+            endi
+            doif posb gt 1790
+              doif posb lt 1850 setv var2 1 endi
+            endi
+          endi
+        endi
+        * (nor on the water's surface: a fruit floating on the sea, with
+        * a sea room's top near its base (the room starts about 30 px
+        * above the waterline drawn), sprouts nothing; owner,
+        * 2026-11-18, a bush had grown on the sea by the boats)
+        setv var7 posl addv var7 posr divv var7 2
+        setv var6 0
+        reps 400
+          doif room var6 4 eq 2
+            doif room var6 0 le var7
+              doif room var6 2 ge var7
+                setv var8 room var6 1 subv var8 posb
+                doif var8 gt -45
+                  doif var8 lt 12 setv var2 1 endi
+                endi
+              endi
+            endi
+          endi
+          addv var6 1
+        repe
+        * (nor in a lift's shaft, between 250 px above its top stop and
+        * its bottom stop, judged by the fruit's middle: a bush grew between
+        * the cage lift's cables at its middle stop, in the cabin's way;
+        * owner, 2026-11-19. The lifts' spans and stops are the world's.)
+        setv var3 posl addv var3 posr divv var3 2
+        doif var3 ge 1534 doif var3 le 1637 doif posb ge 89 doif posb le 971 setv var2 1 endi endi endi endi
+        doif var3 ge 1546 doif var3 le 1649 doif posb ge 1245 doif posb le 2153 setv var2 1 endi endi endi endi
+        doif var3 ge 2334 doif var3 le 2458 doif posb ge 715 doif posb le 1705 setv var2 1 endi endi endi endi
+        doif var3 ge 3188 doif var3 le 3312 doif posb ge 1034 doif posb le 2000 setv var2 1 endi endi endi endi
+        doif var3 ge 3526 doif var3 le 3650 doif posb ge 1294 doif posb le 2265 setv var2 1 endi endi endi endi
+        doif var3 ge 4172 doif var3 le 4275 doif posb ge 342 doif posb le 1165 setv var2 1 endi endi endi endi
+        doif var3 ge 4549 doif var3 le 4673 doif posb ge 1826 doif posb le 2259 setv var2 1 endi endi endi endi
+        doif var3 ge 5116 doif var3 le 5240 doif posb ge 1364 doif posb le 1862 setv var2 1 endi endi endi endi
+        doif var3 ge 5705 doif var3 le 5829 doif posb ge 1607 doif posb le 2259 setv var2 1 endi endi endi endi
+        doif var3 ge 5759 doif var3 le 5862 doif posb ge 211 doif posb le 1179 setv var2 1 endi endi endi endi
+        doif var3 ge 2220 doif var3 le 2324 doif posb ge 1898 doif posb le 2325 setv var2 1 endi endi endi endi
+        doif var3 ge 302 doif var3 le 406 doif posb ge 1264 doif posb le 1845 setv var2 1 endi endi endi endi
+        doif var3 ge 60 doif var3 le 164 doif posb ge 784 doif posb le 1507 setv var2 1 endi endi endi endi
+        doif var3 ge 7525 doif var3 le 7629 doif posb ge 442 doif posb le 2156 setv var2 1 endi endi endi endi
+        doif var3 ge 8118 doif var3 le 8222 doif posb ge 1053 doif posb le 1849 setv var2 1 endi endi endi endi
+        doif var3 ge 1320 doif var3 le 1479 doif posb ge 1049 doif posb le 1845 setv var2 1 endi endi endi endi
+        doif var2 eq 0
+          setv var3 posl subv var3 70 setv var4 posb subv var4 107
+          setv var5 ov03
+          doif posl gt 6400
+            doif posb gt 1780 setv var5 2 endi
+          endi
+          * (in the desert above the incubator: the desert look)
+          doif posl gt 4300
+            doif posl lt 5735
+              doif posb lt 650 setv var5 4 endi
+            endi
+          endi
+          * (under water: kelp; a sea fruit ashore: mossy)
+          doif rtyp eq 2
+            setv var5 5
+          else
+            doif var5 eq 5 setv var5 0 endi
+          endi
+          inst
+          doif var5 eq 0 new: simp zfbs 12 0 -10 0 endi
+          doif var5 eq 1 new: simp zfbm 12 0 -10 0 endi
+          doif var5 eq 2 new: simp zfbv 12 0 -10 0 endi
+          doif var5 eq 3 new: simp zfbw 12 0 -10 0 endi
+          doif var5 eq 4 new: simp zfbd 12 0 -10 0 endi
+          doif var5 eq 5 new: simp zfbk 12 0 -10 0 endi
+          setv cls2 2 4 141 setv attr 0 setv rnge 150
+          setv ov00 0 setv ov01 0 setv ov02 var5 setv ov03 2 setv ov04 -10 setv ov99 7461
+          mvto var3 var4 pose sean tick 250
+          slow
+        endi
+      endi
+    endi
+    kill ownr
+  endi
+endm
+* Eating one: it feeds nothing, and the belly hurts at once (18, Pain
+* Increase) so it is learned; it may also bring the illness that lives in
+* rotting food (Disease::ateRotten).
+scrp 2 25 149 12
+  snde chwp
+  stim writ from 0 255 0 0 18 60 19 30 0 0 0 0
+  kill ownr
 endm
 
 * When a falling fruit hits the floor (event 6, collision) it lies on its
@@ -936,6 +641,7 @@ enum 2 25 141 kill targ next
 enum 2 25 142 kill targ next
 enum 2 25 143 kill targ next
 enum 2 25 144 kill targ next
+enum 2 25 149 kill targ next
 
 * No bush on the water's surface (owner, 2026-11-18: a bush had sprouted
 * from a fruit floating on the sea by the boats). A bush, not potted, whose

@@ -18,6 +18,7 @@
  */
 
 #include "Profile.h"
+#include "common/devenv.h"
 #include "creatures/Pheromones.h"
 #include "creatures/Breeding.h"
 #include "creatures/Disease.h"
@@ -130,7 +131,7 @@ void oldCreature::sayNeed() {
 		}
 	// the same need again within about 30 s: the gesture only (an adult
 	// asking for sleep eleven times running in a test, 2026-11-10)
-	static const bool every = getenv("OPENC2E_TEST_SPEECH") != nullptr; // developer aid: no pause
+	static const bool every = devenv("OPENC2E_TEST_SPEECH") != nullptr; // developer aid: no pause
 	if (!every && best == lastNeedSaid && ticks < lastNeedTick + 300)
 		return;
 	lastNeedSaid = best;
@@ -142,7 +143,7 @@ void oldCreature::tickBrain() {
 	if (mind) {
 		tickMind();
 		// the brain is replaced, but its chemical relay lobes are body chemistry
-		static const bool norelay = getenv("OPENC2E_NO_RELAY") != nullptr; // for A/B testing
+		static const bool norelay = devenv("OPENC2E_NO_RELAY") != nullptr; // for A/B testing
 		{
 			PROFILE_SCOPE("creature: brain relays");
 			if (brain && !norelay)
@@ -908,7 +909,7 @@ MindPerception oldCreature::buildPerception() {
 	if (engine.version == 2)
 		p.self = world.history->findMoniker(getGenome());
 	p.temperament = temperament.z;
-	static const bool noMindGenes = getenv("OPENC2E_NO_MIND_GENES") != nullptr; // (to compare: every mind gene average)
+	static const bool noMindGenes = devenv("OPENC2E_NO_MIND_GENES") != nullptr; // (to compare: every mind gene average)
 	if (!noMindGenes)
 		p.mindGenes = mindGenes.z;
 	p.season = (int)world.season;
@@ -936,7 +937,7 @@ MindPerception oldCreature::buildPerception() {
 		// and nothing but open doorways between (not a wall)
 		if (reachable && engine.version == 2 && world.map)
 			if (float sx; std::shared_ptr<Room> here = senseRoom(parentagent, cx, cy, sx))
-				if (!(reachable = walkableTo(here, (float)a->x, a->x + a->getWidth(), std::max(1, parentagent->size))) && getenv("OPENC2E_TEST_REACH"))
+				if (!(reachable = walkableTo(here, (float)a->x, a->x + a->getWidth(), std::max(1, parentagent->size))) && devenv("OPENC2E_TEST_REACH"))
 					fmt::print("* REACH {} {} {} at {:.0f},{:.0f} behind a wall from {:.0f},{:.0f}\n", (int)a->family, (int)a->genus, a->species, ax, ay, cx, cy);
 		// C2 marks what may be activated (attr 4): the airlock's drain machine
 		// (2 3 4, attr 0) is run only by its two doors, which close the sea
@@ -976,22 +977,45 @@ MindPerception oldCreature::buildPerception() {
 	// the volcanic bushes' fruit is seen apart (MIND_HEALING_FRUIT): the one
 	// noticed as fruit, if it is one, and else the nearest in sight
 	// (OPENC2E_NO_HEALING_KIND: the fruit stays plain fruit to the mind, to compare)
-	static const bool noHealingKind = getenv("OPENC2E_NO_HEALING_KIND") != nullptr;
+	static const bool noHealingKind = devenv("OPENC2E_NO_HEALING_KIND") != nullptr;
 	auto healing = [](Agent* a) {
 		return !noHealingKind && engine.version == 2 && a && a->family == 2 && a->genus == 25 && a->var[2].hasInt() && a->var[2].getInt() == 2;
 	};
-	bool healingSeen = false;
+	// rotten fruit too (MIND_ROTTEN_FRUIT), when one is what is noticed as
+	// fruit; the nearest good fruit in sight is then seen as well, so a rotten
+	// one lying nearer never hides it
+	auto rotten = [](Agent* a) {
+		return engine.version == 2 && a && a->family == 2 && a->genus == 25 && a->species == 149;
+	};
+	bool healingSeen = false, rottenSeen = false;
 	for (unsigned int i = 0; i < chosenagents.size(); i++)
 		if (chosenagents[i]) {
 			bool h = mind && healing(chosenagents[i].get());
-			see(chosenagents[i], h ? (unsigned int)MIND_HEALING_FRUIT : i);
+			bool r = mind && rotten(chosenagents[i].get());
+			see(chosenagents[i], r ? (unsigned int)MIND_ROTTEN_FRUIT : h ? (unsigned int)MIND_HEALING_FRUIT : i);
 			healingSeen = healingSeen || h;
+			rottenSeen = rottenSeen || r;
 		}
+	if (rottenSeen) {
+		AgentRef best;
+		float bestd = 1e18f;
+		for (auto& a : world.agents) {
+			if (!a || a->family != 2 || a->genus != 25 || a->isDying() || a->carriedby || rotten(a.get()) || healing(a.get()) || edibleNow(a.get()) <= 0.0f)
+				continue;
+			float d = std::hypot(a->x - cx, a->y - cy);
+			if (d < bestd && agentInSight(AgentRef(a))) {
+				bestd = d;
+				best = AgentRef(a);
+			}
+		}
+		if (best)
+			see(best, 25u);
+	}
 	if (mind && engine.version == 2 && !healingSeen) {
 		AgentRef best;
 		float bestd = 1e18f;
 		for (auto& a : world.agents) {
-			if (!a || a->isDying() || !healing(a.get()) || a->carriedby)
+			if (!a || a->genus != 25 || a->isDying() || !healing(a.get()) || a->carriedby)
 				continue;
 			float d = std::hypot(a->x - cx, a->y - cy);
 			if (d < bestd && agentInSight(AgentRef(a))) {
@@ -1006,7 +1030,7 @@ MindPerception oldCreature::buildPerception() {
 	// its kind, so the mind can tell individuals apart
 	if (engine.version == 2 && mind)
 		for (auto& a : world.agents) {
-			if (!a || a.get() == parentagent || a->isDying() || a->category < 0 || a->category >= (int)chosenagents.size())
+			if (!a || a->family != 4 || a.get() == parentagent || a->isDying() || a->category < 0 || a->category >= (int)chosenagents.size())
 				continue;
 			auto* ca = dynamic_cast<CreatureAgent*>(a.get());
 			if (!ca || !ca->getCreature() || !ca->getCreature()->isAlive() || chosenagents[a->category] == AgentRef(a))
@@ -1195,8 +1219,7 @@ MindPerception oldCreature::buildPerception() {
 				// floors read as ~300 px drops both ways, so starving norns there
 				// were offered no walk to food (2026-11-19). A real drop beyond
 				// the side is still followed down from the room stepped into.
-				static const bool oldSideDrops = getenv("OPENC2E_OLD_SIDE_DROPS") != nullptr; // (to compare)
-				if (!oldSideDrops) {
+				{
 					float herefloor = here->floorYatX(bx);
 					float mine = std::fabs(n->floorYatX(bx - seamShift(*n, hc, w) + (west ? -2.0f : 2.0f)) - herefloor);
 					bool nearer = false;
@@ -1253,7 +1276,7 @@ MindPerception oldCreature::buildPerception() {
 			{
 				// developer aid: OPENC2E_WATCH_DROPS prints each change of the
 				// drops a creature sees ahead
-				static const bool watchdrops = getenv("OPENC2E_WATCH_DROPS") != nullptr;
+				static const bool watchdrops = devenv("OPENC2E_WATCH_DROPS") != nullptr;
 				static std::map<int, std::pair<int, int>> lastdrops;
 				std::pair<int, int> nowd{(int)p.dropWest, (int)p.dropEast};
 				if (watchdrops && lastdrops[parentagent->getUNID()] != nowd) {
@@ -1262,7 +1285,7 @@ MindPerception oldCreature::buildPerception() {
 				}
 			}
 			{
-				static const bool watchwater = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+				static const bool watchwater = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 				static std::map<int, int> lastwater;
 				int now = (p.waterWest ? 1 : 0) | (p.waterEast ? 2 : 0);
 				if (watchwater && lastwater[parentagent->getUNID()] != now) {
@@ -1288,7 +1311,7 @@ MindPerception oldCreature::buildPerception() {
 						if (!walkOnFrom(*fr, east, fit, false, true, w, ns))
 							(east ? p.wallEast : p.wallWest) = true;
 					}
-					static const bool watchwall = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+					static const bool watchwall = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 					static std::map<int, int> lastwall;
 					int wallnow = (p.wallWest ? 1 : 0) | (p.wallEast ? 2 : 0);
 					if (watchwall && lastwall[parentagent->getUNID()] != wallnow) {
@@ -1326,12 +1349,9 @@ MindPerception oldCreature::buildPerception() {
 				// px above the seabed, so a norn there was sent east from one
 				// and west from the other, back and forth along the seabed for
 				// good, and never tried the jump pad beside it (2026-11-18)
-				static const bool oldDryWay = getenv("OPENC2E_OLD_DRY_WAY") != nullptr; // (to compare)
 				// (floors as walked: a water room's bed may slope up to its
 				// exit, as the pond's ramp does; at the edge the two share)
 				auto withinStep = [&](Room& n, Room& from, float fromFloor) {
-					if (oldDryWay)
-						return true;
 					bool west = n.x_right <= from.x_left + 2;
 					float edge = west ? (float)n.x_right - 1.0f : (float)n.x_left + 1.0f;
 					return n.floorYatX(edge) + 40.0f >= fromFloor;
@@ -1405,7 +1425,7 @@ Temperament oldCreature::inheritableTemperament() const {
 }
 
 void oldCreature::temperamentExperience(int kind, float size) {
-	static const bool off = getenv("OPENC2E_NO_TEMPERAMENT_DRIFT") != nullptr; // (A/B testing)
+	static const bool off = devenv("OPENC2E_NO_TEMPERAMENT_DRIFT") != nullptr; // (A/B testing)
 	if (off || engine.version != 2 || size == 0.0f)
 		return;
 	if (!Temperaments::experience(temperamentDrift, kind, size, (int)stage))
@@ -1434,7 +1454,7 @@ void oldCreature::temperamentExperience(int kind, float size) {
 // "patted"), fading over a second or two.
 void oldCreature::updateBrainCells(MindPerception& p) {
 	// (OPENC2E_NO_GENOME_BRIDGE: as before, for A/B testing)
-	static const bool off = getenv("OPENC2E_NO_GENOME_BRIDGE") != nullptr;
+	static const bool off = devenv("OPENC2E_NO_GENOME_BRIDGE") != nullptr;
 	if (engine.version != 2 || !brain || off)
 		return;
 	// which chemicals its decision lobe learns from: the receptors on that
@@ -1457,7 +1477,7 @@ void oldCreature::updateBrainCells(MindPerception& p) {
 		brainProfileRead = true;
 		BrainProfiles::Result r = BrainProfiles::read(*genome);
 		// (OPENC2E_NO_BRAIN_PROFILES: read and logged, not applied; A/B testing)
-		static const bool off = getenv("OPENC2E_NO_BRAIN_PROFILES") != nullptr;
+		static const bool off = devenv("OPENC2E_NO_BRAIN_PROFILES") != nullptr;
 		if (!off)
 			brainSettings = r.settings;
 		if (r.any()) {
@@ -1562,7 +1582,7 @@ void oldCreature::updateBrainCells(MindPerception& p) {
 	for (int i = 0; i < 32; i++)
 		p.senses[i] = (unsigned char)std::lround(s[i]);
 	// developer aid: OPENC2E_WATCH_CREATURES lists the lit senses now and then
-	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	static const bool watch = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 	if (watch && ticks % 200 == 0) {
 		std::string lit;
 		for (int i = 0; i < 32; i++)
@@ -1651,7 +1671,7 @@ void oldCreature::tickMind() {
 		mindborn = true;
 		mind->born(p);
 	}
-	static const bool watchrides = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	static const bool watchrides = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 	if (watchrides && p.riding != wasriding) {
 		Agent* v = parentagent->invehicle.get();
 		fmt::print("* WATCH RIDE unid {} {} at ({:.0f}, {:.0f}){}\n", parentagent->getUNID(), p.riding ? "boards" : "leaves", p.x, p.y,
@@ -1664,7 +1684,7 @@ void oldCreature::tickMind() {
 	if (out.passOver) {
 		passedover.erase(std::remove_if(passedover.begin(), passedover.end(), [&](auto& po) { return !po.first || ticks >= po.second || po.first == out.passOver; }), passedover.end());
 		passedover.push_back({out.passOver, ticks + 2000}); // about 3 minutes
-		if (getenv("OPENC2E_WATCH_CREATURES"))
+		if (devenv("OPENC2E_WATCH_CREATURES"))
 			fmt::print("[homeostat] creature {} passes over {} {} {} at ({:.0f}, {:.0f})\n", p.creatureId, (int)out.passOver->family,
 				(int)out.passOver->genus, out.passOver->species, out.passOver->x, out.passOver->y);
 	}
@@ -1705,7 +1725,7 @@ void oldCreature::tickMind() {
 	// Run the world's script for the chosen action when the choice changes,
 	// or when the mind asks again after the previous action finished.
 	if (decn >= 0 && (oldattn != attention || olddecn != decn || (out.decision >= 0 && p.actionFinished))) {
-		static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+		static const bool watch = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 		if (watch && attention) {
 			float dx = (attention->x + attention->getWidth() / 2.0f) - (parentagent->x + parentagent->getWidth() / 2.0f);
 			float dy = (attention->y + attention->getHeight() / 2.0f) - (parentagent->y + parentagent->getHeight() / 2.0f);
@@ -1715,7 +1735,7 @@ void oldCreature::tickMind() {
 		// developer aid: OPENC2E_WATCH_LIFT_USE prints each action a creature
 		// starts on a lift: the lift's place, OBV0 (1 while it is moving: its
 		// activate scripts then do nothing) and YVEC
-		static const bool watchLift = getenv("OPENC2E_WATCH_LIFT_USE") != nullptr;
+		static const bool watchLift = devenv("OPENC2E_WATCH_LIFT_USE") != nullptr;
 		if (watchLift && attention)
 			if (Lift* lift = dynamic_cast<Lift*>(attention.get()))
 				fmt::print("* WATCH LIFT USE t{} unid {} decision {} on lift {} {} {} at {:.0f},{:.0f} obv0 {} yvec {} creature at {:.0f},{:.0f}\n", world.tickcount,

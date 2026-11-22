@@ -85,6 +85,12 @@ const char* shortVerb(int decision) {
 
 // a category's noun from the game's word list (nouns are words 16-55)
 std::string thing(int category) {
+	// the mind's own kinds, past the game's 40 (they read as whatever words
+	// follow the nouns in the list)
+	if (category == MIND_HEALING_FRUIT)
+		return "healing fruit";
+	if (category == MIND_ROTTEN_FRUIT)
+		return "rotten fruit";
 	size_t w = 16 + (size_t)std::max(0, category);
 	if (category >= 0 && w < engine.wordlist.size()) {
 		std::string s = engine.wordlist[w];

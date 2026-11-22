@@ -69,6 +69,9 @@ void tick();
 // the creature sneezes (SNEZ): creatures in front of it may catch its illnesses
 void sneeze(Agent* creature);
 
+// a creature ate rotten fruit: it may catch what lives in rotting food
+void ateRotten(Agent* creature);
+
 // for the kits and the mind
 bool isIll(const std::string& moniker);
 std::vector<Illness> illnessesOf(const std::string& moniker);

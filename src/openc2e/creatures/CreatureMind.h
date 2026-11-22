@@ -42,6 +42,9 @@
 // and by watchers), and carers can bring it on purpose. A choice of it always
 // names the fruit itself (MindOutput::attentionAgent).
 const int MIND_HEALING_FRUIT = 40;
+// Our bushes' rotten fruit (2 25 149; owner, 2026-11-21), seen apart from good
+// fruit in the same way, so a creature that eats one learns to leave them.
+const int MIND_ROTTEN_FRUIT = 41;
 
 struct SeenAgent {
 	int category; // world category index (0-39 for C1/C2)

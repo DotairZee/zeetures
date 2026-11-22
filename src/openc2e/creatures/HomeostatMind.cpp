@@ -36,6 +36,7 @@
  */
 
 #include "CreatureMind.h"
+#include "common/devenv.h"
 #include "Temperament.h"
 
 #include <algorithm>
@@ -148,7 +149,7 @@ DemoBoard& demoBoard() {
 	return b;
 }
 bool watchingOff() {
-	static const bool off = getenv("OPENC2E_NO_WATCHING") != nullptr; // (to compare)
+	static const bool off = devenv("OPENC2E_NO_WATCHING") != nullptr; // (to compare)
 	return off;
 }
 
@@ -876,7 +877,7 @@ class HomeostatMind : public CreatureMind {
 		prm = Params();
 		// (a test's settings again: they were lost when a young creature's
 		// temperament drifted and this ran again)
-		if (getenv("OPENC2E_MIND_PARAMS"))
+		if (devenv("OPENC2E_MIND_PARAMS"))
 			overrideParams();
 		// the mind's own heritable settings (MindGenes.h), each exp(k z)
 		{
@@ -945,7 +946,7 @@ class HomeostatMind : public CreatureMind {
 					fmt::print("Warning: brain-profiles.txt names a setting the mind does not have: {}\n", name);
 			}
 		}
-		if (getenv("OPENC2E_WATCH_CREATURES"))
+		if (devenv("OPENC2E_WATCH_CREATURES"))
 			fmt::print("[homeostat] creature {} temperament z {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f} {:+.2f}: fear w {:.2f} lonely w {:.2f} bored w {:.2f} anger w {:.2f} "
 					   "curiosity {:.3f} commitment {:.3f} worse/better learning {:.2f}/{:.2f}\n",
 				creatureId, z[0], z[1], z[2], z[3], z[4], z[5], z[6], prm.weights[FEAR], prm.weights[LONELY], prm.weights[BORED], prm.weights[ANGER],
@@ -1114,7 +1115,7 @@ class HomeostatMind : public CreatureMind {
 		// to full, so a creature looks for food sooner and eats past its
 		// need; its own chemistry stores what it does not burn (glycogen,
 		// fat) for the winter, when its body runs slower (Biochemistry.cpp).
-		static const bool noSeasons = getenv("OPENC2E_NO_SEASONAL_BIOLOGY") != nullptr; // (to compare)
+		static const bool noSeasons = devenv("OPENC2E_NO_SEASONAL_BIOLOGY") != nullptr; // (to compare)
 		if (!noSeasons && p.season == 2) {
 			float a = std::min(prm.autumnAppetiteMax, prm.autumnAppetite * p.seasonalStrength);
 			d[HUNGER] += (1.0f - d[HUNGER]) * a;
@@ -1154,7 +1155,7 @@ class HomeostatMind : public CreatureMind {
 		// knows at most one good food place). So it eats while it can.
 		// OPENC2E_NO_ANTICIPATION turns this off (for comparison).
 		{
-			static const bool noAnticipation = getenv("OPENC2E_NO_ANTICIPATION") != nullptr;
+			static const bool noAnticipation = devenv("OPENC2E_NO_ANTICIPATION") != nullptr;
 			if (!noAnticipation && d[HUNGER] < prm.starveAwake) {
 				bool foodAtHand = false;
 				for (auto& s : p.visible)
@@ -1375,7 +1376,7 @@ class HomeostatMind : public CreatureMind {
 		// the place renewed at every look (owner, 2026-11-16: "mind gives
 		// up waiting"). Arriving and finding only such food halves the
 		// place as finding nothing does, so it is given up and others tried.
-		static const bool noReachCheck = getenv("OPENC2E_NO_FOOD_REACH_CHECK") != nullptr; // (to compare)
+		static const bool noReachCheck = devenv("OPENC2E_NO_FOOD_REACH_CHECK") != nullptr; // (to compare)
 		for (auto& s : p.visible)
 			if (s.edible >= prm.foodSeeEdible) {
 				if (s.reachable || noReachCheck) {
@@ -1499,7 +1500,7 @@ class HomeostatMind : public CreatureMind {
 			// itself had been eaten (2026-11-14)
 			// (developer aid: OPENC2E_NO_STALLFIX=1 turns this and the
 			// "helped" exception below off, for comparison)
-			static const bool noStallFix = getenv("OPENC2E_NO_STALLFIX") != nullptr;
+			static const bool noStallFix = devenv("OPENC2E_NO_STALLFIX") != nullptr;
 			if (current.category >= 0 && !objectGone && episodeAgent && !noStallFix) {
 				bool same = false;
 				for (auto& s : p.visible)
@@ -1522,7 +1523,7 @@ class HomeostatMind : public CreatureMind {
 					stalled = true;
 					// developer aid: OPENC2E_WATCH_STALLS prints each stalled
 					// action on an object: where both were and how far it got
-					static const bool watchStalls = getenv("OPENC2E_WATCH_STALLS") != nullptr;
+					static const bool watchStalls = devenv("OPENC2E_WATCH_STALLS") != nullptr;
 					if (watchStalls)
 						for (auto& s : p.visible)
 							if (s.category == current.category)
@@ -1551,7 +1552,7 @@ class HomeostatMind : public CreatureMind {
 			// way that side first (200 px seen), and is still caught as before.
 			{
 				int walkDir = current.decision == 26 ? 10 : current.decision == 27 ? 11 : current.decision;
-				static const bool noTurnBump = getenv("OPENC2E_NO_TURN_BUMP") != nullptr; // (to compare)
+				static const bool noTurnBump = devenv("OPENC2E_NO_TURN_BUMP") != nullptr; // (to compare)
 				if (walled && !noTurnBump && current.category < 0 && (walkDir == 10 || walkDir == 11) && p.walledDir != walkDir) {
 					float towardBump = p.walledDir == 11 ? -dxTo(p, episodeStartX) : dxTo(p, episodeStartX);
 					if (towardBump < prm.turnBumpWay)
@@ -1641,13 +1642,13 @@ class HomeostatMind : public CreatureMind {
 			bringPickupCategory = choice.category;
 		if (choice.urge.rfind("tend:", 0) == 0 && choice.decision == 1 && !choice.who.empty()) {
 			tendedUntil[choice.who] = p.tick + prm.tendAgain;
-			if (getenv("OPENC2E_WATCH_TEND"))
+			if (devenv("OPENC2E_WATCH_TEND"))
 				fmt::print("[homeostat] creature {} t{}: TEND tickles {}\n", p.creatureId, p.tick, choice.who);
 		}
 
 		// (only working the lift can take a creature up or down: activate 1
 		// or 2, deactivate; see learnRide)
-		if (choice.category == prm.liftCategory && ((choice.decision >= 1 && choice.decision <= 3) || getenv("OPENC2E_KEEP_BADLINKS")))
+		if (choice.category == prm.liftCategory && ((choice.decision >= 1 && choice.decision <= 3) || devenv("OPENC2E_KEEP_BADLINKS")))
 			lastLiftDecision = choice.decision;
 		if (choice.place == "leave:Hunger") {
 			starveLeaveTick = p.tick;
@@ -1961,7 +1962,7 @@ class HomeostatMind : public CreatureMind {
 				l >> lk.x >> lk.fromY >> lk.toY >> lk.decision >> lk.uses;
 				// (links by eating, picking up and the like are dropped: see learnRide)
 				// (developer aid: OPENC2E_KEEP_BADLINKS keeps them, for comparison)
-				if (l && ((lk.decision >= 1 && lk.decision <= 3) || getenv("OPENC2E_KEEP_BADLINKS")))
+				if (l && ((lk.decision >= 1 && lk.decision <= 3) || devenv("OPENC2E_KEEP_BADLINKS")))
 					links.push_back(lk);
 			} else if (what == "instinct") {
 				std::string sig;
@@ -2108,7 +2109,7 @@ class HomeostatMind : public CreatureMind {
 	// floorChangeDistance, routeMaxCost, seekDistanceCost)
 	bool paramsOverridden = false;
 	void overrideParams() {
-		const char* env = getenv("OPENC2E_MIND_PARAMS");
+		const char* env = devenv("OPENC2E_MIND_PARAMS");
 		if (!env)
 			return;
 		std::map<std::string, float*> known = {{"hungerPatience", &prm.hungerPatience}, {"travelHalf", &prm.travelHalf},
@@ -2322,7 +2323,7 @@ class HomeostatMind : public CreatureMind {
 	bool riding = false;
 	float rideFromX = 0, rideFromY = 0;
 	int lastLiftDecision = -1;
-	std::array<float, 41> habituation; // (C2's 40 categories and MIND_HEALING_FRUIT)
+	std::array<float, 42> habituation; // (C2's 40 categories, MIND_HEALING_FRUIT and MIND_ROTTEN_FRUIT)
 	float valence = 0.0f;
 	std::mt19937 rng;
 
@@ -2606,8 +2607,9 @@ class HomeostatMind : public CreatureMind {
 				c.target = who->agent;
 				c.who = who->who;
 			}
-			// the healing fruit: always that very fruit (the engine knows it as fruit)
-			if (category == MIND_HEALING_FRUIT && who)
+			// the healing and the rotten fruit: always that very fruit (the
+			// engine knows them as fruit)
+			if ((category == MIND_HEALING_FRUIT || category == MIND_ROTTEN_FRUIT) && who)
 				c.target = who->agent;
 			const Expectation& e = blend;
 			c.want = predictedRelief(d, D, e);
@@ -2628,7 +2630,7 @@ class HomeostatMind : public CreatureMind {
 			// food (2026-11-16). Below satiationHunger, what eating is
 			// expected to ease besides hunger shrinks with hunger, to
 			// satedLiking when full. OPENC2E_NO_ALLIESTHESIA turns it off.
-			static const bool noAlliesthesia = getenv("OPENC2E_NO_ALLIESTHESIA") != nullptr;
+			static const bool noAlliesthesia = devenv("OPENC2E_NO_ALLIESTHESIA") != nullptr;
 			if (!noAlliesthesia && decision == prm.eatDecision && (category < 36 || category > 39) && d[HUNGER] < prm.satiationHunger) {
 				float liking = std::max(prm.satedLiking, d[HUNGER] / prm.satiationHunger);
 				Expectation sated = e;
@@ -2639,7 +2641,7 @@ class HomeostatMind : public CreatureMind {
 						sated.delta[i] *= liking;
 				c.want = predictedRelief(d, D, sated);
 			}
-			static const bool countCuriosity = getenv("OPENC2E_COUNT_CURIOSITY") != nullptr;
+			static const bool countCuriosity = devenv("OPENC2E_COUNT_CURIOSITY") != nullptr;
 			if (countCuriosity || known < prm.firstTries || !record)
 				c.novelty = curiosity / std::sqrt(1.0f + known);
 			else
@@ -2667,7 +2669,7 @@ class HomeostatMind : public CreatureMind {
 			if (a.needsObject) {
 				for (auto& s : p.visible)
 					if (s.reachable && (s.activatable || (a.decision != 1 && a.decision != 2 && a.decision != 3)))
-						add(s.category, a.decision, s.distance, s.edible, (s.who.empty() && s.category != MIND_HEALING_FRUIT) ? nullptr : &s);
+						add(s.category, a.decision, s.distance, s.edible, (s.who.empty() && s.category != MIND_HEALING_FRUIT && s.category != MIND_ROTTEN_FRUIT) ? nullptr : &s);
 			} else {
 				// plain wandering never walks off dry land into water (food,
 				// forage and seeking trips already check; the pond's new ramp let
@@ -3014,7 +3016,7 @@ class HomeostatMind : public CreatureMind {
 		foodTrip = -1; // (the straight-line trip check does not apply)
 		// developer aid: OPENC2E_WATCH_ROUTES (1, or a creature id) prints each
 		// route step offered: the food it leads to and the step
-		static const char* watchRoutes = getenv("OPENC2E_WATCH_ROUTES");
+		static const char* watchRoutes = devenv("OPENC2E_WATCH_ROUTES");
 		if (watchRoutes && (std::string(watchRoutes) == "1" || std::to_string(p.creatureId) == watchRoutes)) {
 			const FoodPlace& t = foodPlaces[bestIdx];
 			fmt::print("[homeostat] creature {} t{}: ROUTE at {:.0f},{:.0f} cell {},{} to food {:.0f},{:.0f} cost {:.0f}: step dir {} cat {} dec {} lift {}\n", p.creatureId, p.tick, p.x,
@@ -3137,7 +3139,7 @@ class HomeostatMind : public CreatureMind {
 			// waiting on food the short way round, across the seam, which is
 			// shut at that height, or on tomatoes hanging out of reach
 			// (owner, 2026-11-16: "mind gives up waiting").
-			static const bool noBarredGiveUp = getenv("OPENC2E_NO_BARRED_GIVEUP") != nullptr; // (to compare)
+			static const bool noBarredGiveUp = devenv("OPENC2E_NO_BARRED_GIVEUP") != nullptr; // (to compare)
 			if (!noBarredGiveUp) {
 				FoodPlace& t = foodPlaces[bestSame - foodPlaces.data()];
 				t.confidence *= 0.5f;
@@ -3157,7 +3159,7 @@ class HomeostatMind : public CreatureMind {
 	// Leaving a place to find food (see starveLeaveHunger)
 	void addStarveLeave(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
 		// (developer aid: OPENC2E_NO_STARVELEAVE turns this off, for comparison)
-		static const bool off = getenv("OPENC2E_NO_STARVELEAVE") != nullptr;
+		static const bool off = devenv("OPENC2E_NO_STARVELEAVE") != nullptr;
 		if (off || p.inWater || d[HUNGER] < prm.starveLeaveHunger || hungryTicks < prm.restlessRamp)
 			return;
 		for (auto& s : p.visible)
@@ -3218,7 +3220,7 @@ class HomeostatMind : public CreatureMind {
 		// to one in sight on its floor. A ride is learned as any other
 		// (learnRide), so the way is remembered. OPENC2E_NO_STARVE_LIFT turns
 		// this part off.
-		static const bool noLift = getenv("OPENC2E_NO_STARVE_LIFT") != nullptr;
+		static const bool noLift = devenv("OPENC2E_NO_STARVE_LIFT") != nullptr;
 		if (!noLift) {
 			const SeenAgent* lift = nullptr;
 			const SeenAgent* button = nullptr;
@@ -3263,7 +3265,7 @@ class HomeostatMind : public CreatureMind {
 		// teleporter at the west end and starving creatures piled up at the
 		// east end, 750 px away, out of its sight (owner's screencast,
 		// 2026-11-14 night). OPENC2E_NO_STARVEWALK turns this part off.
-		static const bool noWalk = getenv("OPENC2E_NO_STARVEWALK") != nullptr;
+		static const bool noWalk = devenv("OPENC2E_NO_STARVEWALK") != nullptr;
 		if (noWalk)
 			return;
 		// (one in view but not yet in reach counts too: from the gene lab's
@@ -3346,10 +3348,7 @@ class HomeostatMind : public CreatureMind {
 		// sea's boat to the palm side, found nothing, took it straight back,
 		// found nothing, and so on, a ride every 40 decisions (owner's
 		// screencast, 2026-11-19)
-		static const bool oldBoatForage = getenv("OPENC2E_OLD_BOAT_FORAGE") != nullptr; // (to compare)
 		auto searchedLately = [&](int dir) {
-			if (oldBoatForage)
-				return false;
 			for (auto& tl : travelLinks) {
 				if (tl.category != prm.boatCategory || std::fabs(dxTo(p, tl.fromX)) > prm.linkNear || std::fabs(tl.fromY - p.y) > prm.sameLevel)
 					continue;
@@ -3591,7 +3590,7 @@ class HomeostatMind : public CreatureMind {
 		}
 		if (board.seq == demoSeen)
 			return;
-		static const bool watch = getenv("OPENC2E_WATCH_WATCHING") != nullptr;
+		static const bool watch = devenv("OPENC2E_WATCH_WATCHING") != nullptr;
 		int stage = std::clamp((int)p.stage, 0, 6);
 		for (auto& dm : board.demos) {
 			if (dm.seq <= demoSeen || dm.who == p.self)
@@ -4245,7 +4244,7 @@ class HomeostatMind : public CreatureMind {
 	}
 
 	bool smellsSignature(const MindPerception& p, const std::string& who) const {
-		static const bool off = getenv("OPENC2E_NO_SIGNATURES") != nullptr;
+		static const bool off = devenv("OPENC2E_NO_SIGNATURES") != nullptr;
 		if (off)
 			return false;
 		for (auto& ss : p.signatures)
@@ -4258,7 +4257,7 @@ class HomeostatMind : public CreatureMind {
 	// than here (Pheromones signature scents). False if it is not smelled, or
 	// is strongest here (it is near: the usual looking takes over).
 	bool followSignature(const MindPerception& p, const std::string& who, float want, bool canWest, bool canEast, std::vector<Candidate>& out) {
-		static const bool off = getenv("OPENC2E_NO_SIGNATURES") != nullptr;
+		static const bool off = devenv("OPENC2E_NO_SIGNATURES") != nullptr;
 		if (off)
 			return false;
 		for (auto& ss : p.signatures) {
@@ -4322,11 +4321,11 @@ class HomeostatMind : public CreatureMind {
 	// as the meal ends). Knowledge spreads as creatures meet the fruit and
 	// watch each other, over many days. OPENC2E_NO_CURE_SEEK turns it off.
 	void addCureTrip(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, bool canWest, bool canEast, std::vector<Candidate>& out) {
-		static const bool off = getenv("OPENC2E_NO_CURE_SEEK") != nullptr;
+		static const bool off = devenv("OPENC2E_NO_CURE_SEEK") != nullptr;
 		if (off || d[PAIN] < prm.favouritePainNeed)
 			return;
 		// (OPENC2E_WATCH_CURE: why a creature in pain is or is not offered the trip)
-		static const bool watch = getenv("OPENC2E_WATCH_CURE") != nullptr;
+		static const bool watch = devenv("OPENC2E_WATCH_CURE") != nullptr;
 		auto why = [&](const char* w) {
 			if (watch && p.tick % 50 == 0)
 				fmt::print("* CURE creature {} pain {:.2f}: {}\n", p.creatureId, d[PAIN], w);
@@ -4441,52 +4440,11 @@ class HomeostatMind : public CreatureMind {
 		float survival = std::max({d[PAIN], d[HUNGER], d[COLD], d[HOT], d[INJURY], d[SUFFOCATE], d[THIRST]});
 		float want = prm.exploreWant * (0.5f + d[BORED]) * std::clamp(1.0f + 0.5f * appliedTemperament[1], 0.3f, 2.0f) *
 					 (1.0f - prm.survivalCuriosityDamp * std::clamp(survival, 0.0f, 1.0f));
-		static const bool oldExplore = getenv("OPENC2E_OLD_EXPLORE") != nullptr; // (to compare; it also halves the pull back to 0.025)
-		if (oldExplore)
-			want *= 0.5f;
-		if (!oldExplore && p.stage >= 0 && p.stage < 7)
+		if (p.stage >= 0 && p.stage < 7)
 			want *= prm.stageExplore[(size_t)p.stage];
 		if (want < prm.seekMinWant)
 			return;
-		if (!oldExplore) {
-			addExploreByNovelty(p, d, want, canWest, canEast, out);
-			return;
-		}
-		const RoomMemory* target = nullptr;
-		int targetId = -1;
-		float bestDist = 1e9f;
-		auto blockedRoom = [&](int id) {
-			auto it = exploreBlockedUntil.find(id);
-			return it != exploreBlockedUntil.end() && p.tick < it->second;
-		};
-		for (auto& n : p.roomsNear) {
-			if ((n.side != 10 && n.side != 11) || (n.water && !p.inWater))
-				continue;
-			auto r = rooms.find(n.id);
-			if ((r != rooms.end() && r->second.visits > 0) || blockedRoom(n.id))
-				continue;
-			float dist = std::fabs(dxTo(p, n.x));
-			if (r != rooms.end() && dist < bestDist) {
-				bestDist = dist;
-				target = &r->second;
-				targetId = n.id;
-			}
-		}
-		if (!target)
-			for (auto& [id, r] : rooms) {
-				if (r.visits > 0 || r.water || std::fabs(r.floor - p.roomFloor) > prm.seekMaxHeight || blockedRoom(id))
-					continue;
-				float dist = std::fabs(dxTo(p, r.x));
-				if (dist < prm.exploreReach && dist < bestDist) {
-					bestDist = dist;
-					target = &r;
-					targetId = id;
-				}
-			}
-		if (target) {
-			exploreTarget = targetId;
-			addGoTo(p, want, target->x, target->floor - 40.0f, "explore", canWest, canEast, out, d[BORED]);
-		}
+		addExploreByNovelty(p, d, want, canWest, canEast, out);
 	}
 
 	// a room's novelty: 1 / sqrt(1 + visits), the visits fading with time away
@@ -4685,7 +4643,7 @@ class HomeostatMind : public CreatureMind {
 		// a bring finished: what was carried for someone is no longer held
 		if (lastCarrying >= 0 && p.carryingCategory < 0 && !bringingFor.empty()) {
 			broughtUntil[bringingFor] = p.tick + prm.bringAgain;
-			static const bool watch = getenv("OPENC2E_WATCH_TEND") != nullptr;
+			static const bool watch = devenv("OPENC2E_WATCH_TEND") != nullptr;
 			if (watch)
 				fmt::print("[homeostat] creature {} t{}: TEND brought something to {}\n", p.creatureId, p.tick, bringingFor);
 			bringingFor.clear();
@@ -4801,7 +4759,7 @@ class HomeostatMind : public CreatureMind {
 		c.who = foe->who;
 		c.urge = "defend:" + p.defendFor;
 		out.push_back(c);
-		static const bool watch = getenv("OPENC2E_WATCH_TEND") != nullptr;
+		static const bool watch = devenv("OPENC2E_WATCH_TEND") != nullptr;
 		if (watch)
 			fmt::print("[homeostat] creature {} t{}: DEFEND offered: {} hurt {}\n", p.creatureId, p.tick, foe->who, p.defendFor);
 	}
@@ -4810,7 +4768,7 @@ class HomeostatMind : public CreatureMind {
 	// itself, with a friend in sight who looks hungry, a creature brings it
 	// food. The friend credits the gift to it when it eats (Relationships).
 	void addShare(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, bool canWest, bool canEast, std::vector<Candidate>& out) {
-		static const bool noShare = getenv("OPENC2E_NO_SHARE") != nullptr; // (to compare)
+		static const bool noShare = devenv("OPENC2E_NO_SHARE") != nullptr; // (to compare)
 		if (noShare || d[HUNGER] > prm.shareFed)
 			return;
 		bringBookkeeping(p);
@@ -4823,7 +4781,7 @@ class HomeostatMind : public CreatureMind {
 			return;
 		float want = prm.shareWant * (0.5f + friendIn->affinity) * friendIn->hunger;
 		if (addBring(p, *friendIn, want, "share:", canWest, canEast, out, true)) {
-			static const bool watch = getenv("OPENC2E_WATCH_TEND") != nullptr;
+			static const bool watch = devenv("OPENC2E_WATCH_TEND") != nullptr;
 			if (watch)
 				fmt::print("[homeostat] creature {} t{}: SHARE offered for {} (affinity {:.2f}, its hunger {:.2f})\n", p.creatureId, p.tick, friendIn->who,
 					friendIn->affinity, friendIn->hunger);
@@ -4858,7 +4816,7 @@ class HomeostatMind : public CreatureMind {
 				float calm = std::clamp(1.0f - pressing, 0.0f, 1.0f);
 				want *= std::pow(calm, prm.tendCalmPower);
 			}
-			static const bool watch = getenv("OPENC2E_WATCH_SCENTS") != nullptr;
+			static const bool watch = devenv("OPENC2E_WATCH_SCENTS") != nullptr;
 			if (watch && p.tick % 20 == 0)
 				fmt::print("[homeostat] creature {} t{}: scent {} {} want {:.3f} here {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f}\n", p.creatureId, p.tick,
 					u.scent, u.avoid ? "avoid" : "follow", want, u.here, u.west, u.east, u.up, u.down);
@@ -5027,7 +4985,7 @@ class HomeostatMind : public CreatureMind {
 		// lift to go up", and sat in the cabin eating it for good: 43% of the
 		// 4,204 lift links saved in Home were by eating, picking up, hitting and
 		// the like (2026-11-14). (Travel links had the same rule already.)
-		if (std::fabs(dy) < prm.minRide || lastLiftDecision < 0 || ((lastLiftDecision < 1 || lastLiftDecision > 3) && !getenv("OPENC2E_KEEP_BADLINKS")))
+		if (std::fabs(dy) < prm.minRide || lastLiftDecision < 0 || ((lastLiftDecision < 1 || lastLiftDecision > 3) && !devenv("OPENC2E_KEEP_BADLINKS")))
 			return;
 		for (auto& l : links) {
 			if (std::fabs(l.x - rideFromX) < prm.atPlace && std::fabs(l.fromY - rideFromY) < prm.sameLevel &&
@@ -5059,7 +5017,7 @@ class HomeostatMind : public CreatureMind {
 				dormant = true; // heard words: waiting for language
 		}
 		// (OPENC2E_NO_GENOME_BRIDGE: senses and no drive wait, as before)
-		static const bool oldWay = getenv("OPENC2E_NO_GENOME_BRIDGE") != nullptr;
+		static const bool oldWay = devenv("OPENC2E_NO_GENOME_BRIDGE") != nullptr;
 		if (oldWay && (drives.empty() || !senses.empty()))
 			dormant = true;
 		if (dormant) {
@@ -5186,7 +5144,7 @@ class HomeostatMind : public CreatureMind {
 		episodes++;
 		if (!episodeNudges.empty()) {
 			float approval = std::clamp((approvalNow(p) - episodeApprovalStart) / prm.approvalScale, -1.0f, 1.0f);
-			static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+			static const bool watch = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 			for (size_t i : episodeNudges)
 				if (i < nudges.size()) {
 					nudges[i].tries++;
@@ -5217,7 +5175,7 @@ class HomeostatMind : public CreatureMind {
 			// a norn chewing a many-bite food gets no nearer to it, and three
 			// such meals in a row marked eating there futile)
 			bool helped = reward > prm.surpriseReward * 0.2f || (current.decision == prm.eatDecision && felt[HUNGER] < -0.05f);
-			if (getenv("OPENC2E_NO_STALLFIX"))
+			if (devenv("OPENC2E_NO_STALLFIX"))
 				helped = false;
 			if (stalled && stayed && !helped) {
 				bool same = current.category == futileCategory && current.decision == futileDecision;
@@ -5311,7 +5269,7 @@ class HomeostatMind : public CreatureMind {
 		// before it could: in a crowd, pokes and hits ended walks within
 		// 2-6 ticks, and each marked its way blocked, so hungry creatures in
 		// the crowd at room 14's east wall had both ways marked; 2026-11-16)
-		static const bool noShortWalks = getenv("OPENC2E_NO_SHORT_WALK_CHECK") != nullptr; // (to compare)
+		static const bool noShortWalks = devenv("OPENC2E_NO_SHORT_WALK_CHECK") != nullptr; // (to compare)
 		if ((current.decision == 10 || current.decision == 11) && current.category < 0 && !p.riding &&
 			std::fabs(dxTo(p, startX)) < blockedMove && !(steppedNowhere && gaitWalk) &&
 			(noShortWalks || episodeTicks >= prm.nowhereMinTicks)) {
@@ -5460,7 +5418,7 @@ class HomeostatMind : public CreatureMind {
 	void logChoice(const MindPerception& p, const Candidate& choice, const std::vector<Candidate>& candidates, float D) {
 		// developer aid: OPENC2E_WATCH_CANDS (1, or a creature id) prints every
 		// candidate of each choice, with the walls and blocked ways sensed
-		static const char* watchCands = getenv("OPENC2E_WATCH_CANDS");
+		static const char* watchCands = devenv("OPENC2E_WATCH_CANDS");
 		const bool watch = watchCands && (std::string(watchCands) == "1" || std::to_string(p.creatureId) == watchCands);
 		if (!mindLogOn() && !watch)
 			return;

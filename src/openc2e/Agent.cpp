@@ -18,6 +18,7 @@
  */
 
 #include "Profile.h"
+#include "common/devenv.h"
 #include "Agent.h"
 #ifndef _WIN32
 #include <dlfcn.h>
@@ -211,7 +212,7 @@ void Agent::logBigMove(float nx, float ny) {
 	// was moved 489 px up by no script and not by the pocket safety net):
 	// resolve with addr2line -f -C -e build/openc2e OFFSET
 	// (developer aid: OPENC2E_WATCH_MOVES; walking the stack is not free)
-	static const bool watchMoves = getenv("OPENC2E_WATCH_MOVES") != nullptr;
+	static const bool watchMoves = devenv("OPENC2E_WATCH_MOVES") != nullptr;
 	if (by == "the engine" && watchMoves)
 		fmt::print("* BIG MOVE stack:{}\n", engineStack());
 }
@@ -325,8 +326,9 @@ std::shared_ptr<script> Agent::findScript(unsigned short event) {
 #include "PointerAgent.h"
 #include "creatures/Creature.h"
 #include "creatures/CreatureAgent.h"
+#include "creatures/Disease.h"
 bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosValue two) {
-	static const bool watcheat = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	static const bool watcheat = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 	if (watcheat && event == 12 && engine.version == 2 && family == 2)
 		fmt::print("* WATCH EATEN {} {} {} by {}\n", (int)family, (int)genus, species, from ? from->getUNID() : -1);
 	// Start running the specified script on the VM of this agent, with FROM set to the provided agent.
@@ -351,8 +353,8 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 	// zero (-68: every bit set, physics among them), so it fell through the
 	// world (owner, 2026-11-21). Switch OPENC2E_ACTIVATE_ANYTHING.
 	if (engine.version <= 2 && (event == 1 || event == 2) && !activateable() && dynamic_cast<CreatureAgent*>(from)) {
-		static const bool anything = getenv("OPENC2E_ACTIVATE_ANYTHING") != nullptr;
-		static const bool watchRefused = getenv("OPENC2E_WATCH_REFUSED") != nullptr;
+		static const bool anything = devenv("OPENC2E_ACTIVATE_ANYTHING") != nullptr;
+		static const bool watchRefused = devenv("OPENC2E_WATCH_REFUSED") != nullptr;
 		if (watchRefused)
 			fmt::print("* REFUSED activate {} on {} {} {} (attr {})\n", (int)event, (int)family, (int)genus, species, (int)attr);
 		if (!anything)
@@ -409,7 +411,7 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 				return false;
 			// C2: food whose BHVR touch has no eat bit cannot be eaten (a
 			// core or shell, rotting fruit; see edibleNow)
-			if (engine.version <= 2 && c2touch >= 0 && !(c2touch & 64) && dynamic_cast<CreatureAgent*>(from) && !getenv("OPENC2E_IGNORE_TOUCH"))
+			if (engine.version <= 2 && c2touch >= 0 && !(c2touch & 64) && dynamic_cast<CreatureAgent*>(from) && !devenv("OPENC2E_IGNORE_TOUCH"))
 				return false;
 			break;
 		case 13: // hold hands with pointer
@@ -434,7 +436,7 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 	}
 
 	bool ranscript = false;
-	static const bool trace_events = getenv("OPENC2E_TRACE_EVENTS") != nullptr;
+	static const bool trace_events = devenv("OPENC2E_TRACE_EVENTS") != nullptr;
 
 	std::shared_ptr<script> s;
 	// C2: a creature's action on another creature runs the world's
@@ -464,7 +466,7 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 		// kind's timer rate and how many of its timer events ran or were
 		// skipped because the last run had not finished
 		if (event == 9) {
-			static const char* ts = getenv("OPENC2E_TIMER_STATS");
+			static const char* ts = devenv("OPENC2E_TIMER_STATS");
 			if (ts) {
 				static std::map<std::tuple<int, int, int>, std::array<long, 3>> stats;
 				auto& st = stats[{family, genus, species}];
@@ -479,6 +481,9 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 			}
 		}
 		if (fired) {
+			// C2: our bushes' rotten fruit may make its eater ill
+			if (event == 12 && engine.version == 2 && family == 2 && genus == 25 && species == 149 && dynamic_cast<CreatureAgent*>(from))
+				Disease::ateRotten(from);
 			lastScript = event;
 			zotstack();
 			vm->setVariables(one, two);
@@ -521,7 +526,7 @@ bool Agent::fireScript(unsigned short event, Agent* from, caosValue one, caosVal
 	}
 
 	// (creatures' own events too with OPENC2E_TRACE_CREATURE_EVENTS)
-	static const bool trace_creatures = getenv("OPENC2E_TRACE_CREATURE_EVENTS") != nullptr;
+	static const bool trace_creatures = devenv("OPENC2E_TRACE_CREATURE_EVENTS") != nullptr;
 	if (((trace_events && family != 4) || (trace_creatures && family == 4)) && event != 9)
 		fmt::print("[event] {} {} {} unid {} event {} from {} -> {}\n", (int)family, (int)genus, species, unid, event,
 			from ? fmt::format("{} {} {}", (int)from->family, (int)from->genus, from->species) : std::string("none"),
@@ -1176,9 +1181,8 @@ void Agent::findCollisionInDirection(unsigned int i, class MetaRoom* m, Point sr
 			// value 50, door 255 to the deck below) fell 213 px, and one let
 			// go in the lift's cage at its top stop fell out of it (owner's
 			// screencast, 2026-11-13; 2026-11-20)
-			static const bool oldBottomLine = getenv("OPENC2E_OLD_BOTTOM_LINE") != nullptr; // (to compare)
 			bool bottomLine = false;
-			if (engine.version == 2 && !oldBottomLine && i == 3 && dy > 0 && room->floorpoints.size() && size > room->floorvalue &&
+			if (engine.version == 2 && i == 3 && dy > 0 && room->floorpoints.size() && size > room->floorvalue &&
 				src.y + p.y > room->y_left_floor) {
 				float fx = src.x + p.x;
 				float floory = room->floorYatX(fx);
@@ -1258,7 +1262,7 @@ void Agent::findCollisionInDirection(unsigned int i, class MetaRoom* m, Point sr
 // round the object that players saw (owner, 2026-11-11).
 void Agent::markOutOfRoomSystem() {
 	outofroomsystem = true;
-	static const bool show = getenv("OPENC2E_SHOW_CORES") != nullptr;
+	static const bool show = devenv("OPENC2E_SHOW_CORES") != nullptr;
 	if (show)
 		displaycore = true;
 }
@@ -1335,7 +1339,7 @@ void Agent::physicsTickC2() {
 	// all hands it to healOutOfRoomSystem, which sets it down at the nearest
 	// place it fits. (Not objects that only sit across a wall between two
 	// rooms, such as call buttons: each of their points is in a room.)
-	static const bool noRockCheck = getenv("OPENC2E_NO_ROCK_CHECK") != nullptr; // (to compare)
+	static const bool noRockCheck = devenv("OPENC2E_NO_ROCK_CHECK") != nullptr; // (to compare)
 	if (engine.version == 2 && !noRockCheck && !falling && !outofroomsystem && family == 2 && suffercollisions() &&
 		sufferphysics() && !carriedby && !invehicle && world.map && (world.tickcount + (unsigned int)getUNID() * 7) % 100 == 0) {
 		MetaRoom* m = world.map->metaRoomAt(x, y);
@@ -1590,7 +1594,7 @@ void Agent::vmTick() {
 		// different ticks and the parts drift visibly out of step. 5 (as in c2e)
 		// keeps such groups together. OPENC2E_C2_TIMESLICE overrides it for testing.
 		static const int c2_timeslice = [] {
-			const char* s = getenv("OPENC2E_C2_TIMESLICE");
+			const char* s = devenv("OPENC2E_C2_TIMESLICE");
 			return (s && atoi(s) > 0) ? atoi(s) : 5;
 		}();
 		vm->timeslice = (engine.version == 1) ? 1 : (engine.version == 2) ? c2_timeslice : 5;
