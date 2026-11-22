@@ -473,6 +473,7 @@ static bool senileTint(float& grey, float& lift) {
 
 void SkeletalCreature::skeletonInit() {
 	glide = Glide(); // (its pictures and joints may change)
+	walkCycle = WalkCycle();
 	// TODO: the exception throwing in here needs some more thought
 	// TODO: if we throw an exception when we need to kill the creature off, else segfault :/
 
@@ -1584,10 +1585,39 @@ void SkeletalCreature::tick() {
 		}
 	}
 
+	// C2: a creature walking (WALK) goes the way it faces. The world's
+	// walk scripts face it first (POSE 59 east, 60 west), and the walk's
+	// poses face "towards IT", which reads its direction; that was set
+	// only by approaching something (or DIRN) and not saved, so after a
+	// load it was north, every walk pose became the facing-out pose and
+	// the creature walked in place (6KBY, starving and drowning in the
+	// west sea airlock's pool, 2026-11-17), and later each walk went the
+	// way of whatever it had last approached, not the way chosen. 153 of
+	// Home's 155 creatures walk by gait (HomeostatMind's gaitWalk).
+	if (engine.version == 2 && walking && !approaching && !eyesclosed && !creature->isZombie()) {
+		if (posedirection == 0)
+			direction = 2; // east
+		else if (posedirection == 1)
+			direction = 3; // west
+	}
+
 	// TODO: every 2 ticks = correct? what about the engine var?
 	ticks++;
-	if (ticks % 2 == 0)
+	if (ticks % 2 == 0) {
+		// C2: a walk's steps may come on these ticks too, so that at a pace
+		// other than a step every two ticks they come as evenly as ticks
+		// allow (at 0.8 of it every 2 or 3, not 2, 2, 2 and then 4: drawn
+		// moving smoothly, a walk paused at each long one; a player,
+		// 2026-11-22). Same pace on average.
+		if (engine.version == 2 && walking && !approaching && !eyesclosed && !creature->isZombie() && walkSteps(0.5f)) {
+			if (!falling && !carriedby && !invehicle)
+				snapDownFoot();
+			else
+				downfootroom.reset();
+		}
+		glideSettle();
 		return;
+	}
 
 	//if (eyesclosed) return; // TODO: hack, this is wrong :)
 
@@ -1596,10 +1626,25 @@ void SkeletalCreature::tick() {
 		bool edgeStop = false;
 		if (approaching && approachtarget) {
 			// TODO: more sane approaching skillz
-			if (approachtarget->x < x)
-				direction = 3;
-			else
-				direction = 2;
+			// C2: by their middles. A creature reaching for something over its
+			// head or under its feet turned to and fro past it at every step
+			// (2026-11-22): after it has turned back twice it stands there
+			// (for what moves it may have to turn, so a while later again).
+			const float past = approachtarget->x + approachtarget->getWidth() / 2.0f - (x + getWidth() / 2.0f);
+			const unsigned int way = (engine.version == 2 ? past < 0 : approachtarget->x < x) ? 3 : 2;
+			if (engine.version == 2) {
+				if (approachtarget->getUNID() != approachUnid || world.tickcount - approachTurnedAt > 50)
+					approachTurns = 0;
+				approachUnid = approachtarget->getUNID();
+				if (approachTurns >= 2 && std::fabs(past) <= 30.0f)
+					edgeStop = true;
+				else if (way != direction) {
+					approachTurns++;
+					approachTurnedAt = world.tickcount;
+				}
+			}
+			if (!edgeStop)
+				direction = way;
 			// C2: walking up to an object, a creature at its floor's edge
 			// stops there when the next step would end in water it can't
 			// breathe in (it walked off the east dock's end reaching for an
@@ -1624,43 +1669,14 @@ void SkeletalCreature::tick() {
 		if (watchwalk && (walking || approaching) && world.tickcount % 20 == 0)
 			fmt::print("* WATCH WALK t{} unid {} walking {} approaching {} edgeStop {} falling {} at {:.0f},{:.0f}\n", world.tickcount, unid,
 				walking, approaching, edgeStop, (bool)falling, x, y);
-		// C2: a creature walking (WALK) goes the way it faces. The world's
-		// walk scripts face it first (POSE 59 east, 60 west), and the walk's
-		// poses face "towards IT", which reads its direction; that was set
-		// only by approaching something (or DIRN) and not saved, so after a
-		// load it was north, every walk pose became the facing-out pose and
-		// the creature walked in place (6KBY, starving and drowning in the
-		// west sea airlock's pool, 2026-11-17), and later each walk went the
-		// way of whatever it had last approached, not the way chosen. 153 of
-		// Home's 155 creatures walk by gait (HomeostatMind's gaitWalk).
-		if (engine.version == 2 && walking && !approaching) {
-			if (posedirection == 0)
-				direction = 2; // east
-			else if (posedirection == 1)
-				direction = 3; // west
-		}
 		if ((walking || approaching) && !edgeStop) {
-			// TODO: we shouldn't bother with this unless it changed?
-			setGaitGene(creature->getGait());
-
-			// TODO: we should only do this if we're moving :-P
-			// C2: a walking pace by life stage (owner, 2026-11-10: vigor
-			// with age): the walk's steps come at stagePace() of the usual
-			// rate (a step every other tick), slow in infancy and old age,
-			// briskest as a youth
 			if (engine.version == 2) {
-				// and by temperament: energetic creatures walk a little faster
-				float energy = 1.0f;
-				if (auto* oc = dynamic_cast<oldCreature*>(creature))
-					energy = oc->temperament.factor(ENERGY, 0.12f);
-				paceCredit += stagePace((int)creature->getStage()) * energy;
-				while (paceCredit >= 1.0f) {
-					paceCredit -= 1.0f;
-					gaitTick();
-					stepTiredness();
-				}
-			} else
+				walkSteps(walking && !approaching ? 0.5f : 1.0f);
+			} else {
+				// TODO: we shouldn't bother with this unless it changed?
+				setGaitGene(creature->getGait());
 				gaitTick();
+			}
 		}
 
 		approaching = false;
@@ -1851,6 +1867,33 @@ void SkeletalCreature::stepTiredness() {
 			oc->addChemical(6, 1);
 }
 
+// C2: a walking pace by life stage (owner, 2026-11-10: vigor with age): the
+// walk's steps come at stagePace() of the usual rate (a step every other
+// tick), slow in infancy and old age, briskest as a youth, and by
+// temperament: energetic creatures walk a little faster. `share` is how much
+// of two ticks this call stands for. Says whether it took a step.
+bool SkeletalCreature::walkSteps(float share) {
+	// TODO: we shouldn't bother with this unless it changed?
+	setGaitGene(creature->getGait());
+	// TODO: we should only do this if we're moving :-P
+	float energy = 1.0f;
+	if (auto* oc = dynamic_cast<oldCreature*>(creature))
+		energy = oc->temperament.factor(ENERGY, 0.12f);
+	const float pace = stagePace((int)creature->getStage()) * energy * share;
+	bool stepped = false;
+	paceCredit += pace;
+	while (paceCredit >= 1.0f) {
+		paceCredit -= 1.0f;
+		// (how many ticks until the next: it is drawn taking that long)
+		nextStepIn = pace > 0.01f ? std::max(1.0f, std::ceil((1.0f - paceCredit) / pace)) * 2.0f * share : 2.0f;
+		gaitTick();
+		stepTiredness();
+		stepped = true;
+	}
+	nextStepIn = 0;
+	return stepped;
+}
+
 void SkeletalCreature::gaitTick() {
 	if (!gaitgene)
 		return;
@@ -1868,7 +1911,14 @@ void SkeletalCreature::gaitTick() {
 	if (i != posegenes.end()) {
 		creaturePoseGene* poseg = i->second;
 		assert(poseg->poseno == pose);
-		setPose(poseg->getPoseString());
+		std::string p = poseg->getPoseString();
+		// C2: a walk goes the way the creature faces. The game's norns have
+		// one walk (gait 13) whose four poses are all written to face east:
+		// told to walk west, a norn with it faced west for an instant, turned
+		// round and walked east (2026-11-22).
+		if (engine.version == 2 && (p[0] == '2' || p[0] == '3'))
+			p[0] = '?';
+		setPose(p);
 	}
 
 	gaiti++;

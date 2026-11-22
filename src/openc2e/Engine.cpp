@@ -2504,6 +2504,7 @@ bool Engine::initialSetup() {
 			WorldSave::SetAsideUnreadableSave(currentworlddir, e.what());
 		}
 		worldready = true;
+		Openc2eImgui::DefaultWorldOpened();
 		fflush(stdout); // (how the load went is in the log whatever follows)
 	}
 

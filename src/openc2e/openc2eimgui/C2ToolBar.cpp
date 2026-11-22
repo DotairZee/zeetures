@@ -243,7 +243,7 @@ static const char* GenusName(int genus) {
 // 0.5.0 (2026-11-14, night): every object kept between launches (stage 3).
 // 0.6.0 (2026-11-14, night): signature scents; the hand takes things from
 // creatures and keeps its mode; the gene lab's east end sealed.
-#define OPENC2E_FORK_VERSION "0.29.1"
+#define OPENC2E_FORK_VERSION "0.29.2"
 
 // CITATIONS.md, as Help > About shows it: "## " headings as separators,
 // "- " entries wrapped, each Markdown link [text](url) as a small button
@@ -371,6 +371,13 @@ static bool s_set_aside_was_paused = false;
 					RelaunchIntoWorld(w.name);
 			}
 			ImGui::EndMenu();
+		}
+		if (!engine.currentworlddir.empty()) {
+			bool atlaunch = DefaultWorld() == engine.currentworld;
+			if (ImGui::MenuItem("Open This World at Launch", nullptr, atlaunch))
+				SetDefaultWorld(atlaunch ? "" : engine.currentworld);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Starts in this world, without asking which");
 		}
 		if (ImGui::MenuItem("Save World", nullptr, false, !engine.currentworlddir.empty())) {
 			std::string err;
@@ -648,7 +655,7 @@ static bool s_set_aside_was_paused = false;
 		// (said plainly under the name, with what it forks from: owner, 2026-11-15)
 		ImGui::TextUnformatted("A fork of openc2e (from its commit dfcd46f2, 7 October 2026)");
 		ImGui::Text("Version %s (built %s)", OPENC2E_FORK_VERSION, __DATE__);
-		ImGui::TextUnformatted("by DotairZee");
+		ImGui::TextUnformatted("by DotairZee, developed alongside Claude (Anthropic's AI)");
 		// (owner, 2026-11-15: "this build is a labor of love by an old fan";
 		// British spelling, as all the game's own text)
 		ImGui::TextUnformatted("A labour of love by an old fan.");

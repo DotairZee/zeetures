@@ -11,7 +11,10 @@
  *  the skeleton is rebuilt from the joints, the foot on the ground stays
  *  where it is, and each part is drawn as its nearest picture turned about
  *  its joint. A part going from its first angle to its fourth passes through
- *  the game's own second and third. The turned pictures are made from the
+ *  the game's own second and third. A walk's poses carry the body forward
+ *  unevenly (in one, 1, 22, 4 and 25 px), which drawn smoothly would be a
+ *  lurch and a halt by turns, so the body is drawn part of the way to an
+ *  even speed over the cycle (the feet slip a few px for it). The turned pictures are made from the
  *  player's own sprites as they are first needed, and kept a while.
  *
  *  Drawing only: what the creature is, does and touches is unchanged, and
@@ -63,6 +66,8 @@ const float PI = 3.14159265f;
 const float STEP = 5.0f * PI / 180.0f; // turned pictures are made 5 degrees apart
 const float SHORT_BONE = 4.0f; // px: a part whose joint and end are nearer than this has no angle to speak of
 const float MOST_TURN = 100.0f * PI / 180.0f; // between neighboring pictures; more is a joint file's oddity
+const float EVEN = 0.7f; // how much of a walk's unevenness is taken out
+const float EVEN_FADE = 2.0f; // ticks for a stopped walk's to go
 const float MOST_JUMP = 72.0f; // px: the feet further off than this were moved, not walked (or pushed back by a wall, some 55)
 
 int s_on = -1;
@@ -129,6 +134,80 @@ float SkeletalCreature::glideShare() const {
 	return std::clamp((now - glide.start) / glide.length, 0.0f, 1.0f);
 }
 
+// How far across it is drawn now to even out its walk.
+float SkeletalCreature::evenNow() const {
+	if (glide.evenFrom == 0 && glide.evenTo == 0)
+		return 0;
+	const float t = glideShare();
+	if (t < 1.0f)
+		return glide.evenFrom + (glide.evenTo - glide.evenFrom) * t;
+	// (the walk has stopped: fading)
+	const float now = (float)(world.tickcount - glide.changed) + (glide.pending ? 1.0f : engine.tickFraction());
+	return glide.evenTo * std::clamp(1.0f - (now - glide.start - std::max(glide.length, 0.0f)) / EVEN_FADE, 0.0f, 1.0f);
+}
+
+// A step of a walk has just been taken (gaiti: its place in the cycle): how
+// far to draw the body from where this pose puts it, for an even speed. Worked
+// out from the cycle's poses and the joints when a walk or its way changes: a
+// step keeps the foot that was down where it is, so the neck moves on by how
+// much further ahead of that foot the next pose has it.
+float SkeletalCreature::evenWalk() {
+	if (!gaitgene)
+		return 0;
+	WalkCycle& w = walkCycle;
+	if (w.gene != gaitgene || w.dir != posedirection) {
+		w = WalkCycle();
+		w.gene = gaitgene;
+		w.dir = posedirection;
+		float ahead[8][2];
+		bool leftDown[8];
+		for (; w.size < 8 && gaitgene->pose[w.size] != 0; w.size++) {
+			auto g = posegenes.find(gaitgene->pose[w.size]);
+			if (g == posegenes.end() || posedirection > 1)
+				return 0;
+			const std::string pose = g->second->getPoseString();
+			// a part's picture in this pose (setPose; the pose string's places
+			// for the body and the legs)
+			auto picture = [&](int part, int place) {
+				const char c = place < (int)pose.size() ? pose[place] : 'X';
+				return c >= '0' && c <= '3' ? (int)(c - '0') + (int)posedirection * 4 : (int)this->pose[part];
+			};
+			auto& body = att[0].attachments[picture(0, 2)];
+			float footy[2];
+			for (int leg = 0; leg < 2; leg++) {
+				// the hip, then along the thigh, shin and foot
+				float fx = (float)(int)body[2 + leg * 2], fy = (float)(int)body[3 + leg * 2];
+				const int parts[3] = {leg ? 3 : 2, leg ? 8 : 7, leg ? 12 : 11};
+				for (int k = 0; k < 3; k++) {
+					auto& a = att[parts[k]].attachments[picture(parts[k], (leg ? 6 : 3) + k)];
+					fx += (float)(int)a[2] - (float)(int)a[0];
+					fy += (float)(int)a[3] - (float)(int)a[1];
+				}
+				ahead[w.size][leg] = (float)(int)body[0] - fx;
+				footy[leg] = fy;
+			}
+			leftDown[w.size] = footy[1] < footy[0];
+		}
+		float step[8], whole = 0;
+		for (int i = 0; i < w.size; i++) {
+			const int f = leftDown[i] ? 0 : 1;
+			step[i] = ahead[(i + 1) % w.size][f] - ahead[i][f];
+			whole += step[i];
+		}
+		// where each pose has it, and where an even walk would
+		float at = 0, mean = 0;
+		for (int i = 0; i < w.size; i++) {
+			w.even[i] = whole * i / w.size - at;
+			mean += w.even[i] / w.size;
+			at += step[i];
+		}
+		for (int i = 0; i < w.size; i++)
+			w.even[i] = std::clamp((w.even[i] - mean) * EVEN, -14.0f, 14.0f);
+	}
+	// (gaitTick counts gaiti on after the pose is set)
+	return gaiti < (unsigned int)w.size && w.size > 1 ? w.even[gaiti] : 0;
+}
+
 // Where a part's joint `id` is from its own joint (0), at a pose between two
 // of its pictures: turned and stretched from the one's to the other's.
 void SkeletalCreature::attachmentBetween(int part, int id, float p, float& ox, float& oy) const {
@@ -189,7 +268,8 @@ float SkeletalCreature::turnBetween(int part, float p, int& frame) const {
 
 bool SkeletalCreature::drawnSkeleton(float poses[14], float jx[14], float jy[14], float& bx, float& by) const {
 	const float t = glideShare();
-	if (t >= 1.0f)
+	const float even = evenNow();
+	if (t >= 1.0f && std::fabs(even) < 0.25f)
 		return false;
 	for (int i = 0; i < PARTS; i++) {
 		const float a = glide.from[i];
@@ -215,7 +295,7 @@ bool SkeletalCreature::drawnSkeleton(float poses[14], float jx[14], float jy[14]
 	}
 	float ox, oy;
 	attachmentBetween(glide.foot, 1, poses[glide.foot], ox, oy);
-	bx = fx - jx[glide.foot] - ox;
+	bx = fx - jx[glide.foot] - ox + even;
 	by = fy - jy[glide.foot] - oy;
 	return true;
 }
@@ -245,7 +325,7 @@ void SkeletalCreature::glideBegin() {
 	if (drawnSkeleton(p, jx, jy, bx, by)) {
 		float ax, ay;
 		attachmentBetween(foot, 1, p[foot], ax, ay);
-		glide.footx = bx + jx[foot] + ax;
+		glide.footx = bx - evenNow() + jx[foot] + ax;
 		glide.footy = by + jy[foot] + ay;
 		std::copy(p, p + PARTS, glide.from);
 	} else {
@@ -254,6 +334,7 @@ void SkeletalCreature::glideBegin() {
 		for (int i = 0; i < PARTS; i++)
 			glide.from[i] = (float)pose[i];
 	}
+	glide.evenFrom = evenNow();
 	glide.originx = x + ox;
 	glide.originy = y + oy;
 	glide.foot = foot;
@@ -268,17 +349,18 @@ void SkeletalCreature::glideEnd() {
 	glide.dir = posedirection;
 	glide.have = true;
 	if (glide.pending) {
-		// to be there by the next: a walk's steps come every other tick, or
-		// slower for the very young and the old
-		const unsigned int since = world.tickcount - glide.changed;
-		glide.length = since >= 2 && since <= 5 ? (float)since : 2.0f;
+		// to be there as the walk's next step comes (walkSteps knows when);
+		// any other pose, in two ticks
+		glide.length = nextStepIn > 0 ? std::min(nextStepIn, 8.0f) : 2.0f;
 		glide.start = 1.0f;
 		glide.settled = false;
 		glide.pending = false;
+		glide.evenTo = nextStepIn > 0 ? evenWalk() : 0;
 		glide.changed = world.tickcount;
 	} else if (changed) {
 		glide.length = 0;
 		glide.settled = true;
+		glide.evenFrom = glide.evenTo = 0;
 		glide.changed = world.tickcount;
 	}
 }

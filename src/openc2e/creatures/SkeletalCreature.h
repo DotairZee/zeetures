@@ -88,8 +88,19 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 		float footx = 0, footy = 0; // and where it was drawn
 		bool settled = true; // off is known
 		float offx = 0, offy = 0; // how far that foot was drawn from where it is now
+		float evenFrom = 0, evenTo = 0; // how far across it is drawn to even out its walk
 		float originx = 0, originy = 0; // the creature's x and y as drawn when the change began
 	} glide;
+	// its walk's cycle: how far to draw the body, at each pose, from where
+	// the pose puts it, for an even speed
+	struct WalkCycle {
+		creatureGaitGene* gene = nullptr;
+		unsigned int dir = 0;
+		int size = 0;
+		float even[8] = {};
+	} walkCycle;
+	float evenWalk();
+	float evenNow() const;
 	void glideBegin(); // the pose has changed, the skeleton has not yet
 	void glideEnd(); // the skeleton is the new pose's
 	void glideSettle(); // the change's other effects (the foot snapped to its floor) are done
@@ -103,7 +114,11 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 
 	unsigned int gaiti = 0; // (was left unset: a fresh or loaded creature read its gait gene past its 8 poses once)
 	float paceCredit = 0; // C2: walking pace by life stage (stagePace)
+	int approachUnid = -1, approachTurns = 0; // approaching: what, and how often it has turned back for it lately
+	unsigned int approachTurnedAt = 0;
 	static float stagePace(int stage);
+	float nextStepIn = 0; // while a walk's step is taken: ticks until its next (0: not a step)
+	bool walkSteps(float share);
 	void stepTiredness();
 	creatureGaitGene* gaitgene;
 

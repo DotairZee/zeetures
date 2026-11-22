@@ -27,6 +27,12 @@ void RelaunchIntoWorld(const std::string& name);
 std::string DrawNewWorldForm(bool reset);
 
 // Start-up chooser, run before the world loads. Returns "" if the user quits.
+// A world the player chose to open at every launch is returned at once.
 std::string RunWorldChooser();
+// the world opened at launch without asking ("": ask)
+std::string DefaultWorld();
+void SetDefaultWorld(const std::string& name);
+// once the world has loaded
+void DefaultWorldOpened();
 
 } // namespace Openc2eImgui
