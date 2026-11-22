@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 621 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 623 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 3 commits, 21 November 2026
+- [0.28.1](#version-0281): 5 commits, 21 November 2026
 - [0.28.0](#version-0280): 14 commits, 21 November 2026
 - [0.27.0](#version-0270): 4 commits, 21 November 2026
 - [0.26.2](#version-0262): 3 commits, 21 November 2026
@@ -71,11 +71,28 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.28.1
 
-Changes since the last version.
+The Breeder's Kit's Breeds page is as wide as its pictures, and the Mind Kit's Places page no longer grows as wide as the screen.
 
 ### 21 November 2026
+
+#### Version 0.28.1
+
+[`2f6ff0cc`](https://github.com/DotairZee/zeetures/commit/2f6ff0cc557fe6420d3b33503f2b409047c4568e)
+
+#### Breeds and Places no wider than what they show
+
+[`367b31f1`](https://github.com/DotairZee/zeetures/commit/367b31f1e92875d781fadf8df77568d7608654e6)
+
+- Breeder's Kit, Breeds: the breed's side is as wide as its two pictures
+  and a little more, and its text wraps to that. One long line ("Installed
+  in your data folder, in place of the game's") had widened the kit and
+  left it empty beside the pictures. The pictures' size no longer depends
+  on the window's; the message about an egg or an import wraps too.
+- Mind Kit, Places: 660 wide, its text wrapped. "Longs to find again", all
+  on one line, made the kit as wide as the screen; it names the eight
+  strongest and counts the rest, with all of them on hover.
 
 #### README: the trailer on YouTube
 

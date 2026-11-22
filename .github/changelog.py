@@ -292,6 +292,9 @@ VERSIONS = [
      "and the germs of rotting food; eating it hurts and may bring illness, and creatures learn it apart from good "
      "fruit. A saved game that cannot be read is now shown on screen, with a way to put it back. Windows builds "
      "again (they had failed since 0.19.0)."),
+    ("0.28.1", "2f6ff0cc",
+     "The Breeder's Kit's Breeds page is as wide as its pictures, and the Mind Kit's Places page no longer grows as "
+     "wide as the screen."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
