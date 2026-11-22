@@ -1158,6 +1158,24 @@ void ApplySavedView() {
 	engine.camera->moveToGlobal(s_view.x, s_view.y, jump);
 }
 
+// A save this version cannot read is moved aside, never left to be replaced
+// by the next autosave (owner, 2026-11-21: old worlds must survive every new
+// version). It stays in the world folder as save.unreadable-DATE for a later
+// version, or a person, to recover.
+void SetAsideUnreadableSave(const fs::path& worlddir, const std::string& why) {
+	fs::path dest = worlddir / "save";
+	if (!fs::exists(dest))
+		return;
+	std::time_t now = std::time(nullptr);
+	char stamp[32];
+	std::strftime(stamp, sizeof stamp, "%Y%m%d-%H%M%S", std::localtime(&now));
+	fs::path aside = worlddir / (std::string("save.unreadable-") + stamp);
+	std::error_code ec;
+	fs::rename(dest, aside, ec);
+	fmt::print("* This world's save could not be read ({}); it was kept as {} and the world starts from its world file\n", why,
+		ec ? std::string("save (moving it failed: ") + ec.message() + ")" : aside.filename().string());
+}
+
 bool LoadWorldState(const fs::path& worlddir) {
 	s_view = SavedView();
 	world.allFertile = true; // (saves made before the setting have every creature fertile)
@@ -1176,7 +1194,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 	};
 	dropCR(line);
 	if (line != MAGIC) {
-		fmt::print("* Save file has an unknown format; starting from the world file\n");
+		in.close();
+		SetAsideUnreadableSave(worlddir, "an unknown format: " + line.substr(0, 40));
 		return false;
 	}
 

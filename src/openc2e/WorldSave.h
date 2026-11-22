@@ -14,6 +14,8 @@ bool HasSavedState(const std::filesystem::path& worlddir);
 bool SaveWorldState(const std::filesystem::path& worlddir, std::string& error);
 // Applies a saved state after the world file has loaded; false if none.
 bool LoadWorldState(const std::filesystem::path& worlddir);
+// moves a save that cannot be read out of the way (save.unreadable-DATE)
+void SetAsideUnreadableSave(const std::filesystem::path& worlddir, const std::string& why);
 // Puts the view back where it was saved (place and zoom), once the world has
 // finished starting: objects installed at load show themselves with SYS:
 // CAMT, which moved the view after LoadWorldState had restored it.

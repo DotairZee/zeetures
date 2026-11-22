@@ -2461,7 +2461,13 @@ bool Engine::initialSetup() {
 	if (version < 3 && !currentworlddir.empty()) {
 		Disease::reset(); // (the save, if any, then fills it)
 		Exposure::reset();
-		WorldSave::LoadWorldState(currentworlddir);
+		// (a save that breaks the loader part way is kept aside, not
+		// overwritten by the next autosave; the world goes on from what loaded)
+		try {
+			WorldSave::LoadWorldState(currentworlddir);
+		} catch (std::exception& e) {
+			WorldSave::SetAsideUnreadableSave(currentworlddir, e.what());
+		}
 		worldready = true;
 	}
 
