@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 627 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 628 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 3 commits, 22 November 2026
+- [0.28.3](#version-0283): 4 commits, 22 November 2026
 - [0.28.2](#version-0282): 1 commits, 22 November 2026
 - [0.28.1](#version-0281): 5 commits, 21 November 2026
 - [0.28.0](#version-0280): 14 commits, 21 November 2026
@@ -73,11 +73,43 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.28.3
 
-Changes since the last version.
+The first players' reports fixed: display scaling on Windows, speaking after naming a world, creatures that grew up unable to breed, sleep broken off within seconds, a crash at some births, and clearer wording of what a creature is doing.
 
 ### 22 November 2026
+
+#### Version 0.28.3: norns breed, sleep and hear again; Windows display scaling
+
+[`31d17d7e`](https://github.com/DotairZee/zeetures/commit/31d17d7e2421c293e5f6d3b66a8f14d56f5b1d1e)
+
+Fixes for what the first players reported on Reddit (22 November 2026).
+
+- With the desktop scaled (Windows and X11 at 125%, 150%, 200%), the
+  interface was laid out for the window's pixels and then drawn larger:
+  windows sat off centre or off the screen and the mouse missed what it
+  pointed at. It is laid out in the drawn size now, and so is the pointer.
+- The first screen always shows the pointer, and its world name box is
+  ready to type in.
+- Closing a text box stopped typing for the whole window, so nobody could
+  speak to the creatures after naming a new world (or anything else) until
+  the world was opened again.
+- Breeding: a receptor that switches on at a life stage reads its chemical
+  at once. One on its own organ's clock was waited for with the clock at 0,
+  so the reproductive organ of every creature that grew up since its world
+  was opened stopped at adolescence and none could breed. Four fast game
+  weeks of twelve hatched norns: no mating at all; with this, 12 to 13
+  matings and 1 to 2 conceptions each.
+- Sleep: a very sleepy body's own falling asleep (event 69) is a sleep, let
+  run; the mind's next choice used to wake it within a second or two, as
+  tired as before (710 of 832 sleeps in a test). It does not start over a
+  sleep, nor while hunger or water keeps the creature awake. Lying down to
+  rest is not learned as sleeping, and lasts until rested. Sleep learned
+  before is learned afresh.
+- A birth no longer crashes the game when a mutated gene names a breed
+  whose pictures are not installed: the creature wears its own species'.
+- What a creature is doing is worded better ("dropping a nature").
+- Developer aids: OPENC2E_WATCH_SLEEP, OPENC2E_WATCH_SEX.
 
 #### README: the trailer by its YouTube picture
 

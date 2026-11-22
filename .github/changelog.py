@@ -299,6 +299,10 @@ VERSIONS = [
      "File > Exit saved an emptied world: quitting now saves it whole, an empty world is never saved over a good "
      "one, and a world already stripped gets its objects back. File > Exit also works while paused. Players' builds "
      "open no listening port, so no firewall question at the first start."),
+    ("0.28.3", "31d17d7e",
+     "The first players' reports fixed: display scaling on Windows, speaking after naming a world, creatures that "
+     "grew up unable to breed, sleep broken off within seconds, a crash at some births, and clearer wording of what "
+     "a creature is doing."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
