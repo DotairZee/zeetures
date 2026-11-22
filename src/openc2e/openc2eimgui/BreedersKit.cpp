@@ -27,6 +27,7 @@
 #include "Engine.h"
 #include "fileformats/c2cobfile.h"
 #include "fileformats/genomeFile.h"
+#include "fileformats/attFile.h"
 
 #include <SDL3/SDL_dialog.h>
 #include <algorithm>
@@ -573,6 +574,105 @@ static std::string partFile(const BreedInfo& b, char part, bool female, int stag
 				return stem + ext;
 	}
 	return {};
+}
+
+// ---- the whole body, facing the camera (owner, 2026-11-21: "full-body breed
+// preview", option B from a sheet of poses) ---------------------------------------
+// Drawn as the engine draws a creature (SkeletalCreature): each part's
+// picture 8 (C2's one picture toward the camera), hung from its parent's
+// joint by the body data's ATT points, in the engine's order for facing the
+// camera. A part the breed lacks comes from its younger stages, then the
+// standard breed (norns Hebe, h; grendels and ettins a), as creatures do.
+
+namespace {
+struct FullPart {
+	char letter;
+	int parent, attorder;
+};
+// the engine's tables (SkeletalCreature.cpp cee_bodyparts, cee_zorder's row
+// for facing the camera, without Creatures Village's ears and hair)
+const FullPart FULL_PARTS[14] = {{'b', -1, -1}, {'a', 0, 0}, {'c', 0, 1}, {'f', 0, 2}, {'i', 0, 3}, {'k', 0, 4}, {'m', 0, 5},
+	{'d', 2, 1}, {'g', 3, 1}, {'j', 4, 1}, {'l', 5, 1}, {'e', 7, 1}, {'h', 8, 1}, {'n', 6, 1}};
+const int FULL_FRONT_ORDER[14] = {6, 13, 2, 4, 9, 5, 3, 7, 8, 10, 0, 11, 12, 1};
+const int FULL_FRAME = 8;
+
+// a part's picture file stem and its body data, the given breed's or a fallback's
+bool fullPartFiles(int species, int slot, char letter, bool female, int stage, std::string& image, attFile& att) {
+	static std::map<std::string, attFile> attCache;
+	int standard = species == 0 ? breedSlotFromName("h") : 0;
+	for (int sl : {slot, standard})
+		for (int st = stage; st >= 0; st--) {
+			std::string stem = fmt::format("{}{}{}{}", letter, species + (female ? 4 : 0), st, breedSlotName(sl));
+			std::string img;
+			for (const char* ext : {".png", ".s16", ".c16"})
+				if (img.empty() && !findImageFile(stem + ext).empty())
+					img = stem + ext;
+			if (img.empty())
+				continue;
+			auto it = attCache.find(stem);
+			if (it == attCache.end()) {
+				auto path = findBodyDataFile(stem + ".att");
+				if (path.empty())
+					continue;
+				try {
+					FileReader f(path);
+					it = attCache.emplace(stem, ReadAttFile(f)).first;
+				} catch (...) {
+					continue;
+				}
+			}
+			image = img;
+			att = it->second;
+			return true;
+		}
+	return false;
+}
+} // namespace
+
+// Draws the breed's whole body facing the camera at `at`, `scale` times its
+// size; returns the size drawn (0, 0 if the body or head cannot be made)
+static ImVec2 drawFullBody(const BreedInfo& b, bool female, int stage, ImVec2 at, float scale) {
+	Texture tex[14];
+	attFile att[14];
+	bool have[14] = {};
+	for (int i = 0; i < 14; i++) {
+		std::string img;
+		if (fullPartFiles(b.species, b.slot, FULL_PARTS[i].letter, female, stage, img, att[i])) {
+			tex[i] = breedPicture(img, FULL_FRAME);
+			have[i] = (bool)tex[i];
+		}
+	}
+	if (!have[0] || !have[1])
+		return ImVec2(0, 0);
+	int px[14] = {}, py[14] = {};
+	for (int i = 1; i < 14; i++) {
+		const FullPart& part = FULL_PARTS[i];
+		if (!have[i] || !have[part.parent]) {
+			have[i] = false;
+			continue;
+		}
+		int ax = (int)att[i].attachments[FULL_FRAME][0], ay = (int)att[i].attachments[FULL_FRAME][1];
+		const attFile& pa = att[part.parent];
+		int jx = px[part.parent] + (int)pa.attachments[FULL_FRAME][part.attorder * 2];
+		int jy = py[part.parent] + (int)pa.attachments[FULL_FRAME][part.attorder * 2 + 1];
+		px[i] = jx - ax;
+		py[i] = jy - ay;
+	}
+	int lx = 1 << 20, ly = 1 << 20, hx = -(1 << 20), hy = -(1 << 20);
+	for (int i = 0; i < 14; i++)
+		if (have[i]) {
+			lx = std::min(lx, px[i]);
+			ly = std::min(ly, py[i]);
+			hx = std::max(hx, px[i] + (int)tex[i].width);
+			hy = std::max(hy, py[i] + (int)tex[i].height);
+		}
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	for (int i : FULL_FRONT_ORDER)
+		if (have[i]) {
+			ImVec2 p0 = at + ImVec2((px[i] - lx) * scale, (py[i] - ly) * scale);
+			dl->AddImage(tex[i].as<ImTextureID>(), p0, p0 + ImVec2(tex[i].width * scale, tex[i].height * scale));
+		}
+	return ImVec2((hx - lx) * scale, (hy - ly) * scale);
 }
 
 static const char* partName(char p) {
@@ -1552,14 +1652,18 @@ static void BreedsPage() {
 	}
 
 	// the list, by species
-	ImGui::BeginChild("list", ImVec2(230, 330), ImGuiChildFlags_Borders);
+	// the list as tall as the chosen breed's side when that is taller (owner,
+	// 2026-11-21: the full-body pictures made the right side longer than
+	// the list), measured the frame before
+	static float s_detailHeight = 0.0f;
+	ImGui::BeginChild("list", ImVec2(230, std::max(330.0f, s_detailHeight)), ImGuiChildFlags_Borders);
 	for (int sp = 0; sp < 4; sp++) {
 		int n = 0;
 		for (auto& b : breeds)
 			n += b.group() == sp;
 		if (n == 0)
 			continue;
-		if (!ImGui::TreeNodeEx(BreedSpeciesName(sp), ImGuiTreeNodeFlags_DefaultOpen, "%s (%d breeds)", BreedSpeciesName(sp), n))
+		if (!ImGui::TreeNodeEx(BreedSpeciesName(sp), ImGuiTreeNodeFlags_DefaultOpen, "%s (%d breed%s)", BreedSpeciesName(sp), n, n == 1 ? "" : "s"))
 			continue;
 		// in order of slot letter (breeds filed in other picture sets among
 		// them; two may share a letter from different sets)
@@ -1596,20 +1700,44 @@ static void BreedsPage() {
 		ImGui::TextDisabled("%s", b->inOverrides ? (b->inGame ? "Installed in your data folder, in place of the game's" : "Installed in your data folder")
 														 : b->inGame ? (b->jointsAdjusted ? "In the game's folders (joints corrected in your data folder)" : "In the game's folders")
 																	 : "Installed in your data folder");
-		// portraits: the adult face (or the oldest there is), each sex
+		// the whole adult (or the oldest there is), each sex, facing the
+		// camera; just the face when the body cannot be put together
 		int stage = b->stages.empty() ? 0 : std::min(4, *b->stages.rbegin());
 		ImVec2 p = ImGui::GetCursorScreenPos();
 		float x = 0, tallest = 0;
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+		// measure both at their own size first (drawn clipped away), then
+		// draw them as large as fits beside each other, up to twice their size
+		ImVec2 own[2];
+		for (int k = 0; k < 2; k++) {
+			dl->PushClipRect(ImVec2(-10000, -10000), ImVec2(-9000, -9000));
+			own[k] = drawFullBody(*b, k == 1, stage, ImVec2(-10000, -10000), 1.0f);
+			dl->PopClipRect();
+		}
+		float fit = (ImGui::GetContentRegionAvail().x - 40.0f) / std::max(1.0f, own[0].x + own[1].x);
+		float scale = std::clamp(fit, 1.0f, 2.0f);
+		float boxH = 95.0f * scale; // room for the tallest adult
 		for (bool female : {false, true}) {
-			std::string f = partFile(*b, 'a', female, stage);
-			Texture t = f.empty() ? Texture() : breedPicture(f, 8);
-			if (!t)
-				continue;
-			ImGui::GetWindowDrawList()->AddRectFilled(p + ImVec2(x, 0), p + ImVec2(x + t.width * 2 + 8, t.height * 2 + 8), IM_COL32(60, 70, 90, 255), 4);
-			ImGui::GetWindowDrawList()->AddImage(t.as<ImTextureID>(), p + ImVec2(x + 4, 4), p + ImVec2(x + 4 + t.width * 2, 4 + t.height * 2));
-			ImGui::GetWindowDrawList()->AddText(p + ImVec2(x + 4, t.height * 2 + 10), IM_COL32(200, 200, 210, 255), female ? "female" : "male");
-			x += t.width * 2 + 16;
-			tallest = std::max(tallest, (float)t.height * 2 + 8);
+			ImVec2 size = (double)scale * own[female ? 1 : 0];
+			float w, h;
+			if (size.x > 0) {
+				w = std::max(size.x, 60.0f * scale);
+				h = std::max(boxH, size.y);
+				dl->AddRectFilled(p + ImVec2(x, 0), p + ImVec2(x + w + 8, h + 8), IM_COL32(60, 70, 90, 255), 4);
+				drawFullBody(*b, female, stage, p + ImVec2(x + 4 + (w - size.x) / 2, 4 + h - size.y), scale);
+			} else {
+				std::string f = partFile(*b, 'a', female, stage);
+				Texture t = f.empty() ? Texture() : breedPicture(f, 8);
+				if (!t)
+					continue;
+				w = t.width * 2.0f;
+				h = t.height * 2.0f;
+				dl->AddRectFilled(p + ImVec2(x, 0), p + ImVec2(x + w + 8, h + 8), IM_COL32(60, 70, 90, 255), 4);
+				dl->AddImage(t.as<ImTextureID>(), p + ImVec2(x + 4, 4), p + ImVec2(x + 4 + w, 4 + h));
+			}
+			dl->AddText(p + ImVec2(x + 4, h + 10), IM_COL32(200, 200, 210, 255), female ? "female" : "male");
+			x += w + 16;
+			tallest = std::max(tallest, h + 8);
 		}
 		if (x > 0)
 			ImGui::Dummy(ImVec2(x, tallest + 22));
@@ -1788,6 +1916,7 @@ static void BreedsPage() {
 		}
 	}
 	ImGui::EndGroup();
+	s_detailHeight = ImGui::GetItemRectSize().y;
 
 	if (!s_breed_message.empty())
 		ImGui::TextUnformatted(s_breed_message.c_str());
