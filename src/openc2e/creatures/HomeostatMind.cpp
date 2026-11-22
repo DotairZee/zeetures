@@ -1455,6 +1455,43 @@ class HomeostatMind : public CreatureMind {
 			drivesSeen = true;
 		}
 
+		// hunger, water, or a place or need that has just woken it keep it
+		// from dropping off where it stands, as they keep it from choosing
+		// sleep (it dropped off and was woken again every second or so)
+		out.resistSleep = p.tick < wokenUntil || badSleepAt(p) || starvingAwake(d) || (p.inWater && !p.breathesWater);
+
+		// Dropped off where it stood: a very sleepy body's own reflex (event
+		// 69, which interrupts whatever it was doing). It is a sleep like any
+		// other: let it sleep. (Not noticed before, the mind's next choice woke
+		// it within a second or two, as sleepy as ever, and a tired norn's day
+		// was three seconds of sleep, one thing done, three seconds of sleep;
+		// reported 2026-11-22.)
+		if (p.dozing && !(inEpisode && current.category < 0 && current.decision == prm.sleepDecision)) {
+			if (inEpisode)
+				endEpisode(p, d, D, "dropped off");
+			current = Candidate{};
+			current.category = -1;
+			current.decision = prm.sleepDecision;
+			inEpisode = true;
+			fellAsleep = false;
+			episodeNudges.clear();
+			episodeApprovalStart = approvalNow(p);
+			episodeAgent = AgentRef();
+			episodeTicks = 0;
+			closest = 1e9f;
+			lastProgress = 0;
+			episodeWalledStart = p.walledCount;
+			episodeStartX = startX = p.x;
+			episodeStartY = startY = p.y;
+			startDrives = sleepStartDrives = d;
+			startD = D;
+			felt.fill(0.0f);
+			feltAny.fill(false);
+			MIND_LOG("[homeostat] creature {} t{}: dropped off to sleep\n", p.creatureId, p.tick);
+			thinkAbout(p, current, out);
+			return out;
+		}
+
 		// Asleep: let the sleep script run unless something urgent wakes us.
 		if (inEpisode && current.category < 0 && current.decision == prm.sleepDecision) {
 			episodeTicks++;
@@ -1475,11 +1512,17 @@ class HomeostatMind : public CreatureMind {
 					prm.noSleepAfterRefusal);
 				sleepRefused = true; // not a sleep: nothing to learn about sleeping
 			}
+			// lay down only to rest (tired but not sleepy, sleep.cos): not a
+			// sleep either. Learned as one, a few rests taught a norn that
+			// sleep does not cure sleepiness, and it stopped choosing it
+			// (reported 2026-11-22)
+			if (done && !fellAsleep)
+				sleepRefused = true;
 			endEpisode(p, d, D, done ? "finished" : urgent >= 0 ? DRIVE_NAMES[urgent] : "time");
 			sleepRefused = false;
 			if (urgent >= 0) {
 				MIND_LOG("[homeostat] creature {} t{}: woken by {}\n", p.creatureId, p.tick, DRIVE_NAMES[urgent]);
-				noSleepUntil = p.tick + prm.noSleepAfterWaking;
+				noSleepUntil = wokenUntil = p.tick + prm.noSleepAfterWaking;
 				if (urgent == COLD || urgent == HOT) {
 					badSleepX = p.x;
 					badSleepY = p.y;
@@ -1606,9 +1649,7 @@ class HomeostatMind : public CreatureMind {
 
 		// Choose the next action.
 		std::vector<Candidate> candidates = evaluate(p, d, D);
-		bool badSleepHere = p.tick < badSleepUntil && std::fabs(dxTo(p, badSleepX)) < prm.badSleepNear && std::fabs(p.y - badSleepY) < prm.sameLevel;
-		bool starvingAwake = d[HUNGER] >= prm.starveAwake && d[SLEEPY] < prm.exhausted && d[TIRED] < prm.exhausted;
-		if (p.tick < noSleepUntil || badSleepHere || (p.inWater && !p.breathesWater) || starvingAwake) // (never sleep in water, unless it breathes it)
+		if (p.tick < noSleepUntil || badSleepAt(p) || (p.inWater && !p.breathesWater) || starvingAwake(d)) // (never sleep in water, unless it breathes it)
 			candidates.erase(std::remove_if(candidates.begin(), candidates.end(),
 								 [&](const Candidate& c) { return c.category < 0 && c.decision == prm.sleepDecision; }),
 				candidates.end());
@@ -1737,7 +1778,7 @@ class HomeostatMind : public CreatureMind {
 	// (learned numbers are written to 4 significant figures: at 9, with 145
 	// creatures, the save was 28 MB; 2026-11-13)
 	std::string saveState() const override {
-		std::string s = fmt::format("statever 7\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
+		std::string s = fmt::format("statever 8\nvalence {}\nmood {}\nepisodes {}\nstimuli {}\n", valence, mood, episodes, stimuliSeen);
 		s += "drift";
 		for (float f : drift)
 			s += fmt::format(" {:.4g}", f);
@@ -2032,13 +2073,15 @@ class HomeostatMind : public CreatureMind {
 			scents.clear();
 			fmt::print("[homeostat] relearning from scratch (expectations saved before felt effects)\n");
 		}
-		if (version >= 2 && version <= 4) {
+		if (version >= 2 && version <= 7) {
 			// Saved while a sleep the world's sleep script refused (C2's: only
 			// while Tiredness is above 48) was learned as sleeping that did
 			// nothing: grendels and ettins, who hardly tire, learned that
 			// sleep never helps. Grendels and ettins now sleep when sleepy
 			// (sleep.cos, owner 2026-11-10): learn sleep afresh (its prior,
-			// from the instincts, is kept).
+			// from the instincts, is kept). And, until version 8, while lying
+			// down to rest was learned as sleeping, and sleep was broken off
+			// within seconds.
 			if (expectations.erase(prm.sleepDecision)) { // category -1
 				// and let the sleep instincts seed it again (signatures end
 				// "-action-drive-level")
@@ -2049,7 +2092,7 @@ class HomeostatMind : public CreatureMind {
 					else
 						++it;
 				}
-				fmt::print("[homeostat] relearning sleep (learned while sleep could be refused)\n");
+				fmt::print("[homeostat] relearning sleep (learned while sleep could be refused or cut short)\n");
 			}
 		}
 		if (version < 7) {
@@ -2399,6 +2442,7 @@ class HomeostatMind : public CreatureMind {
 	std::array<float, NUM_DRIVES> drift{}; // baseline drive change per tick
 	std::array<float, NUM_DRIVES> sleepStartDrives{};
 	unsigned int noSleepUntil = 0;
+	unsigned int wokenUntil = 0; // (woken by an urgent need: awake until then)
 	bool fellAsleep = false; // during the current sleep episode
 	bool sleepRefused = false; // the episode ending now was a refused sleep
 	float badSleepX = 0, badSleepY = 0; // where a sleep was cut short by cold or heat
@@ -2475,6 +2519,15 @@ class HomeostatMind : public CreatureMind {
 	float mood = 0.0f; // short-term affect: fast-following, decaying average of reward
 	int lastFace = -1;
 
+	// by the place whose cold or heat woke it a while ago
+	bool badSleepAt(const MindPerception& p) const {
+		return p.tick < badSleepUntil && std::fabs(dxTo(p, badSleepX)) < prm.badSleepNear && std::fabs(p.y - badSleepY) < prm.sameLevel;
+	}
+	// too hungry to sleep (see prm.starveAwake)
+	bool starvingAwake(const std::array<float, NUM_DRIVES>& d) const {
+		return d[HUNGER] >= prm.starveAwake && d[SLEEPY] < prm.exhausted && d[TIRED] < prm.exhausted;
+	}
+
 	// A bodily need that has risen sharply since falling asleep (hunger,
 	// cold, pain from a slap...), or -1. Boredom or loneliness do not wake.
 	int wakeReason(const std::array<float, NUM_DRIVES>& d) const {
@@ -2483,8 +2536,10 @@ class HomeostatMind : public CreatureMind {
 			if (d[i] >= prm.wakeLevel && d[i] - sleepStartDrives[i] >= prm.wakeRise && (worst < 0 || d[i] > d[worst]))
 				worst = i;
 		}
-		// starving and not exhausted: hunger keeps it awake (see starveAwake)
-		if (worst < 0 && d[HUNGER] >= prm.starveAwake && d[SLEEPY] < prm.exhausted && d[TIRED] < prm.exhausted)
+		// starving and no longer near exhaustion: hunger wakes it (see
+		// starveAwake; one that slept because exhausted was woken as soon as
+		// it was a hair less so)
+		if (worst < 0 && starvingAwake(d) && std::max(d[SLEEPY], d[TIRED]) < prm.exhausted - prm.wakeRise)
 			worst = HUNGER;
 		return worst;
 	}

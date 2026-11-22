@@ -216,6 +216,9 @@ std::string DrawNewWorldForm(bool reset) {
 	static int s_template = 0;
 	static std::string s_error;
 	static std::vector<fs::path> s_templates;
+	static bool s_focus = false;
+	if (reset)
+		s_focus = true;
 	if (reset || s_templates.empty()) {
 		s_templates = ListWorldTemplates();
 		s_template = 0;
@@ -228,6 +231,9 @@ std::string DrawNewWorldForm(bool reset) {
 
 	ImGui::Text("World name:");
 	ImGui::SetNextItemWidth(260);
+	if (ImGui::IsWindowAppearing() || s_focus)
+		ImGui::SetKeyboardFocusHere(); // (ready to type the name)
+	s_focus = false;
 	bool enter = ImGui::InputText("##worldname", s_name, sizeof(s_name), ImGuiInputTextFlags_EnterReturnsTrue);
 	ImGui::Text("Start from:");
 	ImGui::SetNextItemWidth(260);
@@ -271,6 +277,7 @@ std::string RunWorldChooser() {
 		get_backend()->getMainRenderTarget()->renderClear();
 
 		ImGuiIO& io = ImGui::GetIO();
+		ImGui::SetNextFrameWantCaptureMouse(true); // (the pointer shows everywhere: there is no hand yet)
 		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x / 2, io.DisplaySize.y / 2), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 		ImGui::SetNextWindowSize(ImVec2(360, 0));
 		ImGui::Begin("Choose a World", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);

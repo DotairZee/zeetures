@@ -512,6 +512,7 @@ void SkeletalCreature::skeletonInit() {
 		// (the file found, so its body data can be the matching one)
 		int foundstage = -1, foundvar = -1;
 		bool foundfemale = false;
+		int fallback = 0;
 		while (!images[i]) {
 			int var = partvariant;
 			while (var > -1 && !images[i]) {
@@ -529,8 +530,17 @@ void SkeletalCreature::skeletonInit() {
 				// to them, not slot by slot through thousands
 				var = var > 26 ? 25 : var - 1;
 			}
-			if (!tryfemale)
-				break;
+			if (!tryfemale) {
+				// no pictures of that species at all (a mutation in the gene
+				// for this part's breed can name a species only an added pack
+				// has): the creature's own species' then. Without this the
+				// birth failed half done, and the game crashed (2026-11-22).
+				if (fallback >= 2)
+					break;
+				spe = fallback++ == 0 ? (int)creature->getGenus() : 0; // (then a norn's)
+				tryfemale = creature->isFemale();
+				continue;
+			}
 			tryfemale = false;
 		}
 		if (!images[i])

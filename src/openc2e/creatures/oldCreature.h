@@ -113,6 +113,9 @@ class oldCreature : public Creature {
 
 	// TODO: is it really worth having drives outside oldCreature?
 	virtual unsigned char getDrive(unsigned int id) = 0;
+	bool resistsleep = false; // the mind fights off the falling-asleep reflex (MindOutput)
+	bool sleepseen = false; // (OPENC2E_WATCH_SLEEP)
+	unsigned int sleepseenat = 0;
 
 	void handleStimulus(unsigned int id);
 	void handleStimulus(const StimulusEvent& s);

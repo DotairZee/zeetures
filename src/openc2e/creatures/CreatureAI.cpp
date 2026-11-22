@@ -106,15 +106,21 @@ void oldCreature::feedSensoryCells() {
 // breeding). As reflexes they interrupt what the creature is doing; each
 // script starts by setting its own latency (LTCY), so it does not repeat at
 // once.
+// None while asleep, as in the original brain path (which stops at sleep): a
+// very sleepy creature's falling asleep (event 69, Sleepiness over 230) began
+// again over the sleep it was in. Nor while it lies down to sleep by itself
+// (event 41), nor while the mind has a reason to stay awake (MindOutput::
+// resistSleep).
 void oldCreature::tickInvoluntaryActions() {
 	if (zombie)
 		return;
+	bool lyingDown = parentagent->getLastScript() == 41 && !parentagent->vmStopped();
 	for (unsigned int i = 0; i < 8; i++) {
 		if (involactionlatency[i] > 0) {
 			involactionlatency[i]--;
 			continue;
 		}
-		if (involaction[i] > 0)
+		if (involaction[i] > 0 && !asleep && !(i == 5 && (resistsleep || lyingDown)))
 			parentagent->queueScript(i + 64);
 	}
 }
@@ -140,6 +146,23 @@ void oldCreature::sayNeed() {
 }
 
 void oldCreature::tickBrain() {
+	// developer aid: OPENC2E_WATCH_SLEEP prints each falling asleep and waking,
+	// with the body's hunger, tiredness and sleepiness (0-255) at the time
+	if (static const bool watchSleep = devenv("OPENC2E_WATCH_SLEEP") != nullptr; watchSleep && asleep != sleepseen) {
+		fmt::print("* WATCH SLEEP t{} unid {} stage {} {} after {} ticks; hunger {} tired {} sleepy {}; script event {} {}\n", world.tickcount, parentagent->getUNID(), (int)stage,
+			asleep ? "falls asleep" : "wakes", world.tickcount - sleepseenat, (int)getDrive(2), (int)getDrive(5), (int)getDrive(6),
+			parentagent->getLastScript(), parentagent->vmStopped() ? "ended" : "running");
+		sleepseen = asleep;
+		sleepseenat = world.tickcount;
+	}
+	// developer aid: OPENC2E_WATCH_SEX=N prints, every N ticks, what makes a
+	// grown norn's urge to mate (C2's chemicals, 0-255)
+	if (static const char* ws = devenv("OPENC2E_WATCH_SEX"); ws && engine.version == 2 && (int)stage >= 2 && genus == 0 && atoi(ws) > 0 && ticks % atoi(ws) == 0) {
+		auto c = [&](int id) { return (int)getChemical((unsigned char)id); };
+		fmt::print("* WATCH SEX t{} unid {} {} stage {} at ({:.0f}, {:.0f}): drive {} (13: {}) fertile {} receptive {}; attending norn 116: {} other sex 120: {} both 115: {} fertility hormone 114: {} 113: {} 105: {} 106: {}; mate in sight {}; hunger {} sleepy {} tired {} {}\n",
+			world.tickcount, parentagent->getUNID(), female ? "female" : "male", (int)stage, parentagent->x, parentagent->y, (int)getDrive(12), c(13), (int)getFertile(), (int)getReceptive(),
+			c(116), c(120), c(115), c(114), c(113), c(105), c(106), mateInSight ? 1 : 0, (int)getDrive(2), (int)getDrive(6), (int)getDrive(5), asleep ? "asleep" : "");
+	}
 	if (mind) {
 		tickMind();
 		// the brain is replaced, but its chemical relay lobes are body chemistry
@@ -918,6 +941,7 @@ MindPerception oldCreature::buildPerception() {
 	p.tick = ticks / 4;
 	p.stage = stage;
 	p.asleep = asleep;
+	p.dozing = parentagent->getLastScript() == 69 && !parentagent->vmStopped();
 	p.dreaming = dreaming;
 	p.female = female;
 	p.genus = (int)genus;
@@ -1699,6 +1723,7 @@ void oldCreature::tickMind() {
 			sc->setFacialExpression((unsigned int)out.expression);
 	}
 
+	resistsleep = out.resistSleep;
 	if (out.sleep == 1 && !asleep)
 		setAsleep(true);
 	else if (out.sleep == 0 && asleep)
