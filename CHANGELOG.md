@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 595 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 597 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.26.1](#version-0261): 2 commits, 21 November 2026
 - [0.26.0](#version-0260): 3 commits, 21 November 2026
 - [0.25.1](#version-0251): 2 commits, 21 November 2026
 - [0.25.0](#version-0250): 2 commits, 21 November 2026
@@ -65,6 +66,34 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.26.1
+
+The Breeder's Kit's Breeds page shows each breed as a whole creature facing you, male and female, instead of just their faces, and its list of breeds grows to match.
+
+### 21 November 2026
+
+#### Version 0.26.1
+
+[`1e0c2adb`](https://github.com/DotairZee/zeetures/commit/1e0c2adb869977b46e93c4c7ad34485108ea135c)
+
+#### Breeds page: each breed's whole body, facing the camera
+
+[`b70cf4b2`](https://github.com/DotairZee/zeetures/commit/b70cf4b22a9c75fa5b0ea1cf1c33c88bbf514709)
+
+The Breeds page showed only face portraits (TODO "a composed full-body
+preview"). It now shows the adult (or the oldest there is) of each sex
+as a whole creature facing the camera, the pose the owner chose from a
+sheet of options (art/full_body_preview.py, which draws the sheet from
+the player's own files). Drawn as the engine draws creatures
+(SkeletalCreature's part table and facing-camera draw order; picture 8
+of each part hung from its parent's joint by the body data), with parts
+a breed lacks taken from its younger stages, then the standard breed;
+the face portrait still shows if a body cannot be made. As large as the
+kit's width allows, up to twice the size.
+
+The breed list grows down with the chosen breed's side (owner), and a
+species with one breed reads "1 breed".
 
 ## Version 0.26.0
 

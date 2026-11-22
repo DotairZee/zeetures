@@ -274,6 +274,9 @@ VERSIONS = [
      "volcano's fruit as a medicine of its own: those who know it eases pain bring it to sufferers and go looking "
      "for it when they hurt. The Health Kit's Doctor shelf has the volcanic fruit, for heavy metals from radiation "
      "poisoning. Swarm bees stuck against walls now join their hive."),
+    ("0.26.1", "1e0c2adb",
+     "The Breeder's Kit's Breeds page shows each breed as a whole creature facing you, male and female, instead of "
+     "just their faces, and its list of breeds grows to match."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
