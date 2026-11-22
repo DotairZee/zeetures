@@ -354,3 +354,22 @@ jobs:
         git push origin ":refs/tags/nightly" || true
         gh release create nightly files/* --prerelease --target "$GITHUB_SHA" \
           --title "Zeetures nightly $(date -u +%Y-%m-%d) (${GITHUB_SHA:0:8})" --notes-file notes.md
+        # Players must be able to download it. GitHub can handle the old
+        # tag's deletion after the new release is made and turn that into
+        # a draft, which only the owner can see (2026-11-22: the job said
+        # success, and every download was "not found"). Published again if
+        # so; the job fails if a download still does not answer.
+        url="https://github.com/${GITHUB_REPOSITORY}/releases/download/nightly/zeetures-nightly-linux-x86_64.tar.gz"
+        for i in 1 2 3 4 5 6; do
+          sleep 30
+          if [ "$(gh release view nightly --json isDraft -q .isDraft)" = true ]; then
+            echo "The release is a draft: publishing it again."
+            gh release edit nightly --draft=false --prerelease
+            continue
+          fi
+          code=$(curl -sL -o /dev/null -w '%{http_code}' "$url" || true)
+          echo "Public download: $code"
+          if [ "$code" = 200 ] && [ "$i" -ge 3 ]; then exit 0; fi
+        done
+        echo "The release is not public."
+        exit 1
