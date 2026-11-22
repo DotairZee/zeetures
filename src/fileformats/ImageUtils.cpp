@@ -1,4 +1,5 @@
 #include "ImageUtils.h"
+#include <vector>
 #include <algorithm>
 #include <cmath>
 
@@ -186,6 +187,15 @@ Image Scale(const Image& src, float k) {
 	const bool sixteen = src.format == if_rgb565 || src.format == if_rgb555;
 	const bool rgba = src.format == if_rgba32;
 	const int N = 4; // samples per side of each new pixel
+	// the source column and row of each sample, worked out once (a world's
+	// load spends a third of its time here)
+	std::vector<int> sampleX((size_t)w * N), sampleY((size_t)h * N);
+	for (int ox = 0; ox < w; ox++)
+		for (int sx = 0; sx < N; sx++)
+			sampleX[(size_t)ox * N + sx] = std::clamp((int)((ox + (sx + 0.5f) / N) / k), 0, src.width - 1);
+	for (int oy = 0; oy < h; oy++)
+		for (int sy = 0; sy < N; sy++)
+			sampleY[(size_t)oy * N + sy] = std::clamp((int)((oy + (sy + 0.5f) / N) / k), 0, src.height - 1);
 	for (int oy = 0; oy < h; oy++) {
 		for (int ox = 0; ox < w; ox++) {
 			uint8_t* dst = out.data.data() + ((size_t)oy * w + ox) * bpp;
@@ -198,10 +208,9 @@ Image Scale(const Image& src, float k) {
 			int count = 0;
 			unsigned int sr = 0, sg = 0, sb = 0;
 			for (int sy = 0; sy < N; sy++) {
-				int py = std::clamp((int)((oy + (sy + 0.5f) / N) / k), 0, src.height - 1);
+				const uint8_t* row = in + (size_t)sampleY[(size_t)oy * N + sy] * src.width * bpp;
 				for (int sx = 0; sx < N; sx++) {
-					int px = std::clamp((int)((ox + (sx + 0.5f) / N) / k), 0, src.width - 1);
-					const uint8_t* p = in + ((size_t)py * src.width + px) * bpp;
+					const uint8_t* p = row + (size_t)sampleX[(size_t)ox * N + sx] * bpp;
 					if (sixteen) {
 						uint16_t v;
 						std::memcpy(&v, p, 2);

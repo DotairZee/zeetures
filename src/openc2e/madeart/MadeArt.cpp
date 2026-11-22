@@ -7,6 +7,9 @@
 #include "common/creaturesImage.h"
 #include "common/case_insensitive_filesystem.h"
 
+#include <set>
+#include <SDL3/SDL_timer.h>
+#include <SDL3/SDL_filesystem.h>
 #include <cctype>
 
 #include <cstring>
@@ -233,12 +236,93 @@ bool canMake(const std::string& name) {
 	return engine.version == 2 && recipes().count(name) && background().ok();
 }
 
+// Pictures that take long to make (the glass tube's, 2-3 s at every start) are
+// kept in the user folder's "Zeetures made/Images", on the player's own
+// machine like the body data, and made again when the program or the game's
+// own pictures change.
+static std::string keptKey() {
+	static const std::string key = [] {
+		std::string k = "ZMA1";
+		std::error_code ec;
+		auto add = [&](const fs::path& f) {
+			auto size = fs::is_directory(f, ec) ? 0 : fs::file_size(f, ec);
+			auto when = fs::last_write_time(f, ec);
+			k += fmt::format(" {}:{}", ec ? 0 : (unsigned long long)size, ec ? 0 : (long long)when.time_since_epoch().count());
+			ec.clear();
+		};
+		if (const char* base = SDL_GetBasePath()) {
+			// (the program: whichever file it is here)
+			for (const char* exe : {"openc2e", "Zeetures.exe", "../MacOS/Zeetures"})
+				add(fs::path(reinterpret_cast<const char8_t*>(base)) / exe);
+		}
+		add(findMainDirectoryFile("Eden.sfc"));
+		for (const char* dir : {"Images", "Backgrounds"})
+			add(findMainDirectoryFile("Eden.sfc").parent_path() / dir);
+		return k;
+	}();
+	return key;
+}
+
+static fs::path keptFile(const std::string& name) {
+	return getUserDataDir() / "Zeetures made" / "Images" / (name + ".rgba");
+}
+
+static std::vector<Rgba> readKept(const std::string& name) {
+	std::ifstream in(keptFile(name), std::ios::binary);
+	std::string key;
+	if (!in || !std::getline(in, key) || key != keptKey())
+		return {};
+	size_t n = 0;
+	if (!(in >> n) || n == 0 || n > 4096)
+		return {};
+	in.get();
+	std::vector<Rgba> out(n);
+	for (auto& f : out) {
+		if (!(in >> f.w >> f.h) || f.w <= 0 || f.h <= 0 || f.w > 8192 || f.h > 8192)
+			return {};
+		in.get();
+		f.px.resize((size_t)f.w * f.h * 4);
+		if (!in.read(reinterpret_cast<char*>(f.px.data()), (std::streamsize)f.px.size()))
+			return {};
+	}
+	return out;
+}
+
+static void keep(const std::string& name, const std::vector<Rgba>& fr) {
+	std::error_code ec;
+	fs::create_directories(keptFile(name).parent_path(), ec);
+	fs::path tmp = keptFile(name);
+	tmp += ".new";
+	{
+		std::ofstream out(tmp, std::ios::binary);
+		out << keptKey() << "\n" << fr.size() << "\n";
+		for (auto& f : fr) {
+			out << f.w << " " << f.h << "\n";
+			out.write(reinterpret_cast<const char*>(f.px.data()), (std::streamsize)f.px.size());
+		}
+		if (!out.good())
+			return;
+	}
+	fs::rename(tmp, keptFile(name), ec);
+}
+
 std::vector<Rgba> frames(const std::string& name) {
 	auto it = recipes().find(name);
 	if (it == recipes().end() || !background().ok())
 		return {};
+	if (auto kept = readKept(name); !kept.empty())
+		return kept;
 	try {
-		return it->second();
+		uint64_t from = SDL_GetTicks();
+		auto fr = it->second();
+		// (several pictures may share one slow making: each is kept)
+		static std::set<std::string> slowFamily;
+		std::string family = name.substr(0, 3);
+		if (SDL_GetTicks() - from > 100)
+			slowFamily.insert(family);
+		if (!fr.empty() && slowFamily.count(family))
+			keep(name, fr);
+		return fr;
 	} catch (std::exception& e) {
 		fmt::print(stderr, "* Made art: {} failed: {}\n", name, e.what());
 		return {};
