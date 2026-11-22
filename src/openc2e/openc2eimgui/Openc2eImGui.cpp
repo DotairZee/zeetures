@@ -47,15 +47,19 @@ void Init() {
 	}
 }
 
+bool g_hideBars = false;
+
 void Update() {
 	if (!ImGui::GetCurrentContext())
 		return;
 	if (engine.version == 1) {
 		Openc2eImgui::DrawC1ToolBar();
 	} else if (engine.version == 2) {
-		Openc2eImgui::DrawC2Toolbar();
-		Openc2eImgui::DrawC2StatusBar();
-		Openc2eImgui::DrawC2ScrollBars();
+		if (!g_hideBars) {
+			Openc2eImgui::DrawC2Toolbar();
+			Openc2eImgui::DrawC2StatusBar();
+			Openc2eImgui::DrawC2ScrollBars();
+		}
 		Openc2eImgui::DrawEyeView();
 		Openc2eImgui::DrawC2Kits();
 		Openc2eImgui::DrawHelpWindow();
@@ -74,7 +78,7 @@ void Update() {
 }
 
 int GetViewportOffsetTop() {
-	if (!ImGui::GetCurrentContext())
+	if (!ImGui::GetCurrentContext() || g_hideBars)
 		return 0;
 	if (engine.version == 1) {
 		return Openc2eImgui::GetC1ToolBarHeight();
@@ -86,7 +90,7 @@ int GetViewportOffsetTop() {
 }
 
 int GetViewportOffsetBottom() {
-	if (!ImGui::GetCurrentContext())
+	if (!ImGui::GetCurrentContext() || g_hideBars)
 		return 0;
 	if (engine.version == 2) {
 		return Openc2eImgui::GetC2StatusBarHeight() + Openc2eImgui::GetC2ScrollBarThickness();
@@ -96,7 +100,7 @@ int GetViewportOffsetBottom() {
 }
 
 int GetViewportOffsetRight() {
-	if (!ImGui::GetCurrentContext())
+	if (!ImGui::GetCurrentContext() || g_hideBars)
 		return 0;
 	if (engine.version == 2) {
 		return Openc2eImgui::GetC2ScrollBarThickness();

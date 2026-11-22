@@ -78,6 +78,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include "openc2eimgui/Openc2eImGui.h"
+#include "openc2eimgui/C2Kits.h"
 #include "Scriptorium.h"
 #include "WorldSave.h"
 #include "creatures/CreatureSpeech.h"
@@ -1175,7 +1176,108 @@ void Engine::update() {
 	lasttimestamp = get_ticks_msec();
 }
 
+// developer aid (the trailer, owner 2026-11-21): OPENC2E_DIRECTOR=FILE, a
+// list of timed instructions, one a line, "SECONDS INSTRUCTION ...", the time
+// in seconds of real time from the end of startup ('#' starts a comment):
+//   zoom Z            the view's zoom (keeps the middle where it is)
+//   cam X Y           the view's middle jumps to world X, Y
+//   pan X Y           the view's middle glides to world X, Y
+//   follow MONIKER    the view follows that creature ("follow off" stops)
+//   select MONIKER    that creature is the one chosen (for the kits)
+//   bars off|on       the toolbar, status bar and scroll bars hidden or shown
+//   kit ID [PAGE]     opens a kit (health, breeders, owners, ecology...) at a page
+//   kits off          closes the kits
+//   caos TEXT         runs CAOS (as the world's additions run)
+// For recording scripted shots with OPENC2E_RECORD.
+static void runDirector() {
+	static const char* file = getenv("OPENC2E_DIRECTOR");
+	if (!file || !engine.worldready || !engine.camera)
+		return;
+	struct Cue {
+		double at;
+		std::string what;
+	};
+	static std::vector<Cue> cues;
+	static size_t next = 0;
+	static uint64_t startMs = 0;
+	if (startMs == 0) {
+		startMs = engine.get_ticks_msec();
+		std::ifstream in(file);
+		std::string line;
+		while (std::getline(in, line)) {
+			if (auto h = line.find('#'); h != std::string::npos)
+				line = line.substr(0, h);
+			std::istringstream l(line);
+			Cue c;
+			if (l >> c.at) {
+				std::getline(l, c.what);
+				c.what.erase(0, c.what.find_first_not_of(" \t"));
+				if (!c.what.empty())
+					cues.push_back(c);
+			}
+		}
+		std::stable_sort(cues.begin(), cues.end(), [](const Cue& a, const Cue& b) { return a.at < b.at; });
+		fmt::print("* Director: {} cues from {}\n", cues.size(), file);
+	}
+	double t = (engine.get_ticks_msec() - startMs) / 1000.0;
+	auto creature = [](const std::string& mon) -> AgentRef {
+		if (!world.history || !world.history->hasMoniker(mon))
+			return AgentRef();
+		return world.history->getMoniker(mon).owner;
+	};
+	auto middleTo = [](float x, float y, panstyle style) {
+		float z = engine.zoom > 0 ? engine.zoom : 1.0f;
+		engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+		engine.camera->moveTo((int)(x - engine.camera->getWidth() / (2 * z)), (int)(y - engine.camera->getHeight() / (2 * z)), style);
+	};
+	while (next < cues.size() && cues[next].at <= t) {
+		std::istringstream l(cues[next].what);
+		std::string cmd;
+		l >> cmd;
+		fmt::print("* Director {:.1f}s: {}\n", t, cues[next].what);
+		if (cmd == "zoom") {
+			float z;
+			if (l >> z)
+				engine.setZoom(z);
+		} else if (cmd == "cam" || cmd == "pan") {
+			float x, y;
+			if (l >> x >> y)
+				middleTo(x, y, cmd == "cam" ? jump : smoothscroll);
+		} else if (cmd == "follow") {
+			std::string who;
+			l >> who;
+			if (who == "off")
+				engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+			else if (AgentRef a = creature(who))
+				engine.camera->trackAgent(a, 50, 50, flexible, none);
+		} else if (cmd == "select") {
+			std::string who;
+			l >> who;
+			if (AgentRef a = creature(who))
+				world.selectedcreature = a;
+		} else if (cmd == "bars") {
+			std::string v;
+			l >> v;
+			Openc2eImGui::g_hideBars = v == "off";
+		} else if (cmd == "kit") {
+			std::string id, page;
+			l >> id;
+			std::getline(l, page);
+			page.erase(0, page.find_first_not_of(" \t"));
+			Openc2eImgui::OpenC2KitAt(id.c_str(), page.empty() ? nullptr : page.c_str());
+		} else if (cmd == "kits") {
+			Openc2eImgui::CloseC2Kits();
+		} else if (cmd == "caos") {
+			std::string text;
+			std::getline(l, text);
+			world.executeInitScriptText("director", text);
+		}
+		next++;
+	}
+}
+
 bool Engine::tick() {
+	runDirector();
 	// developer aid: OPENC2E_SNAPSHOTS="x,y,file;x,y,file" moves the camera to
 	// each (x, y) in turn and saves a screenshot there (BMP), one every 40 ticks
 	// (-1,-1: where the view already is)

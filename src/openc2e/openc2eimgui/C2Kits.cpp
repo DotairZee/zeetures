@@ -99,6 +99,11 @@ bool IsC2KitAvailable(const char* id) {
 	return engine.version == 2 && findKit(id) != nullptr;
 }
 
+void CloseC2Kits() {
+	for (auto& [id, st] : s_state)
+		st.open = false;
+}
+
 void OpenC2Kit(const char* id) {
 	if (!findKit(id))
 		return;

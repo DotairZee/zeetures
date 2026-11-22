@@ -819,6 +819,53 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 		ImGui::Render();
 		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 
+		// developer aid (the trailer, owner 2026-11-21): OPENC2E_RECORD=FILE.mp4
+		// records what is drawn through ffmpeg at 30 frames a second of real
+		// time (a frame drawn late is repeated, one drawn early skipped);
+		// OPENC2E_RECORD_SECONDS=N stops after N seconds (the file is then
+		// finished while the game runs on)
+		if (const char* out = getenv("OPENC2E_RECORD")) {
+			static FILE* rec = nullptr;
+			static bool started = false, stopped = false;
+			static Uint64 startMs = 0;
+			static long frames = 0;
+			static int rw = 0, rh = 0;
+			static const double stopAfter = getenv("OPENC2E_RECORD_SECONDS") ? atof(getenv("OPENC2E_RECORD_SECONDS")) : 0.0;
+			if (!stopped) {
+				SDL_SetRenderTarget(renderer, nullptr);
+				if (SDL_Surface* shot = SDL_RenderReadPixels(renderer, nullptr)) {
+					if (SDL_Surface* rgb = SDL_ConvertSurface(shot, SDL_PIXELFORMAT_RGB24)) {
+						if (!started) {
+							started = true;
+							rw = rgb->w;
+							rh = rgb->h;
+							std::string cmd = fmt::format("ffmpeg -y -loglevel error -f rawvideo -pix_fmt rgb24 -s {}x{} -r 30 -i - "
+														  "-c:v libx264 -preset veryfast -crf 14 -pix_fmt yuv420p \"{}\"",
+								rw, rh, out);
+							rec = popen(cmd.c_str(), "w");
+							startMs = SDL_GetTicks();
+							fmt::print("* Recording to {} ({}x{}, 30 fps)\n", out, rw, rh);
+						}
+						double t = (SDL_GetTicks() - startMs) / 1000.0;
+						long want = (long)(t * 30.0) + 1;
+						while (rec && frames < want && rgb->w == rw && rgb->h == rh) {
+							for (int y = 0; y < rh; y++)
+								fwrite((const uint8_t*)rgb->pixels + (size_t)y * rgb->pitch, 1, (size_t)rw * 3, rec);
+							frames++;
+						}
+						if (rec && stopAfter > 0 && t >= stopAfter) {
+							pclose(rec);
+							rec = nullptr;
+							stopped = true;
+							fmt::print("* Recording finished: {} ({} frames)\n", out, frames);
+						}
+						SDL_DestroySurface(rgb);
+					}
+					SDL_DestroySurface(shot);
+				}
+			}
+		}
+
 		if (!pending_screenshot.empty()) {
 			SDL_SetRenderTarget(renderer, nullptr);
 			if (SDL_Surface* shot = SDL_RenderReadPixels(renderer, nullptr)) {
