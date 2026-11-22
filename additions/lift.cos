@@ -1,5 +1,5 @@
 * The lab lift (openc2e Creatures 2 project, our own script and our own art
-* from tools/sprites/lift.py; owner, 2026-11-08, redrawn 2026-11-09 as a
+* from art/lift.py; owner, 2026-11-08, redrawn 2026-11-09 as a
 * modern glass pod). The pod (vehicle 3 2 141, sprite zlft, a PNG with real
 * transparency) runs centred in the copper shaft of the domed lab (inside
 * x 4247-4339; the pod is 90 wide at x 4248) between three stops, each
@@ -212,7 +212,7 @@ scrp 2 2 218 2
   part 0 wait 30 pose 0 setv actv 0
 endm
 
-* The iris at the top of the shaft (tools/sprites/iris.py, sprite zlir):
+* The iris at the top of the shaft (art/iris.py, sprite zlir):
 * a machined collar of worn brushed steel and bronze, seen about 4 degrees
 * from above, over the stone lintel (x 4249-4338, y 1543-1571) whose
 * top is a ring of eight blades. Its back (2 1 145, pictures 0-6, shut to

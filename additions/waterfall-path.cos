@@ -49,9 +49,9 @@ enum 2 3 1 plne 2000 next
 * owner outlined, with depth inside: zcvm frame 0 behind creatures, so a
 * creature walking west is seen in it until the rock hides it, and frame 1,
 * its part over the dark earth, in front of the rock picture (plane 9001;
-* original art by tools/sprites/cavemouth.py); the waterfall's frames are
+* original art by art/cavemouth.py); the waterfall's frames are
 * used water-only,
-* tools/sprites/cavepath.py, so the creature shows around the water). Its
+* art/cavepath.py, so the creature shows around the water). Its
 * exit: the old stone arch west of the lift, its bricked-up back opened into
 * a dark passage with a faint glimmer far inside (zcva frame 1, plane -30),
 * and the arch's right jamb and the log wall beside it drawn again in front

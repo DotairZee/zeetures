@@ -1,7 +1,7 @@
 * Walkways (openc2e Creatures 2 project, our own script and our own art).
 * Where they go was inspired by JayD's "Plato Project" (Creatures 2 COB)
 * and Helen and NORNGod's "Walls and Bridges Pack"; none of their files are
-* used. Sprites zbw1-zbw4 are drawn by tools/sprites/bamboo.py. Run by
+* used. Sprites zbw1-zbw4 are drawn by art/bamboo.py. Run by
 * openc2e after the world loads (Additions folder); safe to repeat.
 * ROOM takes all of a room's data, so each room's own values are passed back.
 
@@ -42,7 +42,7 @@ enum 2 7 2
   endi
 next
 * and a pipe from the old standpipe (x 3041, its cap at y 2260) along the
-* ground to the pump (sprite zpip from tools/sprites/pipe.py;
+* ground to the pump (sprite zpip from art/pipe.py;
 * plane 590: behind the walkway's posts, the plants and the pump)
 enum 2 3 234 kill targ next
 inst new: simp zpip 1 0 590 0 setv cls2 2 3 234 setv attr 0 mvto 3030 2244 slow

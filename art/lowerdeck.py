@@ -10,7 +10,7 @@ X-braced box like the old one.
 
 Everything here is drawn from scratch (no game pixels are read or copied),
 so the output can ship with the project. Colors are numbers chosen by eye
-(the golden bamboo of our walkways, tools/sprites/bamboo.py, a little
+(the golden bamboo of our walkways, art/bamboo.py, a little
 dimmer for the cave).
 
     python3 lowerdeck.py OUT_BASENAME
@@ -168,7 +168,7 @@ def draw():
 
 def dapple(rgb, shape, seed):
     """Dappled light: soft patches of sun and shade over everything drawn
-    (as in tools/sprites/bamboo.py, stronger here to match the hut deck)."""
+    (as in art/bamboo.py, stronger here to match the hut deck)."""
     h, w = shape
     blobs = np.kron(_noise((h, w), seed, 7) + 0.6 * _noise((h, w), seed + 1, 3), np.ones((SS, SS)))
     sun = np.clip((blobs - 0.1) * 1.6, 0, 1)

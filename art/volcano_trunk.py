@@ -12,7 +12,7 @@ traced outline (soft at the edges), to be placed in front of creatures.
 
     python3 volcano_trunk.py C2_DIR USER_DATA_DIR
 
-writes USER_DATA_DIR/Images/zvtk.png; tools/additions/volcano-trunk.cos
+writes USER_DATA_DIR/Images/zvtk.png; additions/volcano-trunk.cos
 places it at world X0, Y0.
 """
 import os, sys

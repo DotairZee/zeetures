@@ -4,7 +4,7 @@
 * treehouse-lift-short-tube-mockup.png, treehouse-lift-cables.png approved).
 * Run by openc2e after the world loads (Additions folder); safe to repeat.
 * The pictures are made on the player's own machine from their installed
-* Creatures 2 by tools/sprites/treelift_top.py and tube_short.py.
+* Creatures 2 by art/treelift_top.py and tube_short.py.
 *
 * The bamboo cage lift below the treehouses (3 2 2, cage x 3526-3650) ran
 * between the lower deck (caller 3679/1916) and the middle deck (caller

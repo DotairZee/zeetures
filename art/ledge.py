@@ -5,7 +5,7 @@ off the ledge's thin tip, and moved left it covered the lift's cables).
 The ledge is a tongue of red-brown rock whose flat top is the deck's walking
 line (y 906) and whose underside slopes up to a point at about x 7677. This
 continues it about 75 px east to a blunter tip, so the planter stands wholly
-on rock; ledge.cos (tools/additions) moves the walking floor out to match.
+on rock; ledge.cos (additions) moves the walking floor out to match.
 
 Everything here is drawn from scratch (no game pixels are read or copied),
 so the output can ship with the project. Colors are numbers chosen by eye to

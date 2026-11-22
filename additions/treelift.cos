@@ -14,7 +14,7 @@
 room 45 4543 1858 5360 2077 room 45 4 room 45 5 room 45 6 room 45 7 room 45 8 room 45 9 room 45 12 room 45 13 room 45 14 room 45 15 room 45 16 room 45 17 room 45 19
 room 46 5360 1858 5700 2077 room 46 4 room 46 5 room 46 6 room 46 7 room 46 8 room 46 9 room 46 12 room 46 13 room 46 14 room 46 15 room 46 16 room 46 17 room 46 19
 *
-* 2. The deck's extension (zldk frame 0, drawn by tools/sprites/lowerdeck.py:
+* 2. The deck's extension (zldk frame 0, drawn by art/lowerdeck.py:
 *    dappled planks on to x 5356, under the lift, an X-braced box at the
 *    new end), plane -20: behind the lift's cage, which stands on it. And
 *    the lift's two ropes carried on down from the pulley on the walkway to

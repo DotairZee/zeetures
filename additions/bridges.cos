@@ -6,7 +6,7 @@
 * west of it (room 156, floor y 1326) and the one east of it (room 182,
 * floor y 1304). The gap is room 227, x 7720-7934, whose floor was an
 * open door into room 177 below, so creatures walking east fell through.
-* Sprite zcwk is drawn by tools/sprites/catwalk.py (no railings; deck
+* Sprite zcwk is drawn by art/catwalk.py (no railings; deck
 * joins measured against both platforms), placed at x 7720, y 1240.
 
 * the walkway: a floor line rising from the west platform's floor (room
@@ -56,12 +56,12 @@ enum 1 0 0 doif posl eq 1155 doif post eq 952 kill targ endi endi next
 * the column east of the ramp: removing the overlay piece above also
 * removed the front copy of the column's foot and base slab, so creatures
 * walking behind the column showed their feet. Sprite zpln (our own, from
-* tools/sprites/plinth.py) puts a plinth back in front, at the overlay's
+* art/plinth.py) puts a plinth back in front, at the overlay's
 * plane.
 enum 2 3 226 kill targ next
 inst new: simp zpln 1 0 8999 0 setv cls2 2 3 226 setv attr 0 mvto 1448 953 slow
 
-* the ramp's picture: sprite zsrp, drawn by tools/sprites/sandramp.py (the
+* the ramp's picture: sprite zsrp, drawn by art/sandramp.py (the
 * tube's dune built up into a sand ramp, the opening above it, and the
 * glass reflection west of it painted out so the tube's glass ends at the
 * middle brass band), placed at x 1205, y 950, behind creatures

@@ -1,5 +1,5 @@
 * The flying fox (openc2e Creatures 2 project, our own script and our own
-* art from tools/sprites/flyingfox.py and basket3d.py). Run by openc2e after
+* art from art/flyingfox.py and basket3d.py). Run by openc2e after
 * the world loads (Additions folder); made anew each load.
 *
 * A woven basket rides a rope from the plank deck west of the stone arch

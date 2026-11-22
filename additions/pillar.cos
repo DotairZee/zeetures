@@ -8,7 +8,7 @@
 * top-left 4271, 1053, plane 8999) down to the foot of its base at y 1172,
 * but creatures there walk on y 1175: one passing behind it showed its feet
 * in the dark ledge under the base. Sprite zpft, cut from the player's own
-* background by tools/sprites/pillarfoot.py, draws that ledge in front of
+* background by art/pillarfoot.py, draws that ledge in front of
 * creatures too, at the overlay's plane.
 enum 2 3 246 kill targ next
 inst new: simp zpft 1 0 8999 0 setv cls2 2 3 246 setv attr 0 mvto 4270 1172 slow

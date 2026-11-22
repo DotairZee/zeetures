@@ -16,7 +16,7 @@
 *   mirrored, its post on the wall line (x 8240); like that one it is pressed
 *   to open or shut, and starts open;
 * - pictures made on the player's machine from their own game by
-*   tools/sprites/volcano_passage.py: the seam between the two rooms hidden
+*   art/volcano_passage.py: the seam between the two rooms hidden
 *   (zvps), the passage carved out of the rock by light (zvpc), the ramp
 *   (zvpr) and the mirrored door (zvdr). They lie behind creatures and
 *   objects, the door in front of them.

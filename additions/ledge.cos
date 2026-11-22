@@ -7,7 +7,7 @@
 * in a thin point at about x 7677, where the deck's walking floor (room 145,
 * y 906) ended too. The potted bush there hung off that point, and moved left
 * it covered the cables (owner, 2026-11-10). The rock now goes on to x 7750
-* (sprite zldg, drawn by tools/sprites/ledge.py, plane -20: behind the bush
+* (sprite zldg, drawn by art/ledge.py, plane -20: behind the bush
 * and everything else), the walking floor with it to x 7745, and the bush
 * stands 22 px further right (7604/779): its crown clear of the cables, its
 * planter wholly on rock.

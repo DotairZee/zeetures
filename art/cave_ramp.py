@@ -18,7 +18,7 @@ stop, so they run into it.
 
     python3 cave_ramp.py C2_DIR USER_DATA_DIR
 
-writes USER_DATA_DIR/Images/zcrp.png; tools/additions/water-pocket.cos
+writes USER_DATA_DIR/Images/zcrp.png; additions/water-pocket.cos
 places it at world X0, Y0.
 """
 import math, os, sys

@@ -15,7 +15,7 @@ stay as they are.
 
     python3 stream_bed.py C2_DIR USER_DATA_DIR
 
-writes USER_DATA_DIR/Images/zsbd.png; tools/additions/water-pocket.cos
+writes USER_DATA_DIR/Images/zsbd.png; additions/water-pocket.cos
 places it at world X0, Y0.
 """
 import os, sys

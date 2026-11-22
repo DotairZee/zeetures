@@ -36,7 +36,7 @@ setv door 0 100 95 0
 * still step out dry; past its east end planks run down into the stream at
 * about 17 degrees and into the earth of its bed (sprite zcrp: the dock's own
 * boards and log laid along the slope by
-* tools/sprites/cave_ramp.py from the player's own dock and stream). Room
+* art/cave_ramp.py from the player's own dock and stream). Room
 * 96, the air over the channel, now reaches down to the bed (y 2399) with
 * its floor along the planks: 2320 to where they start (x 2332), 2384 at
 * x 2545, then along the bed to x 2800. The water room (95) keeps only the
@@ -63,7 +63,7 @@ enum 2 3 252 doif posl eq 2300 kill targ endi next
 enum 2 3 222 kill targ next
 inst new: simp zcrp 1 0 -5 0 setv cls2 2 3 222 setv attr 0 mvto 2300 2290 slow
 * The stream bed's earth in front of creatures, down past the foot of the
-* world's picture (sprite zsbd, by tools/sprites/stream_bed.py from the
+* world's picture (sprite zsbd, by art/stream_bed.py from the
 * player's own earth; owner, 2026-11-14: creatures carried along the bed
 * poked out below the ground). Class 2 3 221 (until 2026-11-14 night
 * 2 3 251, which the volcano passage's picture uses: this file then removed

@@ -1,5 +1,5 @@
 * The west sea's seabed airlock (openc2e Creatures 2 project, our own
-* script; art from tools/sprites/westlock.py). Run by openc2e after the world
+* script; art from art/westlock.py). Run by openc2e after the world
 * loads (Additions folder); safe to repeat.
 *
 * The west sea (rooms 121-137) has one way to land: up at the surface. A

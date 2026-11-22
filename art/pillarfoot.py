@@ -14,7 +14,7 @@ nothing changes to the eye until a creature walks behind it.
     python3 pillarfoot.py C2_DIR USER_DATA_DIR
 
 writes USER_DATA_DIR/Images/zpft.png, 48 x 8, top-left at (X0, Y0);
-tools/additions/pillar.cos places it.
+additions/pillar.cos places it.
 """
 import sys
 import os

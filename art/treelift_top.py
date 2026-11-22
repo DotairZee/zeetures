@@ -20,7 +20,7 @@ Two pictures:
 
     python3 treelift_top.py C2_DIR USER_DATA_DIR
 
-writes USER_DATA_DIR/Images/ztlc.png and ztla.png; tools/additions/
+writes USER_DATA_DIR/Images/ztlc.png and ztla.png; additions/
 treelift-top.cos places them at (CX0, CY0) and (X0, Y0).
 """
 import os, sys
