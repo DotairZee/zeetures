@@ -648,28 +648,43 @@ add_custom_command(TARGET openc2e POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC}/art/sprites $<TARGET_FILE_DIR:openc2e>/zeetures-art)
 install(DIRECTORY art/sprites/ DESTINATION "zeetures-art")
 
+# What players get: the game, its art, and the license and source notice.
+# The developer tools and the CAOS reference are installed only when asked
+# for (cmake --install build --component devtools); the packages leave them
+# out (owner, 2026-11-21: "I want this to run well on people's computers").
 install(FILES
 	AUTHORS
 	COPYING
 	README.md
-	${BIN}/caosdocs.html
-	${GEN}/commandinfo.json
 	DESTINATION "."
 )
 install(TARGETS
 	openc2e
+	DESTINATION "."
+)
+install(FILES
+	${BIN}/caosdocs.html
+	${GEN}/commandinfo.json
+	DESTINATION "."
+	COMPONENT devtools
+	EXCLUDE_FROM_ALL
+)
+install(TARGETS
 	cobdumper
 	mngdumper
 	praybuilder
 	praydumper
 	spritedumper
 	DESTINATION "."
+	COMPONENT devtools
+	EXCLUDE_FROM_ALL
 )
 
 install(TARGETS
 	mngplayer2
 	DESTINATION "."
 	COMPONENT mngplayer2
+	EXCLUDE_FROM_ALL
 )
 
 if(WIN32)

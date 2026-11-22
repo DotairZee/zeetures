@@ -407,18 +407,25 @@ if __name__ == '__main__':
     # the smaller forms (owner, 2026-11-18: for places too small for the
     # full bush): compact (zfc*, 108 x 80, for slopes and low rooms) and
     # slender (zfn*, 56 x 118, for narrow gaps), each also in a pot for
-    # built floors (zfq*, zfo*), in the same picture order
+    # built floors (zfq*, zfo*), in the same picture order. Only the forms
+    # placed in the world (additions/food.cos), or by an earlier version
+    # whose saves may still hold one (zfnm), are kept in art/sprites; the
+    # others went on 2026-11-21 (3 MB in every download). To plant another,
+    # add its name here and make it again.
+    SMALL_FORMS_USED = {'zfcd', 'zfnm', 'zfns', 'zfom', 'zfov', 'zfqw'}
     for vname, V in VARIANTS.items():
         k, sat = V['dim']
         L = V['file'][3]
         for (plain, pot_name, w, h, sz, col, pw, ph) in FORMS:
             imgs = [dim(bush(s, 7 + i, st, vname, BW=w, BH=h, size=sz, column=col), k, sat=sat)
                     for st in range(3) for i, s in enumerate(('spring', 'summer', 'autumn', 'winter'))]
-            s16.write(os.path.join(out, plain + L + '.s16'), imgs)
-            with planter.sized(pw, ph):
-                tub = dim(planter.matte(planter.pot('copper')), k, sat=sat)
-                s16.write(os.path.join(out, pot_name + L + '.s16'),
-                          [planter.potted(im, tub, soil_y=h - 8, drape=4) for im in imgs])
+            if plain + L in SMALL_FORMS_USED:
+                s16.write(os.path.join(out, plain + L + '.s16'), imgs)
+            if pot_name + L in SMALL_FORMS_USED:
+                with planter.sized(pw, ph):
+                    tub = dim(planter.matte(planter.pot('copper')), k, sat=sat)
+                    s16.write(os.path.join(out, pot_name + L + '.s16'),
+                              [planter.potted(im, tub, soil_y=h - 8, drape=4) for im in imgs])
     bushes = sheets['moss']
     # zfrt: kind * 6 + stage (bud, half-grown, ripe, overripe, then ripe and
     # overripe lying on the ground)
