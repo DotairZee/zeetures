@@ -1,6 +1,7 @@
 // Thought bubbles: see Thoughts.h.
 
 #include "Thoughts.h"
+#include "common/devenv.h"
 #include "caosValue.h"
 #include "creatures/CreatureMind.h"
 
@@ -105,6 +106,7 @@ AgentRef thingOf(Agent* creature, int category) {
 		// (the mind's own healing fruit: the volcanic bushes' fruit, 2 25 x OV02 2)
 		bool match = category == MIND_HEALING_FRUIT
 			? (a && a->family == 2 && a->genus == 25 && a->var[2].hasInt() && a->var[2].getInt() == 2)
+			: category == MIND_ROTTEN_FRUIT ? (a && a->family == 2 && a->genus == 25 && a->species == 149)
 			: (a && a->category == category);
 		if (!a || !match || a->isDying() || dynamic_cast<CreatureAgent*>(a.get()))
 			continue;
@@ -194,7 +196,7 @@ void think(Agent* creature, const std::vector<std::string>& items, const std::st
 	if (sh.items.empty())
 		return;
 	s_showing[creature->getUNID()] = sh;
-	static const bool watch = getenv("OPENC2E_WATCH_THOUGHTS") != nullptr;
+	static const bool watch = devenv("OPENC2E_WATCH_THOUGHTS") != nullptr;
 	if (watch)
 		fmt::print("* THINKS {}: {}\n", creature->getUNID(), key);
 }
@@ -207,7 +209,18 @@ void think(Agent* creature, const std::vector<std::string>& items, const std::st
 // the ring's middle a little above the head's top
 static void drawStars(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth) {
 	std::shared_ptr<creaturesImage> star;
-	for (auto& a : world.agents) {
+	// (the creatures, gone over all the world's objects ten times a second,
+	// not every frame)
+	static std::vector<AgentRef> creatures;
+	static unsigned int looked = 0;
+	if (unsigned int now = engine.get_ticks_msec(); now - looked >= 100 || creatures.empty()) {
+		looked = now;
+		creatures.clear();
+		for (auto& a : world.agents)
+			if (a && a->family == 4)
+				creatures.push_back(AgentRef(a));
+	}
+	for (auto& a : creatures) {
 		if (!a || a->family != 4 || a->isDying())
 			continue;
 		auto* ca = dynamic_cast<CreatureAgent*>(a.get());
@@ -243,7 +256,7 @@ void draw(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth, Agent*
 	// developer aid: OPENC2E_TEST_THOUGHT="hungry,east" (symbol names) makes
 	// the creature nearest the view's middle think that, again whenever its
 	// last has gone, for snapshots of the bubble
-	if (static const char* tt = getenv("OPENC2E_TEST_THOUGHT"); tt && engine.version == 2) {
+	if (static const char* tt = devenv("OPENC2E_TEST_THOUGHT"); tt && engine.version == 2) {
 		std::vector<std::string> items;
 		std::string s = tt;
 		for (size_t p = 0; p != std::string::npos;) {

@@ -127,7 +127,22 @@ fs::path canonical(const fs::path& path, std::error_code& ec) {
 	if (fs::exists(path)) {
 		force_update_directory(abspath.parent_path());
 	} else {
-		maybe_update_directory(abspath.parent_path());
+		// nothing is in a folder that is not there. Without this, each look
+		// for such a file went through the whole cache to update a folder
+		// that could not be updated: a player's folder has no Overrides, and
+		// a world of a hundred creatures took over a minute to load there
+		// (ten seconds where the folder exists; 2026-11-21)
+		fs::path parent = abspath.parent_path();
+		std::error_code parent_error;
+		if (parent != abspath && !fs::exists(parent, parent_error)) {
+			std::error_code no_parent;
+			case_insensitive_filesystem::canonical(parent, no_parent);
+			if (no_parent) {
+				ec = std::make_error_code(std::errc::no_such_file_or_directory);
+				return {};
+			}
+		}
+		maybe_update_directory(parent);
 	}
 
 	// then check if we found it

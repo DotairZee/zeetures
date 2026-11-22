@@ -18,6 +18,7 @@
  */
 
 #include "Pheromones.h"
+#include "common/devenv.h"
 #include "Disease.h"
 
 #include "Additions.h"
@@ -117,7 +118,7 @@ bool loaded = false;
 std::map<int, std::set<int>> emittedLast;
 
 bool watching() {
-	static const bool w = getenv("OPENC2E_WATCH_SCENTS") != nullptr;
+	static const bool w = devenv("OPENC2E_WATCH_SCENTS") != nullptr;
 	return w;
 }
 
@@ -470,7 +471,7 @@ void load() {
 	habit.clear();
 	emittedLast.clear();
 	// (OPENC2E_PHEROMONES=FILE reads another file: for comparing rule sets in test copies)
-	const char* other = getenv("OPENC2E_PHEROMONES");
+	const char* other = devenv("OPENC2E_PHEROMONES");
 	// the player's own pheromones.txt, else Zeetures's built-in one (Additions.h)
 	std::ifstream fin;
 	std::istringstream builtin;
@@ -582,8 +583,29 @@ void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 
 }
 
 
-// the signature scents' step: fade, spread through open doorways, laid by
-// each living creature where it is; traces below a millionth are dropped
+// The signature scents' step: fade, spread through open doorways, laid by
+// each living creature where it is; traces below a millionth are dropped.
+// Each creature has a slot, an index into every room's values, given up when
+// its scent is gone everywhere: the same sums as when each room kept a table
+// by name, which was 7% of all play time (2026-11-21).
+std::map<std::string, int> sigSlots;
+std::vector<std::string> slotNames; // slot -> creature ("" free)
+
+int slotFor(const std::string& who) {
+	auto it = sigSlots.find(who);
+	if (it != sigSlots.end())
+		return it->second;
+	size_t slot = 0;
+	while (slot < slotNames.size() && !slotNames[slot].empty())
+		slot++;
+	if (slot == slotNames.size())
+		slotNames.push_back(who);
+	else
+		slotNames[slot] = who;
+	sigSlots[who] = (int)slot;
+	return (int)slot;
+}
+
 void tickSignatures() {
 	const auto& rooms = world.map->getRooms();
 	if (!signature.on) {
@@ -591,23 +613,10 @@ void tickSignatures() {
 			r->sig.clear();
 		return;
 	}
-	for (auto& r : rooms) {
-		r->signext.clear();
-		for (auto& [who, v] : r->sig)
-			r->signext[who] = v * (1.0f - signature.fade);
-	}
-	for (auto& r : rooms)
-		for (auto& [nb, door] : r->getDoors()) {
-			if (door.perm <= 0 || !nb)
-				continue;
-			float k = signature.spread * (door.perm / 255.0f);
-			for (auto& [who, v] : nb->sig)
-				r->signext[who] += k * v;
-			for (auto& [who, v] : r->sig)
-				r->signext[who] -= k * v;
-		}
+	// who lays a scent this step, and where (first, so every slot exists)
+	std::vector<std::pair<std::shared_ptr<Room>, int>> laid;
 	for (auto& a : world.agents) {
-		if (!a || a->isDying())
+		if (!a || a->family != 4 || a->isDying())
 			continue;
 		oldCreature* c = creatureOf(a.get());
 		if (!c || !c->isAlive())
@@ -617,14 +626,42 @@ void tickSignatures() {
 			continue;
 		std::string who = world.history->findMoniker(c->getGenome());
 		if (!who.empty())
-			room->signext[who] += signature.strength * DEPOSIT;
+			laid.push_back({room, slotFor(who)});
 	}
+	const size_t n = slotNames.size();
+	const float keep = 1.0f - signature.fade;
 	for (auto& r : rooms) {
-		r->sig.clear();
-		for (auto& [who, v] : r->signext)
-			if (v > 1e-6f)
-				r->sig[who] = std::min(v, 1000.0f);
+		r->sig.resize(n, 0.0f);
+		r->signext.resize(n);
+		for (size_t k = 0; k < n; k++)
+			r->signext[k] = r->sig[k] * keep;
 	}
+	for (auto& r : rooms)
+		for (auto& [nb, door] : r->getDoors()) {
+			if (door.perm <= 0 || !nb || nb->sig.size() != n)
+				continue;
+			const float share = signature.spread * (door.perm / 255.0f);
+			float* out = r->signext.data();
+			const float *here = r->sig.data(), *there = nb->sig.data();
+			for (size_t k = 0; k < n; k++)
+				out[k] += share * (there[k] - here[k]);
+		}
+	for (auto& [room, slot] : laid)
+		if ((size_t)slot < room->signext.size())
+			room->signext[(size_t)slot] += signature.strength * DEPOSIT;
+	std::vector<char> used(n, 0);
+	for (auto& r : rooms)
+		for (size_t k = 0; k < n; k++) {
+			float v = r->signext[k];
+			v = v > 1e-6f ? std::min(v, 1000.0f) : 0.0f;
+			r->sig[k] = v;
+			used[k] |= (char)(v > 0.0f);
+		}
+	for (size_t k = 0; k < n; k++)
+		if (!used[k] && !slotNames[k].empty()) {
+			sigSlots.erase(slotNames[k]);
+			slotNames[k].clear();
+		}
 }
 
 void tick() {
@@ -765,8 +802,8 @@ std::vector<Urge> urgesFor(Agent* creature, oldCreature* c) {
 }
 
 float signatureIn(const Room& room, const std::string& moniker) {
-	auto it = room.sig.find(moniker);
-	return it == room.sig.end() ? 0.0f : it->second;
+	auto it = sigSlots.find(moniker);
+	return it == sigSlots.end() || (size_t)it->second >= room.sig.size() ? 0.0f : room.sig[(size_t)it->second];
 }
 
 } // namespace Pheromones

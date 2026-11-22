@@ -18,6 +18,7 @@
  */
 
 #include "SDLBackend.h"
+#include "common/devenv.h"
 
 #include "common/UiPinch.h"
 #include "openc2e_icon.h"
@@ -493,31 +494,35 @@ void SDLBackend::updateTexture(Texture& tex, Rect2i location, const Image& image
 }
 
 int32_t SDLRenderTarget::getWidth() const {
-	if (texture) {
-		float width;
-		SDL_GetTextureSize(texture, &width, nullptr);
-		return numeric_cast<int32_t>(width);
-	} else {
-		int width;
-		SDL_GetWindowSizeInPixels(parent->window, &width, nullptr);
-		width = width / SDL_GetWindowDisplayScale(parent->window);
-		return numeric_cast<int32_t>(width - viewport_offset_right);
+	if (knownw < 0) {
+		if (texture) {
+			float width;
+			SDL_GetTextureSize(texture, &width, nullptr);
+			knownw = numeric_cast<int32_t>(width);
+		} else {
+			int width;
+			SDL_GetWindowSizeInPixels(parent->window, &width, nullptr);
+			knownw = numeric_cast<int32_t>(width / SDL_GetWindowDisplayScale(parent->window));
+		}
 	}
+	return texture ? knownw : knownw - viewport_offset_right;
 }
 
 int32_t SDLRenderTarget::getHeight() const {
-	if (texture) {
-		float height;
-		SDL_GetTextureSize(texture, nullptr, &height);
-		assert(viewport_offset_top == 0);
-		assert(viewport_offset_bottom == 0);
-		return numeric_cast<int32_t>(height);
-	} else {
-		int height;
-		SDL_GetWindowSizeInPixels(parent->window, nullptr, &height);
-		height = height / SDL_GetWindowDisplayScale(parent->window);
-		return numeric_cast<int32_t>(height - viewport_offset_top - viewport_offset_bottom);
+	if (knownh < 0) {
+		if (texture) {
+			float height;
+			SDL_GetTextureSize(texture, nullptr, &height);
+			assert(viewport_offset_top == 0);
+			assert(viewport_offset_bottom == 0);
+			knownh = numeric_cast<int32_t>(height);
+		} else {
+			int height;
+			SDL_GetWindowSizeInPixels(parent->window, nullptr, &height);
+			knownh = numeric_cast<int32_t>(height / SDL_GetWindowDisplayScale(parent->window));
+		}
 	}
+	return texture ? knownh : knownh - viewport_offset_top - viewport_offset_bottom;
 }
 
 void SDLRenderTarget::setClip(Rect2f dest) {
@@ -794,10 +799,16 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 		// otherwise side panels get in weird locations. related to issue with panels
 		// when resizing in general?
 
+		// (the window may have changed size since the last frame)
+		mainrendertarget->knownw = mainrendertarget->knownh = -1;
 		// TODO: does this work on Windows?
 		SDL_SetRenderScale(renderer, SDL_GetWindowDisplayScale(window), SDL_GetWindowDisplayScale(window));
 
 		bool focused = SDL_GetWindowFlags(window) & (SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS);
+		// (developer aid: OPENC2E_FULL_RATE draws at the focused window's rate,
+		// for measuring with a window nobody is looking at)
+		static const bool fullRate = devenv("OPENC2E_FULL_RATE") != nullptr;
+		focused = focused || fullRate;
 		Uint32 desired_ticks_per_frame = 1000 / (focused ? OPENC2E_MAX_FPS : OPENC2E_MIN_FPS);
 		Uint32 frame_end = SDL_GetTicks();
 		if (frame_end - last_frame_end < desired_ticks_per_frame) {
@@ -822,13 +833,13 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 		// time (a frame drawn late is repeated, one drawn early skipped);
 		// OPENC2E_RECORD_SECONDS=N stops after N seconds (the file is then
 		// finished while the game runs on)
-		if (const char* out = getenv("OPENC2E_RECORD")) {
+		if (const char* out = devenv("OPENC2E_RECORD")) {
 			static FILE* rec = nullptr;
 			static bool started = false, stopped = false;
 			static Uint64 startMs = 0;
 			static long frames = 0;
 			static int rw = 0, rh = 0;
-			static const double stopAfter = getenv("OPENC2E_RECORD_SECONDS") ? atof(getenv("OPENC2E_RECORD_SECONDS")) : 0.0;
+			static const double stopAfter = devenv("OPENC2E_RECORD_SECONDS") ? atof(devenv("OPENC2E_RECORD_SECONDS")) : 0.0;
 			if (!stopped) {
 				SDL_SetRenderTarget(renderer, nullptr);
 				if (SDL_Surface* shot = SDL_RenderReadPixels(renderer, nullptr)) {

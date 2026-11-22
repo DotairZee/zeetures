@@ -49,6 +49,10 @@ class SDLRenderTarget : public RenderTarget {
 	void renderLine(float x1, float y1, float x2, float y2, Color color) override;
 	void blitRenderTarget(RenderTarget* src, Rect2f dest) override;
 
+	// the size without the panels round the world, kept for a frame (the
+	// window's) or for good (a texture's): it is asked for at every sprite
+	mutable int32_t knownw = -1, knownh = -1;
+
 	// dimensions in logical window points (device-independent pixels), not pixels
 	int32_t getWidth() const override;
 	int32_t getHeight() const override;

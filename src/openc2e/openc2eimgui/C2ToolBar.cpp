@@ -1,4 +1,5 @@
 #include <cfloat>
+#include "common/devenv.h"
 #include "C2ToolBar.h"
 
 #include <algorithm>
@@ -146,9 +147,20 @@ static void DrawObjectToolTip() {
 // (world-file script 0 1 0 0) makes or removes the halo object (2 1 3),
 // whose timer script keeps it over the creature's head.
 static bool HaloShown() {
+	// (the one found last time, while it is there; else looked for again)
+	static AgentRef last;
+	if (last && !last->isDying() && last->family == 2 && last->genus == 1 && last->species == 3)
+		return true;
+	static unsigned int looked = 0;
+	unsigned int now = engine.get_ticks_msec();
+	if (now - looked < 100)
+		return false;
+	looked = now;
 	for (auto& a : world.agents)
-		if (a && a->family == 2 && a->genus == 1 && a->species == 3)
+		if (a && a->family == 2 && a->genus == 1 && a->species == 3) {
+			last = AgentRef(a);
 			return true;
+		}
 	return false;
 }
 
@@ -560,14 +572,14 @@ static bool s_set_aside_was_paused = false;
 	}
 	// developer aid: OPENC2E_TEST_MENU="Creatures" opens that menu once, for
 	// a snapshot of it
-	if (static const char* tm = getenv("OPENC2E_TEST_MENU"); tm && std::string(tm) == "Creatures" && world.tickcount > 0) {
+	if (static const char* tm = devenv("OPENC2E_TEST_MENU"); tm && std::string(tm) == "Creatures" && world.tickcount > 0) {
 		static int frames = 0;
 		if (++frames == 30)
 			ImGui::OpenPopup("Creatures");
 		// (the world does not tick while a menu is open, so the picture is
 		// taken from here: OPENC2E_TEST_MENU_SHOT=file.bmp)
 		if (frames == 60)
-			if (const char* shot = getenv("OPENC2E_TEST_MENU_SHOT"))
+			if (const char* shot = devenv("OPENC2E_TEST_MENU_SHOT"))
 				get_backend()->requestScreenshot(shot);
 	}
 	if (ImGui::BeginMenu("Creatures")) {
@@ -612,7 +624,7 @@ static bool s_set_aside_was_paused = false;
 	}
 
 	// About Zeetures (developer aid: OPENC2E_OPEN_KITS="about" opens it)
-	static bool s_test_about = getenv("OPENC2E_OPEN_KITS") && strstr(getenv("OPENC2E_OPEN_KITS"), "about");
+	static bool s_test_about = devenv("OPENC2E_OPEN_KITS") && strstr(devenv("OPENC2E_OPEN_KITS"), "about");
 	if (s_test_about && world.worldtickcount > 5) {
 		s_test_about = false;
 		s_open_about = true;
@@ -674,7 +686,7 @@ static bool s_set_aside_was_paused = false;
 		// sized to the screen (inside About it made About taller than the
 		// game's window; owner's screenshot)
 		// (developer aid: OPENC2E_OPEN_KITS="about,citations" opens it)
-		static bool s_open_citations = getenv("OPENC2E_OPEN_KITS") && strstr(getenv("OPENC2E_OPEN_KITS"), "citations");
+		static bool s_open_citations = devenv("OPENC2E_OPEN_KITS") && strstr(devenv("OPENC2E_OPEN_KITS"), "citations");
 		if (ImGui::Button("Research behind " FORK_NAME) || s_open_citations) {
 			ImGui::OpenPopup("Research behind " FORK_NAME);
 			s_open_citations = false;
@@ -1011,7 +1023,7 @@ static void ApplyBandDrop(int dragged, const BandDrop& d) {
 			break;
 		}
 	s_band_rows.erase(std::remove_if(s_band_rows.begin(), s_band_rows.end(), [](auto& r) { return r.empty(); }), s_band_rows.end());
-	if (!getenv("OPENC2E_TEST_TOOLBAR_DRAG")) // (tests leave the player's settings alone)
+	if (!devenv("OPENC2E_TEST_TOOLBAR_DRAG")) // (tests leave the player's settings alone)
 		writePlayerSetting("toolbar-layout", BandLayoutText());
 }
 
@@ -1101,12 +1113,12 @@ void DrawC2Toolbar() {
 	// developer aid: OPENC2E_VIEW="labels,tips,smooth" starts with Text
 	// Labels, ToolTips for Objects and Smooth Scrolling on (headless tests)
 	static bool s_view_aid = [] {
-		if (!getenv("OPENC2E_VIEW") && !getenv("OPENC2E_OPEN_KITS"))
+		if (!devenv("OPENC2E_VIEW") && !devenv("OPENC2E_OPEN_KITS"))
 			LoadViewSettings();
 		// developer aid: OPENC2E_TOOLBAR_LAYOUT="applets;standard,pointer;favourites"
-		if (const char* l = getenv("OPENC2E_TOOLBAR_LAYOUT"))
+		if (const char* l = devenv("OPENC2E_TOOLBAR_LAYOUT"))
 			ParseBandLayout(l);
-		if (const char* v = getenv("OPENC2E_VIEW")) {
+		if (const char* v = devenv("OPENC2E_VIEW")) {
 			std::string s = v;
 			s_text_labels = s.find("labels") != std::string::npos;
 			s_object_tips = s.find("tips") != std::string::npos;
@@ -1122,7 +1134,7 @@ void DrawC2Toolbar() {
 	// developer aid: OPENC2E_TEST_UI_CLICKS="frame,x,y;frame,x,y" clicks the
 	// left mouse button at those screen points on those frames (headless
 	// tests of the toolbar's controls); prints the game speed after each
-	if (const char* tc = getenv("OPENC2E_TEST_UI_CLICKS")) {
+	if (const char* tc = devenv("OPENC2E_TEST_UI_CLICKS")) {
 		static int s_uiframe = 0;
 		s_uiframe++;
 		std::string all = tc;
@@ -1147,7 +1159,7 @@ void DrawC2Toolbar() {
 			pos = semi + 1;
 		}
 	}
-	if (const char* td = getenv("OPENC2E_TEST_TOOLBAR_DRAG")) {
+	if (const char* td = devenv("OPENC2E_TEST_TOOLBAR_DRAG")) {
 		static int s_frame = 0, s_band = -1;
 		static ImVec2 s_from, s_to;
 		s_frame++;

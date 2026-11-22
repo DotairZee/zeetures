@@ -107,7 +107,7 @@ class Room {
 	std::vector<float> scent, scentnext;
 	// C2: each creature's own scent (its signature, by moniker), where any
 	// of it is (creatures/Pheromones.h)
-	std::map<std::string, float> sig, signext;
+	std::vector<float> sig, signext; // by slot (one a creature; Pheromones.cpp)
 
 	// C2: water too deep to wade (owner, 2026-11-10: the path to the cave
 	// behind the pond's waterfall runs along the pond's bed). Creatures do

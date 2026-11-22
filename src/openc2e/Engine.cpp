@@ -18,6 +18,7 @@
  */
 
 #include "Profile.h"
+#include "common/devenv.h"
 #include "creatures/SkeletalCreature.h"
 #include <chrono>
 #include "Engine.h"
@@ -322,7 +323,7 @@ void Engine::loadGameData() {
 		}
 		// developer aid: OPENC2E_PRINT_WORDS prints the word list (C2: nouns,
 		// the names of object categories, are words 16-55)
-		if (getenv("OPENC2E_PRINT_WORDS"))
+		if (devenv("OPENC2E_PRINT_WORDS"))
 			for (size_t i = 0; i < wordlist.size(); i++)
 				fmt::print("* WORD {} {}\n", i, wordlist[i]);
 	}
@@ -408,7 +409,7 @@ void Engine::drawWorld() {
 	// developer aid: OPENC2E_TEST_PAN="dx,dy" starts a smooth pan that far
 	// from the view at world tick 30 and prints the camera's place each
 	// frame while it glides
-	if (const char* tp = getenv("OPENC2E_TEST_PAN")) {
+	if (const char* tp = devenv("OPENC2E_TEST_PAN")) {
 		static bool started = false;
 		int dx = 0, dy = 0;
 		if (!started && world.tickcount >= 30 && sscanf(tp, "%d,%d", &dx, &dy) == 2) {
@@ -421,7 +422,7 @@ void Engine::drawWorld() {
 	}
 	// developer aid: OPENC2E_TEST_HANG=N spins the main loop for N seconds
 	// at world tick 50 (to test the hang reports, common/backtrace.h)
-	if (const char* th = getenv("OPENC2E_TEST_HANG")) {
+	if (const char* th = devenv("OPENC2E_TEST_HANG")) {
 		static bool hung = false;
 		if (!hung && world.tickcount >= 50) {
 			hung = true;
@@ -525,12 +526,12 @@ uint32_t Engine::get_ticks_msec() const {
 static void dumpRenders() {
 	// developer aid: OPENC2E_DUMP_CREATURE_PARTS lists every creature's part
 	// pictures, frames and growth scales at each snapshot
-	if (getenv("OPENC2E_DUMP_CREATURE_PARTS"))
+	if (devenv("OPENC2E_DUMP_CREATURE_PARTS"))
 		for (auto& a : world.agents)
 			if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()))
 				fmt::print("* PARTS unid {} at {:.0f},{:.0f}: {}\n", a->getUNID(), a->x, a->y, sc->describeParts());
 	int x0, x1;
-	const char* s = getenv("OPENC2E_DUMP_RENDERS");
+	const char* s = devenv("OPENC2E_DUMP_RENDERS");
 	if (!s || sscanf(s, "%d,%d", &x0, &x1) != 2)
 		return;
 	int i = 0;
@@ -550,7 +551,7 @@ static void dumpRenders() {
 
 static void dumpAgents() {
 	int f, g, sp;
-	const char* s = getenv("OPENC2E_DUMP_AGENT");
+	const char* s = devenv("OPENC2E_DUMP_AGENT");
 	if (!s || sscanf(s, "%d,%d,%d", &f, &g, &sp) != 3)
 		return;
 	for (auto& a : world.agents) {
@@ -580,7 +581,7 @@ void Engine::update() {
 	// developer aid: OPENC2E_TICKRATE=s prints, every s seconds, how many
 	// world ticks ran and the average time one took (ms), with the number of
 	// creatures (for performance work)
-	static const int tickrate = getenv("OPENC2E_TICKRATE") ? std::max(1, atoi(getenv("OPENC2E_TICKRATE"))) : 0;
+	static const int tickrate = devenv("OPENC2E_TICKRATE") ? std::max(1, atoi(devenv("OPENC2E_TICKRATE"))) : 0;
 	auto t0 = std::chrono::steady_clock::now();
 	world.tick();
 	// the pace reached, measured over about two seconds of real time, for
@@ -641,7 +642,7 @@ void Engine::update() {
 	// tick N, or "+N" N ticks into the session (headless; OPENC2E_TEST_DEATH
 	// needs the Owner's Kit drawn)
 	static unsigned int killAt = [] {
-		const char* k = getenv("OPENC2E_TEST_KILL");
+		const char* k = devenv("OPENC2E_TEST_KILL");
 		return !k ? 0u : k[0] == '+' ? world.tickcount + (unsigned int)atoi(k + 1) : (unsigned int)atoi(k);
 	}();
 	if (killAt && world.tickcount == killAt && world.selectedcreature)
@@ -656,7 +657,7 @@ void Engine::update() {
 	// prints what a click (C) and a pickup (P) would land on at each point:
 	// the first letter of its genus's place in the alphabet of agents seen,
 	// listed after the grid ('.' nothing)
-	if (static const char* k = getenv("OPENC2E_TEST_HITGRID"); k) {
+	if (static const char* k = devenv("OPENC2E_TEST_HITGRID"); k) {
 		int n = 0, x0, y0, x1, y1, st = 4;
 		if (sscanf(k, "%d,%d,%d,%d,%d,%d", &n, &x0, &y0, &x1, &y1, &st) >= 5 && world.tickcount == (unsigned int)n) {
 			std::vector<Agent*> seen;
@@ -684,7 +685,7 @@ void Engine::update() {
 				fmt::print("* HITGRID {} = {} {} {} attr {} at {:.0f},{:.0f} {}x{}\n", (char)('a' + i % 26), (int)seen[i]->family, (int)seen[i]->genus, seen[i]->species, (int)seen[i]->attr, seen[i]->x, seen[i]->y, seen[i]->getWidth(), seen[i]->getHeight());
 		}
 	}
-	if (static const char* k = getenv("OPENC2E_TEST_CLICK"); k && world.hand()) {
+	if (static const char* k = devenv("OPENC2E_TEST_CLICK"); k && world.hand()) {
 		int n = 0, cx = 0, cy = 0;
 		// ("+N,x,y": N ticks after the world loaded, as OPENC2E_TEST_KILL=+N)
 		static unsigned int clickAt = 0;
@@ -722,10 +723,10 @@ void Engine::update() {
 	// through the engine's own key handlers, then Enter: the hand's speech
 	// bubble opens, fills and is spoken, as when the player types (tests the
 	// hand teaching creatures words)
-	if (static const char* k = getenv("OPENC2E_TEST_TYPE"); k && version == 2) {
+	if (static const char* k = devenv("OPENC2E_TEST_TYPE"); k && version == 2) {
 		// (OPENC2E_TEST_TYPE_REPEAT=R types it R times, 30 ticks apart)
 		static int times = 0;
-		static const int repeat = getenv("OPENC2E_TEST_TYPE_REPEAT") ? std::max(1, atoi(getenv("OPENC2E_TEST_TYPE_REPEAT"))) : 1;
+		static const int repeat = devenv("OPENC2E_TEST_TYPE_REPEAT") ? std::max(1, atoi(devenv("OPENC2E_TEST_TYPE_REPEAT"))) : 1;
 		static unsigned int nextAt = (unsigned int)atoi(k);
 		const char* words = strchr(k, ',');
 		if (times < repeat && words && world.tickcount >= nextAt) {
@@ -774,7 +775,7 @@ void Engine::update() {
 	// move each tick for 40 ticks, then the button up
 	// ("N,ZOOM,FILE" sets that zoom first and saves pictures mid-drag and
 	// after it, FILE-during.bmp and FILE-after.bmp)
-	if (static const char* k = getenv("OPENC2E_TEST_MIDDLE_DRAG"); k) {
+	if (static const char* k = devenv("OPENC2E_TEST_MIDDLE_DRAG"); k) {
 		static unsigned int last = 0;
 		unsigned int n = (unsigned int)atoi(k), t = world.tickcount;
 		float z = 0;
@@ -808,7 +809,7 @@ void Engine::update() {
 	}
 	// developer aid: OPENC2E_TEST_BLACKBOARDS=N, at world tick N, lists the
 	// world's blackboards (teaching machines): classifier, place, attributes
-	if (static const char* k = getenv("OPENC2E_TEST_BLACKBOARDS"); k && world.tickcount == (unsigned int)atoi(k))
+	if (static const char* k = devenv("OPENC2E_TEST_BLACKBOARDS"); k && world.tickcount == (unsigned int)atoi(k))
 		for (auto& a : world.agents)
 			if (a && dynamic_cast<Blackboard*>(a.get()))
 				fmt::print("* BLACKBOARD {} {} {} at {:.0f},{:.0f} size {}x{} attr {}\n", (int)a->family, (int)a->genus, a->species, a->x, a->y,
@@ -816,7 +817,7 @@ void Engine::update() {
 
 	// developer aid: OPENC2E_TEST_KIN=N, at world tick N, prints for each
 	// pair of living creatures whether they are close kin and barred as mates
-	if (static const char* k = getenv("OPENC2E_TEST_KIN"); k && world.tickcount == (unsigned int)atoi(k)) {
+	if (static const char* k = devenv("OPENC2E_TEST_KIN"); k && world.tickcount == (unsigned int)atoi(k)) {
 		std::vector<CreatureAgent*> all;
 		for (auto& a : world.agents)
 			if (auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr; ca && ca->getCreature()->isAlive())
@@ -832,7 +833,7 @@ void Engine::update() {
 
 	// developer aid: OPENC2E_TEST_MATE=N, at world tick N, has the first
 	// grown female and male of a genus mate (MATE's path: tryConceive)
-	if (static const char* k = getenv("OPENC2E_TEST_MATE"); k && world.tickcount == (unsigned int)atoi(k)) {
+	if (static const char* k = devenv("OPENC2E_TEST_MATE"); k && world.tickcount == (unsigned int)atoi(k)) {
 		CreatureAgent *she = nullptr, *he = nullptr;
 		for (auto& a : world.agents) {
 			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
@@ -849,7 +850,7 @@ void Engine::update() {
 	// is set and the pointer put at 500,380; then 20 ticks of scrolling (as a
 	// TrackPoint's middle button + stick sends, or a wheel), the pointer not
 	// moving; FILE.bmp is the picture after
-	if (static const char* k = getenv("OPENC2E_TEST_WHEEL_PAN"); k) {
+	if (static const char* k = devenv("OPENC2E_TEST_WHEEL_PAN"); k) {
 		static unsigned int last = 0;
 		unsigned int n = (unsigned int)atoi(k), t = world.tickcount;
 		float z = 1;
@@ -868,7 +869,7 @@ void Engine::update() {
 				ev.wheel.x = 0.5f;
 				ev.wheel.y = -0.3f;
 				// (OPENC2E_TEST_WHEEL_XY="X,Y": other amounts per tick)
-				if (const char* xy = getenv("OPENC2E_TEST_WHEEL_XY"))
+				if (const char* xy = devenv("OPENC2E_TEST_WHEEL_XY"))
 					sscanf(xy, "%f,%f", &ev.wheel.x, &ev.wheel.y);
 				ev.wheel.mouse_x = 500;
 				ev.wheel.mouse_y = 380;
@@ -884,7 +885,7 @@ void Engine::update() {
 	// selected creature as the hand finds it, every 2 px: P pet, S spank,
 	// B the rest of the body and legs (push), a letter for any other part,
 	// '.' see-through
-	if (static const char* k = getenv("OPENC2E_TEST_CREATURE_ZONES"); k && world.tickcount == (unsigned int)atoi(k)) {
+	if (static const char* k = devenv("OPENC2E_TEST_CREATURE_ZONES"); k && world.tickcount == (unsigned int)atoi(k)) {
 		if (auto* sk = dynamic_cast<SkeletalCreature*>(world.selectedcreature.get())) {
 			fmt::print("* ZONES creature at {:.0f},{:.0f} {}x{}\n", sk->x, sk->y, sk->getWidth(), sk->getHeight());
 			for (int yy = -4; yy < (int)sk->getHeight() + 4; yy += 2) {
@@ -903,7 +904,7 @@ void Engine::update() {
 	// S spank, B the rest of the body and legs; ",push" with the push hand
 	// on, ",hover" to leave the hand there without clicking), printing what
 	// happened
-	if (static const char* k = getenv("OPENC2E_TEST_ZONE_CLICK"); k && world.hand()) {
+	if (static const char* k = devenv("OPENC2E_TEST_ZONE_CLICK"); k && world.hand()) {
 		int n = 0;
 		char z = 0;
 		// (the selected creature, or, when it is riding or carried, hidden
@@ -980,7 +981,7 @@ void Engine::update() {
 	// that smells of food (its eat script nourishes), by classifier: how
 	// many, how many edible as they are now (edibleNow), how many carried,
 	// and where (for "why is food left uneaten", 2026-11-16)
-	if (static const char* k = getenv("OPENC2E_FOOD_CENSUS"); k && world.tickcount == (unsigned int)atoi(k)) {
+	if (static const char* k = devenv("OPENC2E_FOOD_CENSUS"); k && world.tickcount == (unsigned int)atoi(k)) {
 		struct Tally {
 			int n = 0, edible = 0, carried = 0;
 			std::string where;
@@ -1011,7 +1012,7 @@ void Engine::update() {
 	// eggs, edible food lying within reach of the floor, and deaths by
 	// cause since the last row. OPENC2E_CENSUS_EVERY=0 turns it off.
 	if (version == 2 && world.map && !currentworlddir.empty()) {
-		static const long every = getenv("OPENC2E_CENSUS_EVERY") ? atol(getenv("OPENC2E_CENSUS_EVERY")) : 3000;
+		static const long every = devenv("OPENC2E_CENSUS_EVERY") ? atol(devenv("OPENC2E_CENSUS_EVERY")) : 3000;
 		static unsigned int lastCensus = 0;
 		if (every > 0 && world.tickcount >= lastCensus + (unsigned int)every) {
 			lastCensus = world.tickcount;
@@ -1099,7 +1100,7 @@ void Engine::update() {
 	}
 	// developer aid: OPENC2E_TEST_PINCH="N,scale,count": from tick N, one SDL
 	// pinch update of that scale each tick, count of them, printing the zoom
-	if (static const char* k = getenv("OPENC2E_TEST_PINCH"); k) {
+	if (static const char* k = devenv("OPENC2E_TEST_PINCH"); k) {
 		static unsigned int last = 0;
 		int n = 0, count = 0;
 		float sc = 1;
@@ -1118,7 +1119,7 @@ void Engine::update() {
 	// developer aid: OPENC2E_TEST_EGG_DROP=N: at session tick N a creature
 	// egg (2 5 2, no genome) appears by the incubator, and 10 ticks later it
 	// gets the dropped event (5) from the hand, as when the hand puts it down
-	if (static const char* k = getenv("OPENC2E_TEST_EGG_DROP"); k) {
+	if (static const char* k = devenv("OPENC2E_TEST_EGG_DROP"); k) {
 		unsigned int n = (unsigned int)atoi(k);
 		if (world.tickcount == n) {
 			std::string err = executeNetwork("new: simp eggs 8 0 2000 0\nsetv cls2 2 5 2\nsetv attr 195\nmvto 5100 750\nsetv grav 1\n");
@@ -1134,7 +1135,7 @@ void Engine::update() {
 	// developer aid: OPENC2E_TEST_LAY=N, at world tick N, has the first
 	// pregnant creature lay her egg now (the world's egg-laying involuntary
 	// action, creature event 65)
-	if (static const char* k = getenv("OPENC2E_TEST_LAY"); k && world.tickcount == (unsigned int)atoi(k)) {
+	if (static const char* k = devenv("OPENC2E_TEST_LAY"); k && world.tickcount == (unsigned int)atoi(k)) {
 		bool laid = false;
 		for (auto& a : world.agents) {
 			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
@@ -1147,7 +1148,7 @@ void Engine::update() {
 		if (!laid)
 			fmt::print("* TEST LAY: no pregnant creature\n");
 	}
-	if (getenv("OPENC2E_DUMP_AGENT_EVERY_TICK")) {
+	if (devenv("OPENC2E_DUMP_AGENT_EVERY_TICK")) {
 		fmt::print("* Tick {}\n", world.tickcount);
 		dumpAgents();
 	}
@@ -1190,7 +1191,7 @@ void Engine::update() {
 //   caos TEXT         runs CAOS (as the world's additions run)
 // For recording scripted shots with OPENC2E_RECORD.
 static void runDirector() {
-	static const char* file = getenv("OPENC2E_DIRECTOR");
+	static const char* file = devenv("OPENC2E_DIRECTOR");
 	if (!file || !engine.worldready || !engine.camera)
 		return;
 	struct Cue {
@@ -1283,7 +1284,7 @@ bool Engine::tick() {
 	// (-1,-1: where the view already is)
 	static std::vector<std::tuple<int, int, std::string>> snapshots = [] {
 		std::vector<std::tuple<int, int, std::string>> v;
-		if (const char* s = getenv("OPENC2E_SNAPSHOTS")) {
+		if (const char* s = devenv("OPENC2E_SNAPSHOTS")) {
 			std::stringstream ss(s);
 			std::string item;
 			while (std::getline(ss, item, ';')) {
@@ -1301,20 +1302,20 @@ bool Engine::tick() {
 	static bool rooms_dumped = false;
 	if (!rooms_dumped && world.map) {
 		rooms_dumped = true;
-		if (getenv("OPENC2E_SHOW_ROOMS"))
+		if (devenv("OPENC2E_SHOW_ROOMS"))
 			world.showrooms = true;
 		// OPENC2E_SHOW_SCENT=name starts with View > Scents on that scent
-		if (const char* sc = getenv("OPENC2E_SHOW_SCENT"))
+		if (const char* sc = devenv("OPENC2E_SHOW_SCENT"))
 			for (int ch = 0; ch < Pheromones::channelCount(); ch++)
 				if (Pheromones::channelName(ch) == sc)
 					world.showScent = ch;
-		if (getenv("OPENC2E_FAST"))
+		if (devenv("OPENC2E_FAST"))
 			fastticks = true; // run the world as fast as possible (headless tests)
 		// developer aid: OPENC2E_SPEED=n starts at that game speed
-		if (const char* sp = getenv("OPENC2E_SPEED"))
+		if (const char* sp = devenv("OPENC2E_SPEED"))
 			speed = std::clamp((float)atof(sp), 0.5f, 10.0f);
 		int x0, y0, x1, y1;
-		if (const char* s = getenv("OPENC2E_DUMP_ROOMS"); s && sscanf(s, "%d,%d,%d,%d", &x0, &y0, &x1, &y1) == 4) {
+		if (const char* s = devenv("OPENC2E_DUMP_ROOMS"); s && sscanf(s, "%d,%d,%d,%d", &x0, &y0, &x1, &y1) == 4) {
 			for (unsigned int i = 0; i < world.map->getMetaRoomCount(); i++) {
 				MetaRoom* mr = world.map->getMetaRoom(i);
 				if (mr)
@@ -1351,16 +1352,16 @@ bool Engine::tick() {
 	// OPENC2E_SNAPSHOT_EVERY=n takes the steps n frames apart (default 40),
 	// for sequences of a creature moving; OPENC2E_SNAPSHOT_START=n waits n
 	// frames before the first
-	static const unsigned int snap_every = getenv("OPENC2E_SNAPSHOT_EVERY") ? std::max(1, atoi(getenv("OPENC2E_SNAPSHOT_EVERY"))) : 40;
-	static unsigned int snap_start = getenv("OPENC2E_SNAPSHOT_START") ? atoi(getenv("OPENC2E_SNAPSHOT_START")) : 0;
+	static const unsigned int snap_every = devenv("OPENC2E_SNAPSHOT_EVERY") ? std::max(1, atoi(devenv("OPENC2E_SNAPSHOT_EVERY"))) : 40;
+	static unsigned int snap_start = devenv("OPENC2E_SNAPSHOT_START") ? atoi(devenv("OPENC2E_SNAPSHOT_START")) : 0;
 	if (snap_start > 0 && snapshot_index < snapshots.size()) {
 		snap_start--;
 	} else if (snapshot_index < snapshots.size() && ++snapshot_wait % snap_every == 0) {
-		if (getenv("OPENC2E_SNAPSHOTS_PAUSED"))
+		if (devenv("OPENC2E_SNAPSHOTS_PAUSED"))
 			world.paused = true; // freeze the world so captures differ only by camera
 		auto& [sx, sy, sfile] = snapshots[snapshot_index];
 		// OPENC2E_SNAPSHOT_ZOOM=z draws the snapshots at that zoom
-		if (const char* z = getenv("OPENC2E_SNAPSHOT_ZOOM"))
+		if (const char* z = devenv("OPENC2E_SNAPSHOT_ZOOM"))
 			engine.zoom = (float)atof(z);
 		// move the camera first whenever this snapshot is somewhere new
 		static int camx = INT_MIN, camy = INT_MIN;
@@ -1381,7 +1382,7 @@ bool Engine::tick() {
 
 	// developer aid: OPENC2E_TEST_SAVE_AFTER_TICKS=N saves the world after N
 	// ticks and quits (for testing world saving without the UI)
-	static long test_save_after = getenv("OPENC2E_TEST_SAVE_AFTER_TICKS") ? atol(getenv("OPENC2E_TEST_SAVE_AFTER_TICKS")) : -1;
+	static long test_save_after = devenv("OPENC2E_TEST_SAVE_AFTER_TICKS") ? atol(devenv("OPENC2E_TEST_SAVE_AFTER_TICKS")) : -1;
 	if (test_save_after >= 0 && (long)world.tickcount >= test_save_after) {
 		std::string err;
 		if (!WorldSave::SaveWorldState(currentworlddir, err))
@@ -1392,7 +1393,7 @@ bool Engine::tick() {
 	// developer aid: OPENC2E_TEST_SWITCH_WORLD="N,NAME" switches to world
 	// NAME after N ticks, as File > Switch World does (with
 	// OPENC2E_TEST_SPAWN_RELAUNCH, by the Windows and macOS way)
-	if (const char* sw = getenv("OPENC2E_TEST_SWITCH_WORLD")) {
+	if (const char* sw = devenv("OPENC2E_TEST_SWITCH_WORLD")) {
 		const char* comma = strchr(sw, ',');
 		if (comma && currentworld != comma + 1 && world.tickcount >= (unsigned int)atoi(sw))
 			Openc2eImgui::RelaunchIntoWorld(comma + 1);
@@ -1541,7 +1542,7 @@ void Engine::processEvents() {
 				// OPENC2E_PINCH_STEP=s sets the spread for a step (1.5)
 				static float acc = 0;
 				static uint32_t lastStep = 0;
-				static const float step = std::log(std::max(1.05f, getenv("OPENC2E_PINCH_STEP") ? (float)atof(getenv("OPENC2E_PINCH_STEP")) : 1.5f));
+				static const float step = std::log(std::max(1.05f, devenv("OPENC2E_PINCH_STEP") ? (float)atof(devenv("OPENC2E_PINCH_STEP")) : 1.5f));
 				if (version <= 2 && event.pinch > 0) {
 					acc += std::log(event.pinch);
 					if (std::fabs(acc) >= step && get_ticks_msec() - lastStep >= 250) {
@@ -2469,6 +2470,7 @@ bool Engine::initialSetup() {
 			WorldSave::SetAsideUnreadableSave(currentworlddir, e.what());
 		}
 		worldready = true;
+		fflush(stdout); // (how the load went is in the log whatever follows)
 	}
 
 	// C2: the scents and their rules (pheromones.txt), read again for each world
@@ -2568,13 +2570,13 @@ bool Engine::initialSetup() {
 	// developer aid: OPENC2E_TEST_SEASON=n (0 spring, 1 summer, 2 autumn,
 	// 3 winter) sets the season after loading, for testing seasonal
 	// behavior in a short run (a season is 2 hours of play)
-	if (const char* sea = getenv("OPENC2E_TEST_SEASON")) {
+	if (const char* sea = devenv("OPENC2E_TEST_SEASON")) {
 		world.season = (unsigned int)(std::atoi(sea) % 4);
 		world.dayofseason = 0;
 		fmt::print("* TEST SEASON {}\n", world.season);
 	}
 
-	if (const char* dumppath = getenv("OPENC2E_DUMP_SCRIPTS")) {
+	if (const char* dumppath = devenv("OPENC2E_DUMP_SCRIPTS")) {
 		std::ofstream dump(dumppath, std::ios::binary);
 		world.scriptorium->dumpScripts(dump);
 		fmt::print("* Dumped world scripts to {}\n", dumppath);

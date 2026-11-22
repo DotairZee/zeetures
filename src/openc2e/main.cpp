@@ -19,6 +19,7 @@
  */
 
 #include "Engine.h"
+#include "common/devenv.h"
 #include "PathResolver.h"
 #include "common/backtrace.h"
 #include "common/Exception.h"
@@ -66,7 +67,7 @@ void sampleHandler(int) {
 		g_depths[i] = backtrace(g_samples[i], kDepth);
 }
 void dumpSamples() {
-	const char* path = getenv("OPENC2E_SAMPLE");
+	const char* path = devenv("OPENC2E_SAMPLE");
 	if (!path)
 		return;
 	itimerval off{};
@@ -93,7 +94,7 @@ void dumpSamples() {
 	fclose(f);
 }
 void startSampler() {
-	if (!getenv("OPENC2E_SAMPLE"))
+	if (!devenv("OPENC2E_SAMPLE"))
 		return;
 	void* warm[4];
 	backtrace(warm, 4); // (loads what backtrace needs before any signal)
@@ -156,12 +157,10 @@ static void connectOutput() {
 }
 #endif
 
-// The log file on Windows: flushed once a second (so a crash loses at most a
-// second of it), and started afresh if it grows past 20 MB in one session.
+// The log: written out once a second, so a crash loses at most a second of it
+// (it is quiet now, and a file's buffer could hold minutes). On Windows the
+// file is also started afresh if it grows past 20 MB in one session.
 static void tendLog() {
-#ifdef _WIN32
-	if (s_logPath.empty())
-		return;
 	static Uint64 last = 0;
 	Uint64 now = SDL_GetTicks();
 	if (now - last < 1000)
@@ -169,8 +168,9 @@ static void tendLog() {
 	last = now;
 	fflush(stdout);
 	fflush(stderr);
+#ifdef _WIN32
 	std::error_code ec;
-	if (std::filesystem::file_size(s_logPath, ec) > 20u * 1024 * 1024 && !ec) {
+	if (!s_logPath.empty() && std::filesystem::file_size(s_logPath, ec) > 20u * 1024 * 1024 && !ec) {
 		if (_wfreopen(s_logPath.c_str(), L"w", stdout)) {
 			setvbuf(stdout, nullptr, _IOFBF, 64 * 1024);
 			fmt::print("* (the log passed 20 MB and was started afresh)\n");

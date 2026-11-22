@@ -18,6 +18,7 @@
  */
 
 #include "Profile.h"
+#include "common/devenv.h"
 #include "World.h"
 #include "SkyTint.h"
 
@@ -310,7 +311,7 @@ void World::tick() {
 
 	// developer aid: OPENC2E_TEST_BIG_MOVE=1 has the engine itself move the
 	// selected creature 400 px up at tick 100 (checks BIG MOVE's stack line)
-	static bool testBigMove = getenv("OPENC2E_TEST_BIG_MOVE") != nullptr;
+	static bool testBigMove = devenv("OPENC2E_TEST_BIG_MOVE") != nullptr;
 	if (testBigMove && tickcount == 100) {
 		if (std::shared_ptr<Agent> c = selectedcreature.lock())
 			c->moveTo(c->x, c->y - 400);
@@ -318,10 +319,10 @@ void World::tick() {
 
 	// developer aid: OPENC2E_TEST_PUSH=1 shoves the selected creature east
 	// once, at tick 100 (the push hand)
-	static bool testPush = getenv("OPENC2E_TEST_PUSH") != nullptr;
+	static bool testPush = devenv("OPENC2E_TEST_PUSH") != nullptr;
 	// (=-1: west; =w: west every 20 ticks from tick 100, against a wall)
-	if (testPush && selectedcreature && (tickcount == 100 || (std::string(getenv("OPENC2E_TEST_PUSH")) == "w" && tickcount > 100 && tickcount % 20 == 0))) {
-		std::string tp = getenv("OPENC2E_TEST_PUSH");
+	if (testPush && selectedcreature && (tickcount == 100 || (std::string(devenv("OPENC2E_TEST_PUSH")) == "w" && tickcount > 100 && tickcount % 20 == 0))) {
+		std::string tp = devenv("OPENC2E_TEST_PUSH");
 		shoveCreature(selectedcreature.get(), tp == "-1" || tp == "w" ? -1 : 1);
 		fmt::print("* TEST PUSH at {:.0f},{:.0f}\n", selectedcreature->x, selectedcreature->y);
 	}
@@ -329,7 +330,7 @@ void World::tick() {
 	// developer aid: OPENC2E_TEST_HAND_PUSH="x y" turns the toolbar's push
 	// hand on and keeps the hand at that place (for snapshots of its pose
 	// and arrows)
-	if (const char* hp = getenv("OPENC2E_TEST_HAND_PUSH")) {
+	if (const char* hp = devenv("OPENC2E_TEST_HAND_PUSH")) {
 		float hx, hy;
 		if (sscanf(hp, "%f %f", &hx, &hy) == 2 && hand()) {
 			handPush = true;
@@ -347,7 +348,7 @@ void World::tick() {
 	// pick up the first such object 100 ticks in, hold it beside the egg
 	// pile's spot, and print where it holds it (the hand's carry point, the
 	// object's place and picture size)
-	if (const char* hp = getenv("OPENC2E_TEST_HAND_PICKUP")) {
+	if (const char* hp = devenv("OPENC2E_TEST_HAND_PICKUP")) {
 		static unsigned int s_from = tickcount;
 		static AgentRef s_held;
 		int f, g, sp = -1;
@@ -382,7 +383,7 @@ void World::tick() {
 	}
 	// developer aid: OPENC2E_TEST_HAND_INVISIBLE="x y" turns the toolbar's
 	// invisible hand on and keeps the hand at that place (for snapshots)
-	if (const char* hi = getenv("OPENC2E_TEST_HAND_INVISIBLE")) {
+	if (const char* hi = devenv("OPENC2E_TEST_HAND_INVISIBLE")) {
 		float hx, hy;
 		if (sscanf(hi, "%f %f", &hx, &hy) == 2 && hand()) {
 			handInvisible = true;
@@ -471,7 +472,7 @@ void World::tick() {
 	// developer aid: OPENC2E_DUMP_AGENTS="x0 y0 x1 y1" prints, once after
 	// load, every agent overlapping that box: class, plane, size and the
 	// sprite file of each part
-	static const char* agentBox = getenv("OPENC2E_DUMP_AGENTS");
+	static const char* agentBox = devenv("OPENC2E_DUMP_AGENTS");
 	static bool agentsDumped = false;
 	if (agentBox && !agentsDumped && tickcount > 5) {
 		agentsDumped = true;
@@ -521,16 +522,13 @@ void World::tick() {
 	// (fixed, b74ca45c) and since then mostly kept newborns with lethal
 	// mutations on life support (e.g. the organ that makes PGK switched off
 	// by a mutated receptor). Owner, 2026-11-19: drop it.
-	// OPENC2E_RESTART_METABOLISM turns the restart back on (for experiments;
-	// OPENC2E_OLD_STALL_CHECK then restarts at ATP 0 only).
-	static const bool oldStallCheck = getenv("OPENC2E_OLD_STALL_CHECK") != nullptr; // (to compare)
 	// developer aid: OPENC2E_DUMP_ORGANS=MONIKER prints that creature's
 	// organs once (energy cost, clock rate, life force, and the reactions
 	// that make or use ATP and ADP)
 	// (OPENC2E_DUMP_ORGANS=OV97: the creature a script marks with OV97 = 1,
 	// once it exists, e.g. one just made from a genome file)
 	static bool organsDumped = false;
-	if (static const char* dmEnv = getenv("OPENC2E_DUMP_ORGANS"); dmEnv && !organsDumped && tickcount % 100 == 70) {
+	if (static const char* dmEnv = devenv("OPENC2E_DUMP_ORGANS"); dmEnv && !organsDumped && tickcount % 100 == 70) {
 		bool byMark = std::string(dmEnv) == "OV97";
 		for (auto& a : agents) {
 			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
@@ -546,7 +544,7 @@ void World::tick() {
 				std::string rx;
 				for (auto& r : o->getReactions()) {
 					auto* g = r->data;
-					bool atp = getenv("OPENC2E_DUMP_ORGANS_ALL") != nullptr; // (every reaction, not only those on ATP/ADP)
+					bool atp = devenv("OPENC2E_DUMP_ORGANS_ALL") != nullptr; // (every reaction, not only those on ATP/ADP)
 					for (int i = 0; i < 4; i++)
 						if (g->reactant[i] == 99 || g->reactant[i] == 100)
 							atp = true;
@@ -594,40 +592,8 @@ void World::tick() {
 			}
 		}
 	}
-	static const bool restartMetabolism = getenv("OPENC2E_RESTART_METABOLISM") != nullptr;
-	if (engine.version == 2 && restartMetabolism && tickcount % 100 == 61) {
-		for (auto& a : agents) {
-			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
-			auto* c = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
-			if (!c || !c->isAlive())
-				continue;
-			int need = 1; // the least ATP any working organ runs on
-			if (auto* c2 = dynamic_cast<c2Creature*>(c); c2 && !oldStallCheck) {
-				int least = 256;
-				for (auto& o : c2->getOrgans())
-					if (o->getLongTermLifeforce() > 0.5f && o->getEnergyCost() > 0)
-						least = std::min(least, (int)o->getEnergyCost());
-				if (least < 256)
-					need = least;
-			}
-			unsigned char was = c->getChemical(99);
-			if (was >= need)
-				continue;
-			int fuel = c->getChemical(70) + c->getChemical(71) + c->getChemical(72) + c->getChemical(73) + c->getChemical(74);
-			if (fuel < 20)
-				continue;
-			unsigned char atp = 200;
-			for (auto& gn : c->getGenome()->genes)
-				if (auto* ic = dynamic_cast<bioInitialConcentrationGene*>(gn.get()))
-					if (ic->chemical == 99)
-						atp = ic->quantity;
-			c->setChemicalLevel(99, atp);
-			fmt::print("* Restarted the metabolism of {} ({} genus {}): ATP {} (organs need {}) -> {} with fuel {} in store\n", history->findMoniker(c->getGenome()), c->isFemale() ? "female" : "male", (int)a->genus, (int)was, need, (int)atp, fuel);
-		}
-	}
-
 	if (engine.version == 2 && map && tickcount % 100 == 37) {
-		static const bool watchRescue = getenv("OPENC2E_WATCH_SUNK") != nullptr;
+		static const bool watchRescue = devenv("OPENC2E_WATCH_SUNK") != nullptr;
 		if (!sealedRoomsKnown) {
 			sealedRoomsKnown = true;
 			// (a shut room with a floor line or one creatures can be dropped
@@ -694,7 +660,7 @@ void World::tick() {
 	// developer aid: OPENC2E_WATCH_SUNK=N lists, every N ticks, creatures
 	// and objects sunk into a solid floor (bottom more than 20 px below the
 	// floor of their room, where that floor is solid) or outside the rooms
-	static const int sunkEvery = getenv("OPENC2E_WATCH_SUNK") ? atoi(getenv("OPENC2E_WATCH_SUNK")) : 0;
+	static const int sunkEvery = devenv("OPENC2E_WATCH_SUNK") ? atoi(devenv("OPENC2E_WATCH_SUNK")) : 0;
 	if (sunkEvery > 0 && map && tickcount % sunkEvery == 0) {
 		for (auto& a : agents) {
 			if (!a || a->isDying() || a->carriedby || a->invehicle || a->family == 1)
@@ -910,12 +876,20 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 		gy = -(int)std::lround(dy * glide);
 	};
 
+	// the passes over a world whose ends join: where the objects are, and a
+	// world's width to the right and to the left, when the view comes near
+	// enough to that end to show any of them (objects may reach past the ends;
+	// each pass used to be made for every object, every frame: 2026-11-21)
+	const int seamReach = 2000;
+	const bool passRight = m->wraparound() && (int)m->width() - (adjustx - (int)m->x()) < surface->getWidth() + seamReach;
+	const bool passLeft = m->wraparound() && adjustx - (int)m->x() < seamReach;
+
 	// render all the agents
 	for (auto render : renders) {
 		if (!lit) {
 			auto* p = dynamic_cast<CompoundPart*>(render);
 			Agent* owner = p ? p->getParent() : nullptr;
-			if (owner && (owner == (Agent*)world.hand() || dynamic_cast<Bubble*>(owner))) {
+			if (owner && (owner == (Agent*)world.hand() || typeid(*owner) == typeid(Bubble))) {
 				SkyTint::draw(surface, m, destx, desty);
 				Thoughts::draw(surface, adjustx, adjusty, m->wraparound() ? (int)m->width() : 0, skip_agent);
 				lit = true;
@@ -946,16 +920,14 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 		if (render->showOnRemoteCameras() || cam == engine.camera.get()) {
 			// three-pass for wraparound rooms, the third since agents often straddle the boundary
 			// TODO: same as above with background rendering
-			for (unsigned int z = 0; z < (m->wraparound() ? 3 : 1); z++) {
-				int gx, gy;
-				glideOffset(render, gx, gy);
-				int newx = -adjustx + gx, newy = -adjusty + gy;
-				if (z == 1)
-					newx += m->width();
-				else if (z == 2)
-					newx -= m->width();
-				render->render(surface, newx, newy);
-			}
+			int gx, gy;
+			glideOffset(render, gx, gy);
+			const int newx = -adjustx + gx, newy = -adjusty + gy;
+			render->render(surface, newx, newy);
+			if (passRight)
+				render->render(surface, newx + (int)m->width(), newy);
+			if (passLeft)
+				render->render(surface, newx - (int)m->width(), newy);
 		}
 	}
 	if (!lit) {
@@ -1353,7 +1325,7 @@ void World::tickClimate() {
 // storms' pressure, which went on rising past 500 there).
 void World::tickPressure() {
 	static unsigned int counter = 0;
-	static const bool off = getenv("OPENC2E_NO_WIND") != nullptr;
+	static const bool off = devenv("OPENC2E_NO_WIND") != nullptr;
 	if (off || ++counter % 10 != 0 || !map || engine.version != 2)
 		return;
 	const float spread = 1.0f / 32.0f, sourceRate = 1.0f / 20.0f, basePull = 0.02f, windScale = 1.6f;
@@ -1421,7 +1393,7 @@ void World::tickPressure() {
 // metals. Switch OPENC2E_NO_RADIATION_SPREAD keeps the old fixed values.
 void World::tickRadiation() {
 	static unsigned int counter = 0;
-	static const bool off = getenv("OPENC2E_NO_RADIATION_SPREAD") != nullptr;
+	static const bool off = devenv("OPENC2E_NO_RADIATION_SPREAD") != nullptr;
 	if (off || ++counter % 10 != 0 || !map || engine.version != 2)
 		return;
 	const float spread = 1.0f / 8.0f, sourceRate = 0.354f, loss = 0.1f;
@@ -1462,7 +1434,7 @@ void World::tickRadiation() {
 // Scripts' changes are taken up as they come. Kept 0-255.
 void World::tickNutrients() {
 	static unsigned int counter = 0;
-	static const bool off = getenv("OPENC2E_NO_NUTRIENT_CYCLE") != nullptr; // (A/B testing)
+	static const bool off = devenv("OPENC2E_NO_NUTRIENT_CYCLE") != nullptr; // (A/B testing)
 	if (off || ++counter % 50 != 0 || !map || engine.version != 2)
 		return;
 	const float breakdown = 0.0005f, settle = 0.0005f, seepDown = 0.002f, seepLevel = 0.001f, mixWater = 0.003f;
@@ -1549,7 +1521,7 @@ void World::tickNutrients() {
 // (lamps). Every 50 ticks.
 void World::tickDaylight() {
 	static unsigned int counter = 0;
-	static const bool off = getenv("OPENC2E_NO_DAYLIGHT") != nullptr; // (A/B testing)
+	static const bool off = devenv("OPENC2E_NO_DAYLIGHT") != nullptr; // (A/B testing)
 	if (off || ++counter % 50 != 0 || !map || engine.version != 2)
 		return;
 	auto factorFor = [](int tod) { return tod == 0 ? 0.7f : tod == 3 ? 0.6f : tod == 4 ? 0.25f : 1.0f; };
@@ -1629,7 +1601,7 @@ void World::tickFoodScent() {
 	}
 	for (auto& r : rooms)
 		r->foodscent = std::clamp(r->foodscentnext, 0.0f, 1.0f);
-	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	static const bool watch = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 	if (watch && counter % 1000 == 0) {
 		int some = 0, strong = 0;
 		float top = 0;
