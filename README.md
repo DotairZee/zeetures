@@ -1,6 +1,6 @@
 <!-- TRAILER -->
 
-<h1 align="center"><img src="art/logo/zeetures.png" alt="Zeetures: a labor of love by DotairZee" width="720"></h1>
+<h1><img src="art/logo/zeetures.png" alt="Zeetures: a labor of love by DotairZee" width="720"></h1>
 
 > **Zeetures: a fan fork of openc2e, focused on Creatures 2** (forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2), 7 October 2026). It adds an original creature mind (the "homeostat" mind), a C2-style interface with the kits, world saving, scents and many fixes; see the `creature-mind` branch. Nightly builds are under [Releases](../../releases/tag/nightly) (they contain no game data: you need your own copy of Creatures 2). A noncommercial labor of love by an old fan, not affiliated with Gameware Europe or the openc2e developers. Every change is in the [changelog](CHANGELOG.md). See [Built on openc2e](#built-on-openc2e) below.
 
