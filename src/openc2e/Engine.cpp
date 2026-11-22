@@ -2178,10 +2178,10 @@ void Engine::injectMissingBuiltinCobs() {
 
 // whether the open world started from the game's own world file (Eden.sfc;
 // Home and worlds made from it hold a byte-for-byte copy as world.sfc)
-static bool worldStartedFromEden(const std::string& worlddir) {
+static bool worldStartedFromEden(const fs::path& worlddir) {
 	if (worlddir.empty())
 		return true;
-	fs::path mine = fs::path(worlddir) / "world.sfc";
+	fs::path mine = worlddir / "world.sfc";
 	fs::path eden = findMainDirectoryFile("Eden.sfc");
 	std::error_code ec;
 	if (eden.empty() || !fs::exists(mine, ec) || !fs::exists(eden, ec))

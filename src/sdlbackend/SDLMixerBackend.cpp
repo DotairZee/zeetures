@@ -321,7 +321,9 @@ static AudioChannel play_sdl_io(const std::string& name, const std::string& shor
 AudioChannel SDLMixerBackend::play_clip(const fs::path& filename, bool looping, bool silent) {
 	// SDL takes UTF-8 paths so use u8string
 	const auto shortname = to_ascii_lowercase(filename.filename().string());
-	const std::string key = filename.string();
+	// (UTF-8: path::string() cannot give every Windows path)
+	const auto u8name = filename.u8string();
+	const std::string key(reinterpret_cast<const char*>(u8name.c_str()), u8name.size());
 	auto it = s_audio_cache.find(key);
 	if (it == s_audio_cache.end()) {
 		CachedAudio c;

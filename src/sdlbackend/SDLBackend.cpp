@@ -840,7 +840,11 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 							std::string cmd = fmt::format("ffmpeg -y -loglevel error -f rawvideo -pix_fmt rgb24 -s {}x{} -r 30 -i - "
 														  "-c:v libx264 -preset veryfast -crf 14 -pix_fmt yuv420p \"{}\"",
 								rw, rh, out);
+							#ifdef _WIN32
+							rec = _popen(cmd.c_str(), "wb");
+#else
 							rec = popen(cmd.c_str(), "w");
+#endif
 							startMs = SDL_GetTicks();
 							fmt::print("* Recording to {} ({}x{}, 30 fps)\n", out, rw, rh);
 						}
@@ -852,7 +856,11 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 							frames++;
 						}
 						if (rec && stopAfter > 0 && t >= stopAfter) {
+#ifdef _WIN32
+							_pclose(rec);
+#else
 							pclose(rec);
+#endif
 							rec = nullptr;
 							stopped = true;
 							fmt::print("* Recording finished: {} ({} frames)\n", out, frames);
