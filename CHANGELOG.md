@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 620 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 621 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 2 commits, 21 November 2026
+- [Unreleased](#unreleased): 3 commits, 21 November 2026
 - [0.28.0](#version-0280): 14 commits, 21 November 2026
 - [0.27.0](#version-0270): 4 commits, 21 November 2026
 - [0.26.2](#version-0262): 3 commits, 21 November 2026
@@ -76,6 +76,10 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 21 November 2026
+
+#### README: the trailer on YouTube
+
+[`415ea19d`](https://github.com/DotairZee/zeetures/commit/415ea19d5ca5f9f7e6e62021315d8236dad4179e)
 
 #### README: the trailer at the top
 
