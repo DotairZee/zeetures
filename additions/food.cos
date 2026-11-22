@@ -444,7 +444,7 @@ endm
 * rotting food (Disease::ateRotten).
 scrp 2 25 149 12
   snde chwp
-  stim writ from 0 255 0 0 18 60 19 30 0 0 0 0
+  stim writ from 0 255 0 0 18 120 19 60 0 0 0 0
   kill ownr
 endm
 
