@@ -24,15 +24,14 @@ import threading
 
 
 def counts(state):
-    creatures = eggs = 0
+    """The save's creatures, eggs and kept objects (blocks of state.txt)."""
+    n = {"creature": 0, "egg": 0, "object": 0}
     with open(state, encoding="utf-8", errors="replace") as f:
         for line in f:
             line = line.rstrip("\r\n")
-            if line == "creature":
-                creatures += 1
-            elif line == "egg":
-                eggs += 1
-    return creatures, eggs
+            if line in n:
+                n[line] += 1
+    return n["creature"], n["egg"], n["object"]
 
 
 def check(engine, c2, world_dir):
@@ -40,7 +39,7 @@ def check(engine, c2, world_dir):
     state = os.path.join(world_dir, "save", "state.txt")
     if not os.path.exists(state):
         return None
-    want_c, want_e = counts(state)
+    want = counts(state)
     with tempfile.TemporaryDirectory(prefix="zeetures-savecheck-") as home:
         worlds = os.path.join(home, ".openc2e", "Creatures 2", "Worlds")
         os.makedirs(worlds)
@@ -65,9 +64,9 @@ def check(engine, c2, world_dir):
     if not m:
         why = "could not be read" if "could not be read" in out else "no 'Restored saved world' line"
         return f"FAIL {name}: {why}"
-    got_c, got_e = int(m.group(1)), int(m.group(2)) + int(m.group(3))
-    ok = got_c == want_c and got_e >= want_e
-    return f"{'ok  ' if ok else 'FAIL'} {name}: {got_c}/{want_c} creatures, eggs {got_e} (save lists {want_e})"
+    got = tuple(int(g) for g in m.groups())
+    same = "ok  " if got == want else "FAIL"
+    return f"{same} {name}: " + ", ".join(f"{g}/{w} {what}" for g, w, what in zip(got, want, ("creatures", "eggs", "kept objects")))
 
 
 def main():
