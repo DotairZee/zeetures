@@ -62,7 +62,7 @@ Zeetures runs natively on macOS (Metal graphics, CoreAudio sound). You do **not*
 
 **Two breed packs, fetched on your machine.** The first time a Creatures 2 world runs, Zeetures downloads two community breed packs from the [Eem Foo archive](https://eem.foo/archive), which already hosts them, and imports them: [Boney Grendels](https://eem.foo/archive/downloads/1fad-boney-grendels) (Creature Labs' own Creatures 2 release) and [Frog Norns V3](https://eem.foo/archive/downloads/2538-frog-norns-v3) (by Alex of Norns of the Round Table, from Nornenmeister's V2), which takes the place of the game's own frog norn. Zeetures itself does not carry or host them. The files are kept in your user folder's `Downloads`; to skip this, put the line `breed-packs off` in your user folder's `settings.txt`.
 
-Linux is where Zeetures is played and tested every day; the Windows and macOS builds are new and less tried, and the 32-bit builds are compiled every night but have not yet been tried on a 32-bit machine.
+Linux is where Zeetures is played and tested every day; the Windows and macOS builds are new and less tried. The Windows installer has been installed, played and uninstalled in 64-bit and 32-bit Wine (a new world, and a world of a hundred creatures in the 32-bit program); the 32-bit builds have not yet been tried on a real 32-bit machine.
 
 ## Status
 
