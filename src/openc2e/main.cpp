@@ -28,6 +28,7 @@
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_messagebox.h>
+#include <SDL3/SDL_timer.h>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -125,6 +126,8 @@ static void fatalError(const std::string& message) {
 }
 
 #ifdef _WIN32
+static std::filesystem::path s_logPath; // (zeetures-log.txt when the output goes there)
+
 // Zeetures.exe is a windowed program (no console window behind the game).
 // Started from a command prompt it writes there; otherwise its output goes
 // to zeetures-log.txt in the user folder, for bug reports.
@@ -141,13 +144,41 @@ static void connectOutput() {
 		std::filesystem::path log = storageBaseDirectory() / "zeetures-log.txt";
 		std::error_code ec;
 		std::filesystem::remove(log, ec);
-		if (_wfreopen(log.c_str(), L"a", stdout))
-			setvbuf(stdout, nullptr, _IONBF, 0);
+		// (buffered: written to disk once a second by tendLog, not a disk
+		// write for every line as before)
+		if (_wfreopen(log.c_str(), L"a", stdout)) {
+			setvbuf(stdout, nullptr, _IOFBF, 64 * 1024);
+			s_logPath = log;
+		}
 		_wfreopen(log.c_str(), L"a", stderr);
 	} catch (std::exception&) {
 	}
 }
 #endif
+
+// The log file on Windows: flushed once a second (so a crash loses at most a
+// second of it), and started afresh if it grows past 20 MB in one session.
+static void tendLog() {
+#ifdef _WIN32
+	if (s_logPath.empty())
+		return;
+	static Uint64 last = 0;
+	Uint64 now = SDL_GetTicks();
+	if (now - last < 1000)
+		return;
+	last = now;
+	fflush(stdout);
+	fflush(stderr);
+	std::error_code ec;
+	if (std::filesystem::file_size(s_logPath, ec) > 20u * 1024 * 1024 && !ec) {
+		if (_wfreopen(s_logPath.c_str(), L"w", stdout)) {
+			setvbuf(stdout, nullptr, _IOFBF, 64 * 1024);
+			fmt::print("* (the log passed 20 MB and was started afresh)\n");
+		}
+		_wfreopen(s_logPath.c_str(), L"a", stderr);
+	}
+#endif
+}
 
 // SDL tries stealing main on some platforms, which we don't want.
 #undef main
@@ -193,6 +224,7 @@ int main(int argc, char* argv[]) {
 
 	get_backend()->run([] {
 		hang_watch_beat(); // (see install_backtrace_printer: hang reports)
+		tendLog();
 		engine.tick();
 		if (engine.done) {
 			return false;

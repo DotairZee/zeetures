@@ -226,9 +226,13 @@ bool Map::collideLineWithRoomBoundaries(Point src, Point dest, std::shared_ptr<R
 		Point temppoint;
 		if (x[i].intersect(movement, temppoint)) {
 			if (!movement.containsPoint(temppoint)) {
-				fmt::print("physics bug: intersect wasn't on movement line at ({}, {})\n", temppoint.x, temppoint.y);
-				fmt::print("room line: ({}, {}) to ({}, {})\n", x[i].getStart().x, x[i].getStart().y, x[i].getEnd().x, x[i].getEnd().y);
-				fmt::print("movement line: ({}, {}) to ({}, {})\n", src.x, src.y, dest.x, dest.y);
+				// (at most a few times a run)
+				static int said = 0;
+				if (said < 20 && ++said) {
+					fmt::print("physics bug: intersect wasn't on movement line at ({}, {})\n", temppoint.x, temppoint.y);
+					fmt::print("room line: ({}, {}) to ({}, {})\n", x[i].getStart().x, x[i].getStart().y, x[i].getEnd().x, x[i].getEnd().y);
+					fmt::print("movement line: ({}, {}) to ({}, {}){}\n", src.x, src.y, dest.x, dest.y, said == 20 ? " (no more of these this run)" : "");
+				}
 				return false; // go away
 			}
 			assert(movement.containsPoint(temppoint));

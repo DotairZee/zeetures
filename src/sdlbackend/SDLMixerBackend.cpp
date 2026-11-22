@@ -10,6 +10,8 @@
 #include <SDL3_mixer/SDL_mixer.h>
 #include <SDL3_native_midi/SDL_native_midi.h>
 #include <filesystem>
+#include <memory>
+#include <unordered_map>
 #include <mutex>
 #include <vector>
 
@@ -56,6 +58,26 @@ static void erase_stopped_channels_locked() {
 }
 static std::unique_ptr<NativeMidi_Song, NativeMidiSongDeleter> s_midi;
 static std::unique_ptr<MIX_Mixer, MIXMixerDeleter> s_mixer;
+
+// Sound files decoded once and kept (the game plays the same few hundred
+// files over and over; every play used to reopen and decode its file). A
+// Creatures 2 Sounds folder is about 25 MB; past s_cache_limit the oldest
+// entries are no longer kept. Voices played from memory are not kept.
+struct CachedAudio {
+	std::shared_ptr<MIX_Audio> audio;
+	SDL_AudioSpec spec;
+	size_t bytes;
+};
+static std::unordered_map<std::string, CachedAudio> s_audio_cache;
+static std::vector<std::string> s_audio_cache_order;
+static size_t s_audio_cache_bytes = 0;
+static const size_t s_cache_limit = 64 * 1024 * 1024;
+
+// developer aid: OPENC2E_WATCH_SOUND prints each sound as it starts
+static bool watchSound() {
+	static const bool on = getenv("OPENC2E_WATCH_SOUND") != nullptr;
+	return on;
+}
 
 template <typename F>
 static void audio_channel_to_track(AudioChannel source, F&& f) {
@@ -109,7 +131,8 @@ void SDLMixerBackend::play_midi_file(const std::filesystem::path& filename) {
 	}
 	NativeMidi_Start(s_midi.get(), -1); // TODO: is looping forever correct?
 	const auto shortname = to_ascii_lowercase(fs::path(filename).filename().string());
-	fmt::print("INFO [SDLMixer] Playing {} looping=true\n", shortname);
+	if (watchSound())
+		fmt::print("INFO [SDLMixer] Playing {} looping=true\n", shortname);
 }
 
 void SDLMixerBackend::midi_set_volume(float volume) {
@@ -175,6 +198,9 @@ void SDLMixerBackend::shutdown() {
 		std::lock_guard<std::mutex> lock(s_stopped_mutex);
 		s_stopped_channels.clear();
 	}
+	s_audio_cache.clear();
+	s_audio_cache_order.clear();
+	s_audio_cache_bytes = 0;
 	s_mixer.reset();
 	MIX_Quit();
 
@@ -231,33 +257,33 @@ void SDLMixerBackend::audio_channel_stop(AudioChannel source) {
 	});
 }
 
-static AudioChannel play_sdl_io(const std::string& name, const std::string& shortname, SDL_IOStream* io, bool looping, bool silent = false) {
+// decodes a WAV (the stream is closed); nullptr if it cannot
+static std::shared_ptr<MIX_Audio> load_sdl_io(const std::string& name, SDL_IOStream* io, SDL_AudioSpec& spec, size_t& bytes) {
 	// Use SDL_LoadWAV because MIX_LoadAudio will read loop points from WAV files
 	// and then loop the sound forever, which we don't want. See https://github.com/libsdl-org/SDL_mixer/issues/847
 	// These Creatures 1 files have loop points: fall, kito, kitp, tele, pian, show, hmle, hdsk, hfml, sqek
-	SDL_AudioSpec spec;
 	std::unique_ptr<uint8_t, SDLFreeDeleter> data;
 	uint32_t datalen = 0;
 	if (!SDL_LoadWAV_IO(io, true, &spec, out_ptr(data), &datalen)) {
 		printf("* SDLMixer: error loading %s: %s\n", name.c_str(), SDL_GetError());
 		return {};
 	}
-
-	// TODO: expose concept of a loaded piece of audio (e.g., a MIX_Audio*) and let the
-	// engine load and manage audio lifetimes, so we don't reload the same data over
-	// and over.
-	std::unique_ptr<MIX_Audio, MIXAudioDeleter> audio(MIX_LoadRawAudio(s_mixer.get(), data.get(), datalen, &spec));
+	MIX_Audio* audio = MIX_LoadRawAudio(s_mixer.get(), data.get(), datalen, &spec);
 	if (!audio) {
 		printf("* SDLMixer: error loading %s: %s\n", name.c_str(), SDL_GetError());
 		return {};
 	}
+	bytes = datalen;
+	return std::shared_ptr<MIX_Audio>(audio, MIX_DestroyAudio);
+}
 
+static AudioChannel play_audio(MIX_Audio* audio, const SDL_AudioSpec& spec, const std::string& name, const std::string& shortname, bool looping, bool silent) {
 	std::unique_ptr<MIX_Track, MIXTrackDeleter> track(MIX_CreateTrack(s_mixer.get()));
 	if (!track) {
 		printf("* SDLMixer: error creating track for %s: %s\n", name.c_str(), SDL_GetError());
 		return {};
 	}
-	MIX_SetTrackAudio(track.get(), audio.get());
+	MIX_SetTrackAudio(track.get(), audio);
 
 	if (looping) {
 		MIX_SetTrackLoops(track.get(), -1);
@@ -276,15 +302,45 @@ static AudioChannel play_sdl_io(const std::string& name, const std::string& shor
 	// now start the track
 	MIX_PlayTrack(trackp, 0);
 
-	fmt::print("INFO [SDLMixer] Playing {} format={}/{}Hz/{}{}\n", shortname, spec.channels, spec.freq, sdl_audioformat_to_string(spec.format), looping ? " looping=true" : "");
+	if (watchSound())
+		fmt::print("INFO [SDLMixer] Playing {} format={}/{}Hz/{}{}\n", shortname, spec.channels, spec.freq, sdl_audioformat_to_string(spec.format), looping ? " looping=true" : "");
 
 	return channel;
+}
+
+static AudioChannel play_sdl_io(const std::string& name, const std::string& shortname, SDL_IOStream* io, bool looping, bool silent = false) {
+	SDL_AudioSpec spec;
+	size_t bytes = 0;
+	auto audio = load_sdl_io(name, io, spec, bytes);
+	if (!audio)
+		return {};
+	// (the track holds its own reference to the audio)
+	return play_audio(audio.get(), spec, name, shortname, looping, silent);
 }
 
 AudioChannel SDLMixerBackend::play_clip(const fs::path& filename, bool looping, bool silent) {
 	// SDL takes UTF-8 paths so use u8string
 	const auto shortname = to_ascii_lowercase(filename.filename().string());
-	return play_sdl_io(filename.string(), shortname, SDL_IOFromFile(reinterpret_cast<const char*>(filename.u8string().c_str()), "rb"), looping, silent);
+	const std::string key = filename.string();
+	auto it = s_audio_cache.find(key);
+	if (it == s_audio_cache.end()) {
+		CachedAudio c;
+		c.audio = load_sdl_io(key, SDL_IOFromFile(reinterpret_cast<const char*>(filename.u8string().c_str()), "rb"), c.spec, c.bytes);
+		if (!c.audio)
+			return {};
+		while (s_audio_cache_bytes + c.bytes > s_cache_limit && !s_audio_cache_order.empty()) {
+			auto old = s_audio_cache.find(s_audio_cache_order.front());
+			if (old != s_audio_cache.end()) {
+				s_audio_cache_bytes -= old->second.bytes;
+				s_audio_cache.erase(old);
+			}
+			s_audio_cache_order.erase(s_audio_cache_order.begin());
+		}
+		s_audio_cache_bytes += c.bytes;
+		s_audio_cache_order.push_back(key);
+		it = s_audio_cache.emplace(key, std::move(c)).first;
+	}
+	return play_audio(it->second.audio.get(), it->second.spec, key, shortname, looping, silent);
 }
 
 AudioChannel SDLMixerBackend::play_wav_data(const std::string& name, const uint8_t* buf, size_t size, bool looping) {

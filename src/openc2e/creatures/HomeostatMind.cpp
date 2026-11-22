@@ -53,6 +53,21 @@
 
 namespace {
 
+// The mind's running commentary: every creature's choices, outcomes, stimuli
+// and what it learns, about six lines a decision (70 MB an hour in a world of
+// a hundred). Off for players; OPENC2E_MIND_LOG=1 prints it (developer aid;
+// the WATCH_ switches still print their own lines). The arguments are not
+// worked out when it is off.
+bool mindLogOn() {
+	static const bool on = getenv("OPENC2E_MIND_LOG") != nullptr;
+	return on;
+}
+#define MIND_LOG(...) \
+	do { \
+		if (mindLogOn()) \
+			fmt::print(__VA_ARGS__); \
+	} while (0)
+
 constexpr int NUM_DRIVES = 17;
 
 // Labels for log lines only (the order of drives in the owner's
@@ -747,15 +762,17 @@ class HomeostatMind : public CreatureMind {
 		}
 		applyTemperament(p.temperament, p.mindGenes, p.creatureId);
 		rng.seed((unsigned int)p.creatureId);
+		if (!mindLogOn())
+			return;
 		std::string acts;
 		for (auto& a : *p.actions)
 			acts += fmt::format(" {}{}", actionName(a.decision), a.needsObject ? "*" : "");
-		fmt::print("[homeostat] creature {} born ({} {}); actions (* = on an object):{}\n",
+		MIND_LOG("[homeostat] creature {} born ({} {}); actions (* = on an object):{}\n",
 			p.creatureId, p.stage, p.female ? "female" : "male", acts);
 	}
 
 	void died(const MindPerception& p) override {
-		fmt::print("[homeostat] creature {} died at brain tick {}; {}\n", p.creatureId, p.tick, debugState());
+		MIND_LOG("[homeostat] creature {} died at brain tick {}; {}\n", p.creatureId, p.tick, debugState());
 	}
 
 	// 7. Speaking (vocalizations, owner 2026-11-10): what the creature says,
@@ -1209,7 +1226,7 @@ class HomeostatMind : public CreatureMind {
 				e.uses = 1;
 				exits.push_back(e);
 			}
-			fmt::print("[homeostat] creature {} t{}: out of the water; remembers {}@{} at {:.0f},{:.0f} as an exit\n", p.creatureId, p.tick,
+			MIND_LOG("[homeostat] creature {} t{}: out of the water; remembers {}@{} at {:.0f},{:.0f} as an exit\n", p.creatureId, p.tick,
 				actionName(lastObjectUse.decision), lastObjectUse.category, lastObjectUse.x, lastObjectUse.y);
 		}
 		// (only working a device counts: activate 1 or 2, deactivate; eating
@@ -1228,7 +1245,7 @@ class HomeostatMind : public CreatureMind {
 				f.uses = 1;
 				flooders.push_back(f);
 			}
-			fmt::print("[homeostat] creature {} t{}: in the water; remembers {}@{} at {:.0f},{:.0f} as a flooder\n", p.creatureId, p.tick,
+			MIND_LOG("[homeostat] creature {} t{}: in the water; remembers {}@{} at {:.0f},{:.0f} as a flooder\n", p.creatureId, p.tick,
 				actionName(lastObjectUse.decision), lastObjectUse.category, lastObjectUse.x, lastObjectUse.y);
 		}
 		wasInWater = inWaterSettled;
@@ -1241,7 +1258,7 @@ class HomeostatMind : public CreatureMind {
 			bl.decision = rideDecision;
 			bl.dx = (bl.dx * bl.rides + (-dxTo(p, rideStartX))) / (bl.rides + 1);
 			bl.rides++;
-			fmt::print("[homeostat] creature {} t{}: boat ride with {} took it {:.0f} px\n", p.creatureId, p.tick, actionName(rideDecision), -dxTo(p, rideStartX));
+			MIND_LOG("[homeostat] creature {} t{}: boat ride with {} took it {:.0f} px\n", p.creatureId, p.tick, actionName(rideDecision), -dxTo(p, rideStartX));
 		}
 		// travel links: a device use followed by a ride (or a floor change)
 		// that ends somewhere quite different
@@ -1283,7 +1300,7 @@ class HomeostatMind : public CreatureMind {
 					tl.uses = 1;
 					travelLinks.push_back(tl);
 				}
-				fmt::print("[homeostat] creature {} t{}: learned travel link {}@{} from {:.0f},{:.0f} to {:.0f},{:.0f}\n", p.creatureId, p.tick,
+				MIND_LOG("[homeostat] creature {} t{}: learned travel link {}@{} from {:.0f},{:.0f} to {:.0f},{:.0f}\n", p.creatureId, p.tick,
 					actionName(pendingLink.decision), pendingLink.category, pendingLink.fromX, pendingLink.fromY, p.x, p.y);
 				pendingLink.category = -1;
 			} else if (rideOver || p.tick >= pendingLinkTick + prm.linkWindow) {
@@ -1294,7 +1311,7 @@ class HomeostatMind : public CreatureMind {
 					if (it->category == pendingLink.category && it->decision == pendingLink.decision &&
 						std::fabs(it->fromX - pendingLink.fromX) < 200.0f && std::fabs(it->fromY - pendingLink.fromY) < prm.sameLevel) {
 						if (++it->fails >= 2) {
-							fmt::print("[homeostat] creature {} t{}: forgot travel link {}@{} from {:.0f},{:.0f} (it took it nowhere)\n", p.creatureId, p.tick,
+							MIND_LOG("[homeostat] creature {} t{}: forgot travel link {}@{} from {:.0f},{:.0f} (it took it nowhere)\n", p.creatureId, p.tick,
 								actionName(it->decision), it->category, it->fromX, it->fromY);
 							travelLinks.erase(it);
 						}
@@ -1314,7 +1331,7 @@ class HomeostatMind : public CreatureMind {
 				dudButtons.erase(std::remove_if(dudButtons.begin(), dudButtons.end(), [&](auto& d) { return p.tick >= d.until; }), dudButtons.end());
 				if (dudButtons.size() < 16)
 					dudButtons.push_back({blindX, blindY, p.tick + prm.dudButtonTicks});
-				fmt::print("[homeostat] creature {} t{}: a call button at {:.0f},{:.0f} brought no lift; no blind presses there for {} ticks\n",
+				MIND_LOG("[homeostat] creature {} t{}: a call button at {:.0f},{:.0f} brought no lift; no blind presses there for {} ticks\n",
 					p.creatureId, p.tick, blindX, blindY, prm.dudButtonTicks);
 				blindPending = false;
 			}
@@ -1337,7 +1354,7 @@ class HomeostatMind : public CreatureMind {
 					cb = &callButtons.back();
 				}
 				(boatHere ? cb->worked : cb->failed)++;
-				fmt::print("[homeostat] creature {} t{}: pressed a button at {:.0f},{:.0f} to call a boat: {}\n", p.creatureId, p.tick, callPressX, callPressY,
+				MIND_LOG("[homeostat] creature {} t{}: pressed a button at {:.0f},{:.0f} to call a boat: {}\n", p.creatureId, p.tick, callPressX, callPressY,
 					boatHere ? "the boat came (a boat switch)" : "no boat came");
 				callPending = false;
 			}
@@ -1392,7 +1409,7 @@ class HomeostatMind : public CreatureMind {
 		int face = chooseFace(d, D);
 		if (face != lastFace) {
 			out.expression = face;
-			fmt::print("[homeostat] creature {} t{}: face {} -> {} (mood {:+.3f}, valence {:+.3f}, Anger {:.2f})\n",
+			MIND_LOG("[homeostat] creature {} t{}: face {} -> {} (mood {:+.3f}, valence {:+.3f}, Anger {:.2f})\n",
 				p.creatureId, p.tick, lastFace, face, mood, valence, d[ANGER]);
 			lastFace = face;
 		}
@@ -1417,9 +1434,9 @@ class HomeostatMind : public CreatureMind {
 				}
 			}
 			if (s.numbered)
-				fmt::print("[homeostat] creature {} stimulus {} #{}\n", p.creatureId, s.command, s.id);
+				MIND_LOG("[homeostat] creature {} stimulus {} #{}\n", p.creatureId, s.command, s.id);
 			else
-				fmt::print("[homeostat] creature {} stimulus {} chems {}:{} {}:{} {}:{} {}:{}\n", p.creatureId, s.command,
+				MIND_LOG("[homeostat] creature {} stimulus {} chems {}:{} {}:{} {}:{} {}:{}\n", p.creatureId, s.command,
 					s.chem[0], s.amount[0], s.chem[1], s.amount[1], s.chem[2], s.amount[2], s.chem[3], s.amount[3]);
 		}
 
@@ -1453,14 +1470,14 @@ class HomeostatMind : public CreatureMind {
 				return out;
 			if (done && !fellAsleep && episodeTicks <= prm.refusedSleepTicks) {
 				noSleepUntil = std::max(noSleepUntil, (unsigned int)(p.tick + prm.noSleepAfterRefusal));
-				fmt::print("[homeostat] creature {} t{}: sleep refused (not tired enough); not offered for {} ticks\n", p.creatureId, p.tick,
+				MIND_LOG("[homeostat] creature {} t{}: sleep refused (not tired enough); not offered for {} ticks\n", p.creatureId, p.tick,
 					prm.noSleepAfterRefusal);
 				sleepRefused = true; // not a sleep: nothing to learn about sleeping
 			}
 			endEpisode(p, d, D, done ? "finished" : urgent >= 0 ? DRIVE_NAMES[urgent] : "time");
 			sleepRefused = false;
 			if (urgent >= 0) {
-				fmt::print("[homeostat] creature {} t{}: woken by {}\n", p.creatureId, p.tick, DRIVE_NAMES[urgent]);
+				MIND_LOG("[homeostat] creature {} t{}: woken by {}\n", p.creatureId, p.tick, DRIVE_NAMES[urgent]);
 				noSleepUntil = p.tick + prm.noSleepAfterWaking;
 				if (urgent == COLD || urgent == HOT) {
 					badSleepX = p.x;
@@ -1561,7 +1578,7 @@ class HomeostatMind : public CreatureMind {
 					for (auto& e : it->second)
 						if (e.dir == p.walledDir)
 							e.fails += 2;
-				fmt::print("[homeostat] creature {} t{}: {}@{} walked into a wall going {} at x {:.0f}; stops\n", p.creatureId, p.tick,
+				MIND_LOG("[homeostat] creature {} t{}: {}@{} walked into a wall going {} at x {:.0f}; stops\n", p.creatureId, p.tick,
 					actionName(current.decision), current.category, p.walledDir == 10 ? "west" : "east", p.x);
 				endEpisode(p, d, D, "walled", true);
 			} else if (finished || objectGone || stalled || episodeTicks >= limit) {
@@ -2990,7 +3007,7 @@ class HomeostatMind : public CreatureMind {
 			FoodPlace& t = foodPlaces[bestIdx];
 			t.confidence *= 0.5f;
 			t.cooldownUntil = p.tick + prm.foodCooldown;
-			fmt::print("[homeostat] creature {} t{}: the way to food at {:.0f},{:.0f} gets no shorter; giving it a rest\n", p.creatureId, p.tick, t.x, t.y);
+			MIND_LOG("[homeostat] creature {} t{}: the way to food at {:.0f},{:.0f} gets no shorter; giving it a rest\n", p.creatureId, p.tick, t.x, t.y);
 			routeTarget = -1;
 			return false;
 		}
@@ -3524,7 +3541,7 @@ class HomeostatMind : public CreatureMind {
 			// (its middle's height then, as the perception's y is its middle)
 			painfulDrops.push_back({p.fellFromX, p.fellFromY - 40.0f, dir, p.fellHurt});
 		}
-		fmt::print("[homeostat] creature {} t{}: fell {:.0f} px and it hurt ({:.2f}); keeps away from that drop (and from falls like it: {:.4f} a px)\n",
+		MIND_LOG("[homeostat] creature {} t{}: fell {:.0f} px and it hurt ({:.2f}); keeps away from that drop (and from falls like it: {:.4f} a px)\n",
 			p.creatureId, p.tick, p.fellHeight, p.fellHurt, fallHurtPerPx);
 		if (!p.self.empty() && !watchingOff()) {
 			Demo dm;
@@ -4051,7 +4068,7 @@ class HomeostatMind : public CreatureMind {
 					trimMet(r.met, s.who);
 				// found again after a while apart, while longing for it
 				if (m.last && p.tick > m.last + 200 && longingNow(m, p.tick) >= prm.longingSeek)
-					fmt::print("[homeostat] creature {} t{}: found {} again ({} ticks apart, longing {:.2f})\n", p.creatureId, p.tick, s.who,
+					MIND_LOG("[homeostat] creature {} t{}: found {} again ({} ticks apart, longing {:.2f})\n", p.creatureId, p.tick, s.who,
 						p.tick - m.last, longingNow(m, p.tick));
 				m.room = p.room;
 				m.x = s.x;
@@ -4140,7 +4157,7 @@ class HomeostatMind : public CreatureMind {
 			const RoomSighting& sg = rooms[wr.second].seen[category];
 			places[category] = {sg.x, sg.y, p.tick};
 			recalledFrom[category] = wr.second;
-			fmt::print("[homeostat] creature {} t{}: remembers seeing {} in room {} (seen there {} time{}); looks there\n", p.creatureId, p.tick,
+			MIND_LOG("[homeostat] creature {} t{}: remembers seeing {} in room {} (seen there {} time{}); looks there\n", p.creatureId, p.tick,
 				category, wr.second, sg.times, sg.times == 1 ? "" : "s");
 		}
 	}
@@ -4190,7 +4207,7 @@ class HomeostatMind : public CreatureMind {
 				m.checked = p.tick; // here, and not here
 				m.longing = longingNow(m, p.tick) * 0.7f; // a little less hopeful
 				m.longingAt = p.tick;
-				fmt::print("[homeostat] creature {} t{}: came to where it met {} and they are gone\n", p.creatureId, p.tick, who);
+				MIND_LOG("[homeostat] creature {} t{}: came to where it met {} and they are gone\n", p.creatureId, p.tick, who);
 				continue;
 			}
 			// with the drive itself up, any mate will do; on longing alone,
@@ -5020,7 +5037,7 @@ class HomeostatMind : public CreatureMind {
 			}
 		}
 		links.push_back({rideFromX, rideFromY, p.y, lastLiftDecision, 1});
-		fmt::print("[homeostat] creature {} learned a ride: {} at x {:.0f} takes it from y {:.0f} to y {:.0f}\n", p.creatureId,
+		MIND_LOG("[homeostat] creature {} learned a ride: {} at x {:.0f} takes it from y {:.0f} to y {:.0f}\n", p.creatureId,
 			actionName(lastLiftDecision), rideFromX, rideFromY, p.y);
 	}
 
@@ -5067,7 +5084,7 @@ class HomeostatMind : public CreatureMind {
 			}
 			nudges.push_back(n);
 			activeInstincts++;
-			fmt::print("[homeostat] creature {} instinct: {} nudged {}{}{} (strength {:.2f}, weight {:.1f})\n", p.creatureId, actionName(inst.decision),
+			MIND_LOG("[homeostat] creature {} instinct: {} nudged {}{}{} (strength {:.2f}, weight {:.1f})\n", p.creatureId, actionName(inst.decision),
 				inst.reward ? "toward" : "against",
 				[&] { std::string w; for (int c : categories) w += fmt::format(" seeing {}", c); return w; }(),
 				[&] { std::string w; for (int s : senses) w += fmt::format(" when sense {}", s); return w; }(),
@@ -5112,7 +5129,7 @@ class HomeostatMind : public CreatureMind {
 					hunch(e);
 		}
 		activeInstincts++;
-		fmt::print("[homeostat] creature {} instinct: {} {} when{} (strength {:.2f}, weight {:.1f})\n", p.creatureId,
+		MIND_LOG("[homeostat] creature {} instinct: {} {} when{} (strength {:.2f}, weight {:.1f})\n", p.creatureId,
 			actionName(inst.decision), inst.reward ? "rewarded" : "punished",
 			[&] { std::string w; for (int dr : drives) w += std::string(" ") + DRIVE_NAMES[dr]; for (int c : categories) w += fmt::format(" seeing {}", c); return w; }(),
 			inst.strength, weight);
@@ -5236,7 +5253,7 @@ class HomeostatMind : public CreatureMind {
 				if (futileInARow >= prm.futileAfter) {
 					futile.push_back({current.category, current.decision, p.x, p.y, p.tick + prm.futileTicks});
 					futileInARow = 0;
-					fmt::print("[homeostat] creature {} t{}: {}@{} gets nowhere from {:.0f},{:.0f}{}; not tried here for a while\n", p.creatureId, p.tick,
+					MIND_LOG("[homeostat] creature {} t{}: {}@{} gets nowhere from {:.0f},{:.0f}{}; not tried here for a while\n", p.creatureId, p.tick,
 						actionName(current.decision), current.category, p.x, p.y, pastWater ? " (it lies past water)" : pastWall ? " (a wall is in the way)" : "");
 				}
 			} else
@@ -5285,7 +5302,7 @@ class HomeostatMind : public CreatureMind {
 				if (++stepFails >= 1) { // (once is enough: every creature's gait walk works)
 					gaitWalk = true;
 					blocked[0] = blocked[1] = Blocked{};
-					fmt::print("[homeostat] creature {} t{}: stepping gets it nowhere with the way open; it walks by gait from now on\n", p.creatureId, p.tick);
+					MIND_LOG("[homeostat] creature {} t{}: stepping gets it nowhere with the way open; it walks by gait from now on\n", p.creatureId, p.tick);
 				}
 			} else if (std::fabs(dxTo(p, startX)) >= blockedMove)
 				stepFails = 0;
@@ -5305,7 +5322,7 @@ class HomeostatMind : public CreatureMind {
 				for (auto& e : placeMap[cellOf(p.x, p.y)])
 					if (e.dir == current.decision)
 						e.fails++;
-			fmt::print("[homeostat] creature {} t{}: the way {} is blocked at x {:.0f}\n", p.creatureId, p.tick,
+			MIND_LOG("[homeostat] creature {} t{}: the way {} is blocked at x {:.0f}\n", p.creatureId, p.tick,
 				current.decision == 10 ? "west" : "east", p.x);
 		}
 
@@ -5394,6 +5411,24 @@ class HomeostatMind : public CreatureMind {
 				habituation[current.category] = 1.0f; // dishabituation
 		}
 
+		{
+			MindView::Outcome oc;
+			oc.tick = p.tick;
+			oc.category = current.seekCategory >= 0 ? current.seekCategory : current.category;
+			oc.decision = current.decision;
+			oc.who = current.who;
+			oc.travel = current.seekCategory >= 0;
+			oc.ticks = (unsigned int)std::max(episodeTicks, 0);
+			oc.why = why;
+			oc.reward = reward;
+			for (int i = 0; i < NUM_DRIVES && i < 17; i++)
+				oc.change[i] = change[i];
+			outcomeLog.push_back(std::move(oc));
+			while (outcomeLog.size() > 8)
+				outcomeLog.pop_front();
+		}
+		if (!mindLogOn())
+			return;
 		// the three largest drive changes, for the log
 		std::array<int, NUM_DRIVES> idx;
 		for (int i = 0; i < NUM_DRIVES; i++)
@@ -5416,29 +5451,20 @@ class HomeostatMind : public CreatureMind {
 		for (int i = 0; i < NUM_DRIVES; i++)
 			if (feltAny[i])
 				feltText += fmt::format(" {} {:+.2f}", DRIVE_NAMES[i], felt[i]);
-		{
-			MindView::Outcome oc;
-			oc.tick = p.tick;
-			oc.category = current.seekCategory >= 0 ? current.seekCategory : current.category;
-			oc.decision = current.decision;
-			oc.who = current.who;
-			oc.travel = current.seekCategory >= 0;
-			oc.ticks = (unsigned int)std::max(episodeTicks, 0);
-			oc.why = why;
-			oc.reward = reward;
-			for (int i = 0; i < NUM_DRIVES && i < 17; i++)
-				oc.change[i] = change[i];
-			outcomeLog.push_back(std::move(oc));
-			while (outcomeLog.size() > 8)
-				outcomeLog.pop_front();
-		}
-		fmt::print("[homeostat] creature {} t{}: {}@{} ended ({}, {} ticks): reward {:+.3f}{} | beyond drift:{} | felt:{} | D {:.2f} valence {:+.3f}\n",
+		MIND_LOG("[homeostat] creature {} t{}: {}@{} ended ({}, {} ticks): reward {:+.3f}{} | beyond drift:{} | felt:{} | D {:.2f} valence {:+.3f}\n",
 			p.creatureId, p.tick, current.seekCategory >= 0 ? fmt::format("seek{}:{}", current.seekCategory, actionName(current.decision)) : actionName(current.decision),
 			current.category, why, episodeTicks, reward,
 			changes.empty() ? " (no drive change)" : changes, effects.empty() ? " nothing" : effects, feltText.empty() ? " nothing" : feltText, D, valence);
 	}
 
-	void logChoice(const MindPerception& p, const Candidate& choice, std::vector<Candidate> cands, float D) {
+	void logChoice(const MindPerception& p, const Candidate& choice, const std::vector<Candidate>& candidates, float D) {
+		// developer aid: OPENC2E_WATCH_CANDS (1, or a creature id) prints every
+		// candidate of each choice, with the walls and blocked ways sensed
+		static const char* watchCands = getenv("OPENC2E_WATCH_CANDS");
+		const bool watch = watchCands && (std::string(watchCands) == "1" || std::to_string(p.creatureId) == watchCands);
+		if (!mindLogOn() && !watch)
+			return;
+		std::vector<Candidate> cands = candidates;
 		std::sort(cands.begin(), cands.end(), [](const Candidate& a, const Candidate& b) { return a.score > b.score; });
 		std::string top;
 		for (size_t i = 0; i < cands.size() && i < 3; i++)
@@ -5447,15 +5473,12 @@ class HomeostatMind : public CreatureMind {
 		for (int i = 0; i < NUM_DRIVES; i++)
 			if (p.drives[i] >= 64)
 				needs += fmt::format(" {} {}", DRIVE_NAMES[i], (int)p.drives[i]);
-		fmt::print("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f} | at {:.0f},{:.0f} | restless {:.2f} | food map {}\n",
+		MIND_LOG("[homeostat] creature {} t{}: chose {}@{} (want {:+.3f} novelty {:+.3f}) | top:{} | needs:{} | D {:.2f} | smell {:.2f} W {:.2f} E {:.2f} U {:.2f} D {:.2f} | at {:.0f},{:.0f} | restless {:.2f} | food map {}\n",
 			p.creatureId, p.tick, !choice.place.empty() ? fmt::format("place:{}:{}", choice.place, actionName(choice.decision)) : !choice.urge.empty() ? fmt::format("{}:{}", choice.urge, actionName(choice.decision)) : choice.route ? fmt::format("route:{}", actionName(choice.decision)) : choice.boatCall ? fmt::format("callboat:{}", actionName(choice.decision)) : choice.escape ? fmt::format("escape:{}", actionName(choice.decision)) : choice.food ? fmt::format("food:{}", actionName(choice.decision)) : choice.forage ? fmt::format("forage:{}", actionName(choice.decision)) : choice.scent ? fmt::format("scent:{}", actionName(choice.decision)) : choice.seekCategory >= 0 ? fmt::format("seek{}:{}", choice.seekCategory, actionName(choice.decision)) : actionName(choice.decision),
 			choice.who.empty() ? fmt::format("{}", choice.category) : fmt::format("{}:{}", choice.category, choice.who), choice.want, choice.novelty,
 			top, needs.empty() ? " none high" : needs, D, p.scentHere, p.scentWest, p.scentEast, p.scentUp, p.scentDown, p.x, p.y, std::clamp(hungryTicks / prm.restlessRamp, 0.0f, 1.0f),
 			[&] { std::string m; for (auto& fp : foodPlaces) m += fmt::format(" {:.0f},{:.0f}x{:.2f}", fp.x, fp.y, fp.confidence); return m.empty() ? std::string(" none") : m; }());
-		// developer aid: OPENC2E_WATCH_CANDS (1, or a creature id) prints every
-		// candidate of each choice, with the walls and blocked ways sensed
-		static const char* watchCands = getenv("OPENC2E_WATCH_CANDS");
-		if (watchCands && (std::string(watchCands) == "1" || std::to_string(p.creatureId) == watchCands)) {
+		if (watch) {
 			std::string all;
 			for (auto& c : cands)
 				all += fmt::format(" {}{}{}{}{}@{}={:+.3f}", c.scent ? "scent:" : "", c.forage ? "forage:" : "", c.route ? "route:" : "", c.escape ? "escape:" : "",

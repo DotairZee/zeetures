@@ -1171,7 +1171,10 @@ void SkeletalCreature::snapDownFoot() {
 				retrying = false;
 				return;
 			} else if (!here) {
-				fmt::print(stderr, "Creature out of room system at ({}, {})!\n", footx, footy);
+				// (at most a few times: a stuck creature would say it every tick)
+				static int said = 0;
+				if (said < 20 && ++said)
+					fmt::print(stderr, "Creature out of room system at ({}, {})!{}\n", footx, footy, said == 20 ? " (no more of these this run)" : "");
 				// TODO: exceptiony death?
 				return;
 			}
@@ -1203,7 +1206,9 @@ void SkeletalCreature::snapDownFoot() {
 		queueScript(6);
 
 		if (!downfootroom) {
-			fmt::print(stderr, "no down foot room! ({}, {})\n", footx, footy);
+			static int said = 0;
+			if (said < 20 && ++said)
+				fmt::print(stderr, "no down foot room! ({}, {}){}\n", footx, footy, said == 20 ? " (no more of these this run)" : "");
 			// TODO: exceptiony death
 			return;
 		}

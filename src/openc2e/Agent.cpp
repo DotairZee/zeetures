@@ -210,7 +210,9 @@ void Agent::logBigMove(float nx, float ny) {
 	// which engine code moved it (2026-11-13: a grendel at the world's seam
 	// was moved 489 px up by no script and not by the pocket safety net):
 	// resolve with addr2line -f -C -e build/openc2e OFFSET
-	if (by == "the engine")
+	// (developer aid: OPENC2E_WATCH_MOVES; walking the stack is not free)
+	static const bool watchMoves = getenv("OPENC2E_WATCH_MOVES") != nullptr;
+	if (by == "the engine" && watchMoves)
 		fmt::print("* BIG MOVE stack:{}\n", engineStack());
 }
 

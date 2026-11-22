@@ -369,7 +369,6 @@ SDLRenderTarget::SDLRenderTarget(SDLBackend* parent_)
 
 SDLRenderTarget::~SDLRenderTarget() {
 	if (texture != nullptr) {
-		printf("* SDL destroyed rendertarget texture %p\n", (void*)texture);
 		SDL_DestroyTexture(texture);
 	}
 }
@@ -650,7 +649,6 @@ RenderTarget* SDLBackend::getMainRenderTarget() {
 std::shared_ptr<RenderTarget> SDLBackend::newRenderTarget(int32_t w, int32_t h) {
 	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_UNKNOWN, SDL_TEXTUREACCESS_TARGET, w, h);
 	assert(texture);
-	printf("* SDL created rendertarget texture %p\n", (void*)texture);
 
 	auto newtarget = std::make_shared<SDLRenderTarget>(this);
 	newtarget->texture = texture;
