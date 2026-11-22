@@ -310,6 +310,9 @@ VERSIONS = [
     ("0.29.0", "c292a7f3",
      "Creatures move smoothly from pose to pose, with pictures made between the game's own by turning each part at "
      "its joint; Camera > Smooth Movement turns it off."),
+    ("0.29.1", "07727e4b",
+     "The hidden passage west of the incubator's pond can be walked both ways, and a world whose breed files are "
+     "missing no longer crashes: its save is kept safe."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
