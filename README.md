@@ -1,6 +1,6 @@
-https://github.com/user-attachments/assets/f3b0c01a-5083-4646-bf95-46d372c99151
+[![Watch the Zeetures trailer on YouTube](https://img.youtube.com/vi/C6BTk-ySg68/maxresdefault.jpg)](https://youtu.be/C6BTk-ySg68)
 
-[The trailer on YouTube](https://youtu.be/C6BTk-ySg68) is in full HD. It shows the game running from a player's own copy of Creatures 2, whose pictures and sounds belong to Gameware Europe. Music: Trepak (Tchaikovsky), synthesized performance by Quinn Mason, IMSLP, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+**[▶ Watch the trailer on YouTube](https://youtu.be/C6BTk-ySg68)** (36 seconds, full HD). It shows the game running from a player's own copy of Creatures 2, whose pictures and sounds belong to Gameware Europe. Music: Trepak (Tchaikovsky), synthesized performance by Quinn Mason, IMSLP, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 <h1><img src="art/logo/zeetures.png" alt="Zeetures: a labor of love by DotairZee" width="720"></h1>
 
@@ -14,7 +14,7 @@ https://github.com/user-attachments/assets/f3b0c01a-5083-4646-bf95-46d372c99151
 
 ## Download and play
 
-Download the file for your system from the [nightly release](../../releases/tag/nightly) (built automatically every night there are changes), then follow its one-time steps. No command line is needed.
+Download the file for your system from the [nightly release](../../releases/tag/nightly) (the newest build), then follow its one-time steps. No command line is needed.
 
 | System | Download |
 | --- | --- |
@@ -84,7 +84,7 @@ Zeetures is at version 0.28.2 (shown in Help > About), after about 175 hours of 
 ### Not done yet
 
 * Hunger in very crowded worlds (about 150 creatures in a world built for 16).
-* Windows and macOS are built every night but played far less than Linux.
+* Windows and macOS are built as often as Linux but played far less.
 * Creatures 2 is the focus. Creatures 1, Creatures 3 and Docking Station run as they do in upstream openc2e, and have not been tested in Zeetures.
 
 ### What's coming
