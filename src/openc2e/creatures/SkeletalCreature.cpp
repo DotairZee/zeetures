@@ -973,6 +973,39 @@ void SkeletalCreature::snapDownFoot() {
 
 	std::shared_ptr<Room> newroom;
 
+	// C2: whether the floor from where the foot last stood to where it is now
+	// is one slope, however steep, rather than a step: the two rooms' floor
+	// lines, sampled every 4 px, never change by more than 7 (about 60
+	// degrees). A long stride on a steep slope rises over 40 px, which was
+	// taken for a wall, or goes down over 20, which was taken for a fall: at
+	// the hidden tunnel west of the incubator's pond (47 degrees) 9 of 27
+	// creatures walking west and 9 of 26 walking east were stuck on it (a
+	// player, 2026-11-22).
+	auto oneSlope = [&](const std::shared_ptr<Room>& from, const std::shared_ptr<Room>& to) {
+		static const bool off = devenv("OPENC2E_NO_SLOPES") != nullptr; // (to compare)
+		if (engine.version != 2 || off || !from || !to || carriedby || invehicle)
+			return false;
+		const float x0 = (float)lastgoodfootx + wrapshift, x1 = footx;
+		if (std::fabs(x1 - x0) < 1.0f || std::fabs(x1 - x0) > 80.0f)
+			return false;
+		auto floorAt = [&](float fx, float& fy) {
+			Room* r = fx >= from->x_left && fx <= from->x_right ? from.get() : fx >= to->x_left && fx <= to->x_right ? to.get() : nullptr;
+			if (r)
+				fy = r->floorYatX(fx);
+			return r != nullptr;
+		};
+		const int n = std::max(1, (int)std::ceil(std::fabs(x1 - x0) / 4.0f));
+		float last = 0, fy = 0;
+		for (int k = 0; k <= n; k++) {
+			if (!floorAt(x0 + (x1 - x0) * k / n, fy))
+				return false;
+			if (k > 0 && std::fabs(fy - last) > 7.0f)
+				return false;
+			last = fy;
+		}
+		return true;
+	};
+
 	if (downfootroom) {
 		if (downfootroom->containsPoint(footx, footy)) {
 			newroom = downfootroom;
@@ -1018,7 +1051,7 @@ void SkeletalCreature::snapDownFoot() {
 					float thisfloor = thisroom->floorYatX(footx);
 					if (engine.version == 2 && thisroom->floorvalue > 0 && thisfloor < footy - 40)
 						thisfloor = thisroom->bottom.pointAtX(footx).y;
-					if (engine.version == 2 && thisfloor < footy - 40)
+					if (engine.version == 2 && thisfloor < footy - 40 && !oneSlope(downfootroom, thisroom))
 						continue;
 					if (thisroom->x_left <= footx && thisroom->x_right >= footx) {
 						float thisydiff = fabs(footy - thisfloor);
@@ -1278,7 +1311,8 @@ void SkeletalCreature::snapDownFoot() {
 		// rule above allows, is taken; as a fall, a creature at the top of the
 		// boardwalk pool's bank fell back each time from the 33 px step onto
 		// the planks, owner 2026-11-10)
-		if (newroomchosen && (newy - (footy - y)) - y > 20) {
+		const bool slope = (newy - (footy - y)) - y > 20 && hadroom && !belowfloor && oneSlope(prevroom, downfootroom);
+		if (newroomchosen && (newy - (footy - y)) - y > 20 && !slope) {
 			onMiddleFloor();
 			falling = true;
 			return;
@@ -1299,7 +1333,7 @@ void SkeletalCreature::snapDownFoot() {
 		// treehouse's upper platform (room 51 ends at x 3917; room 52
 		// beside it runs down to the cave floor) were set 470 px down in
 		// one step, no fall (2026-11-18, found from BIG MOVE)
-		if (engine.version == 2 && hadroom && engine.worldready && !carriedby && !invehicle && (newy - (footy - y)) - y > 20) {
+		if (engine.version == 2 && hadroom && engine.worldready && !carriedby && !invehicle && (newy - (footy - y)) - y > 20 && !slope) {
 			onMiddleFloor();
 			falling = true;
 			return;

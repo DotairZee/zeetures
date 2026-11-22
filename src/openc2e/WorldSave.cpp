@@ -76,6 +76,7 @@ namespace WorldSave {
 static constexpr const char* MAGIC = "openc2e-world-save 1";
 
 static SetAsideSave s_setAside; // (see SetAsideUnreadableSave)
+static int s_notRestored = 0; // creatures of the save just loaded that could not be made
 
 static fs::path stateFile(const fs::path& worlddir) {
 	return worlddir / "save" / "state.txt";
@@ -1025,7 +1026,14 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 	else
 		c = new c2Creature(genome, s.female, (unsigned char)s.variant, a);
 	a->setCreature(c);
-	a->finishInit();
+	try {
+		a->finishInit();
+	} catch (...) {
+		// (no body could be made for it: never left half made in the world,
+		// where its next step crashes the game; as NEW: CREA)
+		a->kill();
+		throw;
+	}
 	a->genome_slots[0] = genome;
 	if (moniker.empty()) {
 		world.newMoniker(genome, "saved", a);
@@ -1037,8 +1045,14 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 	{
 		bool wasquiet = world.history->quiet;
 		world.history->quiet = true; // stages reached before, not now
-		for (int i = 0; i < s.stage; i++)
-			c->ageCreature(); // also updates genes and appearance for each stage
+		try {
+			for (int i = 0; i < s.stage; i++)
+				c->ageCreature(); // also updates genes and appearance for each stage
+		} catch (...) {
+			world.history->quiet = wasquiet;
+			a->kill(); // (a later age's body could not be made: as above)
+			throw;
+		}
 		world.history->quiet = wasquiet;
 	}
 	if (s.ageing) {
@@ -1197,11 +1211,40 @@ void SetAsideUnreadableSave(const fs::path& worlddir, const std::string& why) {
 		fmt::print("* This world's save could not be read ({}); it was kept as {} and the world starts from its world file\n", why, aside.filename().string());
 }
 
+void SetAsideIncompleteSave(const fs::path& worlddir) {
+	if (s_notRestored == 0)
+		return;
+	std::time_t now = std::time(nullptr);
+	char stamp[32];
+	std::strftime(stamp, sizeof stamp, "%Y%m%d-%H%M%S", std::localtime(&now));
+	fs::path aside = worlddir / (std::string("save.incomplete-") + stamp);
+	std::error_code ec;
+	fs::copy(worlddir / "save", aside, fs::copy_options::recursive, ec);
+	s_setAside = {worlddir, ec ? fs::path() : aside, "creatures could not be made", true, s_notRestored};
+	if (ec)
+		fmt::print("* {} of this world's creatures could not be made, and its save could not be copied ({}); this session will not save over it\n", s_notRestored, ec.message());
+	else
+		fmt::print("* {} of this world's creatures could not be made; its save was kept as {}\n", s_notRestored, aside.filename().string());
+	s_notRestored = 0;
+}
+
 bool PutBackSetAsideSave(std::string& error) {
 	if (!s_setAside.happened || s_setAside.kept.empty())
 		return true; // (never moved: still where it was)
 	std::error_code ec;
 	fs::path dest = s_setAside.worlddir / "save";
+	if (s_setAside.missing > 0) {
+		// (a copy was kept, and the save is still in place)
+		auto read = [](const fs::path& f) {
+			std::ifstream in(f, std::ios::binary);
+			return std::string(std::istreambuf_iterator<char>(in), {});
+		};
+		if (read(dest / "state.txt") == read(s_setAside.kept / "state.txt")) {
+			fs::remove_all(s_setAside.kept, ec);
+			s_setAside.kept.clear();
+			return true;
+		}
+	}
 	if (fs::exists(dest, ec)) {
 		error = "This world has been saved since, so the old save stays where it was kept.";
 		return false;
@@ -1538,10 +1581,12 @@ bool LoadWorldState(const fs::path& worlddir) {
 					r->intrBase = n.intrBase;
 			}
 	}
+	s_notRestored = 0;
 	for (auto& s : creatures) {
 		try {
 			restoreCreature(savedir, s, !relays_saved);
 		} catch (std::exception& ex) {
+			s_notRestored++;
 			fmt::print("* Couldn't restore a creature ({}): {}\n", s.genome, ex.what());
 		}
 	}

@@ -243,7 +243,7 @@ static const char* GenusName(int genus) {
 // 0.5.0 (2026-11-14, night): every object kept between launches (stage 3).
 // 0.6.0 (2026-11-14, night): signature scents; the hand takes things from
 // creatures and keeps its mode; the gene lab's east end sealed.
-#define OPENC2E_FORK_VERSION "0.29.0"
+#define OPENC2E_FORK_VERSION "0.29.1"
 
 // CITATIONS.md, as Help > About shows it: "## " headings as separators,
 // "- " entries wrapped, each Markdown link [text](url) as a small button
@@ -780,9 +780,15 @@ static bool s_set_aside_was_paused = false;
 	if (ImGui::BeginPopupModal("Saved Game Kept Safe", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 		auto& aside = WorldSave::LastSetAside();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 34);
-		ImGui::TextWrapped("Zeetures could not read the saved game of \"%s\".", engine.currentworld.c_str());
-		ImGui::Spacing();
-		ImGui::TextWrapped("It may be damaged, or have been saved by a newer version of Zeetures. The world has started again from its original map.");
+		if (aside.missing > 0) {
+			ImGui::TextWrapped("%d %s of \"%s\" could not be loaded.", aside.missing, aside.missing == 1 ? "creature" : "creatures", engine.currentworld.c_str());
+			ImGui::Spacing();
+			ImGui::TextWrapped("Their breed's files may be missing or damaged: a breed pack removed, perhaps. The rest of the world is here.");
+		} else {
+			ImGui::TextWrapped("Zeetures could not read the saved game of \"%s\".", engine.currentworld.c_str());
+			ImGui::Spacing();
+			ImGui::TextWrapped("It may be damaged, or have been saved by a newer version of Zeetures. The world has started again from its original map.");
+		}
 		ImGui::Spacing();
 		if (!aside.kept.empty()) {
 			ImGui::TextWrapped("Your saved game has not been lost. It is kept in the world's folder as:");
@@ -793,14 +799,14 @@ static bool s_set_aside_was_paused = false;
 			ImGui::TextColored(ImVec4(1, 0.5f, 0.45f, 1), "%s", s_set_aside_error.c_str());
 		ImGui::PopTextWrapPos();
 		ImGui::Separator();
-		if (ImGui::Button("Quit and Put It Back")) {
+		if (ImGui::Button(aside.missing > 0 ? "Quit Without Saving" : "Quit and Put It Back")) {
 			if (WorldSave::PutBackSetAsideSave(s_set_aside_error)) {
 				engine.autosave = false; // (nothing is written over it)
 				engine.done = true;
 			}
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Closes Zeetures without saving and puts the saved game back,\nso that another version can open it.");
+			ImGui::SetTooltip(aside.missing > 0 ? "Closes Zeetures without saving, so that you can\nput the breed's files back and try again." : "Closes Zeetures without saving and puts the saved game back,\nso that another version can open it.");
 		ImGui::SameLine();
 		if (ImGui::Button("Open World Folder"))
 		{
@@ -816,7 +822,7 @@ static bool s_set_aside_was_paused = false;
 			ImGui::CloseCurrentPopup();
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Plays the world from its original map.\nThe old saved game stays in the folder.");
+			ImGui::SetTooltip(aside.missing > 0 ? "Plays on without them.\nThe saved game with them in it stays in the folder." : "Plays the world from its original map.\nThe old saved game stays in the folder.");
 		ImGui::EndPopup();
 	}
 

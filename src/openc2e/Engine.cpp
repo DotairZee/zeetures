@@ -2499,6 +2499,7 @@ bool Engine::initialSetup() {
 		// overwritten by the next autosave; the world goes on from what loaded)
 		try {
 			WorldSave::LoadWorldState(currentworlddir);
+			WorldSave::SetAsideIncompleteSave(currentworlddir);
 		} catch (std::exception& e) {
 			WorldSave::SetAsideUnreadableSave(currentworlddir, e.what());
 		}
