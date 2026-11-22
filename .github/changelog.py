@@ -295,6 +295,10 @@ VERSIONS = [
     ("0.28.1", "2f6ff0cc",
      "The Breeder's Kit's Breeds page is as wide as its pictures, and the Mind Kit's Places page no longer grows as "
      "wide as the screen."),
+    ("0.28.2", "030e599f",
+     "File > Exit saved an emptied world: quitting now saves it whole, an empty world is never saved over a good "
+     "one, and a world already stripped gets its objects back. File > Exit also works while paused. Players' builds "
+     "open no listening port, so no firewall question at the first start."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

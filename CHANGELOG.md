@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 623 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 624 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.28.2](#version-0282): 1 commits, 22 November 2026
 - [0.28.1](#version-0281): 5 commits, 21 November 2026
 - [0.28.0](#version-0280): 14 commits, 21 November 2026
 - [0.27.0](#version-0270): 4 commits, 21 November 2026
@@ -70,6 +71,34 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.28.2
+
+File > Exit saved an emptied world: quitting now saves it whole, an empty world is never saved over a good one, and a world already stripped gets its objects back. File > Exit also works while paused. Players' builds open no listening port, so no firewall question at the first start.
+
+### 22 November 2026
+
+#### Version 0.28.2: File &gt; Exit saves the world whole; no listening port for players
+
+[`030e599f`](https://github.com/DotairZee/zeetures/commit/030e599fa9a91a7996327fecb928937d622f92f4)
+
+File &gt; Exit set world.quitting, and the next tick cleared every object and
+creature before main() saved the world on quitting: the save it wrote was
+empty (0 creatures, 0 objects), and opening the world again removed the
+world file's own objects to match. Closing the window was never affected.
+The tick no longer clears them (shutdown() does, after the save); Exit now
+quits as the window's close button does, so it also works while paused.
+An empty world is never written over a save, and a save without a single
+object leaves the world file's objects in place, so a world already
+stripped gets them back (its creatures are not in the save).
+check_saves.py quits each world and checks the save that wrote
+(OPENC2E_TEST_QUIT_AFTER_TICKS, developer builds).
+
+The port other programs may send CAOS to is opened in developer builds
+only, and on 127.0.0.1 only: a listening program is what makes Windows and
+macOS ask about the firewall at the first start.
+
+Found by installing the published build in Wine.
 
 ## Version 0.28.1
 
