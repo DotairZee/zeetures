@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 633 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 634 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.29.2](#version-0292): 1 commits, 22 November 2026
 - [0.29.1](#version-0291): 2 commits, 22 November 2026
 - [0.29.0](#version-0290): 1 commits, 22 November 2026
 - [0.28.5](#version-0285): 1 commits, 22 November 2026
@@ -76,6 +77,34 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.29.2
+
+Smooth walking without pauses or sudden turns, a world opened at every launch if you like, and creatures put down on the volcano's catwalk.
+
+### 22 November 2026
+
+#### Version 0.29.2: smooth walking without pauses, and a world opened at launch
+
+[`1a1f7ddd`](https://github.com/DotairZee/zeetures/commit/1a1f7ddd0e0d542faa50cd7c611009d39b655284)
+
+Walking steps come as evenly as ticks allow and each is drawn until the
+next, instead of a skipped chance now and then (adults stood still 9% of
+their walking time, now 1%); a walk's uneven poses are drawn nearer an even
+speed. Same average pace.
+
+A walk goes the way the creature faces: the norns' gait 13 is written to
+face east, so one told to walk west turned round and walked east (falls in
+matched runs 79 to 26). A creature reaching for something out of its reach
+turns back twice and then stands, instead of to and fro at every step.
+
+The hand can put creatures down on the catwalk in the upper east and the
+walkway by the east dock, whose rooms allowed no drops.
+
+The world chooser's "Always open this world at launch" (and File &gt; Open This
+World at Launch); a start that did not finish shows the chooser.
+
+The README and Help &gt; About say that Zeetures is developed alongside Claude.
 
 ## Version 0.29.1
 

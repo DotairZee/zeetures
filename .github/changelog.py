@@ -313,6 +313,9 @@ VERSIONS = [
     ("0.29.1", "07727e4b",
      "The hidden passage west of the incubator's pond can be walked both ways, and a world whose breed files are "
      "missing no longer crashes: its save is kept safe."),
+    ("0.29.2", "1a1f7ddd",
+     "Smooth walking without pauses or sudden turns, a world opened at every launch if you like, and creatures put "
+     "down on the volcano's catwalk."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
