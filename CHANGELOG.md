@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 625 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 626 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 1 commits, 22 November 2026
+- [Unreleased](#unreleased): 2 commits, 22 November 2026
 - [0.28.2](#version-0282): 1 commits, 22 November 2026
 - [0.28.1](#version-0281): 5 commits, 21 November 2026
 - [0.28.0](#version-0280): 14 commits, 21 November 2026
@@ -78,6 +78,15 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Changes since the last version.
 
 ### 22 November 2026
+
+#### The nightly release checked: public, or the job fails
+
+[`96694e44`](https://github.com/DotairZee/zeetures/commit/96694e44d2f64a48efa46e71d99e3ee4db2d09ba)
+
+GitHub can turn the new release into a draft when the old nightly tag's
+deletion is handled late: the job said success and every download was
+not found (run 44997355434; published by hand). The job now looks, publishes
+a draft again and fails unless a download answers.
 
 #### README: what was tried in Wine
 
