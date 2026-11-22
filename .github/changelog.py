@@ -285,6 +285,13 @@ VERSIONS = [
      "play. (An earlier version of this note also claimed about 100 MB less memory; measured again, the difference "
      "was the moment it was measured, not the change.) A save the game cannot read is kept aside rather than "
      "overwritten. The downloads carry only the game: no developer tools, and 2.7 MB of unused pictures gone."),
+    ("0.28.0", "9a94d3fc",
+     "Faster, and rotten fruit. A world loads in seconds (a crowded one took over a minute at every start in a "
+     "player's folder), play takes about a third less of the processor, and players' downloads leave out the "
+     "developer switches; Linux's are fully optimized. Our bushes' fruit now rots where it lies, feeding the soil "
+     "and the germs of rotting food; eating it hurts and may bring illness, and creatures learn it apart from good "
+     "fruit. A saved game that cannot be read is now shown on screen, with a way to put it back. Windows builds "
+     "again (they had failed since 0.19.0)."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

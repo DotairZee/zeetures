@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 607 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 618 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 3 commits, 21 November 2026
+- [0.28.0](#version-0280): 14 commits, 21 November 2026
 - [0.27.0](#version-0270): 4 commits, 21 November 2026
 - [0.26.2](#version-0262): 3 commits, 21 November 2026
 - [0.26.1](#version-0261): 2 commits, 21 November 2026
@@ -70,11 +70,170 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.28.0
 
-Changes since the last version.
+Faster, and rotten fruit. A world loads in seconds (a crowded one took over a minute at every start in a player's folder), play takes about a third less of the processor, and players' downloads leave out the developer switches; Linux's are fully optimized. Our bushes' fruit now rots where it lies, feeding the soil and the germs of rotting food; eating it hurts and may bring illness, and creatures learn it apart from good fruit. A saved game that cannot be read is now shown on screen, with a way to put it back. Windows builds again (they had failed since 0.19.0).
 
 ### 21 November 2026
+
+#### Version 0.28.0
+
+[`9a94d3fc`](https://github.com/DotairZee/zeetures/commit/9a94d3fcbc9412e46557990507ae85ca005f6c61)
+
+#### Rotten fruit: a stronger belly ache
+
+[`0741ea3c`](https://github.com/DotairZee/zeetures/commit/0741ea3c1bbe4c310598708330d93bc8ef2e9259)
+
+Pain Increase 60 to 120: at 60 the ache was lost among the other needs that
+changed while a creature ate (mean outcome about nothing over 20 tastings).
+
+#### Linux downloads fully optimized
+
+[`e7a20800`](https://github.com/DotairZee/zeetures/commit/e7a20800ad4d558054c0d69067860f0fc0405fff)
+
+The Linux 64-bit packages are built with -O3 and link-time optimization: 90
+world ticks a second flat out on a copy of Home against 79. (Windows and
+macOS stay as they are until their builds have been seen to work.)
+check_saves.py no longer fetches breed packs for each check.
+
+#### Starting faster still: picture scaling, and slow-made art kept
+
+[`c62675ea`](https://github.com/DotairZee/zeetures/commit/c62675ea3f6c2f9ad943ed35579d8f1680e24e32)
+
+- ImageUtils::Scale works out each sample's source column and row once, not
+  for each sample of each pixel (the same pictures); a third of a load went
+  there, growing creatures' parts for their life stages.
+- Made pictures that take over a tenth of a second (the glass tube's, 2-3 s
+  at every start) are kept in the player's own "Zeetures made/Images", and
+  made again when the program or the game's own pictures change.
+- Home loads in 3.7 s, from 9.6 s this evening.
+
+#### Art tidied: the icon's unused designs, and old paths in comments
+
+[`a9314149`](https://github.com/DotairZee/zeetures/commit/a93141495002e7802db4c55c9fdabb14eff18b19)
+
+art/app_icon.py keeps the egg in use (F8) and the upright one before it
+(F7): 985 lines to 358, the icon it makes pixel for pixel the same. Comments
+in art and additions that still named tools/sprites and tools/additions,
+where these lived until 2026-11-15, name art and additions.
+
+#### Rotten fruit
+
+[`b9bc2e6c`](https://github.com/DotairZee/zeetures/commit/b9bc2e6c2c8328d877a8410cb5c86f59d0cc31f6)
+
+Our bushes' fruit went ripe, overripe and then vanished, so it fed neither
+the soil nor the germs that live in rotting food, as the game's own fruit
+does (owner: "given that rotten fruit spreads disease, should we consider
+whether the fruits from the plants we made should have a rotten state--and
+sprite set?").
+
+- Overripe fruit becomes rotten fruit (2 25 149, pictures zfrr, our own:
+  art/rottenfruit.py, from the eight land and sea fruits): moldy, then
+  collapsed, for about seven and a half minutes, giving the room one
+  organic nutrient in each of five steps (the game's fruit gives five).
+  The seedling that sometimes sprouted as it vanished now comes then; its
+  long list of places not to sprout is in food.cos once, not four times.
+- It smells of nothing and feeds nothing. Eating one hurts the belly at
+  once (chemical 18), and may give the illness that lives in rotting food
+  (Disease::ateRotten: 0.3 without antibodies).
+- The mind sees it as a kind of its own (MIND_ROTTEN_FRUIT), as it does the
+  healing fruit, so what eating it does is learned apart; the nearest good
+  fruit is still seen when a rotten one lies nearer. The Mind Kit calls the
+  two kinds by name (they read as whatever words follow the nouns).
+- Four copies of Home, ten minutes flat out, two with the old script: good
+  meals 23 and 23 per 1,000 choices (22 and 21 without), mean hungry 12.7
+  and 13.6 of 100 (14.3 and 14.6), illnesses caught 231 and 218 (215 and
+  218, two of them from rotten fruit), no deaths.
+
+#### Loading ten times faster in a player's folder; a third less CPU in play
+
+[`d485afae`](https://github.com/DotairZee/zeetures/commit/d485afae50004efc204465f190847d2b1ebc228b)
+
+Profiled with OPENC2E_SAMPLE on a copy of Home (101 creatures, 60 frames a
+second, 1280x720):
+
+- Looking for a file in a folder that is not there went through the whole
+  file cache each time to update a folder that could not be updated. A
+  player's folder has no Overrides, so a world this size took 65-95 s to
+  load at every start; now 9-10 s (and Home, which has the folders, 9.6 to
+  6.1 s).
+- The window's size was asked of SDL for every sprite of every pass, every
+  frame: 13% of play time. Now once a frame.
+- The passes drawn a world's width to either side (for the join of the
+  world's ends) are made only when the view is near that end, and an
+  object's glide is worked out once, not for each pass.
+- The creatures' own scents (signatures) were kept in a table by name in
+  every room: 7% of play time. Now a column of numbers per creature, the
+  same sums.
+- The halo and the fainted creatures' stars are looked for ten times a
+  second, not at every frame.
+- CPU in play: 35% of a core to 24%. Pictures compared before and after at
+  14 places (both ends of the world included): the same but for creatures'
+  poses.
+- The log is written out once a second on every system (it was, on
+  Windows) and after the load: it is quiet now, and a file's buffer could
+  hold minutes, lost in a crash.
+
+#### Developer switches left out of players' builds; settled old-behavior switches gone
+
+[`31ad4e9d`](https://github.com/DotairZee/zeetures/commit/31ad4e9d9c7694bd8784529abc6c5cc93c0d5196)
+
+- src/common/devenv.h: the 294 reads of OPENC2E_ developer switches go
+  through devenv(), which is getenv in builds made with OPENC2E_DEV_HOOKS
+  (on by default here) and nothing in players' builds (the nightly packages
+  now configure with it off), so what they guard is compiled away. A few
+  anyone may use stay getenv: OPENC2E_MIND_LOG, \_WINDOW_SIZE, \_WINDOW_POS,
+  \_WINDOW_MEMORY, \_STAGE_SCALE, \_STAGE_GROWTH, \_SENILE_TINT.
+- Fourteen switches that kept an old behavior "to compare" are gone with
+  the old code: OLD_BOAT_FORAGE, \_BOTTOM_LINE, \_DRY_WAY, \_EXPLORE,
+  \_RELAY_OUTPUT, \_RESCUE_SIDE, \_SAME_ROOM_SNAP, \_SCRIPT_DOORS, \_SHAFT_PLACE,
+  \_SIDE_DROPS, \_STALL_CHECK (with RESTART_METABOLISM), \_STEP_HOLD,
+  \_STEP_RISE, \_WALK_DIRECTION, and WALL_LINE.
+- The build files' part of removing the never-shipped openc2e tools.
+- Unused: the null mind, Exposure::unbornDose, SkeletalCreature::headBox.
+
+#### Never-shipped parts of openc2e removed
+
+[`2dfa1b62`](https://github.com/DotairZee/zeetures/commit/2dfa1b62818958b46499614518b9ebddf6765809)
+
+Left over from upstream and built on every push, but in no download:
+opencreatures1 (an unfinished Creatures 1 engine of its own, 65 files) and
+its tests; mngplayer2 and the file dialog library only it used; nine tools
+(attparser, change_breed_slot, creaturesarchivedumper, expdumper, mngbuild,
+mngplayer, pefiledumper, sfcdumper, translate_voice); tool sources nothing
+built; the Boost serialization experiment; SDL2, Emscripten and Visual
+Studio settings files; the old openc2e.ico; four one-off refactoring
+scripts. Creatures 1, 3 and Docking Station in the engine itself are as
+before. The build files' part is in the next commit.
+
+#### A message when a saved game had to be set aside
+
+[`4e21d676`](https://github.com/DotairZee/zeetures/commit/4e21d6767189255962869982b2b40e7234a79035)
+
+0.27.0 kept a save it could not read but said so only in the log. Now, at
+such a load, the world is held still behind "Saved Game Kept Safe", which
+names the folder it is kept in, with three choices: Quit and Put It Back
+(nothing is saved, and the save is as it was, so another version can open
+it; refused if the world has been saved since), Open World Folder, and
+Carry On from the original map. A save that could be neither read nor moved
+is never overwritten: saving is refused for that session and the message
+says so. Tests (WorldSaveTest): kept aside with its contents, put back,
+never over a newer save, and nothing made when there is no save.
+
+#### Windows builds again: two things only Unix compilers accepted
+
+[`24da96c2`](https://github.com/DotairZee/zeetures/commit/24da96c2cf494470a853803c8fb30fc0008938ac)
+
+Every Windows build has failed since 2e2ca236 (0.19.0), so the nightly
+release kept its older Windows files:
+
+- worldStartedFromEden took a std::string and was given a path, which only
+  converts by itself where a path's own character is char;
+- the recording switch (e5b4ad2e) called popen and pclose, which are
+  \_popen and \_pclose there (and write binary only with "wb").
+
+The sound cache's key is the path's UTF-8 form, as path::string() cannot
+give every Windows path.
 
 #### README: the logo at the left
 
