@@ -307,6 +307,9 @@ VERSIONS = [
      "Spring and summer fruit that feeds: hatchlings no longer starve on a full stomach in a new world."),
     ("0.28.5", "7dada256",
      "Z's over creatures for as long as they sleep, and grendel eggs that hatch without the Boney Grendels pack."),
+    ("0.29.0", "c292a7f3",
+     "Creatures move smoothly from pose to pose, with pictures made between the game's own by turning each part at "
+     "its joint; Camera > Smooth Movement turns it off."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

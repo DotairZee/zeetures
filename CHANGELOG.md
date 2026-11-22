@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 630 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 631 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.29.0](#version-0290): 1 commits, 22 November 2026
 - [0.28.5](#version-0285): 1 commits, 22 November 2026
 - [0.28.4](#version-0284): 1 commits, 22 November 2026
 - [0.28.3](#version-0283): 4 commits, 22 November 2026
@@ -74,6 +75,27 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.29.0
+
+Creatures move smoothly from pose to pose, with pictures made between the game's own by turning each part at its joint; Camera > Smooth Movement turns it off.
+
+### 22 November 2026
+
+#### Version 0.29.0: creatures move smoothly
+
+[`c292a7f3`](https://github.com/DotairZee/zeetures/commit/c292a7f37cb7d02b92ceea2f8c3dd3a23b2680fc)
+
+Between one pose and the next (a walk is four, one every other tick), each
+body part's angle is worked out from its joints, the skeleton is rebuilt from
+them with the standing foot held, and each part is drawn as its nearest
+picture turned about its joint. Turned pictures are made from the player's
+own sprites as needed and kept a while. Drawing only; up to two ticks behind.
+Carried things, bubbles, the halo, Z's and stars, and a camera following a
+creature go with it. Camera &gt; Smooth Movement turns it off.
+
+OPENC2E_WATCH_GLIDE prints jumps from frame to frame; OPENC2E_SNAPSHOTS at
+-3,-3 follows a walking creature.
 
 ## Version 0.28.5
 
