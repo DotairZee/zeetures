@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 629 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 630 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.28.5](#version-0285): 1 commits, 22 November 2026
 - [0.28.4](#version-0284): 1 commits, 22 November 2026
 - [0.28.3](#version-0283): 4 commits, 22 November 2026
 - [0.28.2](#version-0282): 1 commits, 22 November 2026
@@ -73,6 +74,22 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.28.5
+
+Z's over creatures for as long as they sleep, and grendel eggs that hatch without the Boney Grendels pack.
+
+### 22 November 2026
+
+#### Version 0.28.5: Z's over sleepers, and grendel eggs without the Boney pack
+
+[`7dada256`](https://github.com/DotairZee/zeetures/commit/7dada25687d1075c13e4700bdca27ede521b585f)
+
+A sleeping creature shows the game's own drifting Z (the player's zzzz.s16)
+over its head for as long as it sleeps, as C2's stars are shown over an
+unconscious one. NEW: GENE uses the standard grendel for "bone" when the
+Boney Grendels pack is not there, so those eggs no longer stop mid-hatch.
+OPENC2E_SNAPSHOTS at -2,-2 takes a picture at a sleeping creature.
 
 ## Version 0.28.4
 

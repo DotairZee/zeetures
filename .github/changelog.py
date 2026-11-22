@@ -305,6 +305,8 @@ VERSIONS = [
      "a creature is doing."),
     ("0.28.4", "5e88e479",
      "Spring and summer fruit that feeds: hatchlings no longer starve on a full stomach in a new world."),
+    ("0.28.5", "7dada256",
+     "Z's over creatures for as long as they sleep, and grendel eggs that hatch without the Boney Grendels pack."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
