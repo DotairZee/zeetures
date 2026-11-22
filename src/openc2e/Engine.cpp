@@ -1390,6 +1390,12 @@ bool Engine::tick() {
 		test_save_after = -1;
 		done = true;
 	}
+	// developer aid: OPENC2E_TEST_QUIT_AFTER_TICKS=N quits as CAOS's QUIT
+	// does, saving the world (scripts/check_saves.py: the world must be
+	// whole when it is saved)
+	static long test_quit_after = devenv("OPENC2E_TEST_QUIT_AFTER_TICKS") ? atol(devenv("OPENC2E_TEST_QUIT_AFTER_TICKS")) : -1;
+	if (test_quit_after >= 0 && (long)world.tickcount >= test_quit_after)
+		world.quitting = true;
 	// developer aid: OPENC2E_TEST_SWITCH_WORLD="N,NAME" switches to world
 	// NAME after N ticks, as File > Switch World does (with
 	// OPENC2E_TEST_SPAWN_RELAUNCH, by the Windows and macOS way)

@@ -254,8 +254,9 @@ void World::tick() {
 	if (saving) {
 	} // TODO: save
 	if (quitting) {
-		// due to destruction ordering we must explicitly destroy all agents here
-		agents.clear();
+		// the world stays whole: it is saved after this, and shutdown()
+		// clears the agents. (They used to be cleared here, before the save:
+		// File > Exit saved an empty world.)
 		engine.done = true;
 		return;
 	}

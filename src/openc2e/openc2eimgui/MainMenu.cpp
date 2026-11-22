@@ -154,7 +154,7 @@ static void NewRandomEgg() {
 void DrawMainMenu() {
 	if (ImGui::BeginMenu("File")) {
 		if (ImGui::MenuItem("Quit")) {
-			world.quitting = true;
+			engine.done = true; // (as the window's close button: paused too)
 		}
 		ImGui::EndMenu();
 	}

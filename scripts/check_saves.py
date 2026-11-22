@@ -5,7 +5,8 @@ worlds must survive every new version). Run it before a release.
 Each world under WORLDS that has a save is copied into a throwaway home
 folder (the originals are never touched), loaded by the engine without
 autosave, and its "Restored saved world" line is compared with the creatures
-and eggs its save file lists. Needs the player's own Creatures 2 folder.
+and eggs its save file lists. Then it is loaded again, quit after a few ticks,
+and the save that wrote is checked. Needs the player's own Creatures 2 folder.
 
     scripts/check_saves.py ENGINE C2_FOLDER WORLDS_FOLDER [WORLD ...]
 
@@ -60,13 +61,26 @@ def check(engine, c2, world_dir):
         timer.cancel()
         p.kill()
         p.wait()
+        # quitting must save the world whole: File > Exit once emptied it
+        # first, then saved that (found 2026-11-21). A developer build only.
+        quit_out = subprocess.run([engine, "-d", c2, "--world", name, "--no-world-chooser"],
+                                  env=dict(env, OPENC2E_TEST_QUIT_AFTER_TICKS="5"), stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT, text=True, errors="replace", timeout=limit).stdout
+        quit_m = re.search(r"Saved world: (\d+) creatures, \d+ eggs, \d+ injected objects, (\d+) other", quit_out)
     m = re.search(r"Restored saved world: (\d+) creatures, (\d+) eggs, (\d+) kept", out)
     if not m:
         why = "could not be read" if "could not be read" in out else "no 'Restored saved world' line"
         return f"FAIL {name}: {why}"
     got = tuple(int(g) for g in m.groups())
     same = "ok  " if got == want else "FAIL"
-    return f"{same} {name}: " + ", ".join(f"{g}/{w} {what}" for g, w, what in zip(got, want, ("creatures", "eggs", "kept objects")))
+    if not quit_m:
+        same, left = "FAIL", "quitting did not save"
+    else:
+        left = f"after quitting {quit_m.group(1)} creatures, {quit_m.group(2)} objects"
+        # (a creature may die or hatch in those few ticks)
+        if int(quit_m.group(2)) == 0 or abs(int(quit_m.group(1)) - want[0]) > 2:
+            same = "FAIL"
+    return f"{same} {name}: " + ", ".join(f"{g}/{w} {what}" for g, w, what in zip(got, want, ("creatures", "eggs", "kept objects"))) + f"; {left}"
 
 
 def main():

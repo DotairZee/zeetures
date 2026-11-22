@@ -242,7 +242,7 @@ static const char* GenusName(int genus) {
 // 0.5.0 (2026-11-14, night): every object kept between launches (stage 3).
 // 0.6.0 (2026-11-14, night): signature scents; the hand takes things from
 // creatures and keeps its mode; the gene lab's east end sealed.
-#define OPENC2E_FORK_VERSION "0.28.1"
+#define OPENC2E_FORK_VERSION "0.28.2"
 
 // CITATIONS.md, as Help > About shows it: "## " headings as separators,
 // "- " entries wrapped, each Markdown link [text](url) as a small button
@@ -428,7 +428,7 @@ static bool s_set_aside_was_paused = false;
 				(const char*)GameFolder::currentFolder().u8string().c_str());
 		ImGui::Separator();
 		if (ImGui::MenuItem("Exit"))
-			world.quitting = true;
+			engine.done = true; // (as the window's close button: paused too)
 		ImGui::EndMenu();
 	}
 	if (ImGui::BeginMenu("View")) {

@@ -689,6 +689,12 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 		error = "No world folder is open.";
 		return false;
 	}
+	// a world with nothing at all in it is one already being taken down:
+	// never written over a good save
+	if (world.agents.empty()) {
+		error = "There is nothing in the world to save.";
+		return false;
+	}
 	// write into save.new/, then swap it in, so a failed save never damages
 	// the previous one
 	// a save that could be neither read nor moved aside is never overwritten
@@ -1580,6 +1586,12 @@ bool LoadWorldState(const fs::path& worlddir) {
 	// (developer aid: OPENC2E_NO_WORLD_OBJECTS loads as before stage 3)
 	if (devenv("OPENC2E_NO_WORLD_OBJECTS"))
 		hasWorldObjects = false;
+	// a save without a single object was written by File > Exit up to 0.28.1,
+	// which emptied the world first: the world file's own objects stay
+	if (hasWorldObjects && worldObjects.empty()) {
+		fmt::print("* The save lists no objects, so the world's own are kept\n");
+		hasWorldObjects = false;
+	}
 	if (hasWorldObjects)
 		restoreWorldObjects(worldObjects, wmatched, wremoved, wmade);
 	s_view = {camx >= 0 && camy >= 0, camx, camy, camzoom};

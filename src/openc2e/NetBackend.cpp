@@ -12,7 +12,13 @@ NetBackend::~NetBackend() {
 	shutdown();
 };
 
+// The port takes CAOS from other programs: a developer's aid. Players' builds
+// open none (a listening program is what makes Windows and macOS ask whether
+// to let it through the firewall), and this returns -1.
 int NetBackend::init() {
+#ifndef OPENC2E_DEV_HOOKS
+	return -1;
+#else
 	const int init_result = sockinit();
 	if (init_result != 0) {
 		throw Exception(fmt::format("Networking error during initialization: {}", init_result));
@@ -22,8 +28,8 @@ int NetBackend::init() {
 
 	listensocket = INVALID_SOCKET;
 	int listenport;
-	for (listenport = 20001; listenport < 20050; listenport++) {
-		listensocket = sockcreatetcplistener(0, listenport);
+	for (listenport = 20001; listenport < 20050; listenport++) { // (this computer only: 127.0.0.1)
+		listensocket = sockcreatetcplistener(0x7f000001, listenport);
 		if (listensocket != INVALID_SOCKET) {
 			break;
 		}
@@ -34,6 +40,7 @@ int NetBackend::init() {
 	}
 
 	return listenport;
+#endif
 }
 
 void NetBackend::handleEvents() {
