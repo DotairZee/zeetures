@@ -1,6 +1,6 @@
 https://github.com/user-attachments/assets/f3b0c01a-5083-4646-bf95-46d372c99151
 
-The trailer shows the game running from a player's own copy of Creatures 2, whose pictures and sounds belong to Gameware Europe. Music: Trepak (Tchaikovsky), synthesized performance by Quinn Mason, IMSLP, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+[The trailer on YouTube](https://youtu.be/C6BTk-ySg68) is in full HD. It shows the game running from a player's own copy of Creatures 2, whose pictures and sounds belong to Gameware Europe. Music: Trepak (Tchaikovsky), synthesized performance by Quinn Mason, IMSLP, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 <h1><img src="art/logo/zeetures.png" alt="Zeetures: a labor of love by DotairZee" width="720"></h1>
 
