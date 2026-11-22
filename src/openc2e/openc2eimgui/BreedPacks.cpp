@@ -14,6 +14,7 @@
 // files from that folder instead of downloading them (tests, offline).
 
 #include "C2KitsInternal.h"
+#include "common/devenv.h"
 #include "Engine.h"
 #include "PathResolver.h"
 #include "World.h"
@@ -87,7 +88,7 @@ std::string s_status; // the latest line for the player
 double s_status_until = 0;
 
 bool enabled() {
-	if (getenv("OPENC2E_NO_BREED_PACKS"))
+	if (devenv("OPENC2E_NO_BREED_PACKS"))
 		return false;
 	return readPlayerSetting("breed-packs") != "off";
 }
@@ -168,7 +169,7 @@ void BreedPacksTick() {
 	if (!on)
 		return;
 	fs::path main = getUserDataDir();
-	const char* localDir = getenv("OPENC2E_BREED_PACK_DIR");
+	const char* localDir = devenv("OPENC2E_BREED_PACK_DIR");
 	for (int i = 0; i < kCount; i++) {
 		const Pack& p = kPacks[i];
 		Job& j = s_jobs[i];

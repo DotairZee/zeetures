@@ -4,13 +4,14 @@
 #pragma once
 
 #include <chrono>
+#include "common/devenv.h"
 #include <cstdlib>
 #include <map>
 #include <string>
 
 namespace Profile {
 inline bool enabled() {
-	static const bool on = getenv("OPENC2E_TICKRATE") != nullptr;
+	static const bool on = devenv("OPENC2E_TICKRATE") != nullptr;
 	return on;
 }
 inline std::map<std::string, double>& totals() {

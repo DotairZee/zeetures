@@ -16,6 +16,7 @@
  */
 
 #include "ImportCreature.h"
+#include "common/devenv.h"
 
 #include "Engine.h"
 #include "PointerAgent.h"
@@ -244,7 +245,7 @@ void ImportCreatureTick() {
 	// developer aid: OPENC2E_TEST_IMPORT_CREATURE="path.exp" imports it once
 	// the world is running
 	static bool tested = false;
-	if (const char* t = getenv("OPENC2E_TEST_IMPORT_CREATURE"); t && !tested && world.hand()) {
+	if (const char* t = devenv("OPENC2E_TEST_IMPORT_CREATURE"); t && !tested && world.hand()) {
 		tested = true;
 		std::lock_guard<std::mutex> lock(s_mutex);
 		s_picked.push_back(t);

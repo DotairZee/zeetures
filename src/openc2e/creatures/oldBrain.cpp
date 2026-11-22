@@ -18,6 +18,7 @@
  */
 
 #include "oldBrain.h"
+#include "common/devenv.h"
 
 #include "common/Random.h"
 #include "oldCreature.h"
@@ -1252,15 +1253,13 @@ void oldLobe::tickChemicalRelay() {
 		// 2026-11-18: babies past their first minutes, a child, the adult
 		// grendel and old ettin); passing on the state, it stays near 255 and
 		// hunger and the other drives rise exactly as before (the other lobe
-		// 9 cells are on/off: 255 instead of 245). OPENC2E_OLD_RELAY_OUTPUT
-		// compares.
-		static const bool oldOutput = getenv("OPENC2E_OLD_RELAY_OUTPUT") != nullptr;
-		cell.output = out >= threshold ? (oldOutput ? out - threshold : out) : 0;
+		// 9 cells are on/off: 255 instead of 245).
+		cell.output = out >= threshold ? out : 0;
 	}
 }
 
 void oldBrain::tickChemicalRelays() {
-	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	static const bool watch = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 	if (watch && !relays_reported)
 		fmt::print("* WATCH BRAIN lobes {}\n", lobes.size());
 	if (watch && !relays_reported)

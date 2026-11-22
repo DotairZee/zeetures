@@ -18,6 +18,7 @@
  */
 
 #include "Breeding.h"
+#include "common/devenv.h"
 #include "Exposure.h"
 #include "Temperament.h"
 #include "Relationships.h"
@@ -99,7 +100,7 @@ bool isGenus(const Record& r) {
 }
 
 float rateScale() {
-	static const float k = getenv("OPENC2E_MUTATION_RATE") ? (float)atof(getenv("OPENC2E_MUTATION_RATE")) : 1.0f;
+	static const float k = devenv("OPENC2E_MUTATION_RATE") ? (float)atof(devenv("OPENC2E_MUTATION_RATE")) : 1.0f;
 	return k;
 }
 
@@ -561,7 +562,7 @@ static bool generatedName(const std::string& stem) {
 }
 
 void tidyGeneratedGenomes() {
-	if (engine.version != 2 || getenv("OPENC2E_NO_GENOME_TIDY") || engine.currentworlddir.empty())
+	if (engine.version != 2 || devenv("OPENC2E_NO_GENOME_TIDY") || engine.currentworlddir.empty())
 		return;
 	std::error_code ec;
 	fs::path genetics = getUserDataDir() / "Genetics";
@@ -704,7 +705,7 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	if (!mumBody)
 		return false;
 
-	static const bool test = getenv("OPENC2E_TEST_CONCEIVE") != nullptr;
+	static const bool test = devenv("OPENC2E_TEST_CONCEIVE") != nullptr;
 	const char* why = nullptr;
 	if (mumBody->babymoniker != 0 || mum->getPregnant() != 0)
 		why = "she is already pregnant";

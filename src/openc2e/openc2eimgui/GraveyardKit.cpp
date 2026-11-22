@@ -8,6 +8,7 @@
 // world (records of the dead).
 
 #include "C2Kits.h"
+#include "common/devenv.h"
 #include "C2KitsInternal.h"
 #include "Engine.h"
 #include "World.h"
@@ -72,7 +73,7 @@ void DrawGraveyardKit() {
 	static bool s_test = true;
 	if (s_test) {
 		s_test = false;
-		if (const char* g = getenv("OPENC2E_GRAVE"))
+		if (const char* g = devenv("OPENC2E_GRAVE"))
 			s_selected = g;
 	}
 	auto dead = theDead();

@@ -1,7 +1,7 @@
 // ztlc and ztla: art/treelift_top.py. The treehouse cage lift's new top, its
 // pulley moved up onto a cane arm over the shaft (owner, 2026-11-14: the lift
 // goes one floor higher, to the upper hut's deck; the pulley hung off the
-// flying fox's landing beam over the hut). tools/additions/treelift-top.cos
+// flying fox's landing beam over the hut). additions/treelift-top.cos
 // places them.
 // - ztlc: the background around the old pulley and its hook, taken from just
 //   beside it so the wheel is gone from there (drawn just above the

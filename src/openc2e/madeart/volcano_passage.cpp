@@ -4,7 +4,7 @@
 // The volcano's east ledge (room 167, walking line y 2189) and the potion
 // room across the world's east-west seam (room 105, floor y 2329) were
 // parted by a sealed rock pillar (room 213, x 8240-8352).
-// tools/additions/volcano-passage.cos opens a way through it and places
+// additions/volcano-passage.cos opens a way through it and places
 // these:
 //
 //   zvps  the seam hidden, x 8272 to 80 across it, y 1700-2399: three bands

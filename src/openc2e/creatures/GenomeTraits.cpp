@@ -18,6 +18,7 @@
  */
 
 #include "GenomeTraits.h"
+#include "common/devenv.h"
 
 #include "PathResolver.h"
 #include "World.h"
@@ -136,7 +137,7 @@ std::array<float, 17> driveGains(const genomeFile& g, std::string* species) {
 
 std::array<float, 7> shift(const genomeFile& g) {
 	std::array<float, 7> s{};
-	static const bool off = getenv("OPENC2E_NO_GENOME_TRAITS") != nullptr;
+	static const bool off = devenv("OPENC2E_NO_GENOME_TRAITS") != nullptr;
 	if (off)
 		return s;
 	auto gain = driveGains(g);
@@ -153,7 +154,7 @@ std::array<float, 7> shift(const genomeFile& g) {
 }
 
 void dumpIfAsked() {
-	if (!getenv("OPENC2E_DUMP_GENE_TRAITS"))
+	if (!devenv("OPENC2E_DUMP_GENE_TRAITS"))
 		return;
 	std::vector<std::array<float, 7>> all;
 	int nonzero = 0;

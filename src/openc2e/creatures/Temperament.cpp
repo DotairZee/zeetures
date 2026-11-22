@@ -17,6 +17,7 @@
  */
 
 #include "Temperament.h"
+#include "common/devenv.h"
 #include "PathResolver.h"
 #include <fstream>
 #include <filesystem>
@@ -307,7 +308,7 @@ float fertilityFactor(int season, float mumZ, int mumStage, float dadZ, int dadS
 }
 
 bool behaviorOn() {
-	static const bool off = getenv("OPENC2E_NO_SEASONAL_BEHAVIOR") != nullptr;
+	static const bool off = devenv("OPENC2E_NO_SEASONAL_BEHAVIOR") != nullptr;
 	return !off;
 }
 

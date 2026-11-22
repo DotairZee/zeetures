@@ -4,6 +4,7 @@
 // always available (owner, 2026-11-09).
 
 #include "C2KitsInternal.h"
+#include "common/devenv.h"
 #include "creatures/BreedSlots.h"
 #include "PathResolver.h"
 #include "World.h"
@@ -371,7 +372,7 @@ static void SyringePage() {
 	static double pressed = -10;
 	float since = (float)(ImGui::GetTime() - pressed);
 	// developer aid: OPENC2E_TEST_SYRINGE=0.45 holds the animation at that time
-	static const char* holdAt = getenv("OPENC2E_TEST_SYRINGE");
+	static const char* holdAt = devenv("OPENC2E_TEST_SYRINGE");
 	if (holdAt)
 		since = (float)atof(holdAt);
 	auto ease = [](float t) { t = std::clamp(t, 0.0f, 1.0f); return t * t * (3 - 2 * t); };

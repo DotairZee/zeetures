@@ -5,6 +5,7 @@
 // notes are kept with the world (WorldSave, monikerData).
 
 #include "Agent.h"
+#include "common/devenv.h"
 #include "C2Kits.h"
 #include "C2KitsInternal.h"
 #include "WorldSave.h"
@@ -291,8 +292,8 @@ static void PhotosPage() {
 	}
 	// developer aid: OPENC2E_TEST_PHOTO=N takes one photo once the world has
 	// run N ticks (1: at once)
-	static bool testPhoto = getenv("OPENC2E_TEST_PHOTO") != nullptr;
-	static unsigned int testPhotoTick = testPhoto ? (unsigned int)atoi(getenv("OPENC2E_TEST_PHOTO")) : 0;
+	static bool testPhoto = devenv("OPENC2E_TEST_PHOTO") != nullptr;
+	static unsigned int testPhotoTick = testPhoto ? (unsigned int)atoi(devenv("OPENC2E_TEST_PHOTO")) : 0;
 	if (testPhoto && world.worldtickcount >= testPhotoTick) {
 		testPhoto = false;
 		message = takePhoto(a, *m);
@@ -572,12 +573,12 @@ void DrawLifeNotices(float room) {
 	// developer aid: OPENC2E_TEST_NOTICES=1 announces one of each for the
 	// selected creature (not logged), =N that many; =follow also follows the
 	// last one
-	static bool test = getenv("OPENC2E_TEST_NOTICES") != nullptr;
+	static bool test = devenv("OPENC2E_TEST_NOTICES") != nullptr;
 	if (test && world.selectedcreature) {
 		test = false;
 		std::string mon = world.history->findMoniker(AgentRef(world.selectedcreature));
 		// (=N, a number over 3: N notices, the kinds in turn)
-		int count = std::max(3, atoi(getenv("OPENC2E_TEST_NOTICES")));
+		int count = std::max(3, atoi(devenv("OPENC2E_TEST_NOTICES")));
 		for (int k = 0; k < count; k++) {
 			lifeLogEntry e;
 			e.kind = k % 7;
@@ -586,11 +587,11 @@ void DrawLifeNotices(float room) {
 			e.genus = world.selectedcreature->genus;
 			s_notices.push_back(e);
 		}
-		if (std::string(getenv("OPENC2E_TEST_NOTICES")) == "follow") // as if the pregnancy notice were clicked
+		if (std::string(devenv("OPENC2E_TEST_NOTICES")) == "follow") // as if the pregnancy notice were clicked
 			followEntry(s_notices.back());
 	}
 	// OPENC2E_TEST_DEATH=1: the selected creature dies (logged and announced)
-	static bool testDeath = getenv("OPENC2E_TEST_DEATH") != nullptr;
+	static bool testDeath = devenv("OPENC2E_TEST_DEATH") != nullptr;
 	if (testDeath && world.selectedcreature) {
 		testDeath = false;
 		if (auto* ca = dynamic_cast<CreatureAgent*>(world.selectedcreature.get()))
@@ -599,7 +600,7 @@ void DrawLifeNotices(float room) {
 	}
 	// OPENC2E_TEST_TOGETHER=1: four living creatures are given the same
 	// birth tick and die of old age at once, for the memorial's notice
-	static bool testTogether = getenv("OPENC2E_TEST_TOGETHER") != nullptr;
+	static bool testTogether = devenv("OPENC2E_TEST_TOGETHER") != nullptr;
 	if (testTogether && world.tickcount > 30) {
 		testTogether = false;
 		std::vector<CreatureAgent*> four;
@@ -619,7 +620,7 @@ void DrawLifeNotices(float room) {
 	// OPENC2E_TEST_STONE=1: the first living creature presses the memorial
 	// stone (as its own activation would), with its Loneliness Decrease
 	// (chemical 42) and loneliness drive printed before and after
-	static bool testStone = getenv("OPENC2E_TEST_STONE") != nullptr;
+	static bool testStone = devenv("OPENC2E_TEST_STONE") != nullptr;
 	static int testStoneAt = -1;
 	static AgentRef testStoneBy;
 	if (testStone && world.tickcount > 40) {
@@ -678,7 +679,7 @@ void DrawLifeNotices(float room) {
 			ImGui::SetTooltip("%d older notice%s: click to list them; right-click to clear them all", first, first == 1 ? "" : "s");
 		// developer aid: OPENC2E_TEST_MORE_NOTICES keeps the list open while
 		// five or more notices are hidden, for a snapshot of it
-		static bool testMore = getenv("OPENC2E_TEST_MORE_NOTICES") != nullptr;
+		static bool testMore = devenv("OPENC2E_TEST_MORE_NOTICES") != nullptr;
 		if (testMore && first >= 5 && !ImGui::IsPopupOpen("##morenoticelist"))
 			ImGui::OpenPopup("##morenoticelist");
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
@@ -773,7 +774,7 @@ void DrawLifeNotices(float room) {
 	}
 	// developer aid: OPENC2E_TEST_NOTICE_MENU opens the menu on the newest
 	// notice once, for a snapshot of it
-	static bool testMenu = getenv("OPENC2E_TEST_NOTICE_MENU") != nullptr;
+	static bool testMenu = devenv("OPENC2E_TEST_NOTICE_MENU") != nullptr;
 	if (testMenu && world.tickcount > 30) {
 		testMenu = false;
 		s_notice_menu = (int)s_notices.size() - 1;
@@ -1339,7 +1340,7 @@ static void FamilyPage() {
 	std::string self = m->getName();
 	FamilyLayout L = layOutFamily(self);
 	// developer aid: OPENC2E_TEST_ALBUM=1 zooms in on this creature's photo
-	static bool testAlbum = getenv("OPENC2E_TEST_ALBUM") != nullptr;
+	static bool testAlbum = devenv("OPENC2E_TEST_ALBUM") != nullptr;
 	if (testAlbum && !m->photos.empty()) {
 		testAlbum = false;
 		zoomTo(self, (int)m->photos.size() - 1, ImVec2(), ImVec2());
@@ -1349,7 +1350,7 @@ static void FamilyPage() {
 	static bool zoomEnv = true;
 	if (zoomEnv) {
 		zoomEnv = false;
-		if (const char* z = getenv("OPENC2E_TEST_TREE_ZOOM"))
+		if (const char* z = devenv("OPENC2E_TEST_TREE_ZOOM"))
 			s_treeScale = std::clamp(atoi(z) / 100.0f, 0.25f, 2.0f);
 	}
 	if (!s_zoom.empty() && !recordOf(s_zoom))

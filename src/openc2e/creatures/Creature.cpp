@@ -18,6 +18,7 @@
  */
 
 #include "Profile.h"
+#include "common/devenv.h"
 #include "Creature.h"
 #include "Disease.h"
 #include "GenomeTraits.h"
@@ -290,7 +291,7 @@ void Creature::die() {
 			// dead feed the soil): organic nutrient in the room where it died,
 			// more from a grown body (a baby 15, a child 25, an adolescent 35,
 			// older 50)
-			if (engine.version == 2 && world.map && parentagent && !getenv("OPENC2E_NO_NUTRIENT_CYCLE")) {
+			if (engine.version == 2 && world.map && parentagent && !devenv("OPENC2E_NO_NUTRIENT_CYCLE")) {
 				static const int amount[7] = {15, 25, 35, 50, 50, 50, 50};
 				float cx = parentagent->x + parentagent->getWidth() / 2.0f, cy = parentagent->y + parentagent->getHeight() / 2.0f;
 				if (auto r = world.map->roomAt(cx, cy)) {
@@ -350,7 +351,7 @@ oldCreature::oldCreature(std::shared_ptr<genomeFile> g, bool is_female, unsigned
 	mindGenes = MindGeneSet::roll();
 	// its own pace of ageing, 0.9-1.1 and most often near 1 (the sum of two
 	// draws); OPENC2E_NO_LIFE_SPREAD keeps every creature at its genome's
-	if (engine.version == 2 && !getenv("OPENC2E_NO_LIFE_SPREAD"))
+	if (engine.version == 2 && !devenv("OPENC2E_NO_LIFE_SPREAD"))
 		lifespanScale = 1.0f + rand_float(-0.05f, 0.05f) + rand_float(-0.05f, 0.05f);
 	if (!engine.mindname.empty()) {
 		mind = createCreatureMind(engine.mindname);
@@ -605,10 +606,10 @@ void c2Creature::updateUnderwater() {
 		return;
 	}
 	bubbletimer = rand_int32(12, 40);
-	static const bool fastBubbles = getenv("OPENC2E_TEST_BUBBLES") != nullptr; // developer aid: a bubble every few ticks
+	static const bool fastBubbles = devenv("OPENC2E_TEST_BUBBLES") != nullptr; // developer aid: a bubble every few ticks
 	if (fastBubbles)
 		bubbletimer = 3;
-	if (getenv("OPENC2E_DEBUG_BUBBLES"))
+	if (devenv("OPENC2E_DEBUG_BUBBLES"))
 		if (SkeletalCreature* sc = dynamic_cast<SkeletalCreature*>(parentagent))
 			fmt::print("* BUBBLE agent {:.0f},{:.0f} size {}x{} mouth {},{} neck {},{} -> {:.0f},{:.0f}\n", parentagent->x, parentagent->y, parentagent->getWidth(),
 				parentagent->getHeight(), sc->attachmentX(1, 1), sc->attachmentY(1, 1), sc->attachmentX(1, 0), sc->attachmentY(1, 0), headx, heady);
@@ -739,7 +740,7 @@ void c2Creature::tick() {
 	senses[6] = 0;
 	senses[10] = 0;
 	senses[11] = 0;
-	static const bool oldSenses = getenv("OPENC2E_NO_NEW_SENSES") != nullptr; // (developer aid: as before, for comparing)
+	static const bool oldSenses = devenv("OPENC2E_NO_NEW_SENSES") != nullptr; // (developer aid: as before, for comparing)
 	if (parentagent && world.map && !oldSenses) {
 		float cx = parentagent->x + parentagent->getWidth() / 2.0f;
 		float cy = parentagent->y + parentagent->getHeight() / 2.0f;
@@ -778,7 +779,7 @@ void c2Creature::tick() {
 	// developer aid: OPENC2E_TEST_NO_AIR cuts the air of a creature a script
 	// marks with OV96 = 1, as if it were out of breath under water (to time
 	// how long a creature can go without air before it cannot recover)
-	static const bool testNoAir = getenv("OPENC2E_TEST_NO_AIR") != nullptr;
+	static const bool testNoAir = devenv("OPENC2E_TEST_NO_AIR") != nullptr;
 	if (testNoAir && parentagent && parentagent->var[96].hasInt() && parentagent->var[96].getInt() == 1)
 		senses[9] = 0;
 	senses[12] = 0; // wind towards (no genome reads it)
@@ -799,7 +800,7 @@ void c2Creature::tick() {
 	}
 
 	// developer aid: with OPENC2E_WATCH_CREATURES, organ health every 400 ticks
-	static const bool watchorgans = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	static const bool watchorgans = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 	if (watchorgans && ticks % 400 == 0 && !organs.empty()) {
 		float minpct = 100.0f, sumpct = 0.0f;
 		int deadorgans = 0;
@@ -820,14 +821,14 @@ void c2Creature::tick() {
 			ageCreature();
 	}
 
-	static const bool watchChem = getenv("OPENC2E_WATCH_CHEM") != nullptr;
+	static const bool watchChem = devenv("OPENC2E_WATCH_CHEM") != nullptr;
 	if (watchChem)
 		watchChemistry();
 	// developer aid: OPENC2E_WATCH_FUEL=N prints each creature's hunger and
 	// fuel chemicals (and the breathing ones: pyruvate, lactate, oxygen,
 	// carbon dioxide, air) every N ticks (the CAOS CHEM reading has no way to tell
 	// creatures apart in C2: UNID is not readable there)
-	static const int watchFuel = getenv("OPENC2E_WATCH_FUEL") ? atoi(getenv("OPENC2E_WATCH_FUEL")) : 0;
+	static const int watchFuel = devenv("OPENC2E_WATCH_FUEL") ? atoi(devenv("OPENC2E_WATCH_FUEL")) : 0;
 	if (watchFuel > 0 && world.tickcount % watchFuel == 0 && world.history)
 		fmt::print("* FUEL {} t{} hunger {} glucose {} glycogen {} starch {} fat {} adipose {} energy {} ATP {} ADP {} pyruvate {} lactate {} oxygen {} CO2 {} air {} PGK {} breath held {}{}\n",
 			world.history->findMoniker(genome), world.tickcount, (int)chemicals[3], (int)chemicals[70], (int)chemicals[72],
@@ -1001,8 +1002,7 @@ void oldCreature::keepInRoomSystem() {
 		// <dir> <room> <room> <perm>" with a perm other than a plain 0 counts
 		// (scanned again whenever the number of scripts changes).
 		static size_t scannedScripts = SIZE_MAX;
-		static const bool oldScriptDoors = getenv("OPENC2E_OLD_SCRIPT_DOORS") != nullptr; // (to compare)
-		if (!oldScriptDoors && world.scriptorium && world.scriptorium->scriptCount() != scannedScripts) {
+		if (world.scriptorium && world.scriptorium->scriptCount() != scannedScripts) {
 			scannedScripts = world.scriptorium->scriptCount();
 			int marked = 0;
 			world.scriptorium->forEachCode([&](const std::string& code) {
@@ -1021,7 +1021,7 @@ void oldCreature::keepInRoomSystem() {
 					}
 				}
 			});
-			if (getenv("OPENC2E_LIST_POCKETS"))
+			if (devenv("OPENC2E_LIST_POCKETS"))
 				fmt::print("* Doors scripts open, shut now: {}\n", marked);
 		}
 		std::map<int, int> sizes;
@@ -1080,7 +1080,7 @@ void oldCreature::keepInRoomSystem() {
 			if (n > most)
 				most = n, worldGroup = k;
 		// developer aid: OPENC2E_LIST_POCKETS lists the rooms outside the world
-		if (getenv("OPENC2E_LIST_POCKETS")) {
+		if (devenv("OPENC2E_LIST_POCKETS")) {
 			std::string list;
 			for (auto& [r, k] : group)
 				if (k != worldGroup)
@@ -1118,7 +1118,6 @@ void oldCreature::keepInRoomSystem() {
 		// world are part of it.)
 		auto livable = [&](Room* r) { return group.count(r) && group[r] == worldGroup; };
 		bool feetInWorld = false;
-		static const bool oldWallLine = getenv("OPENC2E_OLD_WALL_LINE") != nullptr; // (to compare: the two checks below off)
 		// (for the messages below: where its foot was judged to stand)
 		std::string footNote;
 		if (auto* sc = dynamic_cast<SkeletalCreature*>(a)) {
@@ -1134,7 +1133,7 @@ void oldCreature::keepInRoomSystem() {
 				// placing a foot takes it: a norn just moved by a script, its foot
 				// 4 px under the library's floor, was judged in the sealed rock
 				// below (room 107) and moved; 2026-11-18)
-				if (!oldWallLine && (!fr || !livable(fr.get()))) {
+				if (!fr || !livable(fr.get())) {
 					std::shared_ptr<Room> above = world.map->roomAt(sc->footX(), sc->footY() - 8);
 					if (above && above->type != 2 && livable(above.get())) {
 						float fl = above->floorYatX(sc->footX());
@@ -1152,7 +1151,7 @@ void oldCreature::keepInRoomSystem() {
 		// line and its foot over the shaft, its foot room cleared while it
 		// hopped or was knocked, was moved 27 px each time (most of the room
 		// 102 rescues; 2026-11-18)
-		if (!feetInWorld && !oldWallLine) {
+		if (!feetInWorld) {
 			float feet = a->y + a->getHeight();
 			for (float off : {-4.0f, 4.0f}) {
 				std::shared_ptr<Room> r = world.map->roomAt(cx + off, feet - 2);
@@ -1305,8 +1304,7 @@ void oldCreature::keepInRoomSystem() {
 			// library (102) was stepped into the library through the wall,
 			// whichever floor was nearest (2026-11-19). One that sank straight
 			// down keeps the usual order.
-			static const bool anySide = getenv("OPENC2E_OLD_RESCUE_SIDE") != nullptr; // (to compare)
-			if (!anySide && haveLastWorld && world.tickcount - lastWorldTick <= 200) {
+			if (haveLastWorld && world.tickcount - lastWorldTick <= 200) {
 				float back = lastWorldMidX - cx;
 				if (std::fabs(back) >= 8.0f && std::fabs(back) <= 300.0f) {
 					float side = back < 0 ? -1.0f : 1.0f;
@@ -1322,8 +1320,7 @@ void oldCreature::keepInRoomSystem() {
 			// the next check its feet were 57 px under the lab's floor; it
 			// was lifted 220 px onto the ledge above (room 158), a floor it
 			// could not walk back from (2026-11-19)
-			static const bool oldStepRise = getenv("OPENC2E_OLD_STEP_RISE") != nullptr; // (to compare)
-			if (!oldStepRise && stepOnto(32.0f, 80.0f))
+			if (stepOnto(32.0f, 80.0f))
 				return;
 			if (liftUp(150.0f))
 				return;
@@ -1553,7 +1550,7 @@ void c2Creature::updateConsciousness() {
 		return;
 	}
 	recoveringTicks = atp >= 40 ? recoveringTicks + 1 : 0;
-	if (getenv("OPENC2E_WATCH_CREATURES") && ticks % 20 == 0)
+	if (devenv("OPENC2E_WATCH_CREATURES") && ticks % 20 == 0)
 		fmt::print("* WATCH UNCONSCIOUS {} atp {} recovering {} vm {}\n", mon, (int)atp, recoveringTicks, parentagent->vmStopped() ? "idle" : "running");
 	if (recoveringTicks >= 100) {
 		unconscious = false;

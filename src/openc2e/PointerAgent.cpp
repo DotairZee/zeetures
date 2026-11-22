@@ -18,6 +18,7 @@
  */
 
 #include "PointerAgent.h"
+#include "common/devenv.h"
 
 #include "Camera.h"
 #include "DullPart.h"
@@ -234,7 +235,7 @@ void PointerAgent::tick() {
 		if (a && parent && dynamic_cast<SkeletalCreature*>(parent)) {
 			// the part under the cursor belongs to a SkeletalCreature
 			int scriptid = a->handleClick(x - a->x - parent->x, y - a->y - parent->y);
-			if (getenv("OPENC2E_WATCH_HAND_SIGN"))
+			if (devenv("OPENC2E_WATCH_HAND_SIGN"))
 				fmt::print("* HAND SIGN t{} at {},{}: script {} timer {}\n", world.tickcount, x, y, scriptid, overlayTimer);
 			if (scriptid == 0) {
 				// devil
@@ -283,7 +284,7 @@ void PointerAgent::tick() {
 				}
 			}
 		} else {
-			if (getenv("OPENC2E_WATCH_HAND_SIGN"))
+			if (devenv("OPENC2E_WATCH_HAND_SIGN"))
 				fmt::print("* HAND SIGN t{} at {},{}: not over a creature (part {})\n", world.tickcount, x, y, a ? a->getParent()->identify() : std::string("none"));
 			if (engine.version == 2) {
 				if (overlayTimer > 0) {

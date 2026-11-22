@@ -163,9 +163,6 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// the middle of the top of the head picture, in world coordinates (for
 	// the halo); false when there is no head picture
 	bool headTop(float& hx, float& hy);
-	// the head picture's box in the world, and its view (C1/C2: 0-3 facing
-	// right, 4-7 facing left, 8 toward the viewer, 9 away)
-	bool headBox(float& left, float& top, float& right, float& bottom, int& view);
 	// where a breath bubble's picture (bubs, 32 x 48) goes, in the world
 	// (owner, 2026-11-11): 3 px outside the head's visible edge on the side
 	// it faces (right facing right or toward the viewer, left facing left

@@ -16,6 +16,7 @@
 // world file's values unless a script sets them. Scents include food smell.
 
 #include "C2Kits.h"
+#include "common/devenv.h"
 #include "C2ToolBar.h"
 #include "C2KitsInternal.h"
 #include "Camera.h"
@@ -888,7 +889,7 @@ void EcologyKitTick() {
 	static bool s_testPins = true;
 	if (s_testPins && world.worldtickcount > 5) {
 		s_testPins = false;
-		if (const char* ids = getenv("OPENC2E_ECO_PINS"))
+		if (const char* ids = devenv("OPENC2E_ECO_PINS"))
 			for (const char* p = ids; *p;) {
 				unsigned int id = (unsigned int)strtoul(p, const_cast<char**>(&p), 10);
 				for (auto& r : world.map->getRooms())
@@ -916,16 +917,16 @@ void DrawEcologyKit() {
 	static bool s_test = true;
 	if (s_test) {
 		s_test = false;
-		if (const char* m = getenv("OPENC2E_ECO_MEASURE"))
+		if (const char* m = devenv("OPENC2E_ECO_MEASURE"))
 			s_measure = std::clamp(atoi(m), 0, MEASURES - 1);
-		s_showFood = getenv("OPENC2E_ECO_FOOD") != nullptr;
+		s_showFood = devenv("OPENC2E_ECO_FOOD") != nullptr;
 		// OPENC2E_ECO_SCENT=name shows that scent (and tints the world)
-		if (const char* sc = getenv("OPENC2E_ECO_SCENT"))
+		if (const char* sc = devenv("OPENC2E_ECO_SCENT"))
 			for (int ch = 0; ch <= Pheromones::channelCount(); ch++)
 				if (scentName(ch) == sc)
 					s_scent = ch, s_scentOnWorld = true;
 		// OPENC2E_ECO_GERMS=n shows strain n's germs (0 every strain)
-		if (const char* g = getenv("OPENC2E_ECO_GERMS"))
+		if (const char* g = devenv("OPENC2E_ECO_GERMS"))
 			s_germ = atoi(g);
 	}
 	if (!world.map) {

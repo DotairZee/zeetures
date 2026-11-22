@@ -1,4 +1,5 @@
 #include "AgentInjector.h"
+#include "common/devenv.h"
 #include "Agent.h"
 #include <ctime>
 #include <map>
@@ -261,7 +262,7 @@ static void importPicked() {
 	s_object_injector.update();
 	hideListed();
 	s_thumbs.clear();
-	if (getenv("OPENC2E_TEST_IMPORT_OBJECTS"))
+	if (devenv("OPENC2E_TEST_IMPORT_OBJECTS"))
 		for (auto& line : s_import_report)
 			fmt::print("* IMPORT {}\n", line);
 }
@@ -375,7 +376,7 @@ void DrawAgentInjector() {
 	static bool testImport = true;
 	if (testImport) {
 		testImport = false;
-		if (const char* files = getenv("OPENC2E_TEST_IMPORT_OBJECTS")) {
+		if (const char* files = devenv("OPENC2E_TEST_IMPORT_OBJECTS")) {
 			std::string list = files;
 			size_t start = 0;
 			while (start <= list.size()) {
@@ -393,12 +394,12 @@ void DrawAgentInjector() {
 	}
 	// developer aid: OPENC2E_TEST_INJECT="Name;Name" adds those objects by
 	// hand once the world is running (for testing that they are saved)
-	static bool testInject = getenv("OPENC2E_TEST_INJECT") != nullptr;
+	static bool testInject = devenv("OPENC2E_TEST_INJECT") != nullptr;
 	if (testInject && world.tickcount > 5) {
 		testInject = false;
 		CobManager cobs;
 		cobs.update();
-		std::string list = getenv("OPENC2E_TEST_INJECT");
+		std::string list = devenv("OPENC2E_TEST_INJECT");
 		size_t start = 0;
 		while (start < list.size()) {
 			size_t end = list.find(';', start);
@@ -420,7 +421,7 @@ void DrawAgentInjector() {
 		}
 	}
 	// developer aid: with OPENC2E_OPEN_KITS, OPENC2E_KITS_MINIMIZED starts it minimized
-	static bool s_test_min = getenv("OPENC2E_KITS_MINIMIZED") != nullptr;
+	static bool s_test_min = devenv("OPENC2E_KITS_MINIMIZED") != nullptr;
 	if (s_test_min && s_agent_injector_open) {
 		s_test_min = false;
 		s_agent_injector_minimized = true;
@@ -442,7 +443,7 @@ void DrawAgentInjector() {
 			s_read_agents = true;
 			// developer aid: OPENC2E_DUMP_COB_PICTURES=<folder> saves each
 			// listed object's thumbnail there (<index>.bmp, names in list.txt)
-			if (const char* dir = getenv("OPENC2E_DUMP_COB_PICTURES")) {
+			if (const char* dir = devenv("OPENC2E_DUMP_COB_PICTURES")) {
 				std::ofstream list(fs::path(dir) / "list.txt", std::ios::binary);
 				for (size_t i = 0; i < s_object_injector.objects.size(); i++) {
 					auto& obj = s_object_injector.objects[i];
@@ -464,7 +465,7 @@ void DrawAgentInjector() {
 			s_sort = v.empty() ? SORT_NAME : std::clamp(atoi(v.c_str()), 0, SORT_COUNT - 1);
 			s_tiles = readPlayerSetting("injector-view") == "tiles";
 			// developer aid: OPENC2E_INJECTOR_VIEW="sort,tiles|list[,search]"
-			if (const char* v2 = getenv("OPENC2E_INJECTOR_VIEW")) {
+			if (const char* v2 = devenv("OPENC2E_INJECTOR_VIEW")) {
 				std::string t = v2;
 				s_sort = std::clamp(atoi(t.c_str()), 0, SORT_COUNT - 1);
 				s_tiles = t.find("tiles") != std::string::npos;
@@ -575,7 +576,7 @@ void DrawAgentInjector() {
 		// developer aid: OPENC2E_TEST_INJECTOR_LIST="build=Name,uninstall=Name,
 		// takeout=Name,reinstall=Name,set=N,select=Name" (applied once, in order;
 		// these write the real lists: back them up first)
-		static const char* s_test_list = getenv("OPENC2E_TEST_INJECTOR_LIST");
+		static const char* s_test_list = devenv("OPENC2E_TEST_INJECTOR_LIST");
 		if (s_test_list && world.tickcount > 5) {
 			std::string all = s_test_list;
 			s_test_list = nullptr;

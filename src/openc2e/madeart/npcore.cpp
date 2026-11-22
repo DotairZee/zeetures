@@ -10,6 +10,7 @@
 // numpy/core/src/umath/loops_hyperbolic.dispatch.c.src; BSD licence).
 
 #include "npcore.h"
+#include "common/devenv.h"
 
 #include <algorithm>
 #include <cfloat>
@@ -2985,7 +2986,7 @@ namespace {
 // OPENC2E_NPCORE_CHECK=DIR: write the self-check at startup and exit
 struct SelfCheckAtStartup {
 	SelfCheckAtStartup() {
-		const char* dir = std::getenv("OPENC2E_NPCORE_CHECK");
+		const char* dir = devenv("OPENC2E_NPCORE_CHECK");
 		if (!dir || !*dir)
 			return;
 		try {

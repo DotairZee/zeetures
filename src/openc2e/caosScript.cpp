@@ -18,6 +18,7 @@
  */
 
 #include "caosScript.h"
+#include "common/devenv.h"
 
 #include "Engine.h"
 #include "Scriptorium.h"
@@ -906,7 +907,7 @@ void caosScript::parseOldStatement(caostoken* t) {
 		enumdepth = depth;
 		curindex = at;
 		errindex = at;
-		if (getenv("OPENC2E_WATCH_FLAT"))
+		if (devenv("OPENC2E_WATCH_FLAT"))
 			fmt::print("* CAOS {}: compiled flat from token {} ({})\n", filename.string(), at, what);
 		compileFlat();
 	}

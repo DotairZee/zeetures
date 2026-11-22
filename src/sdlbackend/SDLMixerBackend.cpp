@@ -1,4 +1,5 @@
 #include "SDLMixerBackend.h"
+#include "common/devenv.h"
 
 #include "common/Ascii.h"
 #include "common/Exception.h"
@@ -75,7 +76,7 @@ static const size_t s_cache_limit = 64 * 1024 * 1024;
 
 // developer aid: OPENC2E_WATCH_SOUND prints each sound as it starts
 static bool watchSound() {
-	static const bool on = getenv("OPENC2E_WATCH_SOUND") != nullptr;
+	static const bool on = devenv("OPENC2E_WATCH_SOUND") != nullptr;
 	return on;
 }
 

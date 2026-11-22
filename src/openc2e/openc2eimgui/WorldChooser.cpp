@@ -1,4 +1,5 @@
 #include "WorldChooser.h"
+#include "common/devenv.h"
 
 #include "Engine.h"
 #include "PathResolver.h"
@@ -187,7 +188,7 @@ void RelaunchIntoWorld(const std::string& name) {
 	fmt::print("* Switching to world '{}'\n", name);
 	engine.shutdown();
 #ifdef __linux__
-	if (!getenv("OPENC2E_TEST_SPAWN_RELAUNCH")) {
+	if (!devenv("OPENC2E_TEST_SPAWN_RELAUNCH")) {
 		std::vector<char*> argv;
 		for (auto& a : args)
 			argv.push_back(a.data());

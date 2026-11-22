@@ -18,6 +18,7 @@
  */
 
 #include "Agent.h"
+#include "common/devenv.h"
 #include "SpritePart.h"
 #include <set>
 #include "Engine.h"
@@ -303,7 +304,7 @@ static const FoodInfo& foodInfo(Agent* a) {
 	}
 	info.anyPose = anyFeeding || info.poses.empty();
 	info.scent = poison ? -1.0f : std::clamp(total / 255.0f, 0.0f, 1.0f);
-	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	static const bool watch = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 	if (watch) {
 		std::string ps;
 		for (int q : info.poses)
@@ -337,7 +338,7 @@ float edibleNow(Agent* a) {
 	const FoodInfo& info = foodInfo(a);
 	float scent = info.scent;
 	// (developer aid: OPENC2E_IGNORE_TOUCH=1 turns this off, for comparison)
-	static const bool ignore = getenv("OPENC2E_IGNORE_TOUCH") != nullptr;
+	static const bool ignore = devenv("OPENC2E_IGNORE_TOUCH") != nullptr;
 	if (scent <= 0.0f || ignore || engine.version > 2)
 		return scent;
 	if (a->c2touch >= 0 && !(a->c2touch & 64))

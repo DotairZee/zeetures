@@ -1,4 +1,5 @@
 #include "FileReader.h"
+#include "common/devenv.h"
 
 #include "common/io/IOException.h"
 
@@ -103,7 +104,7 @@ void FileReader::seek_absolute(size_t n) {
 		// forwards-only, and this likely represents some weird logic that can be cleaned up.
 		// (Zeetures: only with OPENC2E_DEBUG_SEEKS; reading COB files and the game's
 		// own creatures2.exe seeks back as a matter of course, filling the log)
-		static const bool warn = getenv("OPENC2E_DEBUG_SEEKS") != nullptr;
+		static const bool warn = devenv("OPENC2E_DEBUG_SEEKS") != nullptr;
 		if (warn)
 			fmt::print("WARNING: Backwards seek on file {} (-{})\n",
 				path_.string(),

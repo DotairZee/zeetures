@@ -9,7 +9,7 @@ set -euo pipefail
 dmg=$1
 version=$(sed -n 's/^#define OPENC2E_FORK_VERSION "\(.*\)"/\1/p' src/openc2e/openc2eimgui/C2ToolBar.cpp)
 
-cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF \
+cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DOPENC2E_DEV_HOOKS=OFF \
 	"-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15
 cmake --build build -j3
 rm -rf build/installed

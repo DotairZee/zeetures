@@ -28,6 +28,7 @@
 */
 
 #include "Profile.h"
+#include "common/devenv.h"
 #include "SkeletalCreature.h"
 
 bool walkOffEndsInWater(const Room& r, bool east, int fit); // CreatureAI.cpp
@@ -591,7 +592,7 @@ void SkeletalCreature::skeletonInit() {
 			oldWithoutArt = creature->getStage() == 5 && foundstage >= 0 && foundstage < 5;
 		static const std::array<float, 2> oldTint = [] {
 			std::array<float, 2> t{0.25f, 0.04f};
-			if (const char* e = getenv("OPENC2E_OLD_TINT"))
+			if (const char* e = devenv("OPENC2E_OLD_TINT"))
 				if (sscanf(e, "%f,%f", &t[0], &t[1]) < 1)
 					t = {0.0f, 0.0f};
 			return t;
@@ -604,7 +605,7 @@ void SkeletalCreature::skeletonInit() {
 		// 1.0 (twice as saturated), the reverse of the old's grey above.
 		// OPENC2E_BABY_VIVID=s sets another strength (0 turns it off).
 		static const float babyVivid = [] {
-			const char* e = getenv("OPENC2E_BABY_VIVID");
+			const char* e = devenv("OPENC2E_BABY_VIVID");
 			return e ? (float)atof(e) : 1.0f;
 		}();
 		if (babyVivid > 0.0f && creature->getStage() == 0)
@@ -709,17 +710,6 @@ bool SkeletalCreature::headTop(float& hx, float& hy) {
 		return false;
 	hx = x + partx[1] + adjustx + images[1]->width(pose[1]) / 2.0f;
 	hy = y + party[1] + adjusty;
-	return true;
-}
-
-bool SkeletalCreature::headBox(float& left, float& top, float& right, float& bottom, int& view) {
-	if (!images[1])
-		return false;
-	left = x + partx[1] + adjustx;
-	top = y + party[1] + adjusty;
-	right = left + images[1]->width(pose[1]);
-	bottom = top + images[1]->height(pose[1]);
-	view = (int)pose[1];
 	return true;
 }
 
@@ -1046,7 +1036,7 @@ void SkeletalCreature::snapDownFoot() {
 					return false;
 			return true;
 		};
-		static const bool noFootMiddle = getenv("OPENC2E_NO_FOOT_MIDDLE") != nullptr; // (to compare)
+		static const bool noFootMiddle = devenv("OPENC2E_NO_FOOT_MIDDLE") != nullptr; // (to compare)
 		if (engine.version == 2 && !noFootMiddle && newroom && sealedRoom(newroom)) {
 			float midx = x + getWidth() / 2.0f;
 			std::shared_ptr<Room> mid = bestRoomAt(midx, footy, 3, m, std::shared_ptr<Room>());
@@ -1055,8 +1045,7 @@ void SkeletalCreature::snapDownFoot() {
 			// x 1473 where the library (114) meets the sealed shaft (102), had
 			// that line judged part of the shaft, so its foot stayed in the
 			// shaft and it was "rescued" from it; 2026-11-18)
-			static const bool oldWallLine = getenv("OPENC2E_OLD_WALL_LINE") != nullptr; // (to compare)
-			if (!oldWallLine && mid == newroom) {
+			if (mid == newroom) {
 				std::shared_ptr<Room> side = bestRoomAt(midx + (footx > midx ? -3.0f : 3.0f), footy, 3, m, std::shared_ptr<Room>());
 				if (side)
 					mid = side;
@@ -1071,7 +1060,7 @@ void SkeletalCreature::snapDownFoot() {
 					x += dx;
 					footx += dx;
 					newroom = mid;
-					if (getenv("OPENC2E_WATCH_ROOMS"))
+					if (devenv("OPENC2E_WATCH_ROOMS"))
 						fmt::print("* WATCH ROOM t{} unid {} foot kept with its middle in room {} (moved {:.0f})\n", world.tickcount, unid, mid->id, dx);
 				}
 			}
@@ -1105,7 +1094,7 @@ void SkeletalCreature::snapDownFoot() {
 	bool hadroom = downfootroom != nullptr;
 	// developer aid: OPENC2E_WATCH_ROOMS prints each change of a creature's
 	// foot room and which way it was found
-	static const bool watchrooms = getenv("OPENC2E_WATCH_ROOMS") != nullptr;
+	static const bool watchrooms = devenv("OPENC2E_WATCH_ROOMS") != nullptr;
 	auto watchRoom = [&](const char* how, std::shared_ptr<Room> from, std::shared_ptr<Room> to) {
 		if (watchrooms && from != to)
 			fmt::print("* WATCH ROOM t{} unid {} {} foot ({:.0f}, {:.0f}) x {:.0f} room {} -> {}{}\n", world.tickcount, unid, how,
@@ -1145,7 +1134,7 @@ void SkeletalCreature::snapDownFoot() {
 			if (here && here != prevroom) {
 				bool door = world.map->hasDoor(prevroom, here);
 				bool shut = !door || world.map->getDoorPerm(prevroom, here) < size;
-				if (shut && (near || (door && freebody && !getenv("OPENC2E_NO_SHUT_DOOR_WALL")))) {
+				if (shut && (near || (door && freebody && !devenv("OPENC2E_NO_SHUT_DOOR_WALL")))) {
 					walled = true;
 					watchRoom(near ? "walled" : "walled (shut door)", here, prevroom);
 				}
@@ -1219,8 +1208,7 @@ void SkeletalCreature::snapDownFoot() {
 	// (also for a foot placed afresh: a norn let out or moved by a script
 	// into the desert lift's shaft, room 12, below its floor line, was set
 	// up on that line, 243-301 px above; 2026-11-18, found from BIG MOVE)
-	static const bool oldShaftPlace = getenv("OPENC2E_OLD_SHAFT_PLACE") != nullptr; // (to compare)
-	if (engine.version == 2 && (hadroom || !oldShaftPlace) && y > newy && downfootroom->floorvalue > 0) {
+	if (engine.version == 2 && y > newy && downfootroom->floorvalue > 0) {
 		// TODO: hilar hack: cope with walking below floors.
 		// C2 rooms with floor points have a ground line inside the room. Where that
 		// ground is passable (a floor value above 0, e.g. a lift shaft whose bottom
@@ -1229,7 +1217,7 @@ void SkeletalCreature::snapDownFoot() {
 		// is meant to be beneath it, and pinning a creature to the bottom buried it
 		// in the scenery; there the creature stays on (or returns to) the ground line.
 		belowfloor = true;
-		if (getenv("OPENC2E_WATCH_CREATURES"))
+		if (devenv("OPENC2E_WATCH_CREATURES"))
 			fmt::print("* WATCH BELOWFLOOR t{} unid {} foot ({:.0f}, {:.0f}) room {} floor {:.0f} -> room bottom {:.0f}\n",
 				world.tickcount, unid, footx, footy, downfootroom->id, newy, downfootroom->bottom.pointAtX(footx).y);
 		newy = downfootroom->bottom.pointAtX(footx).y;
@@ -1244,9 +1232,8 @@ void SkeletalCreature::snapDownFoot() {
 	// into the tunnel beside (room 20, its floor 25 px lower) began their
 	// fall below 840 and dropped 320-345 px down the empty shaft, badly hurt
 	// (0-6 a 5-minute copy; 2026-11-19).
-	static const bool oldStepHold = getenv("OPENC2E_OLD_STEP_HOLD") != nullptr; // (to compare)
 	auto onMiddleFloor = [&]() {
-		if (engine.version != 2 || oldStepHold || carriedby || invehicle || !downfootroom)
+		if (engine.version != 2 || carriedby || invehicle || !downfootroom)
 			return;
 		float midx = x + getWidth() / 2.0f, bottom = y + getHeight();
 		std::shared_ptr<Room> mid = m->roomAt(midx, bottom - 10);
@@ -1264,7 +1251,7 @@ void SkeletalCreature::snapDownFoot() {
 		}
 		if (!solid)
 			return;
-		if (getenv("OPENC2E_WATCH_ROOMS"))
+		if (devenv("OPENC2E_WATCH_ROOMS"))
 			fmt::print("* WATCH ROOM t{} unid {} falling from under room {}'s floor ({:.0f}, bottom {:.0f}): set on it\n", world.tickcount, unid, mid->id, mf, bottom);
 		moveTo(x, mf - getHeight() - 1);
 	};
@@ -1296,8 +1283,7 @@ void SkeletalCreature::snapDownFoot() {
 		// treehouse's upper platform (room 51 ends at x 3917; room 52
 		// beside it runs down to the cave floor) were set 470 px down in
 		// one step, no fall (2026-11-18, found from BIG MOVE)
-		static const bool oldSameRoomSnap = getenv("OPENC2E_OLD_SAME_ROOM_SNAP") != nullptr; // (to compare)
-		if (engine.version == 2 && !oldSameRoomSnap && hadroom && engine.worldready && !carriedby && !invehicle && (newy - (footy - y)) - y > 20) {
+		if (engine.version == 2 && hadroom && engine.worldready && !carriedby && !invehicle && (newy - (footy - y)) - y > 20) {
 			onMiddleFloor();
 			falling = true;
 			return;
@@ -1509,7 +1495,7 @@ void SkeletalCreature::setGaitGene(unsigned int gaitdrive) { // TODO: not sure i
 	skeleton->animation.clear();
 	// developer aid (OPENC2E_WATCH_CREATURES): each change of walk cycle,
 	// and whether it has any steps (a first pose of 0 means none)
-	static const bool watchgait = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	static const bool watchgait = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 	if (watchgait) {
 		std::string poses;
 		for (int k = 0; k < 8; k++)
@@ -1582,7 +1568,7 @@ void SkeletalCreature::tick() {
 
 		// developer aid (OPENC2E_WATCH_CREATURES): what a walk ran into,
 		// every 20 ticks while it is asked to walk
-		static const bool watchwalk = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+		static const bool watchwalk = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 		if (watchwalk && (walking || approaching) && world.tickcount % 20 == 0)
 			fmt::print("* WATCH WALK t{} unid {} walking {} approaching {} edgeStop {} falling {} at {:.0f},{:.0f}\n", world.tickcount, unid,
 				walking, approaching, edgeStop, (bool)falling, x, y);
@@ -1595,8 +1581,7 @@ void SkeletalCreature::tick() {
 		// west sea airlock's pool, 2026-11-17), and later each walk went the
 		// way of whatever it had last approached, not the way chosen. 153 of
 		// Home's 155 creatures walk by gait (HomeostatMind's gaitWalk).
-		static const bool oldWalkDirection = getenv("OPENC2E_OLD_WALK_DIRECTION") != nullptr; // (A/B testing)
-		if (engine.version == 2 && walking && !approaching && !oldWalkDirection) {
+		if (engine.version == 2 && walking && !approaching) {
 			if (posedirection == 0)
 				direction = 2; // east
 			else if (posedirection == 1)
@@ -1704,7 +1689,7 @@ void SkeletalCreature::physicsTick() {
 				if (!(below == r1 && std::fabs(x - fx0) < 3)) {
 					moveTo(fx0, y);
 					velx = 0;
-					if (getenv("OPENC2E_WATCH_CREATURES"))
+					if (devenv("OPENC2E_WATCH_CREATURES"))
 						fmt::print("* WATCH SHOVE t{} unid {}: kept out of room {} (from room {})\n", world.tickcount, unid, r1->id, r0->id);
 				}
 			}
@@ -1723,7 +1708,7 @@ void SkeletalCreature::physicsTick() {
 				bool rightOut = !inRoom(x + w - 1, y + 1) || !inRoom(x + w - 1, y + h - 1);
 				if (leftOut != rightOut) {
 					moveTo(x + (leftOut ? 3 : -3), y);
-					if (getenv("OPENC2E_WATCH_CREATURES"))
+					if (devenv("OPENC2E_WATCH_CREATURES"))
 						fmt::print("* WATCH UNSTICK t{} unid {} at ({:.0f}, {:.0f}): eased {}\n", world.tickcount, unid, x, y, leftOut ? "right" : "left");
 				}
 			}
@@ -1732,7 +1717,7 @@ void SkeletalCreature::physicsTick() {
 	}
 	// developer aid (OPENC2E_WATCH_FALLS): each tick of a creature's fall,
 	// with whether it is walking, to see what moves it sideways
-	static const bool watchfalls = getenv("OPENC2E_WATCH_FALLS") != nullptr;
+	static const bool watchfalls = devenv("OPENC2E_WATCH_FALLS") != nullptr;
 	if (watchfalls && falling && fallTracking)
 		fmt::print("* FALLTICK t{} unid {} at {:.0f},{:.0f} walking {} approaching {} velx {:.1f}\n", world.tickcount, unid, x + getWidth() / 2.0f, y + getHeight(),
 			walking, approaching, velx);
@@ -1762,7 +1747,7 @@ void SkeletalCreature::physicsTick() {
 
 	// developer aid: OPENC2E_WATCH_CREATURES logs any standing creature whose
 	// foot is below the floor of its foot room, and its position every 200 ticks
-	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	static const bool watch = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 	if (watch && !carriedby && !invehicle) {
 		int fp = downfoot_left ? 11 : 12;
 		float footx = x + attachmentX(fp, 1), footy = y + attachmentY(fp, 1);
@@ -2019,7 +2004,7 @@ void SkeletalCreature::landed(float height) {
 	lastFall.height = height;
 	lastFall.hurt = (pain + injury) / 255.0f;
 	lastFall.tick = world.tickcount;
-	if (pain > 0 || getenv("OPENC2E_WATCH_FALLS"))
+	if (pain > 0 || devenv("OPENC2E_WATCH_FALLS"))
 		fmt::print("* {} fell {:.0f} px from {:.0f},{:.0f} to {:.0f},{:.0f}{}\n", world.history ? world.history->findMoniker(creature->getGenome()) : std::string("?"), height,
 			lastFall.fromX, lastFall.fromY, x + getWidth() / 2.0f, y + getHeight(), pain > 0 ? fmt::format(": hurt (pain {:.0f}, injury {:.0f})", pain, injury) : std::string(water ? " into water" : ""));
 }

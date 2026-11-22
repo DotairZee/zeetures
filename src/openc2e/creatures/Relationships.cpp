@@ -17,6 +17,7 @@
  */
 
 #include "Relationships.h"
+#include "common/devenv.h"
 
 #include "Agent.h"
 #include "Engine.h"
@@ -54,7 +55,7 @@ const char* driveName(int d) {
 }
 
 bool watching() {
-	static const bool w = getenv("OPENC2E_WATCH_BONDS") != nullptr;
+	static const bool w = devenv("OPENC2E_WATCH_BONDS") != nullptr;
 	return w;
 }
 
@@ -145,7 +146,7 @@ void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 
 	// not long ago, felt from the thing itself, counts as from that creature
 	// (the bring of tending and sharing is credited to the bringer)
 	bool gift = false;
-	static const bool noGifts = getenv("OPENC2E_NO_GIFT_CREDIT") != nullptr; // (to compare)
+	static const bool noGifts = devenv("OPENC2E_NO_GIFT_CREDIT") != nullptr; // (to compare)
 	if (!other && source && !noGifts && source->lastDroppedBy && world.worldtickcount - source->lastDroppedTick < GIFT_WINDOW) {
 		Agent* giver = source->lastDroppedBy.get();
 		if (giver && giver != creature && creatureOf(giver)) {
@@ -218,7 +219,7 @@ void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 
 	// witnesses: creatures near the one hurt who count it a friend may stand
 	// up for it against the one who hurt it (owner's idea, 2026-11-11: defend
 	// friends; the mind decides whether, HomeostatMind::addDefend)
-	static const bool noDefend = getenv("OPENC2E_NO_DEFEND") != nullptr; // (to compare)
+	static const bool noDefend = devenv("OPENC2E_NO_DEFEND") != nullptr; // (to compare)
 	if (harm > 0 && !gift && !noDefend) {
 		std::string victim = monikerOf(c);
 		float vx = creature->x + creature->getWidth() / 2.0f, vy = creature->y + creature->getHeight() / 2.0f;

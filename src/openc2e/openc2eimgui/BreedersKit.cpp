@@ -7,6 +7,7 @@
 // Data; our layout.
 
 #include "Agent.h"
+#include "common/devenv.h"
 #include "Breeds.h"
 #include "creatures/BrainProfiles.h"
 #include "C2KitsInternal.h"
@@ -286,7 +287,7 @@ static void InseminationPage() {
 	// 2 genome files; NAME a donor's name, moniker or file name) picks that
 	// donor and presses Inseminate once, when the page has been drawn a few
 	// times (headless tests, with OPENC2E_OPEN_KITS and OPENC2E_KIT_PAGE)
-	static const char* testInsem = getenv("OPENC2E_TEST_INSEM");
+	static const char* testInsem = devenv("OPENC2E_TEST_INSEM");
 	static int testFrames = 0;
 	static std::string testName;
 	if (testInsem && testFrames == 0) {
@@ -356,7 +357,7 @@ static void InseminationPage() {
 		pickFrom = from;
 	}
 
-	static const int testAt = getenv("OPENC2E_TEST_INSEM_FRAMES") ? std::max(5, atoi(getenv("OPENC2E_TEST_INSEM_FRAMES"))) : 5;
+	static const int testAt = devenv("OPENC2E_TEST_INSEM_FRAMES") ? std::max(5, atoi(devenv("OPENC2E_TEST_INSEM_FRAMES"))) : 5;
 	if (testInsem && testFrames < testAt && !testName.empty())
 		for (int i = 0; i < (int)donors.size(); i++)
 			if (donors[i].name == testName || donors[i].moniker == testName) {
@@ -1549,7 +1550,7 @@ static void BreedsPage() {
 	auto& breeds = KnownBreeds();
 	// developer aid: OPENC2E_TEST_BREED_SELECT="species,slot letter" (e.g.
 	// "0,l") shows that breed on the Breeds page
-	if (const char* t = getenv("OPENC2E_TEST_BREED_SELECT")) {
+	if (const char* t = devenv("OPENC2E_TEST_BREED_SELECT")) {
 		static bool picked = false;
 		char letter[8] = {};
 		int sp;
@@ -1562,7 +1563,7 @@ static void BreedsPage() {
 	// developer aid: OPENC2E_TEST_BREED_PLAN="pack;pack" reads the packs as if
 	// picked, leaving the review (and its questions) open, and prints what it
 	// found about each breed
-	if (const char* t = getenv("OPENC2E_TEST_BREED_PLAN")) {
+	if (const char* t = devenv("OPENC2E_TEST_BREED_PLAN")) {
 		static bool done = false;
 		if (!done) {
 			done = true;
@@ -1585,7 +1586,7 @@ static void BreedsPage() {
 	}
 	// developer aid: OPENC2E_TEST_BREED_IMPORT=pack imports it at once and
 	// shows the breed it became, printing a genome rewritten to wear it
-	if (const char* t = getenv("OPENC2E_TEST_BREED_IMPORT")) {
+	if (const char* t = devenv("OPENC2E_TEST_BREED_IMPORT")) {
 		static bool done = false;
 		if (!done) {
 			done = true;
@@ -1622,7 +1623,7 @@ static void BreedsPage() {
 	// developer aid: OPENC2E_MOVE_NORN_BREEDS=1 moves every imported norn
 	// breed filed in another set into the norn set, at its default letter
 	static bool movedNorns = false;
-	if (!movedNorns && getenv("OPENC2E_MOVE_NORN_BREEDS")) {
+	if (!movedNorns && devenv("OPENC2E_MOVE_NORN_BREEDS")) {
 		movedNorns = true;
 		std::vector<BreedInfo> todo;
 		for (auto& b : KnownBreeds())
@@ -1639,11 +1640,11 @@ static void BreedsPage() {
 	// developer aid: OPENC2E_MOVE_BREED="species,slot,toSpecies,toSlot" (slot
 	// letters, e.g. "0,ak,0,ka") moves one imported breed once
 	static bool movedOne = false;
-	if (!movedOne && getenv("OPENC2E_MOVE_BREED")) {
+	if (!movedOne && devenv("OPENC2E_MOVE_BREED")) {
 		movedOne = true;
 		int sp = -1, tsp = -1;
 		char from[8] = "", to[8] = "";
-		if (sscanf(getenv("OPENC2E_MOVE_BREED"), "%d,%7[a-z],%d,%7[a-z]", &sp, from, &tsp, to) == 4) {
+		if (sscanf(devenv("OPENC2E_MOVE_BREED"), "%d,%7[a-z],%d,%7[a-z]", &sp, from, &tsp, to) == 4) {
 			std::string err;
 			const BreedInfo* b = FindBreed(sp, breedSlotFromName(from));
 			bool ok = b && MoveBreedTo(BreedInfo(*b), tsp, breedSlotFromName(to), err);
@@ -1855,7 +1856,7 @@ static void BreedsPage() {
 		if (!canLay)
 			ImGui::BeginDisabled();
 		// developer aid: OPENC2E_TEST_BREED_LAY=1 lays one egg of the breed shown
-		static bool testLay = getenv("OPENC2E_TEST_BREED_LAY") != nullptr;
+		static bool testLay = devenv("OPENC2E_TEST_BREED_LAY") != nullptr;
 		bool layNow = ImGui::Button("Lay an egg of this breed") || (testLay && canLay);
 		if (layNow && testLay)
 			testLay = false;

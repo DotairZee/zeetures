@@ -18,6 +18,7 @@
  */
 
 #include "Agent.h"
+#include "common/devenv.h"
 #include "AgentRef.h"
 #include "Camera.h" // FLTX/FLTY
 #include "Engine.h" // version
@@ -70,7 +71,7 @@ void v_ELAS(caosVM* vm) {
 // creature (MVTO, MVBY, MCRT): which script, from where to where, to find
 // what puts creatures somewhere odd
 static void watchScriptMove(caosVM* vm, const char* cmd, float fromx, float fromy) {
-	static const bool watch = getenv("OPENC2E_WATCH_SCRIPT_MOVES") != nullptr;
+	static const bool watch = devenv("OPENC2E_WATCH_SCRIPT_MOVES") != nullptr;
 	if (!watch || !dynamic_cast<SkeletalCreature*>(vm->targ.get()))
 		return;
 	auto& s = vm->currentscript;

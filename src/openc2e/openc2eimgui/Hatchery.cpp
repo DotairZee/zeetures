@@ -1,4 +1,5 @@
 #include "Hatchery.h"
+#include "common/devenv.h"
 
 /*
   C1 hatchery resources:
@@ -958,7 +959,7 @@ static float DrawShelves(float NW, float NH) {
 		// developer aid: OPENC2E_TEST_HATCHERY_MOUSE=1 drives the first shelf
 		// with real mouse events: drag 250 px left, click the egg under the
 		// middle, swipe a trackpad sideways; prints the results
-		if (getenv("OPENC2E_TEST_HATCHERY_MOUSE") && g == s_c2eggs[0].group) {
+		if (devenv("OPENC2E_TEST_HATCHERY_MOUSE") && g == s_c2eggs[0].group) {
 			static int f = 0;
 			f++;
 			ImVec2 mid(x0 + NW / 2, SY - 10);
@@ -1253,7 +1254,7 @@ static void DrawNursery() {
 		std::string v = readPlayerSetting("hatchery-sort");
 		s_hsort = v.empty() ? HSORT_SLOT : std::clamp(atoi(v.c_str()), 0, HSORT_COUNT - 1);
 		// developer aid: OPENC2E_HATCHERY_SORT=n (not saved)
-		if (const char* t = getenv("OPENC2E_HATCHERY_SORT"))
+		if (const char* t = devenv("OPENC2E_HATCHERY_SORT"))
 			s_hsort = std::clamp(atoi(t), 0, HSORT_COUNT - 1);
 	}
 	ImGui::SameLine(0, 12);
@@ -1265,7 +1266,7 @@ static void DrawNursery() {
 		for (int k = 0; k < HSORT_COUNT; k++)
 			if (ImGui::Selectable(HSORT_NAMES[k], k == s_hsort)) {
 				s_hsort = k;
-				if (!getenv("OPENC2E_HATCHERY_SORT"))
+				if (!devenv("OPENC2E_HATCHERY_SORT"))
 					writePlayerSetting("hatchery-sort", std::to_string(k));
 			}
 		ImGui::EndCombo();
@@ -1279,7 +1280,7 @@ static void DrawNursery() {
 		static size_t s_egg_next = 0;
 		ImGui::BeginDisabled(eggs.empty());
 		// developer aid: OPENC2E_TEST_FIND_EGG=1 presses it once
-		static bool s_test_find = getenv("OPENC2E_TEST_FIND_EGG") != nullptr;
+		static bool s_test_find = devenv("OPENC2E_TEST_FIND_EGG") != nullptr;
 		bool pressed = ImGui::Button(find.c_str());
 		if (s_test_find && !eggs.empty()) {
 			s_test_find = false;
@@ -1316,7 +1317,7 @@ static void DrawNursery() {
 	// developer aid: OPENC2E_TEST_HATCHERY="select=Frog,taken=Ron,search=no,
 	// filter=1,place|incubator" (applied once the shelves are drawn)
 	static bool s_test_done = false;
-	static const char* s_test = getenv("OPENC2E_TEST_HATCHERY");
+	static const char* s_test = devenv("OPENC2E_TEST_HATCHERY");
 	if (s_test && !s_test_done && !s_c2eggs.empty()) {
 		s_test_done = true;
 		std::string all = s_test;
@@ -1421,7 +1422,7 @@ static void DrawNursery() {
 // pauses the world once they have landed (for comparing how each stage is
 // drawn; run with OPENC2E_MUTATION_RATE=0 so they keep the breed's looks)
 static void TestLineup() {
-	static const char* spec = getenv("OPENC2E_TEST_LINEUP");
+	static const char* spec = devenv("OPENC2E_TEST_LINEUP");
 	static int pauseAt = -1;
 	// OPENC2E_LINEUP_SHOT="x,y,file": once they stand, the view moved to x,y
 	// (top left), a screenshot saved to file a few frames later, then quit
@@ -1431,8 +1432,8 @@ static void TestLineup() {
 		// (aimed again just before: something can move the view meanwhile)
 		if (shotFrames == 15) {
 			int sx, sy;
-			if (sscanf(getenv("OPENC2E_LINEUP_SHOT"), "%d,%d", &sx, &sy) == 2) {
-				if (const char* z = getenv("OPENC2E_SNAPSHOT_ZOOM"))
+			if (sscanf(devenv("OPENC2E_LINEUP_SHOT"), "%d,%d", &sx, &sy) == 2) {
+				if (const char* z = devenv("OPENC2E_SNAPSHOT_ZOOM"))
 					engine.zoom = (float)atof(z);
 				engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
 				engine.camera->moveToGlobal(sx, sy, jump);
@@ -1441,7 +1442,7 @@ static void TestLineup() {
 		if (shotFrames == 20) {
 			int sx, sy;
 			char file[512];
-			if (sscanf(getenv("OPENC2E_LINEUP_SHOT"), "%d,%d,%511s", &sx, &sy, file) == 3)
+			if (sscanf(devenv("OPENC2E_LINEUP_SHOT"), "%d,%d,%511s", &sx, &sy, file) == 3)
 				get_backend()->requestScreenshot(file);
 		}
 		if (shotFrames == 30)
@@ -1456,7 +1457,7 @@ static void TestLineup() {
 			if (a && a->family == 4)
 				where += fmt::format(" {:.0f},{:.0f}-{:.0f}", a->x, a->y, a->y + a->getHeight());
 		fmt::print("* Lineup: paused; creatures at{}\n", where);
-		if (getenv("OPENC2E_LINEUP_SHOT"))
+		if (devenv("OPENC2E_LINEUP_SHOT"))
 			shotFrames = 0; // the picture, a few frames on
 	}
 	if (!spec || engine.version != 2 || world.tickcount < 30 || pauseAt != -1)
@@ -1509,7 +1510,7 @@ static void TestLineup() {
 		if (!a || a->family != 4 || before.count(a.get()))
 			continue;
 		if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()))
-			sc->poseInPlace(getenv("OPENC2E_LINEUP_POSE") ? getenv("OPENC2E_LINEUP_POSE") : "111111111111111"); // standing, facing you (as in birth photos); OPENC2E_LINEUP_POSE: another pose string
+			sc->poseInPlace(devenv("OPENC2E_LINEUP_POSE") ? devenv("OPENC2E_LINEUP_POSE") : "111111111111111"); // standing, facing you (as in birth photos); OPENC2E_LINEUP_POSE: another pose string
 		float cx = a->x + a->getWidth() / 2.0f;
 		for (float yy = a->y + a->getHeight() - 2; yy < a->y + 600; yy += 2)
 			if (std::shared_ptr<Room> r = world.map->roomAt(cx, yy)) {
@@ -1522,7 +1523,7 @@ static void TestLineup() {
 		a->velx = a->vely = 0;
 		where += fmt::format(" {:.0f},{:.0f}+{}x{}", a->x, a->y, a->getWidth(), a->getHeight());
 	}
-	if (const char* shot = getenv("OPENC2E_LINEUP_SHOT")) {
+	if (const char* shot = devenv("OPENC2E_LINEUP_SHOT")) {
 		int sx, sy;
 		if (sscanf(shot, "%d,%d", &sx, &sy) == 2) {
 			engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
@@ -1589,7 +1590,7 @@ void DrawHatchery() {
 	TestLineup();
 
 	// developer aid: with OPENC2E_OPEN_KITS, OPENC2E_KITS_MINIMIZED starts it minimized
-	static bool s_test_min = getenv("OPENC2E_KITS_MINIMIZED") != nullptr;
+	static bool s_test_min = devenv("OPENC2E_KITS_MINIMIZED") != nullptr;
 	if (s_test_min && s_hatchery_open) {
 		s_test_min = false;
 		s_hatchery_minimized = true;

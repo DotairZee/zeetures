@@ -54,9 +54,6 @@ void tick(); // a world tick (every 50 ticks it does its work)
 // of its usual chance to conceive it leaves (1 none, toward 0 when high)
 float doseOf(const std::string& moniker);
 float fertilityFactor(const std::string& moniker);
-// the dose a baby's genome has gathered before birth
-float unbornDose(const std::string& genome);
-
 // at hatching (NEW: CREA): the genome with the mutations its dose before birth
 // gave it (written back to its genome file), or the same genome if none
 std::shared_ptr<genomeFile> atHatching(const std::string& genome, std::shared_ptr<genomeFile> g);

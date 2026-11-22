@@ -1,4 +1,5 @@
 #include "C2EyeView.h"
+#include "common/devenv.h"
 
 #include "Agent.h"
 #include "C2KitsInternal.h"
@@ -357,8 +358,8 @@ void DrawEyeView() {
 	// developer aid: OPENC2E_OPEN_EYE_VIEW=1 selects the first norn and
 	// opens this view (for headless snapshots); =2 a grendel, =3 an ettin
 	static bool test_opened = false;
-	if (!test_opened && getenv("OPENC2E_OPEN_EYE_VIEW")) {
-		int want = std::clamp(atoi(getenv("OPENC2E_OPEN_EYE_VIEW")), 1, 3);
+	if (!test_opened && devenv("OPENC2E_OPEN_EYE_VIEW")) {
+		int want = std::clamp(atoi(devenv("OPENC2E_OPEN_EYE_VIEW")), 1, 3);
 		for (auto& a : world.agents) {
 			if (a && dynamic_cast<CreatureAgent*>(a.get()) && a->genus == want) {
 				world.selectedcreature = a;

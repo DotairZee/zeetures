@@ -5,6 +5,7 @@
 // unmet wait on the rim) and a list.
 
 #include "Agent.h"
+#include "common/devenv.h"
 #include "C2Kits.h"
 #include "C2KitsInternal.h"
 #include "World.h"
@@ -121,7 +122,7 @@ void RelationshipsPage() {
 	// developer aid: OPENC2E_TEST_RELMAP="zoom,dx,dy" starts the view zoomed
 	// and moved, for a snapshot
 	static bool testView = [] {
-		if (const char* t = getenv("OPENC2E_TEST_RELMAP"))
+		if (const char* t = devenv("OPENC2E_TEST_RELMAP"))
 			sscanf(t, "%f,%f,%f", &zoom, &pan.x, &pan.y);
 		return true;
 	}();

@@ -18,6 +18,7 @@
  */
 
 #include "Agent.h"
+#include "common/devenv.h"
 #include "Engine.h"
 #include "Scriptorium.h"
 #include "World.h"
@@ -45,7 +46,7 @@
 // log review, 2026-11-16). For C1/C2 it is printed only with
 // OPENC2E_DEBUG_CAOS; C3's DBG: OUTS and DBG: OUTV always.
 static bool debugOutputShown() {
-	static const bool asked = getenv("OPENC2E_DEBUG_CAOS") != nullptr;
+	static const bool asked = devenv("OPENC2E_DEBUG_CAOS") != nullptr;
 	return engine.version >= 3 || asked;
 }
 

@@ -18,6 +18,7 @@
  */
 
 #include "Vehicle.h"
+#include "common/devenv.h"
 #include "Lift.h"
 #include "creatures/SkeletalCreature.h"
 #include <fmt/core.h>
@@ -116,7 +117,7 @@ void Vehicle::carry(AgentRef passenger) {
 			return;
 	}
 
-	static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+	static const bool watch = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 	float beforex = passenger->x;
 	// push into our cabin
 	// TODO: should we use moveTo here?
@@ -234,7 +235,7 @@ void Vehicle::drop(AgentRef passenger) {
 	}
 
 	// developer aid: OPENC2E_WATCH_VEHICLE_DROPS logs where vehicles let creatures out
-	static const bool watchDrops = getenv("OPENC2E_WATCH_VEHICLE_DROPS") != nullptr;
+	static const bool watchDrops = devenv("OPENC2E_WATCH_VEHICLE_DROPS") != nullptr;
 	if (watchDrops && passenger->family == 4 && world.map) {
 		float fx = passenger->x + passenger->getWidth() / 2.0f;
 		float fy = passenger->y + passenger->getHeight();

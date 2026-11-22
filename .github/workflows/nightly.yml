@@ -61,14 +61,14 @@ jobs:
           libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev
     - name: Build
       run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DOPENC2E_BUNDLED_SDL=ON
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DOPENC2E_DEV_HOOKS=OFF -DOPENC2E_BUNDLED_SDL=ON
         cmake --build build
     - name: Package
       run: |
         out=zeetures-nightly-linux-x86_64
         cmake --install build --prefix "$out"
         # (without the debug information: the engine was 138 MB with it)
-        strip "$out"/openc2e "$out"/cobdumper "$out"/mngdumper "$out"/mngplayer2 "$out"/praybuilder "$out"/praydumper "$out"/spritedumper || true
+        strip "$out"/openc2e
         cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
         tar czf "$out.tar.gz" "$out"
         # (used only if linux-appimage's, which runs on older systems, fails)
@@ -102,7 +102,7 @@ jobs:
           libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev
     - name: Build
       run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DOPENC2E_BUNDLED_SDL=ON \
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DOPENC2E_DEV_HOOKS=OFF -DOPENC2E_BUNDLED_SDL=ON \
           -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 "-DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc"
         cmake --build build
     - name: Package
@@ -128,7 +128,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Build
       run: |
-        cmake -S . -B build -DOPENC2E_ASAN=OFF
+        cmake -S . -B build -DOPENC2E_ASAN=OFF -DOPENC2E_DEV_HOOKS=OFF
         cmake --build build --config RelWithDebInfo
     - name: Package
       shell: bash
@@ -195,7 +195,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Build
       run: |
-        cmake -S . -B build -A Win32 -DOPENC2E_ASAN=OFF
+        cmake -S . -B build -A Win32 -DOPENC2E_ASAN=OFF -DOPENC2E_DEV_HOOKS=OFF
         cmake --build build --config RelWithDebInfo
     - name: Package
       shell: bash
@@ -255,13 +255,13 @@ jobs:
         echo "PKG_CONFIG_LIBDIR=/usr/lib/i386-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> "$GITHUB_ENV"
     - name: Build
       run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_LIBRARY_ARCHITECTURE=i386-linux-gnu -DOPENC2E_BUNDLED_SDL=ON -DOPENC2E_ASAN=OFF -DSDL_WAYLAND=OFF
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_LIBRARY_ARCHITECTURE=i386-linux-gnu -DOPENC2E_BUNDLED_SDL=ON -DOPENC2E_ASAN=OFF -DOPENC2E_DEV_HOOKS=OFF -DSDL_WAYLAND=OFF
         cmake --build build
     - name: Package
       run: |
         out=zeetures-nightly-linux-i386
         cmake --install build --prefix "$out"
-        strip "$out"/openc2e "$out"/cobdumper "$out"/mngdumper "$out"/mngplayer2 "$out"/praybuilder "$out"/praydumper "$out"/spritedumper || true
+        strip "$out"/openc2e
         cp .github/nightly/README.txt "$out/README-NIGHTLY.txt"
         tar czf "$out.tar.gz" "$out"
         packaging/linux/make-appimage.sh "$out" i686 Zeetures-i686.AppImage

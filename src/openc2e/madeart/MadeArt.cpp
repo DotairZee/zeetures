@@ -1,4 +1,5 @@
 #include "MadeArt.h"
+#include "common/devenv.h"
 
 #include "Engine.h"
 #include "PathResolver.h"
@@ -277,7 +278,7 @@ std::vector<std::string> names() {
 }
 
 void dumpIfAsked() {
-	const char* dir = getenv("OPENC2E_DUMP_MADE_ART");
+	const char* dir = devenv("OPENC2E_DUMP_MADE_ART");
 	if (!dir)
 		return;
 	std::error_code ec;

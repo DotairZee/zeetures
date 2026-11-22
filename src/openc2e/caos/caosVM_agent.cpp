@@ -18,6 +18,7 @@
  */
 
 #include "AgentHelpers.h"
+#include "common/devenv.h"
 #include "AnimatablePart.h"
 #include "caosScript.h"
 #include "Blackboard.h"
@@ -564,7 +565,7 @@ void v_NULL(caosVM* vm) {
 // developer aid: OPENC2E_WATCH_ANIM="f g s" logs each ANIM, POSE and BASE
 // set on such objects and the script that set it
 static void watchAnim(caosVM* vm, int partid, const std::string& what) {
-	static const char* watch = getenv("OPENC2E_WATCH_ANIM");
+	static const char* watch = devenv("OPENC2E_WATCH_ANIM");
 	if (!watch || !vm->targ)
 		return;
 	int f = -1, g = -1, s = -1;

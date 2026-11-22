@@ -18,6 +18,7 @@
  */
 
 #include <array>
+#include "common/devenv.h"
 #include <cstring>
 #include <vector>
 #include <map>
@@ -131,7 +132,7 @@ void c2Creature::tickBiochemistry() {
 	// 0.2 times its seasonal strength, at most a half: about 7% to 50%, 20%
 	// on average. OPENC2E_NO_SEASONAL_BIOLOGY turns this and the autumn
 	// appetite off.
-	static const bool noSeasons = getenv("OPENC2E_NO_SEASONAL_BIOLOGY") != nullptr;
+	static const bool noSeasons = devenv("OPENC2E_NO_SEASONAL_BIOLOGY") != nullptr;
 	if (!noSeasons && world.season == 3) {
 		thriftCarry += std::min(0.5f, 0.2f * SeasonalRhythm::strength(seasonalZ));
 		if (thriftCarry >= 1.0f) {
@@ -148,7 +149,7 @@ void c2Creature::tickBiochemistry() {
 	// Energy 98, ATP 99, ADP 100; OPENC2E_COUNT_ENERGY="69,95" names
 	// others), and what half-lives take, and prints the totals every 500
 	// steps: where a budget is made and spent
-	static const char* countEnv = getenv("OPENC2E_COUNT_ENERGY");
+	static const char* countEnv = devenv("OPENC2E_COUNT_ENERGY");
 	static const std::vector<int> countChems = [] {
 		std::vector<int> v;
 		if (countEnv && strchr(countEnv, ',')) {
@@ -875,7 +876,7 @@ void c2Organ::processReaction(c2Reaction& d) {
 	// whose organs ran every reaction several times over (c2Organ::processGenes
 	// re-added all genes at each life stage). OPENC2E_C2RATE_CURVE=1 uses the
 	// last of those curves, half-life (rate / 17.5)^2.09 steps, for comparison.
-	static const bool c1table = !getenv("OPENC2E_C2RATE_CURVE");
+	static const bool c1table = !devenv("OPENC2E_C2RATE_CURVE");
 	static const float curveK = 17.5f, curveP = 2.09f;
 	if (!c1table) {
 		float avail = 255.0f;
@@ -927,7 +928,7 @@ void c2Organ::processReaction(c2Reaction& d) {
 	// calculate the actual adjustment (can't go out of bounds)
 	ratio = ratio - ((ratio * parent->calculateMultiplier(rate)) / 65536);
 
-	static const bool watchreact = getenv("OPENC2E_WATCH_REACTIONS") != nullptr;
+	static const bool watchreact = devenv("OPENC2E_WATCH_REACTIONS") != nullptr;
 	if (watchreact && (g.reactant[0] == 72 || g.reactant[1] == 72))
 		fmt::print("* REACT {}*{} + {}*{} -> {}*{} + {}*{} rate {} amount {} (glycogen was {})\n", (int)g.quantity[0], (int)g.reactant[0],
 			(int)g.quantity[1], (int)g.reactant[1], (int)g.quantity[2], (int)g.reactant[2], (int)g.quantity[3], (int)g.reactant[3],

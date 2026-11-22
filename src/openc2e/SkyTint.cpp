@@ -1,4 +1,5 @@
 #include "SkyTint.h"
+#include "common/devenv.h"
 
 #include "Engine.h"
 #include "MetaRoom.h"
@@ -317,7 +318,7 @@ void build(Sky& sky, creaturesImage& bkgd, bool wraps) {
 		}
 	// developer aid: OPENC2E_SKY_DUMP=<prefix> writes the sky trace as
 	// <prefix>mask.pgm and the outdoors map as <prefix>share.pgm
-	if (const char* dump = std::getenv("OPENC2E_SKY_DUMP")) {
+	if (const char* dump = devenv("OPENC2E_SKY_DUMP")) {
 		if (FILE* f = std::fopen(fmt::format("{}mask.pgm", dump).c_str(), "wb")) {
 			std::fprintf(f, "P5 %d %d 255\n", W, H);
 			for (uint8_t v : mask) {
@@ -416,7 +417,7 @@ void draw(RenderTarget* surface, MetaRoom* m, int destx, int desty) {
 	}
 	const float fadeTicks = 300.0f; // about 30 seconds at C2's speed
 	float f = std::clamp((now - s_changed) / fadeTicks, 0.0f, 1.0f);
-	if (const char* l = std::getenv("OPENC2E_SKY_LAYER")) { // developer aid: =0 dawn, 1 dusk, 2 night, -1 none
+	if (const char* l = devenv("OPENC2E_SKY_LAYER")) { // developer aid: =0 dawn, 1 dusk, 2 night, -1 none
 		int k = std::atoi(l);
 		s_from = s_to = k == 0 ? 0 : k == 1 ? 3 : k == 2 ? 4 : 1;
 		f = 1.0f;

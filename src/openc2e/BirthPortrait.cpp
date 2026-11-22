@@ -1,4 +1,5 @@
 #include "BirthPortrait.h"
+#include "common/devenv.h"
 
 #include "Camera.h"
 #include "Engine.h"
@@ -161,7 +162,7 @@ void tick() {
 	// developer aid: OPENC2E_TEST_PORTRAITS=<folder> draws every pose of
 	// every creature there (<moniker>_<pose number>.bmp)
 	// (30 ticks into the run: a restored world's tick count starts far on)
-	static const char* test = std::getenv("OPENC2E_TEST_PORTRAITS");
+	static const char* test = devenv("OPENC2E_TEST_PORTRAITS");
 	static unsigned int s_start = world.worldtickcount;
 	static bool s_done = false;
 	if (test && !s_done && world.worldtickcount >= s_start + 30) {
@@ -176,7 +177,7 @@ void tick() {
 					list.push_back(tp[0]), list.push_back(tp[1]);
 				list.push_back(evenTempered);
 				std::vector<std::string> keep;
-				if (const char* tp = std::getenv("OPENC2E_TEST_PORTRAIT_POSES")) {
+				if (const char* tp = devenv("OPENC2E_TEST_PORTRAIT_POSES")) {
 					list.clear();
 					std::string all = tp;
 					for (size_t at = 0; at <= all.size();) {

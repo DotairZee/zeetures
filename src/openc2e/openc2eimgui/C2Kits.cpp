@@ -1,4 +1,5 @@
 #include "C2Kits.h"
+#include "common/devenv.h"
 #include "C2ToolBar.h"
 
 #include "C2KitsInternal.h"
@@ -191,12 +192,12 @@ static void KitsWriteAll(ImGuiContext*, ImGuiSettingsHandler* handler, ImGuiText
 static bool s_test_kits = false;
 
 static void OpenTestKits() {
-	const char* s = getenv("OPENC2E_OPEN_KITS");
+	const char* s = devenv("OPENC2E_OPEN_KITS");
 	if (!s)
 		return;
 	s_test_kits = true;
 	// OPENC2E_TEST_SELECT=female: the first adult female norn not pregnant
-	if (const char* sel = getenv("OPENC2E_TEST_SELECT"); sel && std::string(sel) == "female")
+	if (const char* sel = devenv("OPENC2E_TEST_SELECT"); sel && std::string(sel) == "female")
 		for (auto& a : world.agents) {
 			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
 			auto* oc = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
@@ -206,7 +207,7 @@ static void OpenTestKits() {
 			}
 		}
 	// OPENC2E_TEST_SELECT=ill: the first creature that is ill (Disease.h)
-	if (const char* sel = getenv("OPENC2E_TEST_SELECT"); sel && std::string(sel) == "ill" && world.history)
+	if (const char* sel = devenv("OPENC2E_TEST_SELECT"); sel && std::string(sel) == "ill" && world.history)
 		for (auto& a : world.agents) {
 			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
 			if (ca && Disease::isIll(world.history->findMoniker(ca->getCreature()->getGenome()))) {
@@ -228,7 +229,7 @@ static void OpenTestKits() {
 	for (auto& k : s_kits)
 		if (list.find(k.id) != std::string::npos) {
 			OpenC2Kit(k.id);
-			if (getenv("OPENC2E_KITS_MINIMIZED"))
+			if (devenv("OPENC2E_KITS_MINIMIZED"))
 				s_state[k.id].minimized = true;
 		}
 }
@@ -243,7 +244,7 @@ void OpenC2KitAt(const char* id, const char* page) {
 }
 
 bool KitTab(const char* label) {
-	const char* want = getenv("OPENC2E_KIT_PAGE");
+	const char* want = devenv("OPENC2E_KIT_PAGE");
 	static int frames = 0;
 	bool force = want && std::strcmp(want, label) == 0 && frames++ < 3;
 	if (!s_want_page.empty() && s_want_page == label) {

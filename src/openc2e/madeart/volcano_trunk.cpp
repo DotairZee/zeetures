@@ -5,7 +5,7 @@
 // from the volcano's shoulder toward the palm; the background is one flat
 // picture, so creatures were drawn over it. This cuts the trunk out of the
 // background along a hand-traced outline, soft at the edges.
-// tools/additions/volcano-trunk.cos places it at world X0, Y0.
+// additions/volcano-trunk.cos places it at world X0, Y0.
 //
 // The recipe's mask is drawn with PIL (ImageDraw polygon at 4x, LANCZOS
 // resize, GaussianBlur 0.7); those are reimplemented here as Pillow 10's C

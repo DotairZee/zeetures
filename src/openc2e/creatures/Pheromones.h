@@ -5,7 +5,7 @@
  *  C2 under a mind: scents creatures and objects give off, carried by the
  *  room system (spreading through doorways, fading), smelled by creatures.
  *  What gives off which scent, and what smelling one does, is data: the user
- *  data folder's pheromones.txt (see the project's tools/additions copy for
+ *  data folder's pheromones.txt (see the project's additions copy for
  *  the format and the rules for the game's breeds). Our own design.
  *
  *  A smelled scent can act on the body (primer: it adds a chemical, so it

@@ -7,6 +7,7 @@
 // art/tube_walk_check_parts.py (OPENC2E_TW_CHECK_PARTS=DIR, see the header).
 
 #include "tube_walk_parts.h"
+#include "common/devenv.h"
 
 #include <algorithm>
 #include <cmath>
@@ -878,7 +879,7 @@ namespace {
 // OPENC2E_TW_CHECK_PARTS=DIR: run the check at startup and exit
 struct CheckAtStartup {
 	CheckAtStartup() {
-		const char* dir = std::getenv("OPENC2E_TW_CHECK_PARTS");
+		const char* dir = devenv("OPENC2E_TW_CHECK_PARTS");
 		if (!dir || !*dir)
 			return;
 		try {

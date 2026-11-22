@@ -6,7 +6,7 @@
 // the log's pixels), laid end to end along the slope (about 17 degrees) from
 // where the dock's last board ends (x 2329). Under the water they take on
 // the water's colour, more with depth, the surface line crosses them, and
-// where the water meets the bed they stop. tools/additions/water-pocket.cos
+// where the water meets the bed they stop. additions/water-pocket.cos
 // places it at X0, Y0.
 //
 // The recipe tilts the strip with PIL (4x LANCZOS up, BICUBIC rotate with

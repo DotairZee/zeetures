@@ -8,9 +8,6 @@ set(BIN "${CMAKE_CURRENT_BINARY_DIR}")
 set(GEN "${BIN}/generated")
 
 list(APPEND CMAKE_MODULE_PATH "${SRC}/cmake")
-if(EMSCRIPTEN)
-	list(APPEND CMAKE_MODULE_PATH "${SRC}/cmake/emscripten")
-endif()
 
 if (NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING
@@ -29,7 +26,7 @@ include(CheckCXXSourceCompiles)
 # AddressSanitizer is on by default (as upstream); OPENC2E_ASAN=OFF builds
 # without it, for playing: it slows everything severalfold
 option(OPENC2E_ASAN "Build with AddressSanitizer" ON)
-if(OPENC2E_ASAN AND NOT (WIN32 OR EMSCRIPTEN))
+if(OPENC2E_ASAN AND NOT WIN32)
 	set(CMAKE_REQUIRED_FLAGS "-fsanitize=address")
 	check_cxx_source_compiles("int main(int, char**) { return 0; }" have_fsanitize_address)
 	if(have_fsanitize_address)
@@ -41,7 +38,7 @@ if(APPLE)
 	enable_language(OBJC)
 endif()
 
-option(OPENC2E_USE_SERIALIZATION "Build the experimental serialization code" OFF)
+option(OPENC2E_DEV_HOOKS "Build the developer switches (see src/common/devenv.h); off for players" ON)
 option(OPENC2E_PROFILE_ALLOCATION "Collect allocation profile stats for DBG: SIZO" OFF)
 if (OPENC2E_PROFILE_ALLOCATION)
 	add_definitions("-DPROFILE_ALLOCATION_COUNT -DPROFILE_ALLOCATION_THREAD_SAFE")
@@ -99,23 +96,21 @@ set(SDLMIXER_WAVPACK OFF)
 add_subdirectory(externals/SDL3_mixer EXCLUDE_FROM_ALL)
 add_subdirectory(externals/SDL3_native_midi EXCLUDE_FROM_ALL)
 
-if (OPENC2E_USE_SERIALIZATION)
-	find_package(Boost 1.34.0 COMPONENTS serialization REQUIRED)
-endif()
-
 add_subdirectory(externals/cxxopts EXCLUDE_FROM_ALL)
 add_subdirectory(externals/fmt EXCLUDE_FROM_ALL)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE) # fix 'mismatch detected for RuntimeLibrary'
 set(INSTALL_GTEST OFF)
 add_subdirectory(externals/googletest EXCLUDE_FROM_ALL)
 add_subdirectory(externals/imgui EXCLUDE_FROM_ALL)
-add_subdirectory(externals/nativefiledialog EXCLUDE_FROM_ALL)
 
 # turn warnings back on
 set(CMAKE_C_FLAGS "${original_c_flags}")
 set(CMAKE_CXX_FLAGS "${original_cxx_flags}")
 
 # Pass flags to the compiler
+if(OPENC2E_DEV_HOOKS)
+	add_compile_definitions("OPENC2E_DEV_HOOKS")
+endif()
 if(WIN32)
 	add_compile_definitions("NOMINMAX")
 endif()
@@ -436,12 +431,7 @@ target_link_libraries(openc2e_core PUBLIC
 # (the Breeder's Kit reads zip files: on Windows zlib is built from
 # externals, and its headers come only with the link)
 target_link_libraries(openc2e_core PRIVATE ZLIB::ZLIB)
-if (OPENC2E_USE_SERIALIZATION)
-	target_sources(openc2e_core PRIVATE src/openc2e/caos/caosVM_ser_real.cpp)
-	target_link_libraries(openc2e_core PUBLIC Boost::serialization)
-else()
-	target_sources(openc2e_core PRIVATE src/openc2e/caos/caosVM_ser_stub.cpp)
-endif()
+target_sources(openc2e_core PRIVATE src/openc2e/caos/caosVM_ser_stub.cpp)
 
 add_executable(openc2e src/openc2e/main.cpp)
 target_include_directories(openc2e PRIVATE src/openc2e)
@@ -464,107 +454,14 @@ add_executable(test_openc2e
 )
 target_link_libraries(test_openc2e openc2e_core gtest_main)
 
-add_library(opencreatures1_core STATIC
-	src/opencreatures1/Biochemistry.cpp
-	src/opencreatures1/C1MusicManager.cpp
-	src/opencreatures1/DullPart.cpp
-	src/opencreatures1/EngineContext.cpp
-	src/opencreatures1/ImageManager.cpp
-	src/opencreatures1/MacroCommands.cpp
-	src/opencreatures1/MacroContext.cpp
-	src/opencreatures1/MacroManager.cpp
-	src/opencreatures1/MapManager.cpp
-	src/opencreatures1/MessageManager.cpp
-	src/opencreatures1/PathManager.cpp
-	src/opencreatures1/PointerManager.cpp
-	src/opencreatures1/SFCSerialization.cpp
-	src/opencreatures1/ViewportManager.cpp
-	src/opencreatures1/C1ControlledSound.cpp
-	src/opencreatures1/C1SoundManager.cpp
-	src/opencreatures1/objects/Blackboard.cpp
-	src/opencreatures1/objects/Bubble.cpp
-	src/opencreatures1/objects/CallButton.cpp
-	src/opencreatures1/objects/CompoundObject.cpp
-	src/opencreatures1/objects/Creature.cpp
-	src/opencreatures1/objects/Lift.cpp
-	src/opencreatures1/objects/Object.cpp
-	src/opencreatures1/objects/ObjectNames.cpp
-	src/opencreatures1/objects/PointerTool.cpp
-	src/opencreatures1/objects/Scenery.cpp
-	src/opencreatures1/objects/SimpleObject.cpp
-	src/opencreatures1/objects/Vehicle.cpp
-)
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-	target_compile_options(opencreatures1_core BEFORE PRIVATE -Wconversion -Wsign-conversion -Wsign-compare)
-endif()
-target_include_directories(opencreatures1_core PUBLIC src/opencreatures1)
-target_link_libraries(opencreatures1_core PUBLIC
-	openc2e-common
-	openc2e-fileformats
-)
-
-add_executable(opencreatures1
-	src/opencreatures1/main.cpp
-)
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-	target_compile_options(opencreatures1 BEFORE PRIVATE -Wconversion -Wsign-conversion -Wsign-compare)
-endif()
-target_link_libraries(opencreatures1 opencreatures1_core openc2e_sdlbackend)
-
-add_executable(test_opencreatures1
-	src/opencreatures1/tests/BiochemistryTest.cpp
-	src/opencreatures1/tests/MacroTest.cpp
-	src/opencreatures1/tests/ScriptoriumTest.cpp
-)
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-	target_compile_options(test_opencreatures1 BEFORE PRIVATE -Wconversion -Wsign-conversion -Wsign-compare)
-endif()
-target_link_libraries(test_opencreatures1 opencreatures1_core gtest_main)
-
-add_executable(attparser src/tools/attparser.cpp)
-target_link_libraries(attparser openc2e-fileformats)
-
 add_executable(caos_to_bytecode src/tools/caos_to_bytecode.cpp)
 target_link_libraries(caos_to_bytecode openc2e_core)
-
-add_executable(change_breed_slot src/tools/change_breed_slot.cpp)
-target_link_libraries(change_breed_slot openc2e-fileformats)
 
 add_executable(cobdumper src/tools/cobdumper.cpp)
 target_link_libraries(cobdumper openc2e_core)
 
-add_executable(creaturesarchivedumper src/tools/creaturesarchivedumper.cpp)
-target_link_libraries(creaturesarchivedumper openc2e-common z)
-
-add_executable(expdumper src/tools/expdumper.cpp)
-target_link_libraries(expdumper openc2e-fileformats)
-
 add_executable(mngdumper src/tools/mngdumper.cpp)
 target_link_libraries(mngdumper openc2e-fileformats)
-
-add_executable(mngbuild src/tools/mngbuild.cpp)
-target_link_libraries(mngbuild openc2e-fileformats)
-
-add_executable(mngplayer
-	src/tools/mngplayer.cpp
-)
-target_link_libraries(mngplayer openc2e_sdlbackend openc2e-mngmusic openc2e-fileformats)
-
-add_executable(mngplayer2
-    src/mngplayer2/mngplayer2.cpp
-    src/mngplayer2/mngplayer2.rc
-)
-target_link_libraries(mngplayer2
-	nativefiledialog
-	openc2e-mngmusic
-	openc2e_sdlbackend
-)
-if(WIN32)
-	set_target_properties(mngplayer2 PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME MNGPlayer2)
-endif()
-
-add_executable(pefiledumper src/tools/pefiledumper.cpp)
-target_link_libraries(pefiledumper openc2e-fileformats)
 
 add_executable(praydumper src/tools/praydumper.cpp)
 target_link_libraries(praydumper openc2e-fileformats)
@@ -572,16 +469,8 @@ target_link_libraries(praydumper openc2e-fileformats)
 add_executable(praybuilder src/tools/praybuilder.cpp)
 target_link_libraries(praybuilder openc2e-fileformats)
 
-add_executable(sfcdumper src/tools/sfcdumper.cpp)
-target_link_libraries(sfcdumper openc2e-fileformats)
-
 add_executable(spritedumper src/tools/spritedumper.cpp)
 target_link_libraries(spritedumper openc2e-fileformats)
-
-add_executable(translate_voice
-	src/tools/translate_voice.cpp
-)
-target_link_libraries(translate_voice openc2e-common openc2e_core openc2e_sdlbackend)
 
 # tests
 enable_testing()
@@ -589,7 +478,6 @@ include(GoogleTest)
 include(Openc2eOutputOnTestFailure)
 
 gtest_discover_tests(test_openc2e DISCOVERY_TIMEOUT 30)
-gtest_discover_tests(test_opencreatures1 DISCOVERY_TIMEOUT 30)
 gtest_discover_tests(test_common DISCOVERY_TIMEOUT 30)
 gtest_discover_tests(test_fileformats DISCOVERY_TIMEOUT 30)
 
@@ -678,13 +566,6 @@ install(TARGETS
 	spritedumper
 	DESTINATION "."
 	COMPONENT devtools
-	EXCLUDE_FROM_ALL
-)
-
-install(TARGETS
-	mngplayer2
-	DESTINATION "."
-	COMPONENT mngplayer2
 	EXCLUDE_FROM_ALL
 )
 

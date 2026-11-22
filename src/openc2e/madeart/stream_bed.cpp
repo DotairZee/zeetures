@@ -7,7 +7,7 @@
 // carries it on further down (ground drawn from bands of that earth's own
 // bottom rows, darker with depth). Only earth is taken: the water, the dock,
 // the wheel and anything above the bed stay as they are.
-// tools/additions/water-pocket.cos places it at world X0, Y0.
+// additions/water-pocket.cos places it at world X0, Y0.
 //
 // The recipe works in numpy float32 (float64 where numpy promotes to it) and
 // draws its band shifts from numpy's default_rng(7); both are matched here

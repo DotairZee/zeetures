@@ -5,6 +5,7 @@
 // note pops up over the world when one goes off.
 
 #include "C2EyeView.h"
+#include "common/devenv.h"
 #include "Agent.h"
 #include "C2KitsInternal.h"
 #include "Engine.h"
@@ -209,7 +210,7 @@ void KitAlarmsTick() {
 	static bool testAlarm = true;
 	if (testAlarm) {
 		testAlarm = false;
-		if (const char* t = getenv("OPENC2E_TEST_ALARM"))
+		if (const char* t = devenv("OPENC2E_TEST_ALARM"))
 			KitAlarmsReadLine(t);
 	}
 	if (s_alarms.empty() || world.tickcount - s_lastCheck < 10)

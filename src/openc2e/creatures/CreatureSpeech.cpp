@@ -17,6 +17,7 @@
  */
 
 #include "CreatureSpeech.h"
+#include "common/devenv.h"
 
 #include "Agent.h"
 #include "Bubble.h"
@@ -47,7 +48,7 @@ const int W_EAT = 12, W_HIT = 13, W_ME = 16, W_FOOD = 22, W_NORN = 52, W_DRIVE0 
 		  W_FRIENDLY = 68, W_HURT = 69, W_PAIN = 56, W_YES = 73, W_NO = 74, W_LOOK = 75, W_VERY = 77;
 
 bool watching() {
-	static const bool watch = getenv("OPENC2E_WATCH_SPEECH") != nullptr;
+	static const bool watch = devenv("OPENC2E_WATCH_SPEECH") != nullptr;
 	return watch;
 }
 
@@ -182,7 +183,7 @@ int populationLimit() {
 	if (s_population_limit < 0) {
 		// developer aid: OPENC2E_POPULATION_LIMIT=n starts with that limit
 		// (not saved), for tests that must not touch the player's settings
-		if (const char* e = getenv("OPENC2E_POPULATION_LIMIT"))
+		if (const char* e = devenv("OPENC2E_POPULATION_LIMIT"))
 			return s_population_limit = std::max(0, atoi(e));
 		// (Zeetures: 150 until the player sets one; 0 is no limit)
 		std::string v = readSetting("population-limit");
@@ -320,7 +321,7 @@ void hearWords(Agent* speaker, const std::vector<int>& heard, int amount) {
 	// "family most")
 	oldCreature* sc = creatureOf(speaker);
 	std::string from = sc ? world.history->findMoniker(sc->getGenome()) : std::string();
-	static const bool noWatching = getenv("OPENC2E_NO_WATCHING") != nullptr; // (to compare)
+	static const bool noWatching = devenv("OPENC2E_NO_WATCHING") != nullptr; // (to compare)
 	for (auto& a : world.agents) {
 		if (!a || a.get() == speaker || a->isDying())
 			continue;

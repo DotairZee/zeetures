@@ -18,6 +18,7 @@
  */
 
 #include "Engine.h"
+#include "common/devenv.h"
 #include "MetaRoom.h"
 #include "Map.h"
 #include "AgentHelpers.h"
@@ -957,7 +958,7 @@ class blockUntilApproached : public blockCond {
 		}
 
 		if (agentsTouching(parent, it)) {
-			static const bool watch = getenv("OPENC2E_WATCH_CREATURES") != nullptr;
+			static const bool watch = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 			if (watch)
 				fmt::print("* WATCH REACHED unid {} {} {} {}\n", parent->getUNID(), (int)it->family, (int)it->genus, it->species);
 			return false;

@@ -17,6 +17,7 @@
  */
 
 #include "Exposure.h"
+#include "common/devenv.h"
 
 #include "Agent.h"
 #include "Engine.h"
@@ -62,11 +63,11 @@ const float painPerStep = 1.0f / 10.0f; // pain chemical every 10 ticks per heav
 const float wearPerStep = 0.2f; // organ injury every 10 ticks at heavy metals 255 (in proportion below)
 
 bool off() {
-	static const bool o = getenv("OPENC2E_NO_EXPOSURE") != nullptr;
+	static const bool o = devenv("OPENC2E_NO_EXPOSURE") != nullptr;
 	return o;
 }
 bool watching() {
-	static const bool w = getenv("OPENC2E_WATCH_EXPOSURE") != nullptr;
+	static const bool w = devenv("OPENC2E_WATCH_EXPOSURE") != nullptr;
 	return w;
 }
 
@@ -187,11 +188,6 @@ float fertilityFactor(const std::string& moniker) {
 	return 1.0f / (1.0f + doseOf(moniker) / fertilityDose);
 }
 
-float unbornDose(const std::string& genome) {
-	auto it = s_unborn.find(genome);
-	return it == s_unborn.end() ? 0.0f : it->second;
-}
-
 std::shared_ptr<genomeFile> atHatching(const std::string& name, std::shared_ptr<genomeFile> g) {
 	auto it = s_unborn.find(name);
 	if (off() || !g || it == s_unborn.end())
@@ -200,7 +196,7 @@ std::shared_ptr<genomeFile> atHatching(const std::string& name, std::shared_ptr<
 	s_unborn.erase(it);
 	// each share of the dose one more mutation; the remainder a chance of one
 	// (developer aid: OPENC2E_EXPOSURE_MUTATION_DOSE=N, the dose for one mutation, for tests)
-	static const float perMutation = getenv("OPENC2E_EXPOSURE_MUTATION_DOSE") ? (float)atof(getenv("OPENC2E_EXPOSURE_MUTATION_DOSE")) : mutationDose;
+	static const float perMutation = devenv("OPENC2E_EXPOSURE_MUTATION_DOSE") ? (float)atof(devenv("OPENC2E_EXPOSURE_MUTATION_DOSE")) : mutationDose;
 	float shares = dose / std::max(perMutation, 1.0f);
 	int count = (int)shares + (rand_float(0, 1) < shares - std::floor(shares) ? 1 : 0);
 	count = std::min(count, mostMutations);

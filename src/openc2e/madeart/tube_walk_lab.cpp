@@ -8,6 +8,7 @@
 // float64 and rounded back. Proof: art/tube_walk_check_lab.py.
 
 #include "tube_walk_lab.h"
+#include "common/devenv.h"
 
 #include <algorithm>
 #include <cmath>
@@ -1190,7 +1191,7 @@ namespace {
 // OPENC2E_TW_CHECK_LAB=DIR: write the check at startup and exit
 struct LabCheckAtStartup {
 	LabCheckAtStartup() {
-		const char* dir = std::getenv("OPENC2E_TW_CHECK_LAB");
+		const char* dir = devenv("OPENC2E_TW_CHECK_LAB");
 		if (!dir || !*dir)
 			return;
 		try {

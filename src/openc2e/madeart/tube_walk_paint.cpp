@@ -5,6 +5,7 @@
 // by art/tube_walk_check_paint.py (OPENC2E_TW_CHECK_PAINT=DIR).
 
 #include "tube_walk_paint.h"
+#include "common/devenv.h"
 
 #include <algorithm>
 #include <cctype>
@@ -810,11 +811,11 @@ namespace {
 // OPENC2E_TW_CHECK_PAINT=DIR: write the check at startup and exit
 struct CheckAtStartup {
 	CheckAtStartup() {
-		const char* dir = std::getenv("OPENC2E_TW_CHECK_PAINT");
+		const char* dir = devenv("OPENC2E_TW_CHECK_PAINT");
 		if (!dir || !*dir)
 			return;
 		std::string c2;
-		if (const char* g = std::getenv("OPENC2E_TW_CHECK_PAINT_C2"); g && *g)
+		if (const char* g = devenv("OPENC2E_TW_CHECK_PAINT_C2"); g && *g)
 			c2 = g;
 		else if (const char* home = std::getenv("HOME"))
 			c2 = std::string(home) + "/.steam/debian-installation/steamapps/common/Creatures The Albian Years/Creatures 2";

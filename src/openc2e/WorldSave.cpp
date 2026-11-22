@@ -23,6 +23,7 @@
  */
 
 #include "WorldSave.h"
+#include "common/devenv.h"
 #include "creatures/Disease.h"
 #include "creatures/Exposure.h"
 #include "creatures/Relationships.h"
@@ -152,7 +153,7 @@ static bool isWorldObject(Agent* a) {
 	if (t == typeid(SimpleAgent) || t == typeid(CompoundAgent))
 		return true;
 	// (developer aid: OPENC2E_NO_SAVED_MACHINES keeps them out, as before)
-	static const bool noMachines = getenv("OPENC2E_NO_SAVED_MACHINES") != nullptr;
+	static const bool noMachines = devenv("OPENC2E_NO_SAVED_MACHINES") != nullptr;
 	return !noMachines && a->sfcIndex >= 0 && isMachine(a);
 }
 
@@ -1577,7 +1578,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 	restoreInjected(injected);
 	int wmatched = 0, wremoved = 0, wmade = 0;
 	// (developer aid: OPENC2E_NO_WORLD_OBJECTS loads as before stage 3)
-	if (getenv("OPENC2E_NO_WORLD_OBJECTS"))
+	if (devenv("OPENC2E_NO_WORLD_OBJECTS"))
 		hasWorldObjects = false;
 	if (hasWorldObjects)
 		restoreWorldObjects(worldObjects, wmatched, wremoved, wmade);
