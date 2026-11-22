@@ -342,6 +342,8 @@ static void DrawC2MenuBar() {
 	static bool s_open_new_world = false;
 	static bool s_open_save_as = false;
 	static bool s_open_save_message = false;
+static std::string s_set_aside_error;
+static bool s_set_aside_was_paused = false;
 	static std::string s_save_message;
 
 	if (ImGui::BeginMenu("File")) {
@@ -743,6 +745,60 @@ static void DrawC2MenuBar() {
 		ImGui::TextUnformatted(s_save_message.c_str());
 		if (ImGui::Button("OK"))
 			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
+	}
+
+	// a save this version could not read was moved aside at the load: say so
+	// before anything else (owner, 2026-11-21), the world held still meanwhile
+	static bool s_set_aside_told = false;
+	if (WorldSave::LastSetAside().happened && !s_set_aside_told && engine.worldready) {
+		s_set_aside_told = true;
+		s_set_aside_error.clear();
+		s_set_aside_was_paused = world.paused;
+		world.paused = true;
+		ImGui::OpenPopup("Saved Game Kept Safe");
+	}
+	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	if (ImGui::BeginPopupModal("Saved Game Kept Safe", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		auto& aside = WorldSave::LastSetAside();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 34);
+		ImGui::TextWrapped("Zeetures could not read the saved game of \"%s\".", engine.currentworld.c_str());
+		ImGui::Spacing();
+		ImGui::TextWrapped("It may be damaged, or have been saved by a newer version of Zeetures. The world has started again from its original map.");
+		ImGui::Spacing();
+		if (!aside.kept.empty()) {
+			ImGui::TextWrapped("Your saved game has not been lost. It is kept in the world's folder as:");
+			ImGui::TextColored(ImVec4(1, 0.85f, 0.45f, 1), "%s", aside.kept.filename().string().c_str());
+		} else
+			ImGui::TextWrapped("Your saved game has not been lost: it is still in place, and saving is switched off so that nothing can overwrite it.");
+		if (!s_set_aside_error.empty())
+			ImGui::TextColored(ImVec4(1, 0.5f, 0.45f, 1), "%s", s_set_aside_error.c_str());
+		ImGui::PopTextWrapPos();
+		ImGui::Separator();
+		if (ImGui::Button("Quit and Put It Back")) {
+			if (WorldSave::PutBackSetAsideSave(s_set_aside_error)) {
+				engine.autosave = false; // (nothing is written over it)
+				engine.done = true;
+			}
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Closes Zeetures without saving and puts the saved game back,\nso that another version can open it.");
+		ImGui::SameLine();
+		if (ImGui::Button("Open World Folder"))
+		{
+			std::string url;
+			for (char ch : aside.worlddir.generic_string())
+				url += ch == ' ' ? std::string("%20") : std::string(1, ch);
+			// (a Windows path starts with its drive: file:///C:/...)
+			SDL_OpenURL(((url.empty() || url[0] != '/' ? "file:///" : "file://") + url).c_str());
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Carry On")) {
+			world.paused = s_set_aside_was_paused;
+			ImGui::CloseCurrentPopup();
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Plays the world from its original map.\nThe old saved game stays in the folder.");
 		ImGui::EndPopup();
 	}
 

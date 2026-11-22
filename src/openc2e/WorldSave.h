@@ -16,6 +16,15 @@ bool SaveWorldState(const std::filesystem::path& worlddir, std::string& error);
 bool LoadWorldState(const std::filesystem::path& worlddir);
 // moves a save that cannot be read out of the way (save.unreadable-DATE)
 void SetAsideUnreadableSave(const std::filesystem::path& worlddir, const std::string& why);
+// what was set aside at this load, for the message shown to the player
+struct SetAsideSave {
+	std::filesystem::path worlddir, kept; // kept: empty if it could not be moved
+	std::string why;
+	bool happened = false;
+};
+const SetAsideSave& LastSetAside();
+// puts it back as the world's save (for quitting without changing anything)
+bool PutBackSetAsideSave(std::string& error);
 // Puts the view back where it was saved (place and zoom), once the world has
 // finished starting: objects installed at load show themselves with SYS:
 // CAMT, which moved the view after LoadWorldState had restored it.

@@ -460,6 +460,7 @@ endif()
 
 add_executable(test_openc2e
 	src/openc2e/tests/CaosTest.cpp
+	src/openc2e/tests/WorldSaveTest.cpp
 )
 target_link_libraries(test_openc2e openc2e_core gtest_main)
 

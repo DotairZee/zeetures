@@ -74,6 +74,8 @@ namespace WorldSave {
 
 static constexpr const char* MAGIC = "openc2e-world-save 1";
 
+static SetAsideSave s_setAside; // (see SetAsideUnreadableSave)
+
 static fs::path stateFile(const fs::path& worlddir) {
 	return worlddir / "save" / "state.txt";
 }
@@ -688,6 +690,11 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	}
 	// write into save.new/, then swap it in, so a failed save never damages
 	// the previous one
+	// a save that could be neither read nor moved aside is never overwritten
+	if (s_setAside.happened && s_setAside.kept.empty() && s_setAside.worlddir == worlddir) {
+		error = "This world's saved game could not be read or moved, so saving is off to protect it.";
+		return false;
+	}
 	fs::path tmp = worlddir / "save.new";
 	std::error_code ec;
 	fs::remove_all(tmp, ec);
@@ -1162,6 +1169,10 @@ void ApplySavedView() {
 // by the next autosave (owner, 2026-11-21: old worlds must survive every new
 // version). It stays in the world folder as save.unreadable-DATE for a later
 // version, or a person, to recover.
+const SetAsideSave& LastSetAside() {
+	return s_setAside;
+}
+
 void SetAsideUnreadableSave(const fs::path& worlddir, const std::string& why) {
 	fs::path dest = worlddir / "save";
 	if (!fs::exists(dest))
@@ -1172,8 +1183,29 @@ void SetAsideUnreadableSave(const fs::path& worlddir, const std::string& why) {
 	fs::path aside = worlddir / (std::string("save.unreadable-") + stamp);
 	std::error_code ec;
 	fs::rename(dest, aside, ec);
-	fmt::print("* This world's save could not be read ({}); it was kept as {} and the world starts from its world file\n", why,
-		ec ? std::string("save (moving it failed: ") + ec.message() + ")" : aside.filename().string());
+	s_setAside = {worlddir, ec ? fs::path() : aside, why, true};
+	if (ec)
+		fmt::print("* This world's save could not be read ({}) nor moved aside ({}); this session will not save over it\n", why, ec.message());
+	else
+		fmt::print("* This world's save could not be read ({}); it was kept as {} and the world starts from its world file\n", why, aside.filename().string());
+}
+
+bool PutBackSetAsideSave(std::string& error) {
+	if (!s_setAside.happened || s_setAside.kept.empty())
+		return true; // (never moved: still where it was)
+	std::error_code ec;
+	fs::path dest = s_setAside.worlddir / "save";
+	if (fs::exists(dest, ec)) {
+		error = "This world has been saved since, so the old save stays where it was kept.";
+		return false;
+	}
+	fs::rename(s_setAside.kept, dest, ec);
+	if (ec) {
+		error = "Couldn't put the save back: " + ec.message();
+		return false;
+	}
+	s_setAside.kept.clear();
+	return true;
 }
 
 bool LoadWorldState(const fs::path& worlddir) {
