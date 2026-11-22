@@ -1376,6 +1376,22 @@ bool Engine::tick() {
 				}
 		if (sx == -2 && sy == -2)
 			return false;
+		// -3,-3: following a walking creature (OPENC2E_SNAPSHOT_GENUS=n:
+		// of that genus; OPENC2E_SNAPSHOT_CARRYING=1: carrying something)
+		if (sx == -3 && sy == -3) {
+			const char* g = devenv("OPENC2E_SNAPSHOT_GENUS");
+			for (auto& a : world.agents)
+				if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()); sc && (sc->isWalking() || sc->isApproaching()) && sc->facing() >= 2 && !sc->invehicle && (!g || a->genus == atoi(g)) && (!devenv("OPENC2E_SNAPSHOT_CARRYING") || a->carrying)) {
+					world.selectCreature(AgentRef(a).lock());
+					camera->trackAgent(a, 0, 0, flexible, none);
+					for (auto& snap : snapshots)
+						if (std::get<0>(snap) == -3)
+							std::get<0>(snap) = std::get<1>(snap) = -1;
+					break;
+				}
+			if (sx == -3)
+				return false;
+		}
 		if (sx == -1 && sy == -1) // -1,-1: wherever the view is
 			camx = sx, camy = sy;
 		if (sx != camx || sy != camy) {

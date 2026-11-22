@@ -472,6 +472,7 @@ static bool senileTint(float& grey, float& lift) {
 }
 
 void SkeletalCreature::skeletonInit() {
+	glide = Glide(); // (its pictures and joints may change)
 	// TODO: the exception throwing in here needs some more thought
 	// TODO: if we throw an exception when we need to kill the creature off, else segfault :/
 
@@ -645,6 +646,8 @@ void SkeletalCreature::render(RenderTarget* renderer, int xoffset, int yoffset) 
 		if (xoffset + drawnwidth + margin < 0 || xoffset - margin > renderer->getWidth() || yoffset + drawnheight + margin < 0 || yoffset - margin > renderer->getHeight())
 			return;
 	}
+	if (!displaycore && renderGliding(renderer, xoffset, yoffset))
+		return;
 	bool mirror_body_parts = (world.variables["engine_mirror_creature_body_parts"] == 1);
 
 	for (int j = 0; j < 17; j++) {
@@ -800,6 +803,7 @@ int SkeletalCreature::attachmentY(unsigned int part, unsigned int id) {
 }
 
 void SkeletalCreature::recalculateSkeleton() {
+	glideBegin();
 	int lowestx = 0, lowesty = 0, highestx = 0, highesty = 0;
 
 	for (int i = 0; i < SkeletalPartCount(); i++) {
@@ -913,6 +917,8 @@ void SkeletalCreature::recalculateSkeleton() {
 	// recalculate width/height
 	height = downfoot_left ? leftfoot : rightfoot;
 	width = 50; // TODO: arbitary values bad
+
+	glideEnd();
 
 	// what it carries goes in front of or behind it with the hand (re-sorted
 	// for drawing when that changes)
@@ -1351,6 +1357,7 @@ SkeletalCreature::PoseMemo SkeletalCreature::memoPose() const {
 	std::copy(party, party + 17, m.party);
 	m.x = x;
 	m.y = y;
+	m.glide = glide;
 	return m;
 }
 
@@ -1374,6 +1381,7 @@ void SkeletalCreature::restorePose(const PoseMemo& m) {
 	std::copy(m.party, m.party + 17, party);
 	x = m.x;
 	y = m.y;
+	glide = m.glide;
 }
 
 void SkeletalCreature::setPose(unsigned int p) {
@@ -1652,6 +1660,7 @@ void SkeletalCreature::tick() {
 		snapDownFoot();
 	else
 		downfootroom.reset();
+	glideSettle();
 }
 
 void SkeletalCreature::physicsTick() {

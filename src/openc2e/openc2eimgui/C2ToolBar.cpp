@@ -27,6 +27,7 @@
 #include "C2ScrollBars.h"
 #include "creatures/CreatureAgent.h"
 #include "creatures/Creature.h"
+#include "creatures/SkeletalCreature.h"
 #include "Camera.h"
 #include "Engine.h"
 #include "EmbeddedFiles.h"
@@ -512,6 +513,11 @@ static bool s_set_aside_was_paused = false;
 			writeFlag("smooth-scrolling", s_smooth_scrolling);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Glide to places and creatures you choose, instead of jumping");
+		bool smoothmove = SkeletalCreature::smoothMovement();
+		if (ImGui::MenuItem("Smooth Movement", nullptr, &smoothmove))
+			SkeletalCreature::setSmoothMovement(smoothmove);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Creatures move smoothly from pose to pose, instead of jumping five times a second");
 		ImGui::Separator();
 		bool hasfree = false, hasnamed = false;
 		for (auto& f : world.favoriteplaces) {

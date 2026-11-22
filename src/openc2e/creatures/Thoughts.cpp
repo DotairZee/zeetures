@@ -257,7 +257,8 @@ static void drawStates(RenderTarget* surface, int adjustx, int adjusty, int wrap
 		float cx = a->x + a->getWidth() / 2.0f;
 		float top = a->y;
 		if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()))
-			sc->headTop(cx, top);
+			if (float dx, dy; sc->headTop(cx, top) && sc->drawnHeadShift(dx, dy)) // (as drawn: SmoothMovement.cpp)
+				cx += dx, top += dy;
 		for (int pass = 0; pass < (wrapWidth > 0 ? 3 : 1); pass++) {
 			float shift = pass == 1 ? (float)wrapWidth : pass == 2 ? -(float)wrapWidth : 0.0f;
 			float sx = cx - w / 2.0f - adjustx + shift;
@@ -324,13 +325,19 @@ void draw(RenderTarget* surface, int adjustx, int adjusty, int wrapWidth, Agent*
 		int need = 16 + n * PIC + (n - 1) * GAP;
 		int size = need <= 112 ? 0 : need <= 176 ? 1 : 2;
 		float cx = c->x + c->getWidth() / 2.0f - adjustx;
-		bool leftside = cx < engine.camera->getWidth() / 2.0f;
+		// (a little to the left of the middle: a creature the camera follows
+		// is at the middle, where its bubble would go from side to side)
+		bool leftside = cx < engine.camera->getWidth() / 2.0f - 40.0f;
 		unsigned int frame = (leftside ? 27 : 24) + size;
 		int bw = (int)syst->width(frame), bh = (int)syst->height(frame);
 		for (int pass = 0; pass < (wrapWidth > 0 ? 3 : 1); pass++) {
 			float shift = pass == 1 ? (float)wrapWidth : pass == 2 ? -(float)wrapWidth : 0.0f;
 			float bx = leftside ? c->x + c->getWidth() - 2 - adjustx + shift : c->x - bw + 2 - adjustx + shift;
 			float by = c->y - bh - adjusty;
+			float dx, dy;
+			if (auto* sc = dynamic_cast<SkeletalCreature*>(c)) // (as drawn: SmoothMovement.cpp)
+				if (sc->drawnShift(dx, dy))
+					bx += dx, by += dy;
 			if (bx + bw < 0 || bx > surface->getWidth())
 				continue;
 			surface->renderCreaturesImage(*syst, frame, (int)bx, (int)by);

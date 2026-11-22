@@ -385,6 +385,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/SFCFile.cpp
 	src/openc2e/SimpleAgent.cpp
 	src/openc2e/creatures/SkeletalCreature.cpp
+	src/openc2e/creatures/SmoothMovement.cpp
 	src/openc2e/Sound.cpp
 	src/openc2e/SoundManager.cpp
 	src/openc2e/Vehicle.cpp
