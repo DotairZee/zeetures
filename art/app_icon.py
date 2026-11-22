@@ -321,14 +321,18 @@ def mind_egg(bgkind, tilt=0.35, rim=(196, 140, 176), rimw=0.035, outline=(110, 4
     ol = egg_points(cx, cy, a + Z * 0.012, b + Z * 0.012, tilt=tilt)
     ImageDraw.Draw(img).polygon(ol, fill=outline + (255,))
     shell = Image.new('RGBA', (Z, Z), (0, 0, 0, 0))
-    lx = cx if symmetric else cx + Z * 0.05
-    shell.paste(radial(Z, (lx, cy - Z * 0.1), Z * 0.5, rim + (255,), tuple(max(0, v - 40) for v in rim) + (255,)), (0, 0), om)
+    # (symmetric and tilted, as F8: the light, the core and the highlight
+    # turn with the egg; at tilt 0 these are the upright egg's own places)
+    lx = cx + math.sin(tilt) * Z * 0.1 if symmetric else cx + Z * 0.05
+    ly = cy - math.cos(tilt) * Z * 0.1 if symmetric else cy - Z * 0.1
+    shell.paste(radial(Z, (lx, ly), Z * 0.5, rim + (255,), tuple(max(0, v - 40) for v in rim) + (255,)), (0, 0), om)
     img = Image.alpha_composite(img, shell)
     # the core: the shell less its rim, lower-left of center as the current icon's
-    icx = cx if symmetric else cx - Z * 0.012
-    inner = egg_points(icx, cy + Z * 0.02, a * (1 - rimw * 4), b * (1 - rimw * 3), tilt=tilt)
+    icx = cx - math.sin(tilt) * Z * 0.02 if symmetric else cx - Z * 0.012
+    icy = cy + math.cos(tilt) * Z * 0.02 if symmetric else icy
+    inner = egg_points(icx, icy, a * (1 - rimw * 4), b * (1 - rimw * 3), tilt=tilt)
     im_ = mask_from(inner, Z).filter(ImageFilter.GaussianBlur(Z * 0.006))
-    glow = radial(Z, (cx if symmetric else cx - Z * 0.02, cy + Z * 0.06), b * 1.05, core[0] + (255,), core[1] + (255,))
+    glow = radial(Z, (cx - math.sin(tilt) * Z * 0.06 if symmetric else cx - Z * 0.02, cy + math.cos(tilt) * Z * 0.06), b * 1.05, core[0] + (255,), core[1] + (255,))
     egg = Image.new('RGBA', (Z, Z), (0, 0, 0, 0))
     egg.paste(glow, (0, 0), im_)
     d = ImageDraw.Draw(egg)
@@ -338,9 +342,9 @@ def mind_egg(bgkind, tilt=0.35, rim=(196, 140, 176), rimw=0.035, outline=(110, 4
     # branch whose end, with its width and a margin, would fall outside a
     # copy of the inner egg drawn smaller is shortened, or not grown
     inner_a, inner_b = a * (1 - rimw * 4), b * (1 - rimw * 3)
-    keep_in = mask_from(egg_points(icx, cy + Z * 0.02, inner_a * 0.9, inner_b * 0.92, tilt=tilt), Z)
+    keep_in = mask_from(egg_points(icx, icy, inner_a * 0.9, inner_b * 0.92, tilt=tilt), Z)
     if region is not None:
-        keep_in = ImageChops.multiply(keep_in, region(Z, icx, cy + Z * 0.02, inner_a, inner_b))
+        keep_in = ImageChops.multiply(keep_in, region(Z, icx, icy, inner_a, inner_b))
 
     def inside(x, y, r):
         for ox, oy in ((0, 0), (r, 0), (-r, 0), (0, r), (0, -r)):
@@ -421,7 +425,7 @@ def mind_egg(bgkind, tilt=0.35, rim=(196, 140, 176), rimw=0.035, outline=(110, 4
             # its right, so it is natural but balanced; owner, 2026-11-20)
             tree_layer = Image.new('RGBA', (Z, Z), vein[:3] + (0,))
             d = ImageDraw.Draw(tree_layer)
-        tree(Z, icx, cy + Z * 0.02, a * (1 - rimw * 4), b * (1 - rimw * 3), seg, crown, inside, rng, draw=d, vein=vein)
+        tree(Z, icx, icy, a * (1 - rimw * 4), b * (1 - rimw * 3), seg, crown, inside, rng, draw=d, vein=vein)
         if mirror:
             mid = int(round(icx))
             left = tree_layer.crop((0, 0, mid, Z))
@@ -450,7 +454,7 @@ def mind_egg(bgkind, tilt=0.35, rim=(196, 140, 176), rimw=0.035, outline=(110, 4
 
         def oseg(x, y, x2, y2, w):
             od.line([(x, y), (x2, y2)], fill=vein, width=max(SS, int(w)))
-        over(Z, icx, cy + Z * 0.02, a * (1 - rimw * 4), b * (1 - rimw * 3), oseg)
+        over(Z, icx, icy, a * (1 - rimw * 4), b * (1 - rimw * 3), oseg)
         # (the line runs a little way under the shell; then the shell's dark
         # inner edge, taken from the picture before the line, is laid back
         # on top, so the edge crosses the line, not the line the edge;
@@ -470,7 +474,7 @@ def mind_egg(bgkind, tilt=0.35, rim=(196, 140, 176), rimw=0.035, outline=(110, 4
     hl = Image.new('RGBA', (Z, Z), (255, 246, 250, 0))
     hx, hy = cx + math.sin(tilt) * b * 0.35 - a * 0.45, cy - math.cos(tilt) * b * 0.42
     if symmetric:
-        hx, hy = cx, cy - b * 0.62
+        hx, hy = cx + math.sin(tilt) * b * 0.62, cy - math.cos(tilt) * b * 0.62
     hm = Image.new('L', (Z, Z), 0)
     ImageDraw.Draw(hm).ellipse((hx - Z * 0.04, hy - Z * 0.06, hx + Z * 0.03, hy + Z * 0.04), fill=55)
     hl.putalpha(hm.filter(ImageFilter.GaussianBlur(Z * 0.015)))
@@ -783,6 +787,29 @@ def pulse_no_heart(*args, **kw):
 pulse_no_heart.over_shell = pulse_ends
 
 
+def pulse_level(tilt):
+    """The heartbeat for an egg tipped by tilt (radians): the line stays
+    level, and its beat sits at the middle of the core's width at the line's
+    height (owner, 2026-11-21: "reorient the heartbeat inside of it so it is
+    still level")."""
+    def middle(x0, y0, a, b):
+        yl = y0 + b * 0.12
+        pts = egg_points(x0, y0, a, b, tilt=tilt, n=1440)
+        xs = []
+        for (xa, ya), (xb, yb) in zip(pts, pts[1:] + pts[:1]):
+            if (ya - yl) * (yb - yl) <= 0 and ya != yb:
+                xs.append(xa + (xb - xa) * (yl - ya) / (yb - ya))
+        return (min(xs) + max(xs)) / 2 if xs else x0
+
+    def beat(Z, x0, y0, a, b, seg, crown, inside, rng, draw=None, vein=None, **kw):
+        return tree_pulse(Z, middle(x0, y0, a, b), y0, a, b, seg, crown, inside, rng, draw=draw, vein=vein, heart=False, ends=False)
+
+    def ends(Z, x0, y0, a, b, seg):
+        return pulse_ends(Z, middle(x0, y0, a, b), y0, a, b, seg)
+    beat.over_shell = ends
+    return beat
+
+
 def tree_pulse(Z, x0, y0, a, b, seg, crown, inside, rng, draw=None, vein=None, heart=True, ends=True, **kw):
     """A heartbeat: a pulse line across the egg, a small heart above it."""
     yl = y0 + b * 0.12
@@ -840,6 +867,9 @@ VARIATIONS = {
     'F6': ('Heartbeat', lambda: mind_egg(None, tilt=0.0, rim=(204, 150, 190), core=((255, 236, 236), (230, 140, 170)), symmetric=True, tree=tree_pulse, foot=False)),
     'G0': ('Empty', lambda: mind_egg(None, tilt=0.0, rim=(204, 150, 190), core=((255, 236, 236), (230, 140, 170)), symmetric=True, tree=lambda *a, **k: None, foot=False)),
     'F7': ('Heartbeat, no heart', lambda: mind_egg(None, tilt=0.0, rim=(204, 150, 190), core=((255, 236, 236), (230, 140, 170)), symmetric=True, tree=pulse_no_heart, foot=False)),
+    # F7 tipped 16 degrees, top to the right, the line still level (owner,
+    # 2026-11-21, from the logo mockups: the egg "tipped as if rolling")
+    'F8': ('Heartbeat, tipped', lambda: mind_egg(None, tilt=math.radians(16), rim=(204, 150, 190), core=((255, 236, 236), (230, 140, 170)), symmetric=True, tree=pulse_level(math.radians(16)), foot=False)),
 }
 
 
@@ -906,9 +936,10 @@ def files(out, key):
     print('wrote zeetures.png, .ico, .icns and zeetures_128.png in', out)
 
 
-# the design in use (owner, 2026-11-20): the heartbeat egg without its heart,
+# the design in use (owner, 2026-11-21): F7 tipped, its heartbeat level;
+# before that (2026-11-20) F7 upright: the heartbeat egg without its heart,
 # the pulse line running under the shell's inner edge
-CHOSEN = 'F7'
+CHOSEN = 'F8'
 
 
 def window_icon_header(icon, path):

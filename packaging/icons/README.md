@@ -1,10 +1,10 @@
 # Zeetures's program icons
 
 The icon is an egg with a heartbeat: a pale pink core glowing inside a mauve
-shell with a plum outline, and a pulse line across the core whose ends run
-under the shell's inner edge. It is drawn from scratch, with no game art, by
-`art/app_icon.py` (design F7 there; the other designs tried are in the same
-file).
+shell with a plum outline, tipped a little to the right as if rolling, and a
+level pulse line across the core whose ends run under the shell's inner edge.
+It is drawn from scratch, with no game art, by `art/app_icon.py` (design F8
+there, F7 tipped 16 degrees; the other designs tried are in the same file).
 
 - `zeetures.png` (256 x 256): Linux (the AppImage and its menu entry)
 - `zeetures.ico` (16 to 256): Windows (Zeetures.exe, the installer, shortcuts)
