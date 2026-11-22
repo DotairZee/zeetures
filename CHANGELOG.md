@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 628 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 629 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.28.4](#version-0284): 1 commits, 22 November 2026
 - [0.28.3](#version-0283): 4 commits, 22 November 2026
 - [0.28.2](#version-0282): 1 commits, 22 November 2026
 - [0.28.1](#version-0281): 5 commits, 21 November 2026
@@ -72,6 +73,29 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.28.4
+
+Spring and summer fruit that feeds: hatchlings no longer starve on a full stomach in a new world.
+
+### 22 November 2026
+
+#### Version 0.28.4: spring and summer fruit that feeds
+
+[`5e88e479`](https://github.com/DotairZee/zeetures/commit/5e88e479498ff6d4e91897e23f67ab89cf3fddab)
+
+Hatchlings starved in new worlds (reported by players, 22 November 2026).
+The seasonal bushes' fruit is most of what they eat, and the spring and
+summer fruits gave only glucose, 60 and 90, where a fruit of the game gives
+about 100 starch, each worth 12 glucose to a norn's body: they ate dozens
+each, stayed at Hunger 255 and died once their stores ran out, about an
+hour old. A new world starts in spring. Both fruits now also give starch
+and a little fat and protein, about 1,500 and 1,800 glucose in all, still
+the lightest of the four seasons.
+
+Twelve norns hatched at the incubator, a fast game week: 7 of 14 creatures
+starved before; none in three runs with this, with 60 to 144 matings and 2
+to 9 conceptions each.
 
 ## Version 0.28.3
 

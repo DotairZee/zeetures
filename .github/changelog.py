@@ -303,6 +303,8 @@ VERSIONS = [
      "The first players' reports fixed: display scaling on Windows, speaking after naming a world, creatures that "
      "grew up unable to breed, sleep broken off within seconds, a crash at some births, and clearer wording of what "
      "a creature is doing."),
+    ("0.28.4", "5e88e479",
+     "Spring and summer fruit that feeds: hatchlings no longer starve on a full stomach in a new world."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
