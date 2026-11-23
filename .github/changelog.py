@@ -336,6 +336,8 @@ VERSIONS = [
      "Creatures eat before bed, and hunger no longer cuts a sleep short; the horizontal scroll bar goes round with the world."),
     ("0.33.3", "52b45fdc",
      "The incubator's waterfall calms instead of lulling creatures to sleep; eyes shut while a creature is out cold; a larger icon."),
+    ("0.33.4", "34984e9e",
+     "Raindrops stuck against rocks are cleared away."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
