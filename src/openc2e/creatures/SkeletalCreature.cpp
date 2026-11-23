@@ -1572,7 +1572,9 @@ void SkeletalCreature::tick() {
 	}
 	PROFILE_SCOPE("creature: body (blink, walk, pose)");
 
-	eyesclosed = creature->isAsleep() || !creature->isAlive();
+	// (and out cold, for as long as it is: owner, 2026-11-22)
+	auto* oc = dynamic_cast<oldCreature*>(creature);
+	eyesclosed = creature->isAsleep() || !creature->isAlive() || (oc && oc->isUnconscious());
 
 	// blink every 3-8 seconds (C2 ticks 10 times a second), eyes shut for
 	// about a fifth of a second (the head picture is chosen when drawing)

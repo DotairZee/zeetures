@@ -338,8 +338,20 @@ def window_icon_header(icon, path):
         f.write('\n'.join(rows) + '\n};\n')
 
 
+def framed(icon, margin=0.02):
+    """The egg as large as the square allows, a small margin round it
+    (owner, 2026-11-22: notably smaller than its neighbours in the taskbar;
+    the egg filled 84% of the height and 69% of the width)."""
+    box = icon.split()[-1].getbbox()
+    egg = icon.crop(box)
+    side = int(round(max(egg.size) / (1 - 2 * margin)))
+    out = Image.new('RGBA', (side, side), (0, 0, 0, 0))
+    out.paste(egg, ((side - egg.width) // 2, (side - egg.height) // 2), egg)
+    return out.resize(icon.size, Image.LANCZOS)
+
+
 def install(root):
-    icon = VARIATIONS[CHOSEN][1]()
+    icon = framed(VARIATIONS[CHOSEN][1]())
     icons = os.path.join(root, 'packaging', 'icons')
     icon.resize((256, 256), Image.LANCZOS).save(os.path.join(icons, 'zeetures.png'))
     icon.resize((256, 256), Image.LANCZOS).save(os.path.join(icons, 'zeetures.ico'),
