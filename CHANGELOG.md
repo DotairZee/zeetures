@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 644 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 645 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [0.33.2](#version-0332): 1 commits, 22 November 2026
+- [0.33.2](#version-0332): 2 commits, 22 November 2026
 - [0.33.1](#version-0331): 2 commits, 22 November 2026
 - [0.33.0](#version-0330): 3 commits, 22 November 2026
 - [0.32.1](#version-0321): 1 commits, 22 November 2026
@@ -87,9 +87,25 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 
 ## Version 0.33.2
 
-Creatures eat before bed, and hunger no longer cuts a sleep short.
+Creatures eat before bed, and hunger no longer cuts a sleep short; the horizontal scroll bar goes round with the world.
 
 ### 22 November 2026
+
+#### The horizontal scroll bar goes round with the world
+
+[`726e7673`](https://github.com/DotairZee/zeetures/commit/726e7673a05f8cd8d82c5ee4bcfd4c0d03c84786)
+
+Owner, 2026-11-22: the horizontal scroll bar looked too big, sat still for
+a long stretch of the map, took a long time to cross to the other side
+going east and leapt there at once going west. Albia wraps east to west,
+but the bar was drawn as for a world with ends: the thumb stopped a view's
+width before the world's end (where the camera goes on to the join), and
+crossing the join west jumped it from one end to the other. For a world
+that wraps the track is now the whole circle, the thumb the view's share
+of it, run off one end and on at the other across the join; dragging
+either piece works, and dragging wraps. Checked at zoom 50%, 100% and 200%
+at seven places each: thumb about 30%, 15% and 8% of the track, moving
+the whole way. Worlds that do not wrap are as before.
 
 #### Version 0.33.2: eat before bed, and let sleep finish
 
