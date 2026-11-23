@@ -403,6 +403,7 @@ class c2Creature : public oldCreature {
 	void updateConsciousness();
 
   public:
+	unsigned char sense(int i) const { return i >= 0 && i < 14 ? senses[i] : 0; } // (developer aids)
 	void setUnconscious(bool u) override; // faints now, or brings round (UNCS)
 
 	// Bringing back the newly dead (the Science Kit's Syringe; owner,

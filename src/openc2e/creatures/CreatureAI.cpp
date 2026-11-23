@@ -149,9 +149,9 @@ void oldCreature::tickBrain() {
 	// developer aid: OPENC2E_WATCH_MONIKER=XXXX prints that creature's sleep
 	// and body every 50 ticks
 	if (static const char* wm = devenv("OPENC2E_WATCH_MONIKER"); wm && ticks % 50 == 0 && world.history && world.history->findMoniker(genome) == wm)
-		fmt::print("* WATCH {} t{}: asleep {} unconscious {} script {} {} sleepy {} tired {} hunger {} chem41 {} ATP {} at {:.0f},{:.0f}\n", wm, world.tickcount,
+		fmt::print("* WATCH {} t{}: asleep {} unconscious {} script {} {} sleepy {} tired {} hunger {} chem41 {} chem24 {} light {} tod {} ATP {} at {:.0f},{:.0f}\n", wm, world.tickcount,
 			asleep, unconscious, parentagent->getLastScript(), parentagent->vmStopped() ? "stopped" : "running", (int)getChemical(7), (int)getChemical(6),
-			(int)getChemical(3), (int)getChemical(41), (int)getChemical(99), parentagent->x, parentagent->y);
+			(int)getChemical(3), (int)getChemical(41), (int)getChemical(24), dynamic_cast<c2Creature*>(this) ? (int)dynamic_cast<c2Creature*>(this)->sense(4) : -1, world.timeofday, (int)getChemical(99), parentagent->x, parentagent->y);
 	// developer aid: OPENC2E_WATCH_SLEEP prints each falling asleep and waking,
 	// with the body's hunger, tiredness and sleepiness (0-255) at the time
 	if (static const bool watchSleep = devenv("OPENC2E_WATCH_SLEEP") != nullptr; watchSleep && asleep != sleepseen) {

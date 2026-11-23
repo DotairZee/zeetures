@@ -33,14 +33,22 @@
 * Sleepiness over 150. The reflex now sleeps as event 41 does: a stimulus
 * every 27 ticks until Sleepiness is below 10, or about five minutes; the
 * mind still wakes it for a pressing need (wakeReason).
+*
+* Both sleep scripts give the sleep stimulus every 27 ticks (as before),
+* until Sleepiness is below 10, or at most 120 times (about five minutes).
+* (2026-11-22: creatures at the incubator slept nearly all the time; the
+* cause was the waterfall by its pond, script-patches.txt. Stimulating sleep
+* every 8 or 15 ticks was tried: creatures slept 5% or 9% of the time, 11%
+* at 27, so the game's own pace stays.)
 scrp 4 2 0 41
   doif driv 6 gt 96
     impt 15 pose 58 aslp 1
+    setv var1 0
     loop
-      wait 15 stm# writ targ 22
-      impt 5 wait 40
-      impt 15 stm# writ targ 22
-    untl driv 6 lt 10
+      impt 15 wait 27 stm# writ targ 22
+      addv var1 1
+      doif driv 6 lt 10 setv var1 120 endi
+    untl var1 ge 120
     impt 1 wait 20
     aslp 0
   else
@@ -56,11 +64,12 @@ endm
 scrp 4 3 0 41
   doif driv 6 gt 96
     impt 15 pose 58 aslp 1
+    setv var1 0
     loop
-      wait 15 stm# writ targ 22
-      impt 5 wait 40
-      impt 15 stm# writ targ 22
-    untl driv 6 lt 10
+      impt 15 wait 27 stm# writ targ 22
+      addv var1 1
+      doif driv 6 lt 10 setv var1 120 endi
+    untl var1 ge 120
     impt 1 wait 20
     aslp 0
   else
@@ -76,11 +85,12 @@ endm
 scrp 4 1 0 41
   doif driv 6 gt 96
     impt 15 pose 58 aslp 1
+    setv var1 0
     loop
-      wait 15 stm# writ targ 22
-      impt 5 wait 40
-      impt 15 stm# writ targ 22
-    untl driv 6 lt 10
+      impt 15 wait 27 stm# writ targ 22
+      addv var1 1
+      doif driv 6 lt 10 setv var1 120 endi
+    untl var1 ge 120
     impt 1 wait 20
     aslp 0
   else
@@ -99,12 +109,10 @@ scrp 4 1 0 69
   aslp 1
   setv var0 0
   loop
-    impt 15 pose 58 wait 15 stm# writ targ 22
-    impt 5 wait 40
-    impt 15 stm# writ targ 22
+    impt 15 pose 58 wait 27 stm# writ targ 22
     addv var0 1
-    doif driv 6 lt 10 setv var0 60 endi
-  untl var0 ge 60
+    doif driv 6 lt 10 setv var0 120 endi
+  untl var0 ge 120
   impt 1 wait 20
   aslp 0
 endm
@@ -114,12 +122,10 @@ scrp 4 2 0 69
   aslp 1
   setv var0 0
   loop
-    impt 15 pose 58 wait 15 stm# writ targ 22
-    impt 5 wait 40
-    impt 15 stm# writ targ 22
+    impt 15 pose 58 wait 27 stm# writ targ 22
     addv var0 1
-    doif driv 6 lt 10 setv var0 60 endi
-  untl var0 ge 60
+    doif driv 6 lt 10 setv var0 120 endi
+  untl var0 ge 120
   impt 1 wait 20
   aslp 0
 endm
@@ -129,12 +135,10 @@ scrp 4 3 0 69
   aslp 1
   setv var0 0
   loop
-    impt 15 pose 58 wait 15 stm# writ targ 22
-    impt 5 wait 40
-    impt 15 stm# writ targ 22
+    impt 15 pose 58 wait 27 stm# writ targ 22
     addv var0 1
-    doif driv 6 lt 10 setv var0 60 endi
-  untl var0 ge 60
+    doif driv 6 lt 10 setv var0 120 endi
+  untl var0 ge 120
   impt 1 wait 20
   aslp 0
 endm

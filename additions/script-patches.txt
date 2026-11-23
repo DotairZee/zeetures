@@ -233,3 +233,14 @@ replace dpas part 2 pose 0 tick 15
 scrp 2 2 21 1
 find setv var8 cmrx setv var9 cmry new: cbub anou 16 0 5
 replace setv actv 0 stop setv var8 cmrx setv var9 cmry new: cbub anou 16 0 5
+
+* The waterfall by the incubator's pond (2 3 1, scenery) calls out to the
+* creatures near it every five seconds: Fear Decrease 30 and Sleepiness
+* Increase 50. The creatures that gather at the incubator slept most of the
+* time (owner's screencast, 2026-11-22: a norn there asleep, on and on, at
+* 10x): in a copy of the owner's world 164 such calls in 3,000 ticks, against
+* about 75 the sleep script's stimulus could undo. It still calms; its
+* sleepiness is a fifth of what it was.
+scrp 2 3 1 9
+find stim shou 10 255 0 0 44 30 24 50
+replace stim shou 10 255 0 0 44 30 24 10
