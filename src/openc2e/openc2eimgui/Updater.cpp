@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cfloat>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -58,8 +59,12 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#include <shellapi.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
+// (after windows.h, which it needs)
+#include <shellapi.h>
 #else
 #include <unistd.h>
 #endif
@@ -173,7 +178,7 @@ bool curl(const std::string& url, const fs::path& to, int seconds) {
 	fs::remove(to, ec);
 #ifdef _WIN32
 	auto wide = [](const std::string& s) { return std::wstring(s.begin(), s.end()); };
-	std::wstring cmd = fmt::format(L"curl.exe -fsSL --max-time {} -A Zeetures -o \"", seconds) + to.wstring() + L"\" \"" + wide(url) + L"\"";
+	std::wstring cmd = L"curl.exe -fsSL --max-time " + std::to_wstring(seconds) + L" -A Zeetures -o \"" + to.wstring() + L"\" \"" + wide(url) + L"\"";
 	int rc = -1;
 	STARTUPINFOW si{};
 	si.cb = sizeof(si);
@@ -378,7 +383,7 @@ void startThread(void (*job)()) {
 }
 
 std::string sizeText(uint64_t n) {
-	return n >= 1024 * 1024 ? fmt::format("{:.0f} MB", n / (1024.0 * 1024.0)) : fmt::format("{:.0f} KB", std::max(1.0, n / 1024.0));
+	return n >= 1024 * 1024 ? fmt::format("{:.0f} MB", n / (1024.0 * 1024.0)) : fmt::format("{:.0f} KB", (std::max)(1.0, n / 1024.0));
 }
 
 void drawWindow() {
