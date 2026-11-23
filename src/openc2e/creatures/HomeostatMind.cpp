@@ -247,6 +247,16 @@ struct Params {
 	// time: the sleep script's stimuli felt restful, its drives never fell,
 	// and it never went looking for food.)
 	float starveAwake = 0.85f, exhausted = 0.97f;
+	// Eat before bed (owner, 2026-11-22: no cycle of being woken by hunger
+	// before a full sleep; "creatures should aim to avoid sleep until they
+	// have enough food"). A copy of the owner's world: of 49 sleeps hunger
+	// cut short, the sleeper had gone to bed at hunger 76% (the median) and
+	// was woken at 85%, while a whole sleep raises hunger only about 3%. So a
+	// sleepy creature at bedtimeHunger or more does not sleep, nor drop off
+	// where it stands, until it has eaten, unless exhausted; and once asleep,
+	// hunger wakes it only when its sleepiness is down to sleepFirst, or it
+	// is truly starving (starvingWake).
+	float bedtimeHunger = 0.6f, sleepFirst = 0.15f, starvingWake = 0.95f;
 	int maxObjectEpisodeTicks = 150; // actions on an object (walk there, then act): at most this long
 	int stallTicks = 25; // ...and given up if not getting closer for this long
 	float habituationRate = 0.7f; // multiplier after an uneventful interaction
@@ -1124,6 +1134,8 @@ class HomeostatMind : public CreatureMind {
 			pendingPassOver = AgentRef();
 		}
 		std::array<float, NUM_DRIVES> d = normalize(p.drives);
+		bodyHunger = d[HUNGER]; // (as the body has them, before the season and anticipation)
+		bodySleepy = d[SLEEPY];
 		// Autumn appetite (owner, 2026-11-16: "should they eat more in autumn
 		// to get through winter?"; the strength inherited, Temperament.h,
 		// SeasonalRhythm): in autumn hunger is felt as if a share of the way
@@ -1473,7 +1485,7 @@ class HomeostatMind : public CreatureMind {
 		// hunger, water, or a place or need that has just woken it keep it
 		// from dropping off where it stands, as they keep it from choosing
 		// sleep (it dropped off and was woken again every second or so)
-		out.resistSleep = p.tick < wokenUntil || badSleepAt(p) || starvingAwake(d) || (p.inWater && !p.breathesWater);
+		out.resistSleep = p.tick < wokenUntil || badSleepAt(p) || starvingAwake(d) || bedtimeHungry(d) || (p.inWater && !p.breathesWater);
 
 		// Dropped off where it stood: a very sleepy body's own reflex (event
 		// 69, which interrupts whatever it was doing). It is a sleep like any
@@ -1499,6 +1511,7 @@ class HomeostatMind : public CreatureMind {
 			episodeStartX = startX = p.x;
 			episodeStartY = startY = p.y;
 			startDrives = sleepStartDrives = d;
+			bedHunger = bodyHunger;
 			startD = D;
 			felt.fill(0.0f);
 			feltAny.fill(false);
@@ -1693,7 +1706,7 @@ class HomeostatMind : public CreatureMind {
 
 		// Choose the next action.
 		std::vector<Candidate> candidates = evaluate(p, d, D);
-		if (p.tick < noSleepUntil || badSleepAt(p) || (p.inWater && !p.breathesWater) || starvingAwake(d)) // (never sleep in water, unless it breathes it)
+		if (p.tick < noSleepUntil || badSleepAt(p) || (p.inWater && !p.breathesWater) || starvingAwake(d) || bedtimeHungry(d)) // (never sleep in water, unless it breathes it)
 			candidates.erase(std::remove_if(candidates.begin(), candidates.end(),
 								 [&](const Candidate& c) { return c.category < 0 && c.decision == prm.sleepDecision; }),
 				candidates.end());
@@ -1821,6 +1834,7 @@ class HomeostatMind : public CreatureMind {
 		feltAny.fill(false);
 		if (chooseSleep)
 			sleepStartDrives = d;
+			bedHunger = bodyHunger;
 
 		if (choice.category >= 0)
 			out.attentionCategory = choice.category;
@@ -2538,6 +2552,8 @@ class HomeostatMind : public CreatureMind {
 	std::array<float, NUM_DRIVES> sleepStartDrives{};
 	unsigned int noSleepUntil = 0;
 	unsigned int wokenUntil = 0; // (woken by an urgent need: awake until then)
+	float bodyHunger = 0, bodySleepy = 0; // the body's own, this tick (0-1), before anticipation
+	float bedHunger = 0; // the body's hunger as it went to sleep
 	bool fellAsleep = false; // during the current sleep episode
 	bool sleepRefused = false; // the episode ending now was a refused sleep
 	float badSleepX = 0, badSleepY = 0; // where a sleep was cut short by cold or heat
@@ -2622,19 +2638,35 @@ class HomeostatMind : public CreatureMind {
 	bool starvingAwake(const std::array<float, NUM_DRIVES>& d) const {
 		return d[HUNGER] >= prm.starveAwake && d[SLEEPY] < prm.exhausted && d[TIRED] < prm.exhausted;
 	}
+	// too hungry to go to bed yet: eat first (see prm.bedtimeHunger). The
+	// body's own hunger, not hunger as anticipation makes it felt
+	bool bedtimeHungry(const std::array<float, NUM_DRIVES>& d) const {
+		static const bool off = devenv("OPENC2E_NO_BEDTIME_MEAL") != nullptr; // (to compare)
+		return !off && bodyHunger >= prm.bedtimeHunger && d[SLEEPY] < prm.exhausted && d[TIRED] < prm.exhausted;
+	}
+	// asleep: may hunger wake it yet? Not before the sleep has done most of
+	// its work, unless it is starving outright
+	bool hungerMayWake() const {
+		static const bool off = devenv("OPENC2E_NO_BEDTIME_MEAL") != nullptr;
+		// (starving already at bedtime, an exhausted creature, sleeps on: woken
+		// at once it dropped off again within seconds, again and again)
+		return off || bodySleepy <= prm.sleepFirst || (bodyHunger >= prm.starvingWake && bedHunger < prm.starvingWake);
+	}
 
 	// A bodily need that has risen sharply since falling asleep (hunger,
 	// cold, pain from a slap...), or -1. Boredom or loneliness do not wake.
 	int wakeReason(const std::array<float, NUM_DRIVES>& d) const {
 		int worst = -1;
 		for (int i : {PAIN, HUNGER, COLD, HOT, FEAR, INJURY, SUFFOCATE, THIRST}) {
+			if (i == HUNGER && !hungerMayWake())
+				continue;
 			if (d[i] >= prm.wakeLevel && d[i] - sleepStartDrives[i] >= prm.wakeRise && (worst < 0 || d[i] > d[worst]))
 				worst = i;
 		}
 		// starving and no longer near exhaustion: hunger wakes it (see
 		// starveAwake; one that slept because exhausted was woken as soon as
 		// it was a hair less so)
-		if (worst < 0 && starvingAwake(d) && std::max(d[SLEEPY], d[TIRED]) < prm.exhausted - prm.wakeRise)
+		if (worst < 0 && starvingAwake(d) && std::max(d[SLEEPY], d[TIRED]) < prm.exhausted - prm.wakeRise && hungerMayWake())
 			worst = HUNGER;
 		return worst;
 	}

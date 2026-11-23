@@ -115,6 +115,7 @@ class oldCreature : public Creature {
 	virtual unsigned char getDrive(unsigned int id) = 0;
 	bool resistsleep = false; // the mind fights off the falling-asleep reflex (MindOutput)
 	bool sleepseen = false; // (OPENC2E_WATCH_SLEEP)
+	unsigned int strayAsleepTicks = 0; // asleep with no sleep script running (CreatureAI.cpp)
 	unsigned int sleepseenat = 0;
 
 	void handleStimulus(unsigned int id);

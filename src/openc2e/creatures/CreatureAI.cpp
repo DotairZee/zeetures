@@ -1750,6 +1750,23 @@ void oldCreature::tickMind() {
 	}
 
 	resistsleep = out.resistSleep;
+	// Asleep with no sleep going on (2026-11-22): a sleep script cut short
+	// by another script (a shiver, a walk) never gets to its ASLP 0, and the
+	// creature slept on with no sleep stimuli, its Sleepiness never falling,
+	// for up to 20 minutes (a copy of the owner's world). Asleep for 5 s with
+	// neither of the sleep scripts (41, 69) running: it wakes.
+	if (asleep && engine.version == 2) {
+		int sc = parentagent->getLastScript();
+		bool sleeping = !parentagent->vmStopped() && (sc == 41 || sc == 69);
+		strayAsleepTicks = sleeping ? 0 : strayAsleepTicks + 1;
+		if (strayAsleepTicks >= 13) { // (mind ticks, every 4 world ticks: about 5 s)
+			strayAsleepTicks = 0;
+			setAsleep(false);
+			if (devenv("OPENC2E_WATCH_SLEEP"))
+				fmt::print("* WATCH SLEEP unid {}: asleep with no sleep script running (script {}): woken\n", parentagent->getUNID(), sc);
+		}
+	} else
+		strayAsleepTicks = 0;
 	if (out.sleep == 1 && !asleep)
 		setAsleep(true);
 	else if (out.sleep == 0 && asleep)
