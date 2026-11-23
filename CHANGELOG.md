@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 640 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 641 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [0.33.0](#version-0330): 2 commits, 22 November 2026
+- [0.33.0](#version-0330): 3 commits, 22 November 2026
 - [0.32.1](#version-0321): 1 commits, 22 November 2026
 - [0.32.0](#version-0320): 1 commits, 22 November 2026
 - [0.31.0](#version-0310): 1 commits, 22 November 2026
@@ -88,6 +88,14 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Zeetures updates itself from inside the game, with switches for checking and for installing automatically; Backspace no longer leaves a block in typed words.
 
 ### 22 November 2026
+
+#### Windows installer: a comment out of the \[Code\] section
+
+[`0504ceaf`](https://github.com/DotairZee/zeetures/commit/0504ceaf7167cf9d4572e9b958b7f5954b52990f)
+
+The note on uninstalling (a ';' comment) came after the new \[Code\]
+section, where Pascal read it as code: 'BEGIN expected', and the 0.33.0
+nightly kept the old installer. It goes before \[Code\] now.
 
 #### Updater: build on Windows
 
