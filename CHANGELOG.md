@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 641 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 642 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [Unreleased](#unreleased): 1 commits, 22 November 2026
 - [0.33.0](#version-0330): 3 commits, 22 November 2026
 - [0.32.1](#version-0321): 1 commits, 22 November 2026
 - [0.32.0](#version-0320): 1 commits, 22 November 2026
@@ -82,6 +83,23 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Unreleased
+
+Changes since the last version.
+
+### 22 November 2026
+
+#### AddressSanitizer off unless asked for (OPENC2E_ASAN=ON)
+
+[`546a3443`](https://github.com/DotairZee/zeetures/commit/546a344389918b8d7574a59b8925674d5b064e57)
+
+Upstream has it on by default. Players who build Zeetures themselves got a
+game several times slower, and its list of memory still held at exit
+(mostly the graphics driver's) read as a crash: a player on Discord took
+it so, 2026-11-22, with upstream openc2e. The test workflow turns it on
+for its 64-bit builds; the packages already had it off. README's build
+steps no longer need the switch.
 
 ## Version 0.33.0
 
