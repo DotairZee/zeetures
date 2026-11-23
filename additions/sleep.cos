@@ -37,7 +37,7 @@
 * Both sleep scripts give the sleep stimulus every 27 ticks (as before),
 * until Sleepiness is below 10, or at most 120 times (about five minutes).
 * (2026-11-22: creatures at the incubator slept nearly all the time; the
-* cause was the waterfall by its pond, script-patches.txt. Stimulating sleep
+* cause was the waterfall by its pond, script-patches.txt (it calms only, now). Stimulating sleep
 * every 8 or 15 ticks was tried: creatures slept 5% or 9% of the time, 11%
 * at 27, so the game's own pace stays.)
 scrp 4 2 0 41
