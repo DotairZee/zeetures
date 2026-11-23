@@ -244,7 +244,7 @@ static const char* GenusName(int genus) {
 // 0.5.0 (2026-11-14, night): every object kept between launches (stage 3).
 // 0.6.0 (2026-11-14, night): signature scents; the hand takes things from
 // creatures and keeps its mode; the gene lab's east end sealed.
-#define OPENC2E_FORK_VERSION "0.33.5"
+#define OPENC2E_FORK_VERSION "0.34.0"
 
 const char* ZeeturesVersion() {
 	return OPENC2E_FORK_VERSION;
@@ -490,6 +490,21 @@ static bool s_set_aside_was_paused = false;
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("What creatures are thinking, in pictures, when they set about something new");
+		// openc2e addition (owner, 2026-11-23): how smoothly creatures move,
+		// from the game's own five poses a second to every frame (C2 only)
+		if (engine.version == 2) {
+			if (ImGui::BeginMenu("Creature Frame Rate")) {
+				static const std::pair<int, const char*> rates[] = {{5, "5 per Second (Original)"}, {10, "10 per Second (World Pace)"}, {15, "15 per Second"},
+					{20, "20 per Second"}, {30, "30 per Second"}, {60, "60 per Second"}};
+				const int now = SkeletalCreature::creatureFrameRate();
+				for (auto& [rate, label] : rates)
+					if (ImGui::MenuItem(label, nullptr, now == rate))
+						SkeletalCreature::setCreatureFrameRate(rate);
+				ImGui::EndMenu();
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("How often creatures move on screen: the game's own 5 poses a second, or smoothly between them.\nThe world's other objects change about 10 times a second.");
+		}
 		bool statusbar = IsC2StatusBarShown();
 		if (ImGui::MenuItem("Status Bar", nullptr, &statusbar)) {
 			SetC2StatusBarShown(statusbar);
@@ -525,11 +540,6 @@ static bool s_set_aside_was_paused = false;
 			writeFlag("smooth-scrolling", s_smooth_scrolling);
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Glide to places and creatures you choose, instead of jumping");
-		bool smoothmove = SkeletalCreature::smoothMovement();
-		if (ImGui::MenuItem("Smooth Movement", nullptr, &smoothmove))
-			SkeletalCreature::setSmoothMovement(smoothmove);
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Creatures move smoothly from pose to pose, instead of jumping five times a second");
 		ImGui::Separator();
 		bool hasfree = false, hasnamed = false;
 		for (auto& f : world.favoriteplaces) {

@@ -142,9 +142,13 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	virtual ~SkeletalCreature();
 
 	void render(RenderTarget* renderer, int xoffset, int yoffset);
-	// smooth movement: on or off (View menu; off in C1 and C3)
+	// smooth movement: on or off (off in C1 and C3, and at a creature frame
+	// rate of 5, the game's own)
 	static bool smoothMovement();
 	static void setSmoothMovement(bool on);
+	// View > Creature Frame Rate: 5, 10, 15, 20, 30 or 60 a second (saved)
+	static int creatureFrameRate();
+	static void setCreatureFrameRate(int rate);
 	// drawn steps per world tick (0: every frame drawn), and the part of this
 	// tick to draw creatures at, stepped to match (may be a little below 0)
 	static float glideSteps();

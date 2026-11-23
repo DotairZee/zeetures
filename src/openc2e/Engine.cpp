@@ -1209,6 +1209,7 @@ void Engine::update() {
 //   click X Y         the hand's left button at world X, Y (rclick: right);
 //                     "click on F G S" at the middle of an object of that kind
 //   smooth on|off     smooth movement on or off
+//   rate N            View > Creature Frame Rate set to N (saved)
 //   steps K           creatures drawn K steps a tick (0: every frame)
 // For recording scripted shots with OPENC2E_RECORD.
 static void runDirector() {
@@ -1344,6 +1345,10 @@ static void runDirector() {
 			std::string w;
 			l >> w;
 			SkeletalCreature::setSmoothMovement(w != "off");
+		} else if (cmd == "rate") { // View > Creature Frame Rate, as the player chooses it (saved)
+			int r;
+			if (l >> r)
+				SkeletalCreature::setCreatureFrameRate(r);
 		} else if (cmd == "steps") { // creatures drawn in steps (0: every frame)
 			float k;
 			if (l >> k)

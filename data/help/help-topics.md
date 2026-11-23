@@ -53,7 +53,7 @@ Albia is much larger than the window, and it has no ends: go far enough east and
 - **Halo:** shows a halo over the selected creature, so that you can find it in a crowd.
 - **Places:** press + beside Places on the Favourites toolbar to name the spot you are looking at (six at most), and choose it from the list to go back. Camera > Remove Favourite Place takes one off.
 - **Smooth Scrolling** (Camera menu): the view glides to places and creatures instead of jumping.
-- **Smooth Movement** (Camera menu): creatures move smoothly from pose to pose, instead of jumping five times a second. Every breed has it. Turn it off for the original look.
+- **Creature Frame Rate** (View menu): how often creatures move on screen. 5 per Second is the original game, jumping from pose to pose. Above that, creatures move smoothly between their poses, drawn 10, 15, 20, 30, or 60 times a second; the world's other objects change about 10 times a second, so a lower rate matches them more closely. Every breed has it.
 - **ToolTips for Objects** (View menu): names whatever the hand rests on.
 
 ## Worlds and saving
@@ -125,8 +125,8 @@ If you know the original game, these are the main differences.
 ## The menus
 
 - **File:** worlds, saving and autosave, importing a creature, sound, your Creatures 2 folder, and Exit.
-- **View:** the Creature's View, zoom, toolbars and their text labels, speech and thought bubbles, the status bar, tooltips for objects, scroll bars, and full screen.
-- **Camera:** following, the halo, smooth scrolling and movement, and favourite places.
+- **View:** the Creature's View, zoom, toolbars and their text labels, speech and thought bubbles, the creature frame rate, the status bar, tooltips for objects, scroll bars, and full screen.
+- **Camera:** following, the halo, smooth scrolling, and favourite places.
 - **Tools:** the Hatchery and every kit.
 - **Creatures:** every living creature; choose one to select it and go to it.
 - **Help:** this window, the projects on the web, checking for updates and the switches for it (see [[Updating Zeetures]]), and About Zeetures, which also lists the research behind the creatures' minds.

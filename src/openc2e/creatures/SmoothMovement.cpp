@@ -117,16 +117,49 @@ bool SkeletalCreature::smoothMovement() {
 	if (engine.version != 2)
 		return false;
 	if (s_on < 0)
-		s_on = readPlayerSetting("smooth-movement") == "0" ? 0 : 1;
+		s_on = creatureFrameRate() > 5 ? 1 : 0;
 	return s_on == 1;
 }
 
+// The player's choice (View > Creature Frame Rate): how many times a second
+// creatures are drawn in a new place, at the game's own speed. 5 is the
+// game's own poses (no smooth movement), 60 every frame drawn; between, the
+// smooth movement held between steps of a world tick (C2: 10 ticks a
+// second). Saved as creature-frame-rate; an older smooth-movement 0 reads as
+// 5, anything else as 60.
+static const int s_rates[] = {5, 10, 15, 20, 30, 60};
+static int s_rate = -1;
+
+int SkeletalCreature::creatureFrameRate() {
+	if (s_rate < 0) {
+		s_rate = readPlayerSetting("smooth-movement") == "0" ? 5 : 60;
+		const int r = atoi(readPlayerSetting("creature-frame-rate").c_str());
+		for (int ok : s_rates)
+			if (r == ok)
+				s_rate = r;
+	}
+	return s_rate;
+}
+
+void SkeletalCreature::setCreatureFrameRate(int rate) {
+	s_rate = rate;
+	s_on = rate > 5 ? 1 : 0;
+	writePlayerSetting("creature-frame-rate", std::to_string(rate));
+	// (for older versions, which know only this)
+	writePlayerSetting("smooth-movement", rate > 5 ? "1" : "0");
+}
+
+// steps a world tick: from the frame rate, unless a developer has set them
+// (OPENC2E_GLIDE_STEPS, the director's "steps"); 0 every frame
 float SkeletalCreature::glideSteps() {
 	if (s_steps < 0) {
 		const char* e = devenv("OPENC2E_GLIDE_STEPS");
-		s_steps = e ? std::max(0.0f, (float)atof(e)) : 0.0f;
+		s_steps = e ? std::max(0.0f, (float)atof(e)) : -2.0f;
 	}
-	return s_steps;
+	if (s_steps >= 0)
+		return s_steps;
+	const int r = creatureFrameRate();
+	return r >= 60 ? 0.0f : r / 10.0f;
 }
 
 void SkeletalCreature::setGlideSteps(float steps) {
@@ -146,9 +179,9 @@ float SkeletalCreature::drawnTickFraction() {
 	return (float)(std::floor(t * k + 1e-4) / k - (double)world.tickcount);
 }
 
+// (the director's "smooth on|off": not saved)
 void SkeletalCreature::setSmoothMovement(bool on) {
 	s_on = on ? 1 : 0;
-	writePlayerSetting("smooth-movement", on ? "1" : "0");
 }
 
 float SkeletalCreature::glideShare() const {
