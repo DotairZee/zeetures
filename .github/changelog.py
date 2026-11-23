@@ -332,6 +332,8 @@ VERSIONS = [
      "Backspace no longer leaves a block in typed words."),
     ("0.33.1", "fb8699f5",
      "Creatures that drop off where they stand sleep properly, instead of dozing on and on."),
+    ("0.33.2", "49557c7a",
+     "Creatures eat before bed, and hunger no longer cuts a sleep short."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 643 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 644 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.33.2](#version-0332): 1 commits, 22 November 2026
 - [0.33.1](#version-0331): 2 commits, 22 November 2026
 - [0.33.0](#version-0330): 3 commits, 22 November 2026
 - [0.32.1](#version-0321): 1 commits, 22 November 2026
@@ -83,6 +84,36 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.33.2
+
+Creatures eat before bed, and hunger no longer cuts a sleep short.
+
+### 22 November 2026
+
+#### Version 0.33.2: eat before bed, and let sleep finish
+
+[`49557c7a`](https://github.com/DotairZee/zeetures/commit/49557c7af9da388b903375fd5691bd2db64f3bcd)
+
+Owner, 2026-11-22: no cycle of being woken by hunger before a full sleep;
+creatures should avoid sleep until they have enough food. In a copy of the
+owner's world, sleeps hunger cut short had begun at hunger 76% (median) and
+ended at 85%, while a whole sleep raises hunger only about 3%.
+
+- A sleepy creature at hunger 60% or more (the body's own) neither chooses
+  sleep nor drops off where it stands until it has eaten, unless exhausted.
+- Asleep, hunger wakes it only once its Sleepiness is down to 15% (owner's
+  figure), or if it has become starving (95%) since it went to bed; one
+  already starving at bedtime sleeps on (woken at once, it dropped off again
+  within seconds, over and over).
+- A sleep script cut short by another script left the creature asleep with
+  no sleep stimuli, Sleepiness never falling, for up to 20 minutes: asleep
+  for about 5 s with neither sleep script (41, 69) running, it wakes.
+
+Same copy, about three game days, before and after: sleeps cut short by
+hunger 20 and 8; going to bed at 60% hunger or more 33 and 10; meals 265
+and 326; sleeps over 4,000 ticks 3 and 0; no deaths. OPENC2E_NO_BEDTIME_MEAL
+turns the first two off for comparison.
 
 ## Version 0.33.1
 
