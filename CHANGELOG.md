@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 645 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 646 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.33.3](#version-0333): 1 commits, 22 November 2026
 - [0.33.2](#version-0332): 2 commits, 22 November 2026
 - [0.33.1](#version-0331): 2 commits, 22 November 2026
 - [0.33.0](#version-0330): 3 commits, 22 November 2026
@@ -84,6 +85,27 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.33.3
+
+Eyes shut while a creature is out cold, and a larger icon.
+
+### 22 November 2026
+
+#### Version 0.33.3: eyes shut when out cold; a larger icon
+
+[`a9d972b5`](https://github.com/DotairZee/zeetures/commit/a9d972b5567c56efdf78ad8cf2e204b1c7daa072)
+
+- An unconscious creature keeps its eyes shut for as long as it is out
+  (owner, 2026-11-22); before, only sleep and death shut them.
+- The program's icon: the egg fills its square, with a 2% margin (owner:
+  notably smaller than its neighbours in the taskbar; it filled 84% of the
+  height and 69% of the width). art/app_icon.py framed(), installed into
+  packaging/icons and the window icon.
+- Developer aid OPENC2E_WATCH_MONIKER=XXXX: that creature's sleep and body
+  every 50 ticks (used on the owner's world: its long sleeper was asleep in
+  the dark at night, at 0.5x; its creature out cold starved within about
+  three minutes at 1x, as it should).
 
 ## Version 0.33.2
 

@@ -334,6 +334,8 @@ VERSIONS = [
      "Creatures that drop off where they stand sleep properly, instead of dozing on and on."),
     ("0.33.2", "726e7673",
      "Creatures eat before bed, and hunger no longer cuts a sleep short; the horizontal scroll bar goes round with the world."),
+    ("0.33.3", "a9d972b5",
+     "Eyes shut while a creature is out cold, and a larger icon."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
