@@ -338,6 +338,8 @@ VERSIONS = [
      "The incubator's waterfall calms instead of lulling creatures to sleep; eyes shut while a creature is out cold; a larger icon."),
     ("0.33.4", "34984e9e",
      "Raindrops stuck against rocks are cleared away."),
+    ("0.33.5", "69811014",
+     "The laptop opens and shuts with a click, and can be picked up whether open or shut."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

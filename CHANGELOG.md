@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 649 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 650 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.33.5](#version-0335): 1 commits, 23 November 2026
 - [0.33.4](#version-0334): 1 commits, 22 November 2026
 - [0.33.3](#version-0333): 3 commits, 22 November 2026
 - [0.33.2](#version-0332): 2 commits, 22 November 2026
@@ -86,6 +87,40 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.33.5
+
+The laptop opens and shuts with a click, and can be picked up whether open or shut.
+
+### 23 November 2026
+
+#### Version 0.33.5: the language computer opens and shuts with a click
+
+[`69811014`](https://github.com/DotairZee/zeetures/commit/69811014aef61fbfaeff42220abba97779f29831)
+
+Owner's screenshot, 2026-11-23: the laptop (2 9 28) stood open and could
+be neither shut nor picked up. Its activate script (the game's) opened
+it, talked for 20 seconds and shut it in one go, not carryable meanwhile;
+a click during that did nothing, and a save or interruption left it open
+and not carryable.
+
+additions/language-computer.cos (any world): a click opens a shut
+computer, which talks (teaching a word) and stays open; a click on an
+open one shuts it and ends the talk (the blackboard 3 3 11 gets a new
+message, 257, that sends it home). A creature's push on an open one has
+it talk again. It can be picked up open or shut; a pickup ends the talk.
+At load every computer is carryable and clickable again. Help has a line
+on it.
+
+Developer aids: director cues click/rclick (X Y, or "on F G S"), find,
+smooth on|off and steps K; OPENC2E_RECORD_FPS; OPENC2E_WATCH_STEPS; and
+OPENC2E_GLIDE_STEPS, creatures drawn in steps of 1/K of a tick (a
+prototype for the owner's creature frame-rate choice; off by default).
+
+Tested in a copy of Home with scripted clicks: open and talk, picked up
+while talking (stays open), dropped, shut, reopened, shut mid-talk,
+picked up and dropped shut; the whole box answers clicks and pickups
+while open. 195 tests in both builds, ASan clean, check_saves OK.
 
 ## Version 0.33.4
 
