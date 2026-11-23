@@ -243,7 +243,7 @@ static const char* GenusName(int genus) {
 // 0.5.0 (2026-11-14, night): every object kept between launches (stage 3).
 // 0.6.0 (2026-11-14, night): signature scents; the hand takes things from
 // creatures and keeps its mode; the gene lab's east end sealed.
-#define OPENC2E_FORK_VERSION "0.31.0"
+#define OPENC2E_FORK_VERSION "0.32.0"
 
 // CITATIONS.md, as Help > About shows it: "## " headings as separators,
 // "- " entries wrapped, each Markdown link [text](url) as a small button
@@ -385,7 +385,7 @@ static bool s_set_aside_was_paused = false;
 			s_open_save_message = true;
 		}
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Saves your creatures (bodies and minds) and eggs. Other objects still start as in the world's original file.");
+			ImGui::SetTooltip("Saves the whole world now: creatures (bodies and minds), eggs and objects. It also saves itself (Autosave, and when you quit).");
 		if (ImGui::MenuItem("Save World As...", nullptr, false, !engine.currentworlddir.empty()))
 			s_open_save_as = true;
 		// openc2e addition (owner, 2026-11-11): saves every few minutes
@@ -624,7 +624,7 @@ static bool s_set_aside_was_paused = false;
 	// Help: what the toolbar's Help and Web buttons do, in words, and About
 	// (C2's items we cannot offer are left out; owner, 2026-11-12)
 	if (ImGui::BeginMenu("Help")) {
-		if (ImGui::MenuItem("Help Topics"))
+		if (ImGui::MenuItem("Help Topics", "F1"))
 			SetHelpOpen(true);
 		if (ImGui::MenuItem(FORK_NAME " on GitHub"))
 			SDL_OpenURL(FORK_WEB);
@@ -1283,7 +1283,7 @@ void DrawC2Toolbar() {
 		if (ToolButton(icon_help, true, "Help"))
 			SetHelpOpen(true);
 		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Help: how to play here, and what this version adds");
+			ImGui::SetTooltip("Help: how to play, what this version adds, and every kit (F1)");
 		if (ToolButton(icon_web, true, "Web"))
 			SDL_OpenURL(OPENC2E_WEB);
 		if (ImGui::IsItemHovered())

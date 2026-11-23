@@ -514,6 +514,7 @@ set(EMBEDDED_FILES
 	${SRC}/data/hatchery/nests.png
 	${SRC}/data/hatchery/nests.txt
 	${SRC}/data/thoughts/icons.png
+	${SRC}/data/help/help-topics.md
 	${SRC}/CITATIONS.md)
 add_custom_command(
 	OUTPUT ${GEN}/embedded_files.cpp
