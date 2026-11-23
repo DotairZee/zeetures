@@ -330,6 +330,8 @@ VERSIONS = [
     ("0.33.0", "0504ceaf",
      "Zeetures updates itself from inside the game, with switches for checking and for installing automatically; "
      "Backspace no longer leaves a block in typed words."),
+    ("0.33.1", "fb8699f5",
+     "Creatures that drop off where they stand sleep properly, instead of dozing on and on."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

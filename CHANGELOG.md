@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 642 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 643 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 1 commits, 22 November 2026
+- [0.33.1](#version-0331): 2 commits, 22 November 2026
 - [0.33.0](#version-0330): 3 commits, 22 November 2026
 - [0.32.1](#version-0321): 1 commits, 22 November 2026
 - [0.32.0](#version-0320): 1 commits, 22 November 2026
@@ -84,11 +84,30 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.33.1
 
-Changes since the last version.
+Creatures that drop off where they stand sleep properly, instead of dozing on and on.
 
 ### 22 November 2026
+
+#### Version 0.33.1: dropping off asleep is a real sleep
+
+[`fb8699f5`](https://github.com/DotairZee/zeetures/commit/fb8699f54eb92938306b1098a08474044c5d3fc9)
+
+The owner's screencast: creatures asleep through the day, on and on, even
+at 8.5x. A very sleepy body's own reflex (C2's event 69, Sleepiness over
+230) lays it down for about 40 s with only two sleep stimuli (22), so
+Sleepiness hardly fell; it woke still at 200-255 and dropped off again
+within 3 s, for good, starving ones too (an exhausted creature's hunger
+does not keep it awake). sleep.cos now gives norns, grendels and ettins an
+event 69 that sleeps as event 41 does: a stimulus every 27 ticks until
+Sleepiness is below 10, or about five minutes; the mind still wakes it.
+
+A copy of the owner's world, flat out for about three game days, 15-16
+creatures sleeping: 894 sleeps, 674 of them ended at the 40 s mark and 737
+still very sleepy, became 357, none and 24; time asleep 51% to 28%;
+dropping off while starving 93 to 22; no deaths either way. Existing
+worlds get it at their next load.
 
 #### AddressSanitizer off unless asked for (OPENC2E_ASAN=ON)
 
