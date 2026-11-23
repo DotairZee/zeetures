@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 637 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 638 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.32.1](#version-0321): 1 commits, 22 November 2026
 - [0.32.0](#version-0320): 1 commits, 22 November 2026
 - [0.31.0](#version-0310): 1 commits, 22 November 2026
 - [0.30.0](#version-0300): 1 commits, 22 November 2026
@@ -80,6 +81,34 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.32.1
+
+Favourite places saved; Save World As copies photos and genes; the Syringe brings back the newly dead; the arrow keys and dragging stop following.
+
+### 22 November 2026
+
+#### Version 0.32.1: four fixes found while writing the Help
+
+[`4ecc0052`](https://github.com/DotairZee/zeetures/commit/4ecc005250ec16e46c0a92268a8a7ad45a02d571)
+
+- Favourite places a player adds are saved with the world (only the world
+  file's came back), and one taken off stays off. Older saves keep the
+  world file's.
+- Save World As copies the world's photos, departed creatures' genes and
+  own Additions into the new world, as play goes on there.
+- The Syringe brings back the newly dead, as the game's own mixtures say:
+  for 29 s after a death (C2's death script lifts the body at 30), a mixture
+  rich in Energy (the Metabolism Transplant) fills the body, then one rich
+  in ATP (the Defibrillant) starts it: out cold, failed organs at a
+  quarter, coming round once its ATP holds; the Life Story says it was
+  brought back, its death notice goes, the grave goes. Old age cannot be
+  undone. The Syringe page says what can be done for the dead one shown.
+- The arrow keys and dragging with the middle button stop following a
+  creature, as the wheel did; the arrow keys no longer move the view while
+  a box in a window is typed in.
+
+The Help says so. Developer aid: the director's "die".
 
 ## Version 0.32.0
 

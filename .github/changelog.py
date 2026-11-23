@@ -324,6 +324,9 @@ VERSIONS = [
      "and following goes with the creature selected."),
     ("0.32.0", "6f395b70",
      "Help in depth: 43 topics with a search and links, one for every kit, opened with F1."),
+    ("0.32.1", "4ecc0052",
+     "Favourite places saved; Save World As copies photos and genes; the Syringe brings back the newly dead; "
+     "the arrow keys and dragging stop following."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
