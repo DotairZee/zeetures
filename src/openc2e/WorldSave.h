@@ -34,6 +34,8 @@ bool PutBackSetAsideSave(std::string& error);
 // finished starting: objects installed at load show themselves with SYS:
 // CAMT, which moved the view after LoadWorldState had restored it.
 void ApplySavedView();
+// Puts back the saved room temperatures, once the additions have run.
+void ApplySavedClimate();
 // Moves a living C1/C2 creature to life stage 0-6 (baby to senile), older or
 // younger, keeping its chemistry, organs and mind; false (with error) if not.
 // The same, one stage at a time with a short pause between stages, ageing

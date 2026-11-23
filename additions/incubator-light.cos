@@ -1,0 +1,35 @@
+* The incubator's cave lit (openc2e Creatures 2 project, our own script;
+* owner, 2026-11-23, softening the places that push creatures hardest:
+* "Incubator darkness"). Run by openc2e after the world loads (Additions
+* folder); safe to repeat.
+*
+* The world file leaves the cave around the incubator almost dark: the
+* incubator's room at light 3, the room east of it at 12, and the pond, its
+* banks and the cave over it at 0 (the open air is 100-255 by day). Every
+* norn, grendel and ettin has a gene that raises Sleepiness in the dark, so
+* newborns there kept getting sleepier. The cave is now lit like the rooms
+* just below it (150): it still makes creatures a little sleepy, less than
+* half as much as before, and is no longer dark enough to keep cave germs
+* (under 80).
+*
+* A helper object goes to the middle of each room in turn and sets its
+* light (LITE is the light of TARG's room), then goes. Each room is also
+* given a light source (LSRC 1): the day and night (World::tickDaylight)
+* took these rooms, whose ceilings meet the sky, as partly outdoors and
+* dimmed them to about 110 at night; a lamp-lit room keeps its light.
+
+inst
+new: simp blnk 1 0 0 0
+setv attr 16
+* the room east of the incubator (15), the incubator's (16), the pond's
+* east bank (17), the air over the pond (18), the pond (19), its west end
+* (20) and the cave over it (219)
+mvto 5594 800 setv lite 150 setv lsrc 1
+mvto 5170 800 setv lite 150 setv lsrc 1
+mvto 4760 800 setv lite 150 setv lsrc 1
+mvto 4494 850 setv lite 150 setv lsrc 1
+mvto 4494 915 setv lite 150 setv lsrc 1
+mvto 4329 800 setv lite 150 setv lsrc 1
+mvto 4500 720 setv lite 150 setv lsrc 1
+kill targ
+slow

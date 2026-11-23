@@ -742,6 +742,14 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 		for (auto& r : world.map->getRooms())
 			if (r->ontr || r->intr || r->ontrBase > 0 || r->intrBase > 0)
 				out << fmt::format("nutrients {} {:.2f} {:.2f} {} {}\n", r->id, r->ontrf >= 0 ? r->ontrf : (float)r->ontr, r->intrf >= 0 ? r->intrf : (float)r->intr, r->ontrBase, r->intrBase);
+	// each room's temperature (World::tickClimate). Without them every load
+	// began again from the world file's, which the climate leaves within a
+	// minute or two: the boiler room was at 195, hotter than the volcano,
+	// for its first minute, then settled at 116 (owner, 2026-11-23: "save
+	// heat")
+	if (world.map)
+		for (auto& r : world.map->getRooms())
+			out << fmt::format("room-temp {} {:.2f}\n", r->id, r->tempf >= 0 ? r->tempf : (float)r->temp);
 	// bacteria and disease (Disease.h): strains, germs in rooms, who is ill
 	Disease::save(out);
 	// radiation doses (Exposure.h): creatures', and babies' before birth
@@ -1192,6 +1200,21 @@ struct SavedView {
 } s_view;
 } // namespace
 
+// the saved room temperatures (LoadWorldState), put back once the additions
+// have run, as some of them remake rooms with the world file's temperature
+static std::vector<std::pair<unsigned int, float>> s_roomTemps;
+
+void ApplySavedClimate() {
+	if (!world.map)
+		return;
+	for (auto& [id, t] : s_roomTemps)
+		if (auto r = world.map->getRoom(id)) {
+			r->tempf = std::clamp(t, 0.0f, 255.0f);
+			r->temp = (int)std::lround(r->tempf);
+		}
+	s_roomTemps.clear();
+}
+
 void ApplySavedView() {
 	if (!s_view.set)
 		return;
@@ -1275,6 +1298,7 @@ bool PutBackSetAsideSave(std::string& error) {
 
 bool LoadWorldState(const fs::path& worlddir) {
 	s_view = SavedView();
+	s_roomTemps.clear();
 	world.allFertile = true; // (saves made before the setting have every creature fertile)
 	world.injectedCobs.clear();
 	world.injectedScripts.clear();
@@ -1393,6 +1417,11 @@ bool LoadWorldState(const fs::path& worlddir) {
 			SavedNutrients n;
 			if (l >> n.room >> n.ontr >> n.intr >> n.ontrBase >> n.intrBase)
 				nutrients.push_back(n);
+		} else if (key == "room-temp") {
+			unsigned int room;
+			float t;
+			if (l >> room >> t)
+				s_roomTemps.push_back({room, t});
 		} else if (key == "ecology-pin") {
 			unsigned int room;
 			int color;

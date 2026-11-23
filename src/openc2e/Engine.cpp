@@ -2740,8 +2740,10 @@ bool Engine::initialSetup() {
 
 	// C1/C2: the view where it was when the world was saved (objects
 	// installed during startup moved it)
-	if (version < 3)
+	if (version < 3) {
 		WorldSave::ApplySavedView();
+		WorldSave::ApplySavedClimate();
+	}
 
 	return true;
 }
