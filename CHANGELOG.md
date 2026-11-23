@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 639 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 640 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [0.33.0](#version-0330): 1 commits, 22 November 2026
+- [0.33.0](#version-0330): 2 commits, 22 November 2026
 - [0.32.1](#version-0321): 1 commits, 22 November 2026
 - [0.32.0](#version-0320): 1 commits, 22 November 2026
 - [0.31.0](#version-0310): 1 commits, 22 November 2026
@@ -88,6 +88,14 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Zeetures updates itself from inside the game, with switches for checking and for installing automatically; Backspace no longer leaves a block in typed words.
 
 ### 22 November 2026
+
+#### Updater: build on Windows
+
+[`2a09b45a`](https://github.com/DotairZee/zeetures/commit/2a09b45a20a4cd2f368c4337581039db06b74e1b)
+
+shellapi.h after windows.h, which it needs; the curl command as a wide
+string without fmt (fmt::format takes no wide format here); cfloat for
+FLT_MAX. The 0.33.0 push failed to build on Windows with these.
 
 #### Version 0.33.0: Zeetures updates itself; Backspace while typing
 
