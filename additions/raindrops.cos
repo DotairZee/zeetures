@@ -1,0 +1,27 @@
+* Stuck raindrops cleared (openc2e Creatures 2 project, our own script;
+* owner's screenshot, 2026-11-22: a raindrop frozen against a rock by the
+* west sea for some time). Run by openc2e after the world loads (Additions
+* folder); made anew each load.
+* any world: it changes objects by kind, not Eden's map, so it runs on every
+* world (other Additions run only on worlds started from Eden.sfc).
+*
+* The clouds (2 14 1) make raindrops (2 14 3) that fall until they land;
+* script-patches.txt has them go on any landing. A drop held still some
+* other way (resting on an object, caught where no collision is reported)
+* would stay. A watcher (2 1 166, every 25 ticks) removes a raindrop that
+* has not moved since its last look. A falling drop moves every tick.
+* OV60, OV61: where it was at the last look; OV62 1 once seen once.
+enum 2 1 166 kill targ next
+inst new: simp blnk 1 0 0 0 setv cls2 2 1 166 setv attr 16 mvto 5000 1350 tick 25 slow
+scrp 2 1 166 9
+  inst
+  enum 2 14 3
+    doif ov62 eq 1 and posl eq ov60 and post eq ov61
+      kill targ
+    else
+      setv ov60 posl
+      setv ov61 post
+      setv ov62 1
+    endi
+  next
+endm

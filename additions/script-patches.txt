@@ -244,3 +244,13 @@ replace setv actv 0 stop setv var8 cmrx setv var9 cmry new: cbub anou 16 0 5
 scrp 2 3 1 9
 find stim shou 10 255 0 0 44 30 24 50
 replace stim shou 10 255 0 0 44 30 0 0
+
+* Raindrops (2 14 3, made by the clouds) go when they land: their collision
+* script removed one only when it struck a floor (WALL 3). One that came to
+* rest against the side of something, as on a rock's sloping face, stayed
+* there for good, a still drop in the air (owner's screenshot, 2026-11-22).
+* Now any landing removes it; only a floor cools the room, as before
+* (raindrops.cos also clears any drop that stops moving).
+scrp 2 14 3 6
+find doif wall eq 3 subv temp 5 kill ownr endi
+replace doif wall eq 3 subv temp 5 endi kill ownr
