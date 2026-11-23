@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 651 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 652 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.34.1](#version-0341): 1 commits, 23 November 2026
 - [0.34.0](#version-0340): 1 commits, 23 November 2026
 - [0.33.5](#version-0335): 1 commits, 23 November 2026
 - [0.33.4](#version-0334): 1 commits, 22 November 2026
@@ -88,6 +89,26 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.34.1
+
+Room heat is saved, so the boiler room no longer starts each session hotter than the volcano; the incubator's cave is lit, so newborns there get less sleepy.
+
+### 23 November 2026
+
+#### Version 0.34.1: room heat saved; the incubator's cave lit
+
+[`8c12ec45`](https://github.com/DotairZee/zeetures/commit/8c12ec459b4c27493ded314213d93a695178ed83)
+
+Room temperatures are now saved with the world and put back once the
+additions have run. Before, every load began again from the world file's,
+so for its first minute the boiler room was at 195, hotter than the
+volcano, though the climate settles it at 116 (the volcano floor at 149).
+
+The cave around the incubator (rooms 15-20 and 219) was almost dark
+(light 0-12), and every creature's light sense turns darkness into
+Sleepiness. incubator-light.cos lights it to 150, like the rooms below,
+with a light source so night does not dim it.
 
 ## Version 0.34.0
 

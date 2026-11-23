@@ -342,6 +342,8 @@ VERSIONS = [
      "The laptop opens and shuts with a click, and can be picked up whether open or shut."),
     ("0.34.0", "ee3cf3ed",
      "View > Creature Frame Rate: choose how smoothly creatures move, from the original 5 per second to 60."),
+    ("0.34.1", "8c12ec45",
+     "Room heat is saved, so the boiler room no longer starts each session hotter than the volcano; the incubator's cave is lit, so newborns there get less sleepy."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
