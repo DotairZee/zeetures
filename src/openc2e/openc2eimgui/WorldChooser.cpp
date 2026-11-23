@@ -133,6 +133,20 @@ bool CreateWorld(const std::string& name, const fs::path& tmpl, std::string& err
 	return true;
 }
 
+bool CopyWorldExtras(const fs::path& from, const fs::path& to, std::string& error) {
+	for (const char* name : {"photos", "departed", "Additions"}) {
+		std::error_code ec;
+		if (!fs::is_directory(from / name, ec))
+			continue;
+		fs::copy(from / name, to / name, fs::copy_options::recursive | fs::copy_options::overwrite_existing, ec);
+		if (ec) {
+			error = fmt::format("Couldn't copy the world's {} folder: {}", name, ec.message());
+			return false;
+		}
+	}
+	return true;
+}
+
 // The command line to start this program again in the named world: the same
 // options, with --world NAME in place of any --world given before.
 static std::vector<std::string> RelaunchArgs(const std::string& name) {

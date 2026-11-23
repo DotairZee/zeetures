@@ -1204,6 +1204,7 @@ void Engine::update() {
 //   kits off          closes the kits
 //   say X Y TEXT      the hand goes to world X, Y and says it
 //   caos TEXT         runs CAOS (as the world's additions run)
+//   die               the creature chosen dies
 // For recording scripted shots with OPENC2E_RECORD.
 static void runDirector() {
 	static const char* file = devenv("OPENC2E_DIRECTOR");
@@ -1298,6 +1299,10 @@ static void runDirector() {
 			std::string text;
 			std::getline(l, text);
 			world.executeInitScriptText("director", text);
+		} else if (cmd == "die") {
+			auto* ca = dynamic_cast<CreatureAgent*>(world.selectedcreature.get());
+			if (ca && ca->getCreature() && ca->getCreature()->isAlive())
+				ca->getCreature()->die();
 		}
 		next++;
 	}
@@ -1508,7 +1513,10 @@ bool Engine::tick() {
 }
 
 void Engine::handleKeyboardScrolling() {
-	// keyboard-based scrolling
+	// keyboard-based scrolling (not while a box in a window is typed in: its
+	// arrow keys are its own)
+	if (ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput)
+		return;
 	static float accelspeed = 8, decelspeed = .5, maxspeed = 64;
 	static float velx = 0;
 	static float vely = 0;
@@ -1572,6 +1580,10 @@ void Engine::handleKeyboardScrolling() {
 
 	// do the actual movement
 	if (velx || vely) {
+		// C1/C2: moving the view stops following, as the wheel does (owner,
+		// 2026-11-22); not while the view only glides on after the key
+		if (version <= 2 && (leftdown || rightdown || updown || downdown))
+			camera->trackAgent(AgentRef(), 0, 0, brittle, none);
 		int adjustx = engine.camera->getX(), adjusty = engine.camera->getY();
 		int adjustbyx = (int)velx, adjustbyy = (int)vely;
 

@@ -398,10 +398,22 @@ class c2Creature : public oldCreature {
 	// stock genome has one). Read from the genome once.
 	int waterbreather = -1;
 	unsigned int noEnergyTicks = 0, recoveringTicks = 0; // (updateConsciousness)
+	bool kickstartPrimed = false; // (kickstart)
 	void updateConsciousness();
 
   public:
 	void setUnconscious(bool u) override; // faints now, or brings round (UNCS)
+
+	// Bringing back the newly dead (the Science Kit's Syringe; owner,
+	// 2026-11-22: its kick-starting mixtures did nothing). How far it has got:
+	// alive; can't (died of old age, or its body is floating away or gone);
+	// dead (and may yet come back); primed (its stores are filled: the
+	// Metabolism Transplant); revived (by the Defibrillant, once primed).
+	enum Kickstart { notDead, tooLate, stillDead, primed, revived };
+	Kickstart kickstartState();
+	// after a mixture's chemicals were put into a dead body: `energy` and
+	// `atp` how much Energy (98) and ATP (99) were in it
+	Kickstart kickstart(int energy, int atp);
 
   protected:
 

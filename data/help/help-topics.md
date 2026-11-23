@@ -49,9 +49,9 @@ Albia is much larger than the window, and it has no ends: go far enough east and
 - **Moving the view:** the wheel, the arrow keys, the middle button, or the scroll bars.
 - **Zooming:** Ctrl and wheel, a pinch, the Zoom list on the Favourites toolbar, or the View menu; from 50% to 300%.
 - **Next:** the toolbar's Next button selects the next creature and goes to it. The Creatures menu lists every living creature by name.
-- **Follow:** Follow on the toolbar (Camera > Track Norn) keeps the selected creature in view. Choose another creature, however you do it, and the view follows that one instead. Moving the view with the wheel or the scroll bars, zooming, or going to a place stops it.
+- **Follow:** Follow on the toolbar (Camera > Track Norn) keeps the selected creature in view. Choose another creature, however you do it, and the view follows that one instead. Moving the view yourself stops it.
 - **Halo:** shows a halo over the selected creature, so that you can find it in a crowd.
-- **Places:** press + beside Places on the Favourites toolbar to name the spot you are looking at (six at most), and choose it from the list to go back. Camera > Remove Favourite Place takes one off. Places you add last until you close the world; the world's own are always there.
+- **Places:** press + beside Places on the Favourites toolbar to name the spot you are looking at (six at most), and choose it from the list to go back. Camera > Remove Favourite Place takes one off.
 - **Smooth Scrolling** (Camera menu): the view glides to places and creatures instead of jumping.
 - **Smooth Movement** (Camera menu): creatures move smoothly from pose to pose, instead of jumping five times a second. Every breed has it. Turn it off for the original look.
 - **ToolTips for Objects** (View menu): names whatever the hand rests on.
@@ -71,13 +71,13 @@ Each world is its own copy of Albia, with its own creatures and history. When Ze
 - Every creature: its body and chemistry, what it has learned, its words and names, its memories of places and others, its temperament, and its life story.
 - Eggs, photos, gravestones, and family records.
 - The objects in the world, where they are and as they are: food, toys, plants, lifts, boats, and those you added.
-- The date, the germs, and which creatures may breed.
+- The date, the germs, your favourite places, and which creatures may breed.
 
 ### When it is saved
 
 - When you quit, and when you switch worlds.
 - Every five minutes, unless you change it (File > Autosave; from every minute to only when quitting).
-- Whenever you choose File > Save World. Save World As makes a copy under a new name, and you go on in the copy. Photos, and the genes of the departed, stay with the first world.
+- Whenever you choose File > Save World. Save World As makes a copy under a new name, photos and all, and you go on in the copy.
 
 Worlds saved by earlier versions open in later ones. If a saved game cannot be read, or some creatures in it cannot be loaded (a breed's files removed, perhaps), Zeetures keeps the saved game safe beside the world, says so, and lets you quit and put things right.
 
@@ -482,7 +482,7 @@ An illness is a nuisance more than a danger to a creature that is well fed. It l
 
 ### Unconscious
 
-A creature out of energy falls down with stars round its head. Give it food (drop it on the creature), or an injection from the [[Science Kit]]'s Syringe, and mend the cause: out of the water, warm, fed. If nothing is done, its organs wear and it may die.
+A creature out of energy falls down with stars round its head. Give it food (drop it on the creature), or an injection from the [[Science Kit]]'s Syringe, and mend the cause: out of the water, warm, fed. If nothing is done, its organs wear and it may die. Even then, for half a minute, the [[Science Kit]] may bring it back.
 
 ### Watching it spread
 
@@ -773,6 +773,10 @@ A graph of up to six chemicals over the last two minutes. Choose a group, then c
 ### Syringe
 
 Inject a ready-made mixture, with its purpose and contents listed, or any one chemical in any amount.
+
+### Bringing back the newly dead
+
+For about half a minute after a creature dies, while its body still lies where it fell, the Syringe can bring it back. First the Metabolism Transplant fills its body with fuel; then the Defibrillant starts it again. It comes back out cold, with its failed organs at a quarter of their strength, and comes round once its energy holds: give it another Defibrillant every ten seconds or so until it does. Mend what killed it, or it may die again. Old age cannot be undone.
 
 Take care: the chemistry is real, and a creature can be killed with it.
 

@@ -243,7 +243,7 @@ static const char* GenusName(int genus) {
 // 0.5.0 (2026-11-14, night): every object kept between launches (stage 3).
 // 0.6.0 (2026-11-14, night): signature scents; the hand takes things from
 // creatures and keeps its mode; the gene lab's east end sealed.
-#define OPENC2E_FORK_VERSION "0.32.0"
+#define OPENC2E_FORK_VERSION "0.32.1"
 
 // CITATIONS.md, as Help > About shows it: "## " headings as separators,
 // "- " entries wrapped, each Markdown link [text](url) as a small button
@@ -746,7 +746,7 @@ static bool s_set_aside_was_paused = false;
 		if (ImGui::Button("Save") || enter) {
 			if (CreateWorld(s_name, WorldFile(engine.currentworlddir), s_error)) {
 				auto w = FindWorld(s_name);
-				if (w && WorldSave::SaveWorldState(w->dir, s_error)) {
+				if (w && CopyWorldExtras(engine.currentworlddir, w->dir, s_error) && WorldSave::SaveWorldState(w->dir, s_error)) {
 					engine.currentworld = w->name;
 					engine.currentworlddir = w->dir;
 					get_backend()->setWindowTitle(w->name + " - " FORK_NAME);

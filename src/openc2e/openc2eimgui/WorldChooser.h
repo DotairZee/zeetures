@@ -19,6 +19,10 @@ std::optional<WorldEntry> FindWorld(const std::string& name);
 std::vector<std::filesystem::path> ListWorldTemplates();
 bool CreateWorld(const std::string& name, const std::filesystem::path& tmpl, std::string& error);
 
+// Copies what a world keeps beside its save (its photos, the genes of its
+// departed, its own Additions) into another world's folder: Save World As.
+bool CopyWorldExtras(const std::filesystem::path& from, const std::filesystem::path& to, std::string& error);
+
 // Restarts openc2e with --world <name> (C1/C2 worlds load once, at start-up).
 void RelaunchIntoWorld(const std::string& name);
 

@@ -720,6 +720,12 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	// the hand's mode: invisible, push (owner, 2026-11-14: start as it was)
 	out << "hand " << (world.handInvisible ? 1 : 0) << " " << (world.handPush ? 1 : 0) << "\n";
 	out << "all-fertile " << (world.allFertile ? 1 : 0) << "\n"; // the Hatchery's setting
+	// the favourite places (owner, 2026-11-22: those a player added were lost),
+	// the world file's own among them, so one taken off stays off
+	out << "favourite-places\n";
+	for (auto& f : world.favoriteplaces)
+		if (!f.name.empty())
+			out << "favourite-place " << f.x << " " << f.y << " " << escapeLine(f.name) << "\n";
 	// the calendar: world ticks, part of the day, day of the season, season,
 	// year (without this every session began again in spring of year 0)
 	out << "calendar " << world.worldtickcount << " " << world.timeofday << " " << world.dayofseason << " " << world.season << " " << world.year << "\n";
@@ -1329,6 +1335,12 @@ bool LoadWorldState(const fs::path& worlddir) {
 			int v = 1;
 			if (l >> v)
 				world.allFertile = v != 0;
+		} else if (key == "favourite-places") {
+			world.favoriteplaces.clear(); // (older saves have no such line: the world file's stay)
+		} else if (key == "favourite-place") {
+			int fx = 0, fy = 0;
+			if (l >> fx >> fy && world.favoriteplaces.size() < 6)
+				world.favoriteplaces.push_back({unescapeLine(restOfLine(l)), fx, fy});
 		} else if (key == "hand") {
 			int inv = 0, push = 0;
 			if (l >> inv >> push) {
