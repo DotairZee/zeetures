@@ -22,6 +22,17 @@
 * every few seconds), or half a minute, as it does not help every genome.
 * any world: it changes objects by kind, not Eden's map, so it runs on every
 * world (other Additions run only on worlds started from Eden.sfc).
+*
+* Dropping off where they stand (2026-11-22; owner's screencast: creatures
+* asleep through the day, on and on, even at 8.5x). A very sleepy body's own
+* reflex, C2's event 69 (Sleepiness over 230), lays it down for about 40 s
+* with only two sleep stimuli (22), so Sleepiness hardly fell: it woke, still
+* at 200-255, dropped off again within 3 s, and so on for good, a starving
+* one too (its hunger cannot keep an exhausted creature awake). In a copy of
+* the owner's world, 675 of 894 sleeps ended at that 40 s mark, 737 with
+* Sleepiness over 150. The reflex now sleeps as event 41 does: a stimulus
+* every 27 ticks until Sleepiness is below 10, or about five minutes; the
+* mind still wakes it for a pressing need (wakeReason).
 scrp 4 2 0 41
   doif driv 6 gt 96
     impt 15 pose 58 aslp 1
@@ -81,4 +92,49 @@ scrp 4 1 0 41
       untl var0 ge 15
     endi
   endi
+endm
+scrp 4 1 0 69
+  ltcy 5 80 180
+  pose 57 wait 25 stm# writ targ 21
+  aslp 1
+  setv var0 0
+  loop
+    impt 15 pose 58 wait 15 stm# writ targ 22
+    impt 5 wait 40
+    impt 15 stm# writ targ 22
+    addv var0 1
+    doif driv 6 lt 10 setv var0 60 endi
+  untl var0 ge 60
+  impt 1 wait 20
+  aslp 0
+endm
+scrp 4 2 0 69
+  ltcy 5 80 180
+  pose 57 wait 25 stm# writ targ 21
+  aslp 1
+  setv var0 0
+  loop
+    impt 15 pose 58 wait 15 stm# writ targ 22
+    impt 5 wait 40
+    impt 15 stm# writ targ 22
+    addv var0 1
+    doif driv 6 lt 10 setv var0 60 endi
+  untl var0 ge 60
+  impt 1 wait 20
+  aslp 0
+endm
+scrp 4 3 0 69
+  ltcy 5 80 180
+  pose 57 wait 25 stm# writ targ 21
+  aslp 1
+  setv var0 0
+  loop
+    impt 15 pose 58 wait 15 stm# writ targ 22
+    impt 5 wait 40
+    impt 15 stm# writ targ 22
+    addv var0 1
+    doif driv 6 lt 10 setv var0 60 endi
+  untl var0 ge 60
+  impt 1 wait 20
+  aslp 0
 endm
