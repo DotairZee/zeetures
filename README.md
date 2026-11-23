@@ -112,19 +112,19 @@ sudo apt-get install build-essential cmake python3 git zlib1g-dev libpng-dev \
   libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev libxtst-dev libxfixes-dev \
   libwayland-dev libxkbcommon-dev libegl1-mesa-dev libgl1-mesa-dev libdecor-0-dev wayland-protocols \
   libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev
-cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF -DOPENC2E_BUNDLED_SDL=ON
+cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_BUNDLED_SDL=ON
 cmake --build build -j"$(nproc)"
 ./build/openc2e -d "/path/to/Creatures 2"
 ```
 
-`OPENC2E_BUNDLED_SDL=ON` builds the SDL3 in `externals` (the packages above are its headers). If your system has SDL3 development packages (`libsdl3-dev`), you can leave it off. `OPENC2E_ASAN=OFF` turns off AddressSanitizer, which is on by default and makes the game several times slower.
+`OPENC2E_BUNDLED_SDL=ON` builds the SDL3 in `externals` (the packages above are its headers). If your system has SDL3 development packages (`libsdl3-dev`), you can leave it off. AddressSanitizer, a tool for finding memory errors, is off unless you add `-DOPENC2E_ASAN=ON`: it makes the game several times slower, and when the game ends it lists memory still held (mostly by graphics drivers), which is a report, not a crash. (openc2e itself has it on by default.)
 
 ### Windows
 
 Install [Visual Studio 2022](https://visualstudio.microsoft.com/) with the "Desktop development with C++" workload (it includes CMake), and [Python 3](https://www.python.org/). In a Developer PowerShell or Command Prompt:
 
 ```bat
-cmake -S . -B build -DOPENC2E_ASAN=OFF
+cmake -S . -B build
 cmake --build build --config RelWithDebInfo
 build\RelWithDebInfo\openc2e.exe -d "C:\path\to\Creatures 2"
 ```
@@ -151,7 +151,7 @@ build\RelWithDebInfo\openc2e.exe -d "C:\path\to\Creatures 2"
    ```bash
    git clone https://github.com/DotairZee/zeetures.git
    cd zeetures
-   ../.tools/bin/cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=OFF
+   ../.tools/bin/cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
    ../.tools/bin/cmake --build build -j"$(sysctl -n hw.ncpu)" --target openc2e
    ./build/openc2e -d "$HOME/Games/Creatures The Albian Years/Creatures 2"
    ```
@@ -169,7 +169,7 @@ sudo apt-get install gcc-multilib g++-multilib zlib1g-dev:i386 libpng-dev:i386 l
   libxkbcommon-dev:i386 libgl1-mesa-dev:i386 libegl1-mesa-dev:i386 libasound2-dev:i386 libpulse-dev:i386
 PKG_CONFIG_LIBDIR=/usr/lib/i386-linux-gnu/pkgconfig:/usr/share/pkgconfig cmake -S . -B build32 \
   -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DCMAKE_LIBRARY_ARCHITECTURE=i386-linux-gnu \
-  -DOPENC2E_BUNDLED_SDL=ON -DOPENC2E_ASAN=OFF -DSDL_WAYLAND=OFF
+  -DOPENC2E_BUNDLED_SDL=ON -DSDL_WAYLAND=OFF
 cmake --build build32 -j"$(nproc)"
 ```
 

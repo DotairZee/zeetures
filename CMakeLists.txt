@@ -23,9 +23,12 @@ if(WINDOWS AND NOT BUILD_SHARED_LIBS)
 endif()
 
 include(CheckCXXSourceCompiles)
-# AddressSanitizer is on by default (as upstream); OPENC2E_ASAN=OFF builds
-# without it, for playing: it slows everything severalfold
-option(OPENC2E_ASAN "Build with AddressSanitizer" ON)
+# AddressSanitizer, for finding memory errors: off unless asked for
+# (OPENC2E_ASAN=ON). Upstream has it on, but in Zeetures that only slowed
+# the game severalfold for players building it themselves, and its report
+# of memory still held at the end (mostly graphics drivers') was taken for
+# a crash (owner, 2026-11-22). The test workflow turns it on.
+option(OPENC2E_ASAN "Build with AddressSanitizer" OFF)
 if(OPENC2E_ASAN AND NOT WIN32)
 	set(CMAKE_REQUIRED_FLAGS "-fsanitize=address")
 	check_cxx_source_compiles("int main(int, char**) { return 0; }" have_fsanitize_address)

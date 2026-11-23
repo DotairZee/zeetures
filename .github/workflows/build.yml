@@ -54,7 +54,8 @@ jobs:
       if: "startsWith(matrix.os, 'ubuntu-')"
       run: sudo apt-get update && sudo apt-get install libpng-dev zlib1g-dev libsdl3-dev
     - name: "Configure"
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      # (AddressSanitizer, off by default, on for the tests; Windows ignores it)
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DOPENC2E_ASAN=ON
     - name: "Build"
       run: cmake --build build --config RelWithDebInfo
     - name: "Test"
