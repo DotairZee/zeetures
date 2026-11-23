@@ -7,6 +7,7 @@
 #include "MetaRoom.h"
 
 #include <algorithm>
+#include <cmath>
 #include <imgui.h>
 
 namespace Openc2eImgui {
@@ -30,7 +31,14 @@ int GetC2ScrollBarThickness() {
 // One scroll bar. 'pos' is the camera's left/top edge in world coordinates,
 // 'view' its width/height, and [lo, lo + range) the metaroom's extent.
 // Returns the new camera position, or -1 if unchanged.
-static int ScrollBar(const char* id, bool vertical, ImVec2 origin, float length, int pos, int view, int lo, int range) {
+//
+// 'wraps': the world goes round (Albia does, east to west): the track is
+// the whole circle, the thumb the view's share of it, and the thumb runs off
+// one end and on at the other as the view crosses the join (owner,
+// 2026-11-22). Before, the thumb sat still for the last view's width of the
+// world, going east it then took that long to reach the end, and going west
+// past the join it leapt straight to the far end.
+static int ScrollBar(const char* id, bool vertical, ImVec2 origin, float length, int pos, int view, int lo, int range, bool wraps = false) {
 	int result = -1;
 	ImGui::PushID(id);
 	ImGui::PushItemFlag(ImGuiItemFlags_ButtonRepeat, true);
@@ -49,11 +57,18 @@ static int ScrollBar(const char* id, bool vertical, ImVec2 origin, float length,
 	bool trackheld = ImGui::IsItemActive();
 	bool trackclicked = ImGui::IsItemClicked();
 
+	wraps = wraps && range > view;
 	float frac_view = range > 0 ? std::min(1.0f, (float)view / range) : 1.0f;
 	float thumblen = std::max(tracklen * frac_view, 12.0f);
-	float scrollable = std::max(range - view, 1);
-	float frac_pos = std::clamp((float)(pos - lo) / scrollable, 0.0f, 1.0f);
-	float thumbstart = (tracklen - thumblen) * frac_pos;
+	float scrollable = wraps ? (float)range : std::max(range - view, 1);
+	float frac_pos = (float)(pos - lo) / scrollable;
+	if (wraps)
+		frac_pos -= std::floor(frac_pos);
+	else
+		frac_pos = std::clamp(frac_pos, 0.0f, 1.0f);
+	float thumbstart = (wraps ? tracklen : tracklen - thumblen) * frac_pos;
+	// (wrapping: what runs off the end, drawn again from the start)
+	float overrun = wraps ? std::max(0.0f, thumbstart + thumblen - tracklen) : 0.0f;
 
 	ImDrawList* dl = ImGui::GetWindowDrawList();
 	ImU32 trackcol = ImGui::GetColorU32(ImGuiCol_ScrollbarBg);
@@ -61,7 +76,18 @@ static int ScrollBar(const char* id, bool vertical, ImVec2 origin, float length,
 	dl->AddRectFilled(trackpos, ImVec2(trackpos.x + tracksize.x, trackpos.y + tracksize.y), trackcol);
 	ImVec2 t0 = vertical ? ImVec2(trackpos.x + 1, trackpos.y + thumbstart) : ImVec2(trackpos.x + thumbstart, trackpos.y + 1);
 	ImVec2 t1 = vertical ? ImVec2(trackpos.x + BAR - 1, t0.y + thumblen) : ImVec2(t0.x + thumblen, trackpos.y + BAR - 1);
+	if (overrun > 0) {
+		if (vertical)
+			t1.y = trackpos.y + tracklen;
+		else
+			t1.x = trackpos.x + tracklen;
+	}
 	dl->AddRectFilled(t0, t1, thumbcol);
+	if (overrun > 0) {
+		ImVec2 w0 = vertical ? ImVec2(trackpos.x + 1, trackpos.y) : ImVec2(trackpos.x, trackpos.y + 1);
+		ImVec2 w1 = vertical ? ImVec2(trackpos.x + BAR - 1, trackpos.y + overrun) : ImVec2(trackpos.x + overrun, trackpos.y + BAR - 1);
+		dl->AddRectFilled(w0, w1, thumbcol);
+	}
 
 	// interaction: drag the thumb, or click the track to page
 	static float s_grab_offset = 0;
@@ -71,12 +97,19 @@ static int ScrollBar(const char* id, bool vertical, ImVec2 origin, float length,
 		if (mouse >= thumbstart && mouse <= thumbstart + thumblen) {
 			s_dragging = id;
 			s_grab_offset = mouse - thumbstart;
+		} else if (mouse < overrun) { // (the part run on at the start)
+			s_dragging = id;
+			s_grab_offset = mouse + tracklen - thumbstart;
 		} else {
 			s_dragging = nullptr;
 			result = pos + (mouse < thumbstart ? -view : view); // page
 		}
 	}
-	if (trackheld && s_dragging == id && tracklen > thumblen) {
+	if (trackheld && s_dragging == id && wraps) {
+		float f = (mouse - s_grab_offset) / tracklen;
+		f -= std::floor(f);
+		result = lo + (int)(f * scrollable);
+	} else if (trackheld && s_dragging == id && tracklen > thumblen) {
 		float f = std::clamp((mouse - s_grab_offset) / (tracklen - thumblen), 0.0f, 1.0f);
 		result = lo + (int)(f * scrollable);
 	}
@@ -126,7 +159,7 @@ void DrawC2ScrollBars() {
 	ImGui::SetNextWindowPos(ImVec2(0, bottom - BAR));
 	ImGui::SetNextWindowSize(ImVec2(right, BAR));
 	if (ImGui::Begin("##c2hscroll", nullptr, flags)) {
-		newx = ScrollBar("h", false, ImVec2(0, bottom - BAR), right - BAR, camx, camw, (int)m->x(), (int)m->width());
+		newx = ScrollBar("h", false, ImVec2(0, bottom - BAR), right - BAR, camx, camw, (int)m->x(), (int)m->width(), m->wraparound());
 	}
 	ImGui::End();
 
