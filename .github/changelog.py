@@ -319,6 +319,9 @@ VERSIONS = [
     ("0.30.0", "6a7941e0",
      "Creatures that answer when spoken to: they look at you, try your words, look at what you name, and weigh the "
      "verbs they know; and Ctrl+S says your last words again."),
+    ("0.31.0", "7b2eab6f",
+     "Names of your own: teach creatures what to call your hand and things, and they use them and teach one another; "
+     "and following goes with the creature selected."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
