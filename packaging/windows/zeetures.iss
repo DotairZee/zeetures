@@ -73,6 +73,9 @@ Filename: "{app}\Zeetures.exe"; Description: "{cm:LaunchProgram,Zeetures}"; Flag
 ; again, in the world it was in (/WORLD=name)
 Filename: "{app}\Zeetures.exe"; Parameters: "{code:RelaunchParams}"; Flags: nowait; Check: Relaunching
 
+; Uninstalling removes only the program: the player's worlds, saves and
+; settings in Documents\My Games stay.
+
 [Code]
 // An update started by the game runs while the game is closing: wait for it
 // to let go of its mutex (Updater.cpp holds ZeeturesRunning while it runs),
@@ -106,5 +109,3 @@ begin
     Result := '--world "' + world + '"';
 end;
 
-; Uninstalling removes only the program: the player's worlds, saves and
-; settings in Documents\My Games stay.
