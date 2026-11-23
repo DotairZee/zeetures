@@ -250,6 +250,7 @@ Creatures are born knowing no words. Until they learn yours they speak Nornish, 
 Each hearing makes a word more familiar, until it is known. Children learn fastest, then adolescents; the senile slowest.
 
 - **Teaching machines and laptops:** one press teaches a word to a child, adolescent, or youth looking at the screen or standing close; babies and adults need another. Others in earshot learn it more slowly.
+- **The laptop:** click it to open it; it says a word as it opens and stays open. Click it again to shut it. Right-click picks it up, open or shut.
 - **The hand:** about three times for a child or an adult, four for a baby or the old, and seven for the senile.
 - **Other creatures:** each time they use a word they know. Family are heard twice as well, so words pass down a line.
 - **Things in use:** creatures name what they have just used, most of all when a baby or child of their family is watching.

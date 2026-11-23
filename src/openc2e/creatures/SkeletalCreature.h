@@ -145,6 +145,11 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// smooth movement: on or off (View menu; off in C1 and C3)
 	static bool smoothMovement();
 	static void setSmoothMovement(bool on);
+	// drawn steps per world tick (0: every frame drawn), and the part of this
+	// tick to draw creatures at, stepped to match (may be a little below 0)
+	static float glideSteps();
+	static void setGlideSteps(float steps);
+	static float drawnTickFraction();
 	// how far it is drawn now from where it is: its corner (what floats on
 	// it), its head, the thing it carries; false: where it is
 	bool drawnShift(float& dx, float& dy) const;

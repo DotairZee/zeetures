@@ -838,8 +838,10 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 		// records what is drawn through ffmpeg at 30 frames a second of real
 		// time (a frame drawn late is repeated, one drawn early skipped);
 		// OPENC2E_RECORD_SECONDS=N stops after N seconds (the file is then
-		// finished while the game runs on)
+		// finished while the game runs on); OPENC2E_RECORD_FPS=N records N
+		// frames a second instead of 30
 		if (const char* out = devenv("OPENC2E_RECORD")) {
+			static const int fps = devenv("OPENC2E_RECORD_FPS") ? std::max(1, atoi(devenv("OPENC2E_RECORD_FPS"))) : 30;
 			static FILE* rec = nullptr;
 			static bool started = false, stopped = false;
 			static Uint64 startMs = 0;
@@ -854,19 +856,19 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 							started = true;
 							rw = rgb->w;
 							rh = rgb->h;
-							std::string cmd = fmt::format("ffmpeg -y -loglevel error -f rawvideo -pix_fmt rgb24 -s {}x{} -r 30 -i - "
+							std::string cmd = fmt::format("ffmpeg -y -loglevel error -f rawvideo -pix_fmt rgb24 -s {}x{} -r {} -i - "
 														  "-c:v libx264 -preset veryfast -crf 14 -pix_fmt yuv420p \"{}\"",
-								rw, rh, out);
+								rw, rh, fps, out);
 #ifdef _WIN32
 							rec = _popen(cmd.c_str(), "wb");
 #else
 							rec = popen(cmd.c_str(), "w");
 #endif
 							startMs = SDL_GetTicks();
-							fmt::print("* Recording to {} ({}x{}, 30 fps)\n", out, rw, rh);
+							fmt::print("* Recording to {} ({}x{}, {} fps)\n", out, rw, rh, fps);
 						}
 						double t = (SDL_GetTicks() - startMs) / 1000.0;
-						long want = (long)(t * 30.0) + 1;
+						long want = (long)(t * fps) + 1;
 						while (rec && frames < want && rgb->w == rw && rgb->h == rh) {
 							for (int y = 0; y < rh; y++)
 								fwrite((const uint8_t*)rgb->pixels + (size_t)y * rgb->pitch, 1, (size_t)rw * 3, rec);

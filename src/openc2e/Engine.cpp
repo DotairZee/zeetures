@@ -1205,6 +1205,11 @@ void Engine::update() {
 //   say X Y TEXT      the hand goes to world X, Y and says it
 //   caos TEXT         runs CAOS (as the world's additions run)
 //   die               the creature chosen dies
+//   find F G S        prints where each object of that kind is
+//   click X Y         the hand's left button at world X, Y (rclick: right);
+//                     "click on F G S" at the middle of an object of that kind
+//   smooth on|off     smooth movement on or off
+//   steps K           creatures drawn K steps a tick (0: every frame)
 // For recording scripted shots with OPENC2E_RECORD.
 static void runDirector() {
 	static const char* file = devenv("OPENC2E_DIRECTOR");
@@ -1299,6 +1304,50 @@ static void runDirector() {
 			std::string text;
 			std::getline(l, text);
 			world.executeInitScriptText("director", text);
+		} else if (cmd == "find") { // prints where each object of a kind is
+			int f, g, sp;
+			if (l >> f >> g >> sp)
+				for (auto& a : world.agents)
+					if (a && a->family == f && a->genus == g && a->species == sp)
+						fmt::print("* Director find {} {} {} at {:.0f},{:.0f} {}x{} attr {} actv {} carried {}\n", f, g, sp, a->x, a->y, a->getWidth(), a->getHeight(),
+							(int)a->attr, (int)a->actv, a->carriedby ? 1 : 0);
+		} else if (cmd == "click" || cmd == "rclick") { // the hand's left or right button at world X, Y
+			float cx, cy;
+			std::string first;
+			l >> first;
+			bool at = false;
+			if (first == "on") { // "click on F G S": the middle of the first object of that kind
+				int f, g, sp;
+				if (l >> f >> g >> sp)
+					for (auto& a : world.agents)
+						if (a && a->family == f && a->genus == g && a->species == sp) {
+							cx = a->x + a->getWidth() / 2.0f;
+							cy = a->y + a->getHeight() / 2.0f;
+							at = true;
+							break;
+						}
+			} else {
+				cx = (float)atof(first.c_str());
+				at = (bool)(l >> cy);
+			}
+			if (at && world.hand()) {
+				auto* hand = dynamic_cast<PointerAgent*>(world.hand());
+				hand->moveTo(cx - (hand->pointerX() - hand->x), cy - (hand->pointerY() - hand->y));
+				BackendEvent e{};
+				e.button = cmd == "rclick" ? buttonright : buttonleft;
+				e.type = eventmousebuttondown;
+				hand->handleEvent(e);
+				e.type = eventmousebuttonup;
+				hand->handleEvent(e);
+			}
+		} else if (cmd == "smooth") { // smooth movement on or off (not saved)
+			std::string w;
+			l >> w;
+			SkeletalCreature::setSmoothMovement(w != "off");
+		} else if (cmd == "steps") { // creatures drawn in steps (0: every frame)
+			float k;
+			if (l >> k)
+				SkeletalCreature::setGlideSteps(k);
 		} else if (cmd == "die") {
 			auto* ca = dynamic_cast<CreatureAgent*>(world.selectedcreature.get());
 			if (ca && ca->getCreature() && ca->getCreature()->isAlive())

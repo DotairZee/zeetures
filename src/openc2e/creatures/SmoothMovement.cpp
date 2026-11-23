@@ -71,6 +71,7 @@ const float EVEN_FADE = 2.0f; // ticks for a stopped walk's to go
 const float MOST_JUMP = 72.0f; // px: the feet further off than this were moved, not walked (or pushed back by a wall, some 55)
 
 int s_on = -1;
+float s_steps = -1; // glideSteps(): unread
 
 float wrapped(float a) {
 	while (a > PI)
@@ -120,6 +121,31 @@ bool SkeletalCreature::smoothMovement() {
 	return s_on == 1;
 }
 
+float SkeletalCreature::glideSteps() {
+	if (s_steps < 0) {
+		const char* e = devenv("OPENC2E_GLIDE_STEPS");
+		s_steps = e ? std::max(0.0f, (float)atof(e)) : 0.0f;
+	}
+	return s_steps;
+}
+
+void SkeletalCreature::setGlideSteps(float steps) {
+	s_steps = std::max(0.0f, steps);
+}
+
+// The part of this tick that creatures are drawn at: every frame, or held
+// between steps of 1/glideSteps() of a tick, counted from the world's first
+// tick so the steps are even across ticks (a fraction of a tick between
+// steps then begins one tick and ends the next: drawn a little below 0).
+float SkeletalCreature::drawnTickFraction() {
+	const float f = engine.tickFraction();
+	const float k = glideSteps();
+	if (k <= 0 || world.paused)
+		return f;
+	const double t = (double)world.tickcount + f;
+	return (float)(std::floor(t * k + 1e-4) / k - (double)world.tickcount);
+}
+
 void SkeletalCreature::setSmoothMovement(bool on) {
 	s_on = on ? 1 : 0;
 	writePlayerSetting("smooth-movement", on ? "1" : "0");
@@ -130,7 +156,7 @@ float SkeletalCreature::glideShare() const {
 		return 1.0f;
 	// (a change in tick n is first drawn in tick n + 1; in the middle of a
 	// tick, as the next change begins, the last frame drawn was at its end)
-	float now = (float)(world.tickcount - glide.changed) + (glide.pending ? 1.0f : engine.tickFraction());
+	float now = (float)(world.tickcount - glide.changed) + (glide.pending ? 1.0f : drawnTickFraction());
 	return std::clamp((now - glide.start) / glide.length, 0.0f, 1.0f);
 }
 
@@ -142,7 +168,7 @@ float SkeletalCreature::evenNow() const {
 	if (t < 1.0f)
 		return glide.evenFrom + (glide.evenTo - glide.evenFrom) * t;
 	// (the walk has stopped: fading)
-	const float now = (float)(world.tickcount - glide.changed) + (glide.pending ? 1.0f : engine.tickFraction());
+	const float now = (float)(world.tickcount - glide.changed) + (glide.pending ? 1.0f : drawnTickFraction());
 	return glide.evenTo * std::clamp(1.0f - (now - glide.start - std::max(glide.length, 0.0f)) / EVEN_FADE, 0.0f, 1.0f);
 }
 
@@ -454,6 +480,39 @@ bool SkeletalCreature::renderGliding(RenderTarget* renderer, int xoffset, int yo
 					falling ? " falling" : "", carriedby ? " carried" : "", invehicle ? " riding" : "", dir != posedirection ? " turned" : "", glideShare(), glide.offx, glide.offy);
 		}
 		last[getUNID()] = std::make_tuple(nx, ny, now, posedirection);
+	}
+	// developer aid: OPENC2E_WATCH_STEPS prints every 5 s how many times a
+	// second, on average, a walking creature's neck is drawn somewhere new
+	if (static const bool steps = devenv("OPENC2E_WATCH_STEPS") != nullptr; steps && engine.version == 2 && walking) {
+		static std::map<int, std::tuple<int, int, unsigned int>> last;
+		static unsigned int since = 0, changes = 0;
+		static double walking = 0;
+		float p[PARTS], jx[PARTS], jy[PARTS], nx, ny;
+		if (!smoothMovement() || !drawnSkeleton(p, jx, jy, nx, ny)) {
+			nx = x + adjustx + (int)att[0].attachments[pose[0]][0];
+			ny = y + adjusty + (int)att[0].attachments[pose[0]][1];
+		}
+		const unsigned int now = engine.get_ticks_msec();
+		if (since == 0)
+			since = now;
+		const int ix = (int)std::lround(nx), iy = (int)std::lround(ny);
+		if (auto it = last.find(getUNID()); it != last.end() && now - std::get<2>(it->second) <= 100) {
+			walking += (now - std::get<2>(it->second)) / 1000.0;
+			if (std::get<0>(it->second) != ix || std::get<1>(it->second) != iy)
+				changes++;
+		}
+		last[getUNID()] = std::make_tuple(ix, iy, now);
+		// (and as the setting changes, so that each setting is counted alone)
+		static float lastSetting = -2;
+		const float setting = smoothMovement() ? glideSteps() : -1;
+		if (now - since >= 5000 || setting != lastSetting) {
+			if (lastSetting != -2 && walking > 0)
+				fmt::print("* WATCH STEPS {:.1f} new places a second while walking ({:.1f} walker-seconds; steps {}, smooth {})\n", changes / walking, walking, lastSetting < 0 ? 0 : lastSetting, lastSetting < 0 ? "off" : "on");
+			lastSetting = setting;
+			since = now;
+			changes = 0;
+			walking = 0;
+		}
 	}
 	if (!smoothMovement())
 		return false;

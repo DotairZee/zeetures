@@ -1,0 +1,111 @@
+* The language computer: open and shut with a click, picked up any time
+* (openc2e Creatures 2 project, our own scripts in place of the game's).
+* Run by openc2e after the world loads (Additions folder); safe to repeat.
+* any world: it changes objects by kind, not Eden's map, so it runs on every
+* world (other Additions run only on worlds started from Eden.sfc).
+*
+* The computer (2 9 28, "lapt", by the submarine's east door) speaks through
+* a blackboard (3 3 11) kept out of sight at 4300, 640, and has a light arrow
+* (2 1 55) that points at it while it is shut. The game's activate script
+* opened it, talked for 20 seconds and shut it again in one go, and made it
+* not carryable while it did; a click during that did nothing (ACTV 1 has no
+* click action), so an open computer could neither be shut nor picked up
+* (owner, 2026-11-23: "a right click anywhere on its sprites should be able
+* to pick it up, whether open or closed, and a left click anywhere on its
+* sprites should open or close it").
+*
+* Now a click opens a shut computer, which then talks (teaching a word, as
+* before) and stays open, and a click on an open one shuts it, ending the
+* talk. A creature pushing an open one has it talk again. It can be picked
+* up at any time, open or shut; a pickup ends the talk and leaves it as it
+* was. OV00: 1 while open.
+
+* activate 1: the hand's click or a creature's push
+scrp 2 9 28 1
+  setv actv 0
+  doif movs eq 0 and grav eq 0
+    doif ov00 eq 0
+      setv ov00 1
+      gsub open
+      gsub talk
+    else
+      doif from ne pntr
+        gsub talk
+      else
+        setv ov00 0
+        gsub hush
+        gsub clos
+      endi
+    endi
+  endi
+  stop
+  subr open
+    enum 2 1 55 mesg writ targ 5 mvto 4300 640 next
+    base 0
+    anim [1234567]
+    over
+  retn
+  subr talk
+    base 7
+    anim [01234567R]
+    setv var0 posx
+    subv var0 10
+    setv var1 posy
+    wait 10
+    enum 3 3 11 mesg wrt+ targ 256 var0 var1 0 next
+    wait 200
+    base 0
+    pose 7
+  retn
+  subr hush
+    enum 3 3 11 mesg writ targ 257 next
+  retn
+  subr clos
+    base 0
+    anim [6543210]
+    over
+    mesg wrt+ ownr 256 0 0 0
+  retn
+endm
+
+* pickup: the talk ends; an open computer stays open
+scrp 2 9 28 4
+  enum 2 1 55 mvto 4300 640 next
+  enum 3 3 11 mesg writ targ 257 next
+  base 0
+  doif ov00 eq 1
+    pose 7
+  else
+    pose 0
+  endi
+endm
+
+* drop: the arrow comes back beside it once it lands, if it is shut
+scrp 2 9 28 5
+  loop
+    wait 1
+  untl grav eq 0
+  doif ov00 eq 0
+    mesg wrt+ ownr 256 0 0 0
+  endi
+endm
+
+* the blackboard's talk cut short: back out of sight (a message ends the
+* talk script running on it)
+scrp 3 3 11 257
+  mvto 4300 640
+endm
+
+* every computer carryable and answering clicks, shown open or shut as it
+* was left (a talk cut short by a save goes quiet)
+enum 2 9 28
+  setv attr 199
+  setv actv 0
+  base 0
+  doif ov00 eq 1
+    pose 7
+  else
+    pose 0
+    mesg wrt+ targ 256 0 0 0
+  endi
+next

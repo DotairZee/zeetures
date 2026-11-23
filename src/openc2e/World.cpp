@@ -884,8 +884,9 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 			float dx = sc->x - sc->tickstartx, dy = sc->y - sc->tickstarty;
 			if (std::fabs(dx) > 64 || std::fabs(dy) > 64)
 				return;
-			gx = -(int)std::lround(dx * glide);
-			gy = -(int)std::lround(dy * glide);
+			const float g = std::clamp(1.0f - SkeletalCreature::drawnTickFraction(), 0.0f, 1.0f);
+			gx = -(int)std::lround(dx * g);
+			gy = -(int)std::lround(dy * g);
 			return;
 		}
 		Vehicle* v = dynamic_cast<Vehicle*>(a->invehicle ? a->invehicle.get() : a);
