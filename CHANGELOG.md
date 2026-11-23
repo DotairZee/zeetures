@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 647 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 648 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [0.33.3](#version-0333): 2 commits, 22 November 2026
+- [0.33.3](#version-0333): 3 commits, 22 November 2026
 - [0.33.2](#version-0332): 2 commits, 22 November 2026
 - [0.33.1](#version-0331): 2 commits, 22 November 2026
 - [0.33.0](#version-0330): 3 commits, 22 November 2026
@@ -88,9 +88,18 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 
 ## Version 0.33.3
 
-The incubator's waterfall no longer lulls creatures to sleep; eyes shut while a creature is out cold; a larger icon.
+The incubator's waterfall calms instead of lulling creatures to sleep; eyes shut while a creature is out cold; a larger icon.
 
 ### 22 November 2026
+
+#### The incubator's waterfall calms only
+
+[`52b45fdc`](https://github.com/DotairZee/zeetures/commit/52b45fdc2902aaf740a6a16c47ccde329bb779ca)
+
+Owner, 2026-11-22: "why would the waterfall cause any sleepiness at all?
+calming is better, drop sleepiness." Its call is now Fear Decrease 30
+alone (script-patches.txt; it was Sleepiness Increase 50, then 10).
+Checked in the world's scripts as loaded.
 
 #### The incubator's waterfall no longer puts creatures to sleep
 
