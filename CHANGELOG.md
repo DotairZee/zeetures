@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 638 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 639 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.33.0](#version-0330): 1 commits, 22 November 2026
 - [0.32.1](#version-0321): 1 commits, 22 November 2026
 - [0.32.0](#version-0320): 1 commits, 22 November 2026
 - [0.31.0](#version-0310): 1 commits, 22 November 2026
@@ -81,6 +82,43 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.33.0
+
+Zeetures updates itself from inside the game, with switches for checking and for installing automatically; Backspace no longer leaves a block in typed words.
+
+### 22 November 2026
+
+#### Version 0.33.0: Zeetures updates itself; Backspace while typing
+
+[`7b42f542`](https://github.com/DotairZee/zeetures/commit/7b42f5420792bb1006f6ed879a479e0f8c1b9477)
+
+- Updates from inside the game (owner, 2026-11-22). Each nightly carries
+  zeetures-update.txt: the version, and each download built that night
+  with its size and SHA-256 (one kept from an earlier night is left out).
+  The game checks it with the system's curl at start and every six hours
+  (Help &gt; Check for Updates Automatically), or when asked (Help &gt; Check for
+  Updates, and a button in About). A newer version is offered in a small
+  window (Update Now, What's New, Not Now); with Help &gt; Install Updates
+  Automatically (off to begin with) it downloads without asking. The
+  download is checked against its SHA-256, kept in the user folder's
+  Updates, and installed as the game ends, after the world is saved:
+  the AppImage takes the old one's place ($APPIMAGE); Windows runs the new
+  installer /SILENT, which waits for the game's ZeeturesRunning mutex and
+  with /RELAUNCH starts it again in the same world; the Mac app is copied
+  out of the disk image by a script that waits for the game to close, or
+  the disk image is opened. Restart Now saves, installs and starts again;
+  When I Quit installs on the way out. The .zip and .tar.gz, and builds
+  of one's own, are told and given the download page. Developer builds
+  check only with OPENC2E_UPDATE_URL (a test server).
+- Backspace while typing to creatures (a player): the system also sent
+  it as a character, "\b", which the hand's bubble drew as a block in the
+  letter's place. Only characters that print reach typed text now.
+
+Tested on Linux against a local server, with real clicks: offered,
+downloaded, checked, swapped, restarted in the same world; automatic
+mode installing on File &gt; Exit; a bad checksum thrown away. The Windows
+and Mac installing is not tried yet (the installer is built on GitHub).
 
 ## Version 0.32.1
 

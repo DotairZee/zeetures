@@ -327,6 +327,9 @@ VERSIONS = [
     ("0.32.1", "4ecc0052",
      "Favourite places saved; Save World As copies photos and genes; the Syringe brings back the newly dead; "
      "the arrow keys and dragging stop following."),
+    ("0.33.0", "7b42f542",
+     "Zeetures updates itself from inside the game, with switches for checking and for installing automatically; "
+     "Backspace no longer leaves a block in typed words."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
