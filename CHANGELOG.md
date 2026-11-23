@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 646 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 647 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [0.33.3](#version-0333): 1 commits, 22 November 2026
+- [0.33.3](#version-0333): 2 commits, 22 November 2026
 - [0.33.2](#version-0332): 2 commits, 22 November 2026
 - [0.33.1](#version-0331): 2 commits, 22 November 2026
 - [0.33.0](#version-0330): 3 commits, 22 November 2026
@@ -88,9 +88,28 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 
 ## Version 0.33.3
 
-Eyes shut while a creature is out cold, and a larger icon.
+The incubator's waterfall no longer lulls creatures to sleep; eyes shut while a creature is out cold; a larger icon.
 
 ### 22 November 2026
+
+#### The incubator's waterfall no longer puts creatures to sleep
+
+[`affce475`](https://github.com/DotairZee/zeetures/commit/affce475a43ff65f6c9eb6fc3e2d612bd44d8edc)
+
+Owner's screencast, 2026-11-22: a norn by the incubator asleep, on and on,
+even at 10x. Watched in a copy of the owner's world (OPENC2E_WATCH_MONIKER):
+asleep about 2,400 ticks, then sleepy again within a minute of waking, in
+full daylight. Its genes are norn.gen's. The cause: the waterfall by the
+incubator's pond (2 3 1, scenery, C2's own) calls out to creatures near it
+every five seconds with Fear Decrease 30 and Sleepiness Increase 50: 164
+such calls in 3,000 ticks, against about 75 sleep stimuli to undo them.
+script-patches.txt lowers its Sleepiness Increase to 10 (it still calms).
+
+Time asleep in the same copy, about 1.7 game days: 28% and more before,
+11% after; longest sleep 1,449 ticks. Stimulating sleep every 8 or 15
+ticks was tried (5% and 9%); sleep.cos keeps the game's pace, every 27
+ticks, now capped at 120 stimuli (about five minutes) in both scripts.
+The watch aid also prints the light sense and Sleepiness Increase.
 
 #### Version 0.33.3: eyes shut when out cold; a larger icon
 
