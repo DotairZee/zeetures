@@ -81,6 +81,18 @@ Each world is its own copy of Albia, with its own creatures and history. When Ze
 
 Worlds saved by earlier versions open in later ones. If a saved game cannot be read, or some creatures in it cannot be loaded (a breed's files removed, perhaps), Zeetures keeps the saved game safe beside the world, says so, and lets you quit and put things right.
 
+## Updating Zeetures
+
+Zeetures can update itself, if it was installed with Zeetures-Setup.exe on Windows, from the disk image on a Mac, or as the AppImage on Linux. Your worlds are never touched.
+
+- **Checking:** Zeetures looks for a new version when it starts and every six hours while it runs. Help > Check for Updates looks now, and so does the button in About Zeetures. Help > Check for Updates Automatically turns the regular checks off and on.
+- **When one is out,** a window says so. Update Now downloads it while you play; then Restart Now saves your world, installs it, and starts again in the same world, or When I Quit installs it as you leave. What's New lists the changes. Not Now leaves it until next time.
+- **Installing automatically:** with Help > Install Updates Automatically ticked (it starts unticked), new versions are downloaded without asking and installed when you quit.
+- **Safety:** each download is checked against the release's own record of it, and thrown away if it does not match.
+- **Other copies:** the .zip and .tar.gz, or a copy built from the source, cannot update themselves. They are told about a new version, with a button to the download page.
+
+The check asks GitHub, where Zeetures is published, and sends nothing about you or your worlds.
+
 ## When something is wrong
 
 - **Nothing happens when I type.** Click on the world, so that no box in a window has the keyboard.
@@ -117,7 +129,7 @@ If you know the original game, these are the main differences.
 - **Camera:** following, the halo, smooth scrolling and movement, and favourite places.
 - **Tools:** the Hatchery and every kit.
 - **Creatures:** every living creature; choose one to select it and go to it.
-- **Help:** this window, the projects on the web, and About Zeetures, which also lists the research behind the creatures' minds.
+- **Help:** this window, the projects on the web, checking for updates and the switches for it (see [[Updating Zeetures]]), and About Zeetures, which also lists the research behind the creatures' minds.
 
 ### Sound
 

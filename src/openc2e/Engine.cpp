@@ -1771,8 +1771,11 @@ void Engine::handleTextInput(BackendEvent& event) {
 		}
 	}
 
-	// tell the agent with keyboard focus
-	if (world.focusagent) {
+	// tell the agent with keyboard focus (only characters that print: some
+	// systems send Backspace as a character too, "\b", after its key, and
+	// the hand's typing showed it as a block where the letter had been; a
+	// player, 2026-11-22)
+	if (world.focusagent && cp1252_isprint(translated_char)) {
 		CompoundPart* t = world.focusagent.get()->part(world.focuspart);
 		if (t && t->canGainFocus())
 			t->handleTranslatedChar(translated_char);

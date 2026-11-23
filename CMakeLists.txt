@@ -409,6 +409,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/openc2eimgui/MindKit.cpp
 	src/openc2e/openc2eimgui/EcologyKit.cpp
 	src/openc2e/openc2eimgui/HelpWindow.cpp
+	src/openc2e/openc2eimgui/Updater.cpp
 	src/openc2e/openc2eimgui/ScienceKit.cpp
 	src/openc2e/openc2eimgui/C2ScrollBars.cpp
 	src/openc2e/openc2eimgui/C2StatusBar.cpp

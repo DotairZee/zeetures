@@ -8,6 +8,7 @@
 
 #include "C2KitsInternal.h"
 #include "HelpWindow.h"
+#include "Updater.h"
 #include "creatures/CreatureSpeech.h"
 #include "creatures/Thoughts.h"
 
@@ -243,7 +244,11 @@ static const char* GenusName(int genus) {
 // 0.5.0 (2026-11-14, night): every object kept between launches (stage 3).
 // 0.6.0 (2026-11-14, night): signature scents; the hand takes things from
 // creatures and keeps its mode; the gene lab's east end sealed.
-#define OPENC2E_FORK_VERSION "0.32.1"
+#define OPENC2E_FORK_VERSION "0.33.0"
+
+const char* ZeeturesVersion() {
+	return OPENC2E_FORK_VERSION;
+}
 
 // CITATIONS.md, as Help > About shows it: "## " headings as separators,
 // "- " entries wrapped, each Markdown link [text](url) as a small button
@@ -631,6 +636,8 @@ static bool s_set_aside_was_paused = false;
 		if (ImGui::MenuItem("openc2e on the Web"))
 			SDL_OpenURL(OPENC2E_WEB);
 		ImGui::Separator();
+		UpdaterMenuItems();
+		ImGui::Separator();
 		if (ImGui::MenuItem("About " FORK_NAME "..."))
 			s_open_about = true;
 		ImGui::EndMenu();
@@ -707,6 +714,11 @@ static bool s_set_aside_was_paused = false;
 		ImGui::SameLine();
 		if (ImGui::Button("openc2e on the Web"))
 			SDL_OpenURL(OPENC2E_WEB);
+		ImGui::SameLine();
+		if (ImGui::Button("Check for Updates")) {
+			CheckForUpdatesNow();
+			ImGui::CloseCurrentPopup();
+		}
 		ImGui::SameLine();
 		bool researchOpen = ImGui::IsPopupOpen("Research behind " FORK_NAME);
 		if (ImGui::Button("OK") || (!researchOpen && ImGui::IsKeyPressed(ImGuiKey_Escape)))
