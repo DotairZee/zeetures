@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 636 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 637 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.32.0](#version-0320): 1 commits, 22 November 2026
 - [0.31.0](#version-0310): 1 commits, 22 November 2026
 - [0.30.0](#version-0300): 1 commits, 22 November 2026
 - [0.29.2](#version-0292): 1 commits, 22 November 2026
@@ -79,6 +80,27 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.32.0
+
+Help in depth: 43 topics with a search and links, one for every kit, opened with F1.
+
+### 22 November 2026
+
+#### Version 0.32.0: Help in depth, with a topic for every kit
+
+[`6f395b70`](https://github.com/DotairZee/zeetures/commit/6f395b7095c42a83af47eece4e35bf0788f5c546)
+
+The Help window is a set of 43 topics now (about 10,000 words, in
+data/help/help-topics.md, built into the program), in place of six short
+sections: getting started, the window, living with creatures (the hand,
+talking, names of your own, thoughts, needs, learning, temperament,
+relationships, growing up, food, sleep, breeding, illness, radiation), the
+world, every kit page by page, add-ons, and where things are kept. The
+topics are listed on the left with a search that marks the words found;
+topics link to one another, with Back; F1 opens it, at the topic of the kit
+in front. Every statement was checked against the code. The Save World
+tooltip said other objects were not saved; they are.
 
 ## Version 0.31.0
 

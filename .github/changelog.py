@@ -322,6 +322,8 @@ VERSIONS = [
     ("0.31.0", "7b2eab6f",
      "Names of your own: teach creatures what to call your hand and things, and they use them and teach one another; "
      "and following goes with the creature selected."),
+    ("0.32.0", "6f395b70",
+     "Help in depth: 43 topics with a search and links, one for every kit, opened with F1."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
