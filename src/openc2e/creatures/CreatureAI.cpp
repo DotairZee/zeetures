@@ -1077,6 +1077,7 @@ MindPerception oldCreature::buildPerception() {
 		if (engine.version == 2 && s.numbered && (s.id == 1 || s.id == 3)) {
 			(s.id == 1 ? p.handPat : p.handSlap) = true;
 			callTo(1);
+			touchedTick = std::max(1u, world.tickcount);
 		}
 	if (spoken.tick != 0 && world.tickcount >= spoken.tick && world.tickcount - spoken.tick < 400) {
 		p.heardVerb = spoken.verb;

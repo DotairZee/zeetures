@@ -152,6 +152,15 @@ class oldCreature : public Creature {
 	// (engine.wordlist), how familiar it is, 0-255 (known at WORD_KNOWN); see
 	// CreatureSpeech.h. Empty until the first word is heard.
 	std::vector<unsigned char> vocab;
+	// Names of its own for kinds of thing, outside the game's word list
+	// ("mummy" for the hand): for each word, how familiar it is as the name
+	// of each category (0-255, known at WORD_KNOWN); learned from the hand
+	// (answerHand) and from other creatures (hearOwnNames), saved with it
+	std::map<std::string, std::map<int, int>> ownNames;
+	std::string namingWord; // the last name the hand was teaching it
+	int namingCategory = -1; // and for what
+	unsigned int namingTick = 0, touchedTick = 0; // when, and when the hand last touched it
+	std::string replyName; // a name it will say back (else replyWord)
 	// what the hand last said to it (answerHand, CreatureSpeech.cpp): the
 	// verb (0-13) and the thing (a category) it knows the words for, -1 none
 	struct Spoken {

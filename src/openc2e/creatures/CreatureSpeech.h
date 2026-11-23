@@ -51,6 +51,14 @@ void hearWord(oldCreature* c, int word, int amount);
 void learnAllWords(oldCreature* c); // Stone of Knowledge (SYS: CMND 32777), VOCB
 int wordsKnown(oldCreature* c);
 
+// Names of a creature's own (oldCreature::ownNames): the category a word
+// names, or -1; its name for a category, or "".
+int ownNameMeans(oldCreature* c, const std::string& word);
+std::string ownNameFor(oldCreature* c, int category);
+int ownNamesKnown(oldCreature* c);
+// it hears `word` as a name for things of that category
+void hearOwnName(oldCreature* c, const std::string& word, int category, int amount);
+
 // Creatures within earshot of the speaker (awake, alive, not the speaker)
 // hear each word of the game's word list in the text (the hand's typing),
 // or the given words (another creature's speech).
@@ -81,6 +89,7 @@ struct Utterance {
 	std::string shown; // in the bubble
 	std::string spoken; // what the voice speaks (the words themselves)
 	std::vector<int> learned; // the learned words in it, for listeners
+	std::vector<std::pair<std::string, int>> own; // and the creature's own names for things (ownNames)
 };
 Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c);
 // One word of the game's word list (C2's SAY#): shown as the creature knows

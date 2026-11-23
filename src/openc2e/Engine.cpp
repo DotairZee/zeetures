@@ -434,6 +434,20 @@ void Engine::drawWorld() {
 	}
 	camera->stepPan(); // smooth scrolling, frame by frame
 	Openc2eImGui::Update();
+	// C1/C2: following goes with the selection (owner, 2026-11-22): while the
+	// view follows the creature selected, choosing another, by whatever
+	// button, kit or key, goes on to follow that one
+	if (version <= 2) {
+		static AgentRef lastSelected;
+		static bool following = false;
+		AgentRef selected(world.selectedcreature);
+		if (selected) {
+			if (selected != lastSelected && following)
+				camera->trackAgent(selected, 0, 0, flexible, none);
+			lastSelected = selected;
+			following = camera->trackedAgent() == selected;
+		}
+	}
 	get_backend()->getMainRenderTarget()->setViewportOffsetTop(Openc2eImGui::GetViewportOffsetTop());
 	get_backend()->getMainRenderTarget()->setViewportOffsetBottom(Openc2eImGui::GetViewportOffsetBottom());
 	get_backend()->getMainRenderTarget()->setViewportOffsetRight(Openc2eImGui::GetViewportOffsetRight());
@@ -1207,7 +1221,8 @@ static void runDirector() {
 		std::ifstream in(file);
 		std::string line;
 		while (std::getline(in, line)) {
-			if (auto h = line.find('#'); h != std::string::npos)
+			// ('#' starts a comment, alone; STM# is CAOS)
+			if (auto h = !line.empty() && line[0] == '#' ? 0 : line.find(" # "); h != std::string::npos)
 				line = line.substr(0, h);
 			std::istringstream l(line);
 			Cue c;

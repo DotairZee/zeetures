@@ -812,6 +812,11 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 						words += fmt::format(" {}:{}", i, (int)c->vocab[i]);
 				if (!words.empty())
 					out << "words" << words << "\n";
+				// names of its own: category, familiarity, the word
+				for (auto& [word, for_] : c->ownNames)
+					for (auto& [category, v] : for_)
+						if (v > 0)
+							out << "ownname " << category << " " << v << " " << escapeLine(word) << "\n";
 			}
 			{
 				std::string mon = world.history->findMoniker(c->getGenome());
@@ -931,6 +936,7 @@ struct SavedCreature {
 	int variant = 0, stage = 0;
 	std::string baby; // the genome name of the baby she carries, if pregnant
 	std::vector<std::pair<int, int>> words; // word-list number, familiarity
+	std::vector<std::pair<std::string, std::pair<int, int>>> ownNames; // word, category, familiarity
 	std::vector<std::string> bonds; // bond lines (Relationships::fromLine)
 	std::string temperament; // Temperaments::toLine; empty: keep the one drawn at hatching
 	std::string temperamentBorn, temperamentDrift; // (saves before 2026-11-17 have neither: born is the temperament)
@@ -1088,6 +1094,9 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 		if (Relationships::fromLine(line, other, b))
 			c->bonds[other] = b;
 	}
+	for (auto& [word, n] : s.ownNames)
+		if (!word.empty() && n.first >= 1 && n.first <= 35)
+			c->ownNames[word][n.first] = std::clamp(n.second, 0, 255);
 	for (auto& w : s.words) {
 		if (w.first < 0 || w.first > 1000)
 			continue;
@@ -1458,6 +1467,11 @@ bool LoadWorldState(const fs::path& worlddir) {
 				std::string rest;
 				std::getline(l, rest);
 				c->bonds.push_back(rest);
+			} else if (key == "ownname") {
+				int category = 0, v = 0;
+				std::string word;
+				if (l >> category >> v >> word)
+					c->ownNames.push_back({unescapeLine(word), {category, v}});
 			} else if (key == "words") {
 				std::string pair;
 				while (l >> pair) {
