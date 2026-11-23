@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 650 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 651 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.34.0](#version-0340): 1 commits, 23 November 2026
 - [0.33.5](#version-0335): 1 commits, 23 November 2026
 - [0.33.4](#version-0334): 1 commits, 22 November 2026
 - [0.33.3](#version-0333): 3 commits, 22 November 2026
@@ -87,6 +88,35 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.34.0
+
+View > Creature Frame Rate: choose how smoothly creatures move, from the original 5 per second to 60.
+
+### 23 November 2026
+
+#### Version 0.34.0: View &gt; Creature Frame Rate
+
+[`ee3cf3ed`](https://github.com/DotairZee/zeetures/commit/ee3cf3ed3f11cad320dbaf459e9dfa648a29e654)
+
+Owner, 2026-11-23: smooth creatures looked uncanny beside the world,
+whose objects change at most ten times a second; let players choose how
+smooth. View &gt; Creature Frame Rate: 5 per Second (Original), 10 per
+Second (World Pace), 15, 20, 30 and 60 per Second. Camera &gt; Smooth
+Movement is gone; 5 is smooth movement off.
+
+Between 5 and 60, creatures are drawn in steps of a tenth of the rate
+per world tick, counted from the world's first tick; 60 draws every
+frame (stepping at 60 against a 60 Hz screen would judder). Saved as
+creature-frame-rate, with smooth-movement still written for older
+versions; a settings file without the rate reads smooth-movement (0 as
+5, else 60), so nobody's look changes. Director cue "rate N" sets it as
+the menu does. Help and README updated.
+
+Measured in test Home, each rate loaded from a saved setting (new
+places a second while walking): 4.2, 9.8, 15.0, 19.8, 29.7, and 49.9
+(the offscreen window draws about 50 frames a second). 195 tests in
+both builds, ASan clean, check_saves OK.
 
 ## Version 0.33.5
 

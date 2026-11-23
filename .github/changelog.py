@@ -340,6 +340,8 @@ VERSIONS = [
      "Raindrops stuck against rocks are cleared away."),
     ("0.33.5", "69811014",
      "The laptop opens and shuts with a click, and can be picked up whether open or shut."),
+    ("0.34.0", "ee3cf3ed",
+     "View > Creature Frame Rate: choose how smoothly creatures move, from the original 5 per second to 60."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
