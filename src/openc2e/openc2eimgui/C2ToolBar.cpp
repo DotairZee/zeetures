@@ -1572,12 +1572,18 @@ static void DrawPreferences() {
 	static std::string shownTab;
 	bool words = shownTab == "Words";
 	static bool wasWords = false;
+	// (no narrower than its row of tabs)
+	static const char* const tabNames[] = {"Display", "Creatures", "Words", "World", "Status Bar", "Updates"};
+	const ImGuiStyle& st = ImGui::GetStyle();
+	float tabsW = st.WindowPadding.x * 2;
+	for (const char* n : tabNames)
+		tabsW += ImGui::CalcTextSize(n).x + st.FramePadding.x * 2 + st.ItemInnerSpacing.x;
 	if (words) {
 		if (!wasWords)
-			ImGui::SetNextWindowSize(ImVec2(600, 560));
-		ImGui::SetNextWindowSizeConstraints(ImVec2(520, 300), ImVec2(FLT_MAX, FLT_MAX));
+			ImGui::SetNextWindowSize(ImVec2(std::max(tabsW, 430.0f), 560));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(std::max(tabsW, 400.0f), 300), ImVec2(FLT_MAX, FLT_MAX));
 	} else {
-		ImGui::SetNextWindowSizeConstraints(ImVec2(540, 0), ImVec2(540, FLT_MAX));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(tabsW, 0), ImVec2(FLT_MAX, FLT_MAX));
 	}
 	wasWords = words;
 	ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | (words ? 0 : ImGuiWindowFlags_AlwaysAutoResize);
@@ -1606,7 +1612,7 @@ static void DrawPreferences() {
 				for (auto& [f, n] : faces)
 					if (f == now)
 						shown = n;
-				ImGui::SetNextItemWidth(300);
+				ImGui::SetNextItemWidth(250);
 				if (ImGui::BeginCombo("Font##worldfont", shown)) {
 					for (auto& [f, n] : faces)
 						if (ImGui::Selectable(n, f == now))
@@ -1625,7 +1631,7 @@ static void DrawPreferences() {
 				for (auto& [r, n] : rates)
 					if (r == now)
 						shown = n;
-				ImGui::SetNextItemWidth(300);
+				ImGui::SetNextItemWidth(190);
 				if (ImGui::BeginCombo("Creature frame rate", shown.c_str())) {
 					for (auto& [r, n] : rates)
 						if (ImGui::Selectable(n, r == now))
@@ -1635,13 +1641,8 @@ static void DrawPreferences() {
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("How often creatures move on screen: the game's own 5 poses a second, or smoothly between them.\nThe world's other objects change about 10 times a second.");
 			}
-			PrefCheck("Smooth scrolling", s_smooth_scrolling, "smooth-scrolling", "Glide to places and creatures you choose, instead of jumping");
 			ImGui::SeparatorText("Screen");
-			bool statusbar = IsC2StatusBarShown();
-			if (ImGui::Checkbox("Status bar", &statusbar)) {
-				SetC2StatusBarShown(statusbar);
-				writeFlag("status-bar", statusbar);
-			}
+			PrefCheck("Smooth scrolling", s_smooth_scrolling, "smooth-scrolling", "Glide to places and creatures you choose, instead of jumping");
 			bool scrollbars = AreC2ScrollBarsShown();
 			if (ImGui::Checkbox("Scroll bars", &scrollbars)) {
 				SetC2ScrollBarsShown(scrollbars);
@@ -1669,27 +1670,23 @@ static void DrawPreferences() {
 				setSpeechBubblesShown(bubbles);
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("Creatures' words in bubbles (their voices go on; Bibble under Sound)");
-			Thoughts::Mode tm = Thoughts::mode();
-			int t = tm == Thoughts::EVERY ? 0 : tm == Thoughts::SELECTED ? 1 : 2;
-			ImGui::AlignTextToFramePadding();
-			ImGui::TextUnformatted("Thought bubbles:");
-			ImGui::SameLine();
-			if (ImGui::RadioButton("Every creature", t == 0))
-				Thoughts::setMode(Thoughts::EVERY);
-			ImGui::SameLine();
-			if (ImGui::RadioButton("Selected creature only", t == 1))
-				Thoughts::setMode(Thoughts::SELECTED);
-			ImGui::SameLine();
-			if (ImGui::RadioButton("Off##thoughts", t == 2))
-				Thoughts::setMode(Thoughts::OFF);
-			ImGui::SeparatorText("The selected creature");
-			bool halo = HaloShown();
-			ImGui::BeginDisabled(!CanToggleHalo());
-			if (ImGui::Checkbox("Norn indicator", &halo))
-				ToggleHalo();
-			ImGui::EndDisabled();
-			if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-				ImGui::SetTooltip("A halo over the selected creature (the toolbar's Halo button)");
+			{
+				Thoughts::Mode tm = Thoughts::mode();
+				static const std::pair<Thoughts::Mode, const char*> modes[] = {{Thoughts::EVERY, "Every creature"}, {Thoughts::SELECTED, "Selected creature only"}, {Thoughts::OFF, "Off"}};
+				const char* shown = modes[0].second;
+				for (auto& [m, n] : modes)
+					if (m == tm)
+						shown = n;
+				ImGui::SetNextItemWidth(190);
+				if (ImGui::BeginCombo("Thought bubbles", shown)) {
+					for (auto& [m, n] : modes)
+						if (ImGui::Selectable(n, m == tm))
+							Thoughts::setMode(m);
+					ImGui::EndCombo();
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("What creatures are thinking, in pictures, when they set about something new");
+			}
 			ImGui::SeparatorText("Creature's View");
 			int b = EyeViewBlinking();
 			ImGui::AlignTextToFramePadding();
@@ -1703,42 +1700,17 @@ static void DrawPreferences() {
 			ImGui::Spacing();
 			ImGui::AlignTextToFramePadding();
 			ImGui::TextUnformatted("Size:");
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Or drag the Creature's View window's corner");
 			for (auto [w, n] : {std::pair<int, const char*>{200, "Small"}, {320, "Normal"}, {480, "Large"}}) {
 				ImGui::SameLine();
 				if (ImGui::Button(n))
 					SetEyeViewWidth(w);
 			}
-			ImGui::SameLine();
-			ImGui::TextDisabled("(or drag the window's corner)");
 			ImGui::EndTabItem();
 		}
 		if (tab("Words")) {
 			DrawWordEditor();
-			ImGui::EndTabItem();
-		}
-		if (tab("Sound")) {
-			bool music = !engine.musicmanager->isMuted();
-			if (ImGui::Checkbox("Ambient music", &music)) {
-				engine.musicmanager->setMuted(!music);
-				engine.musicmanager->setMIDIMuted(!music);
-				writeFlag("ambient-music", music);
-			}
-			bool world_sounds = !soundmanager.isMuted();
-			if (ImGui::Checkbox("World sounds", &world_sounds)) {
-				soundmanager.setMuted(!world_sounds);
-				writeFlag("world-sounds", world_sounds);
-			}
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("Machines, objects, creatures' noises: every sound but music and speech");
-			bool bibble = !soundmanager.areVoicesMutedByPlayer();
-			if (ImGui::Checkbox("Bibble", &bibble)) {
-				soundmanager.setVoicesMutedByPlayer(!bibble);
-				writeFlag("bibble", bibble);
-			}
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("Creatures' speech");
-			ImGui::Spacing();
-			ImGui::TextDisabled("(Also under File > Sound)");
 			ImGui::EndTabItem();
 		}
 		if (tab("World")) {
@@ -1795,16 +1767,29 @@ static void DrawPreferences() {
 				ImGui::SetTooltip("Boney Grendels and Frog Norns V3, fetched from the community archive the first time a world runs without them (from the next start)");
 			if (ImGui::Button("Creatures 2 folder..."))
 				GameFolder::chooseAnother(SDL_GetKeyboardFocus());
-			ImGui::SameLine();
-			ImGui::PushTextWrapPos(0);
-			ImGui::TextDisabled("%s", (const char*)GameFolder::currentFolder().u8string().c_str());
-			ImGui::PopTextWrapPos();
 			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("Choose another folder for the next start");
+				ImGui::SetTooltip("Choose another Creatures 2 folder for the next start (the chooser opens at the one in use)");
 			ImGui::EndTabItem();
 		}
-		if (tab("Notices")) {
+		if (tab("Status Bar")) {
+			bool statusbar = IsC2StatusBarShown();
+			if (ImGui::Checkbox("Show the status bar", &statusbar)) {
+				SetC2StatusBarShown(statusbar);
+				writeFlag("status-bar", statusbar);
+			}
+			ImGui::BeginDisabled(!statusbar);
+			ImGui::SeparatorText("What it shows");
+			for (int part = 0; part < STATUSBAR_PARTS; part++) {
+				bool on = StatusBarPartShown(part);
+				if (part % 2)
+					ImGui::SameLine(200);
+				if (ImGui::Checkbox(StatusBarPartName(part), &on))
+					SetStatusBarPartShown(part, on);
+			}
+			ImGui::TextDisabled("(Minimised kits always show there.)");
+			ImGui::SeparatorText("Notifications");
 			KitAllNoticeSwitches();
+			ImGui::EndDisabled();
 			ImGui::EndTabItem();
 		}
 		if (tab("Updates")) {

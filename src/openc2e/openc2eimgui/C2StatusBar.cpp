@@ -1,4 +1,5 @@
 #include "C2StatusBar.h"
+#include "creatures/CreatureSpeech.h" // readPlayerSetting
 #include "C2KitsInternal.h"
 
 #include "C2Kits.h"
@@ -53,6 +54,42 @@ void SetC2StatusBarShown(bool shown) {
 	s_show_c2statusbar = shown;
 }
 
+// which parts it shows (Preferences > Status Bar; owner, 2026-11-23):
+// "status-bar-hide" in settings.txt lists the hidden ones' keys, joined by
+// commas. Minimised kits always show (they could not be brought back).
+static const char* const s_part_keys[STATUSBAR_PARTS] = {"season", "time", "temperature", "date", "notices", "health"};
+static const char* const s_part_names[STATUSBAR_PARTS] = {"Season", "Time of day", "Temperature", "Day and year", "Notices", "The selected creature's health"};
+static int s_parts_hidden = -1; // bits
+
+static int partsHidden() {
+	if (s_parts_hidden < 0) {
+		s_parts_hidden = 0;
+		std::string v = "," + readPlayerSetting("status-bar-hide") + ",";
+		for (int i = 0; i < STATUSBAR_PARTS; i++)
+			if (v.find(std::string(",") + s_part_keys[i] + ",") != std::string::npos)
+				s_parts_hidden |= 1 << i;
+	}
+	return s_parts_hidden;
+}
+
+bool StatusBarPartShown(int part) {
+	return !(partsHidden() & (1 << part));
+}
+
+void SetStatusBarPartShown(int part, bool shown) {
+	int h = partsHidden();
+	s_parts_hidden = shown ? (h & ~(1 << part)) : (h | (1 << part));
+	std::string v;
+	for (int i = 0; i < STATUSBAR_PARTS; i++)
+		if (s_parts_hidden & (1 << i))
+			v += (v.empty() ? "" : ",") + std::string(s_part_keys[i]);
+	writePlayerSetting("status-bar-hide", v.empty() ? "none" : v);
+}
+
+const char* StatusBarPartName(int part) {
+	return s_part_names[part];
+}
+
 int GetC2StatusBarHeight() {
 	return s_show_c2statusbar ? s_last_c2statusbar_height : 0;
 }
@@ -78,7 +115,7 @@ void DrawC2StatusBar() {
 		// The left end (owner, 2026-11-11): three pictures, each named on
 		// hover (the season, the time of day, how warm it is with the
 		// temperature), then the day and year as text.
-		if (world.season < s_season_icons_texs.size()) {
+		if (StatusBarPartShown(SB_SEASON) && world.season < s_season_icons_texs.size()) {
 			ImGuiUtils::Image(s_season_icons_texs[world.season]);
 			// (it looks like weather, but it is C2's picture of the season)
 			static const char* const s_season_names[4] = {"Spring", "Summer", "Autumn", "Winter"};
@@ -94,7 +131,7 @@ void DrawC2StatusBar() {
 			s_timeofday_icons_texs[3] = GetTextureFromExeFile(0xc3);
 			s_timeofday_icons_texs[4] = GetTextureFromExeFile(0xc5);
 		}
-		if (world.timeofday < s_timeofday_icons_texs.size()) {
+		if (StatusBarPartShown(SB_TIME) && world.timeofday < s_timeofday_icons_texs.size()) {
 			ImGuiUtils::Image(s_timeofday_icons_texs[world.timeofday]);
 			// (C2 has no names built in; the owner's words)
 			static const char* const s_timeofday_names[5] = {"Dawn", "Morning", "Midday", "Dusk", "Night"};
@@ -120,7 +157,7 @@ void DrawC2StatusBar() {
 				// TODO: c2 seems to try closest room as a last resort?
 			}
 		}
-		if (temperature) {
+		if (temperature && StatusBarPartShown(SB_TEMPERATURE)) {
 			int temp = temperature.value();
 			unsigned int tempiconid = 4;
 			if (temp < 255) {
@@ -141,8 +178,10 @@ void DrawC2StatusBar() {
 
 		// the day of the season (openc2e addition, owner 2026-11-11): C2's
 		// seasons are four days long
-		ImGui::Text("Day %u", world.dayofseason % 4 + 1);
-		ImGui::Text("Year %03i", world.year); // (no colon: owner, 2026-11-14)
+		if (StatusBarPartShown(SB_DATE)) {
+			ImGui::Text("Day %u", world.dayofseason % 4 + 1);
+			ImGui::Text("Year %03i", world.year); // (no colon: owner, 2026-11-14)
+		}
 
 		static std::array<Texture, 6> s_healthicons_texs;
 		if (!s_healthicons_texs[0]) {
@@ -174,9 +213,19 @@ void DrawC2StatusBar() {
 		ImGui::SetCursorPosX(std::max(left_end, ImGui::GetWindowContentRegionMax().x - s_last_statusbar_rightside_width));
 		const int start_x = ImGui::GetCursorPosX();
 
-		Openc2eImgui::DrawLifeNotices(ImGui::GetWindowContentRegionMax().x - left_end - s_last_health_width - ImGui::GetStyle().ItemSpacing.x * 2);
+		if (StatusBarPartShown(SB_NOTICES))
+			Openc2eImgui::DrawLifeNotices(ImGui::GetWindowContentRegionMax().x - left_end - s_last_health_width - ImGui::GetStyle().ItemSpacing.x * 2);
 
 		const float health_x = ImGui::GetCursorPosX();
+		if (!StatusBarPartShown(SB_HEALTH)) {
+			// (nothing on the right: an empty line keeps the bar's height)
+			ImGui::Dummy(ImVec2(0, ImGui::GetFrameHeight()));
+			s_last_statusbar_rightside_width = ImGui::GetCursorPosX() - start_x;
+			s_last_health_width = 0;
+			s_last_c2statusbar_height = ImGui::GetWindowSize().y;
+			ImGui::End();
+			return;
+		}
 		ImGui::Text("Health:");
 		// The selected creature's health in C2's pictures (owner, 2026-11-11:
 		// make them real and say what they show). The bar, skull to smile,

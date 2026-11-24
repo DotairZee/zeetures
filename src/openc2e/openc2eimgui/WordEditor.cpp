@@ -88,11 +88,10 @@ void DrawWordEditor() {
 		WordLists::setAllWorlds(all);
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("Ticked, one list for every world. Unticked, each world keeps its own.");
-	ImGui::SameLine(0, 18);
 	ImGui::TextDisabled("%s", all ? "Changing the words of every world" : fmt::format("Changing the words of {}", engine.currentworld).c_str());
 
 	// fill it from a preset or another world
-	ImGui::SetNextItemWidth(260);
+	ImGui::SetNextItemWidth(200);
 	if (ImGui::BeginCombo("##load", "Load words from...")) {
 		auto& presets = WordLists::presets();
 		ImGui::SeparatorText("Languages");
@@ -141,9 +140,9 @@ void DrawWordEditor() {
 
 	if (ImGui::BeginTable("words", 3, ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
 		ImGui::TableSetupScrollFreeze(0, 1);
-		ImGui::TableSetupColumn("Meaning", ImGuiTableColumnFlags_WidthFixed, 130);
-		ImGui::TableSetupColumn("Word", ImGuiTableColumnFlags_WidthStretch);
-		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 130);
+		ImGui::TableSetupColumn("Meaning", ImGuiTableColumnFlags_WidthFixed, 100);
+		ImGui::TableSetupColumn("Word", ImGuiTableColumnFlags_WidthFixed, 150);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableHeadersRow();
 		struct Group {
 			const char* name;

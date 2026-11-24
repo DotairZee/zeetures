@@ -133,7 +133,7 @@ If you know the original game, these are the main differences.
 
 ### Sound
 
-File > Sound (and File > Preferences > Sound) has three switches: Ambient Music, World Sounds (machines, objects, and creatures' noises), and Bibble (creatures' speech).
+File > Sound has three switches: Ambient Music, World Sounds (machines, objects, and creatures' noises), and Bibble (creatures' speech).
 
 ## The toolbars
 
@@ -180,7 +180,8 @@ Births, deaths, pregnancies, eggs laid, illnesses and recoveries, faints, and ch
 - **Click** one to go there: to the egg, the creature, or its gravestone.
 - **Right-click** one to dismiss it, to clear them all, or to open the life log.
 - **+N** lists the older ones that do not fit.
-- **To hide a kind of notice,** untick it in File > Preferences > Notices. The life log still records it.
+- **To hide a kind of notice,** untick it in File > Preferences > Status Bar. The life log still records it.
+- **To hide a part of the bar,** or the whole bar, use File > Preferences > Status Bar too: the season, the time of day, the temperature, the day and year, the notices, and the selected creature's health can each be left out. Minimised kits always show.
 
 The whole record is in the [[Chronicles Kit]].
 
@@ -193,21 +194,20 @@ The eye is its own: a norn's round pupil, a grendel's slit, an ettin's coarse si
 - The pupil narrows in bright rooms and widens in the dark, and with fear.
 - The lids blink, droop when it is sleepy, and close when it sleeps. File > Preferences > Creatures can stop the blinking, or keep the lids open.
 - Its sight reddens and doubles when it is hurt or ill, and ripples under water.
-- **Size:** drag the window's corner to make it larger or smaller; it keeps its shape, and is remembered. File > Preferences > Creatures has Small, Normal, and Large.
+- **Size:** drag the window's corner to make it larger or smaller; it keeps its shape, and is remembered. The eye's screen stays a fine checker at any size. File > Preferences > Creatures has Small, Normal, and Large.
 
 ## Preferences
 
-File > Preferences gathers the settings in one window, in seven sections. Each takes effect at once and is remembered.
+File > Preferences gathers the settings in one window, in six sections. Each takes effect at once and is remembered.
 
-- **Display:** the letters in the world (see [[Words and languages]]), the creature frame rate, smooth scrolling, the status bar, scroll bars, tooltips for objects, full screen, and the toolbars and their text labels.
-- **Creatures:** speech and thought bubbles, the halo, and the Creature's View: its eye's lids (blinking; no blinking, only drooping and closing with sleep; or always open) and its size.
+- **Display:** the letters in the world (see [[Words and languages]]), the creature frame rate, smooth scrolling, scroll bars, tooltips for objects, full screen, and the toolbars and their text labels.
+- **Creatures:** speech and thought bubbles, and the Creature's View: its eye's lids (blinking; no blinking, only drooping and closing with sleep; or always open) and its size.
 - **Words:** the words creatures learn and the teaching computers show. See [[Words and languages]].
-- **Sound:** ambient music, world sounds, and Bibble (also under File > Sound).
 - **World:** how often the world saves itself; opening this world at launch; in this world, whether all creatures are fertile and the limit on their number; Zeetures's recommended breed packs; and your Creatures 2 folder.
-- **Notices:** which happenings show on the status bar.
+- **Status Bar:** whether it shows at all, which of its parts show, and which happenings show there as notices.
 - **Updates:** checking for new versions and installing them by themselves, and a button to check now.
 
-The toolbars, bubbles, halo, full screen, and sound stay in their menus too, to flip while you play.
+The toolbars, bubbles, and full screen stay in their menus too, to flip while you play; the halo is on the toolbar and in the Camera menu, and sound is under File > Sound.
 
 ## Words and languages
 
@@ -645,7 +645,7 @@ Open kits from the Tools menu or the Applets toolbar.
 - **Minimise** a kit with the line at the right of its title bar: it becomes a button on the status bar. The cross closes it.
 - **Where they were:** kits open next time where you left them.
 - **Hover:** nearly everything in a kit explains itself when the pointer rests on it.
-- **Notices on the status bar:** chosen in File > Preferences > Notices. See [[The status bar and notices]].
+- **Notices on the status bar:** chosen in File > Preferences > Status Bar. See [[The status bar and notices]].
 
 ### Which kit?
 

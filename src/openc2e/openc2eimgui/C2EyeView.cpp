@@ -319,8 +319,13 @@ static void drawThroughEye(ImTextureID view, ImVec2 o, ImVec2 size, Agent* c, Cr
 	}
 
 	// the eye, as a picture
-	const int W = VIEW_W, H = VIEW_H;
-	if (!e.img.data) {
+	// drawn at the size it is shown, so the checkered screen stays one
+	// pixel each way at any size (owner, 2026-11-23: stretched, it clumped);
+	// its shapes scale with it (sc)
+	const int W = std::max(1, (int)std::lround(size.x)), H = std::max(1, (int)std::lround(size.y));
+	const float sc = W / (float)VIEW_W;
+	if (!e.img.data || e.img.width != W || e.img.height != H) {
+		e.tex = Texture();
 		e.img.width = W;
 		e.img.height = H;
 		e.img.format = if_rgba32;
@@ -348,13 +353,13 @@ static void drawThroughEye(ImTextureID view, ImVec2 o, ImVec2 size, Agent* c, Cr
 			float lidEdge = std::fabs(dy) - half;
 			bool checker = ((x + y) & 1) == 0; // every other pixel, as C2 drew see-through
 			if (lidEdge > 0 || std::fabs(dx) >= eyeW) {
-				float shade = std::clamp(1.0f - lidEdge / 120.0f, 0.55f, 1.0f) * (0.92f + 0.08f * noise2(x / 2, y / 2));
-				if (lidEdge < 4 && std::fabs(dx) < eyeW)
+				float shade = std::clamp(1.0f - lidEdge / (120.0f * sc), 0.55f, 1.0f) * (0.92f + 0.08f * noise2((int)(x / (2 * sc)), (int)(y / (2 * sc))));
+				if (lidEdge < 4 * sc && std::fabs(dx) < eyeW)
 					shade *= 0.35f; // the lash line
 				R = L.lid[0] * shade, G = L.lid[1] * shade, B = L.lid[2] * shade, A = 255;
 				// the lids' inner edge: checkered, solid further out (and
 				// solid when shut, so sleep is dark)
-				if (e.open > 0.2f && lidEdge >= 4 && lidEdge < 40 && checker)
+				if (e.open > 0.2f && lidEdge >= 4 * sc && lidEdge < 40 * sc && checker)
 					A = 0;
 			} else {
 				bool inPupil;
@@ -391,7 +396,7 @@ static void drawThroughEye(ImTextureID view, ImVec2 o, ImVec2 size, Agent* c, Cr
 			}
 			// a glint, up and to the left of the pupil
 			float gx = dx + irisR * 0.45f, gy = dy + irisR * 0.45f;
-			float glint = std::exp(-(gx * gx + gy * gy) / 120.0f);
+			float glint = std::exp(-(gx * gx + gy * gy) / (120.0f * sc * sc));
 			if (lidEdge <= 0 && glint > 0.02f) {
 				R = R + (255 - R) * glint, G = G + (255 - G) * glint, B = B + (255 - B) * glint;
 				A = std::max(A, 255.0f * glint * 0.8f);
@@ -485,10 +490,11 @@ void DrawEyeView() {
 	});
 	if (ImGui::Begin("Creature's View", &s_eye_view_open, ImGuiWindowFlags_NoScrollbar)) {
 		void* tex = s_target->getNativeTexture();
-		float w = std::max(120.0f, ImGui::GetContentRegionAvail().x);
+		float w = std::floor(std::max(120.0f, ImGui::GetContentRegionAvail().x)); // (whole pixels: the screen is one pixel)
 		ImVec2 size(w, std::round(w * 3 / 4));
 		if (tex) {
 			ImVec2 o = ImGui::GetCursorScreenPos();
+			o = ImVec2(std::floor(o.x), std::floor(o.y));
 			ImGui::Dummy(size);
 			drawThroughEye((ImTextureID)(uintptr_t)tex, o, size, c, cr);
 		}
