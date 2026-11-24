@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 652 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 654 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.35.0](#version-0350): 2 commits, 23 November 2026
 - [0.34.1](#version-0341): 1 commits, 23 November 2026
 - [0.34.0](#version-0340): 1 commits, 23 November 2026
 - [0.33.5](#version-0335): 1 commits, 23 November 2026
@@ -89,6 +90,63 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.35.0
+
+Preferences gathers every setting in one window; the words creatures learn can be changed per world or for all, with the game's six languages, Nornish and 19 draft translations; speech bubbles and the computers use Fusion Pixel, with Greek, Cyrillic, Japanese, Chinese, Korean, Hebrew, Arabic and Thai; the Creature's View can be resized and its blinking turned off; a landing in the lab lift's shaft.
+
+### 23 November 2026
+
+#### Version 0.35.0: Preferences; words in any language; Fusion Pixel
+
+[`ce49c474`](https://github.com/DotairZee/zeetures/commit/ce49c474ec3d0ae7c0e759b0746d4d55064cd823)
+
+Preferences (File &gt; Preferences): the settings from the menus and kits in
+one window, sections Display, Creatures, Words, Sound, World, Notices and
+Updates, each sized to its contents. Autosave, Open This World at Launch,
+the Creatures 2 folder, the creature frame rate, the status bar, tooltips,
+scroll bars, toolbar text labels, smooth scrolling, the automatic update
+switches, the kits' notice switches and the Hatchery's fertility and
+population limit move there; toolbars, bubbles, full screen, the halo and
+File &gt; Sound stay in the menus too.
+
+Words (Preferences &gt; Words, WordLists): the words creatures learn and the
+teaching computers show, per world (words.txt in the world folder) or one
+list for every world, typed or loaded from the game's own six languages
+(gameWordList reads any of them from Creatures2.exe), Nornish, 19 draft
+translations (data/words) or another world. A word is learned by its slot,
+so creatures keep what they know; typed English is still understood;
+blackboard words from the list follow it live.
+
+Letters (PixelText): in-world text is UTF-8 (stray bytes read as the game's
+Windows-1252) and drawn with Fusion Pixel at 10 (default), 12 or 8 px or
+the game's own font, with misc-fixed and GNU Unifont for Hebrew, Thai and
+Arabic (data/fonts, packed by scripts/pack_pixel_fonts.py; licences
+installed as font-licenses). Arabic letters join and right-to-left runs
+are turned around. Typing takes any alphabet and input methods
+(handleTranslatedChar is char32_t); word matching lower-cases any alphabet
+and finds unspaced CJK and Thai words; the voice spells other alphabets in
+a-z. The game's own CHARSET.DTA has only ASCII, so German and French words
+had lost their accents. The program's own windows get the letters from
+Fusion Pixel as ImGui custom glyphs (UiFont, g_beforeUiFrame).
+
+Creature's View: resizable at 4:3 (120-960 px, remembered); its lids blink,
+only droop and close with sleep, or stay open (Preferences &gt; Creatures).
+
+Help: Preferences and Words and languages topics; menus and kits updated.
+Developer aids: OPENC2E_OPEN_KITS="prefs:Tab"; director cues shot, font and
+type. Tests: PixelText (decoding, case, right to left, joining, voice).
+
+#### A landing in the lab lift's shaft
+
+[`35ff771f`](https://github.com/DotairZee/zeetures/commit/35ff771f4e955317f88369181f2c1996c60a0314)
+
+The right platform's floor (y 1739) runs on into the copper shaft (room
+255, x 4225-4349), where creatures wait for the pod; with the pod away
+they stood on nothing to be seen. shaftfloor.cos places a slim landing
+there (zlsf, from art/shaftfloor.py, in the pod's own brushed steel,
+graphite and light line): 104 x 12 at 4241,1736, plane 1395, behind the
+pod and behind creatures, not seen by creatures, click-through.
 
 ## Version 0.34.1
 
