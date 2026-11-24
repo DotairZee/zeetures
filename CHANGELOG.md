@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 665 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 667 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.36.3](#version-0363): 2 commits, 24 November 2026
 - [0.36.2](#version-0362): 2 commits, 24 November 2026
 - [0.36.1](#version-0361): 2 commits, 24 November 2026
 - [0.36.0](#version-0360): 2 commits, 24 November 2026
@@ -93,6 +94,67 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.36.3
+
+C2 genomes are read whole, whatever their genes: a damaged or imported gene no longer refuses the genome; chemistry, stimulus, gait and pose genes are read within the game's ranges. (0.36.2 had no installers; its change is in this one.)
+
+### 24 November 2026
+
+#### Version 0.36.3
+
+[`9e00d30d`](https://github.com/DotairZee/zeetures/commit/9e00d30dc78b3d42888ff155d203e023f2414e74)
+
+C2 genomes are read whole, whatever their genes.
+
+#### C2 genomes read whole, whatever their genes
+
+[`552513b3`](https://github.com/DotairZee/zeetures/commit/552513b37dcf64ad613dc94d8d2687f6e19267be)
+
+Custom C2 genomes, mutants and imports could be refused outright, or
+have genes read at the wrong ranges. Every change below leaves the
+game's own genomes and Home's creatures as they were: all 355 genomes
+on this computer read and write back byte for byte, and none has an
+organ, lobe or starting chemical switching on after birth.
+
+Reading a C2 genome:
+- Genes are found by their "gene" markers, up to "gend", so one with
+  bytes too many or too few leaves the rest readable. A type past the
+  last wraps round (mod 4), a subtype within its type (brain 2,
+  chemistry 5, creature 8, organ 1): a C3 gene in a C2 genome reads as
+  the C2 gene of that number instead of refusing the genome. Stray
+  bytes, out-of-range type numbers and short genes are kept, so the
+  genome is written back as it came.
+- A genus gene's parents' monikers are written in their 4-byte fields
+  (an empty one copied whatever followed it in memory).
+
+Organs and chemistry:
+- Chemistry genes before the first organ gene belong to the body organ
+  every creature has (they stopped the creature being made).
+- Every organ is made at birth, and every brain lobe built, whatever
+  its switch-on stage. A starting concentration applies only at birth.
+- At most 128 organs; an organ holds at most 127 reactions, 128
+  emitters and 128 receptors.
+- Reaction amounts are 1-16; one outside wraps round (0 is 1, 17 is 2,
+  128 is 1): Nova Subterra's catalyst of 128 reacted 128 times slower.
+- A receptor's or emitter's organ field wraps round (0-2), so a
+  mutant's organ 45 or 12 still reaches its locus.
+- A second emitter for the same organ, tissue, locus and chemical in
+  one organ takes over the first one's settings instead of emitting
+  twice.
+- An organ's life force of 0 counts as 1.
+
+Stimuli, gaits and poses:
+- The stimulus number wraps round (mod 46), and the gene of the latest
+  switched-on stage wins, whatever the genome order.
+- The gait number wraps round (0-15).
+- Pose characters are read into 32-90, wrapping, and any but ? ! X and
+  the digits is X. ? and ! are allowed for any body part (each angles
+  as the head does; a debug build asserted on a ? outside the head).
+
+Tests: a genome test for marker-to-marker reading (a stray byte, a C3
+gene, write-back unchanged); every genome here round-trips; an
+AddressSanitizer run of Home is clean.
 
 ## Version 0.36.2
 

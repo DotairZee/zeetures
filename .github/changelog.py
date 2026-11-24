@@ -352,6 +352,8 @@ VERSIONS = [
      "The grendel egg pile hatches one grendel at a time: eggs that waited while the world was full no longer all hatch together."),
     ("0.36.2", "20c074ae",
      "Instincts and brain genes are read for any C2 brain (Nova, Canny, Akamai and their hybrids): an instinct keeps the conditions it can read, lobes are found by what reads them, and hybrids missing added lobes keep their object instincts."),
+    ("0.36.3", "9e00d30d",
+     "C2 genomes are read whole, whatever their genes: a damaged or imported gene no longer refuses the genome; chemistry, stimulus, gait and pose genes are read within the game's ranges. (0.36.2 had no installers; its change is in this one.)"),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
