@@ -67,9 +67,12 @@ static void ImGuiInit(SDL_Window* window, SDL_Renderer* renderer) {
 	SDLViewports::init(renderer);
 	// (kits in their own windows: a window dragged out of the game window
 	// becomes one only past the game window's edge, not while it still
-	// overlaps; and it keeps the system's title bar off, ImGui drawing its own)
+	// overlaps; it keeps the system's title bar off, ImGui drawing its own;
+	// and it is a utility window: no taskbar entry, and no opening animation
+	// (GNOME zoomed each one in as it crossed the edge))
 	io.ConfigViewportsNoAutoMerge = false;
 	io.ConfigViewportsNoDecoration = true;
+	io.ConfigViewportsNoTaskBarIcon = true;
 
 	io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines;
 
@@ -169,13 +172,14 @@ static void applyUiWindows(SDLBackend& b) {
 	if (b.ui_windows_applied == b.ui_windows && ImGui::GetFrameCount() > 0)
 		return;
 	ImGuiIO& io = ImGui::GetIO();
+	// (no docking: kits tabbed or tiled together lost their sizes and soon
+	// made a muddle; owner, 2026-11-23)
 	if (b.ui_windows) {
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		if (io.BackendFlags & ImGuiBackendFlags_PlatformHasViewports)
 			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-	} else if (io.ConfigFlags & (ImGuiConfigFlags_ViewportsEnable | ImGuiConfigFlags_DockingEnable)) {
+	} else if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
 		ImGuiContext& g = *ImGui::GetCurrentContext();
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+		{
 			// from the desktop's coordinates to the game window's: windows in
 			// the game window keep their places in it, the others come in
 			// near its top-left corner, one below another
@@ -197,11 +201,7 @@ static void applyUiWindows(SDLBackend& b) {
 			for (int i = 1; i < g.Viewports.Size; i++)
 				ImGui::DestroyPlatformWindow(g.Viewports[i]);
 		}
-		// undocked: each kit its own window again
-		for (ImGuiWindow* w : g.Windows)
-			if (w->DockNode || w->DockId)
-				ImGui::DockContextQueueUndockWindow(&g, w);
-		io.ConfigFlags &= ~(ImGuiConfigFlags_ViewportsEnable | ImGuiConfigFlags_DockingEnable);
+		io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
 	}
 	b.ui_windows_applied = b.ui_windows;
 }
@@ -291,22 +291,34 @@ void SDLBackend::setUiWindows(bool on) {
 	ui_windows = on; // (taken up at the next frame's start; before init, by init)
 }
 
-static bool ImGuiConsumeEvent(const SDL_Event& event) {
-	ImGui_ImplSDL3_ProcessEvent(&event);
-
+// The system's pointer shows over the interface, and is hidden over the
+// world, where the game draws its hand. With kits in their own windows it
+// also shows whenever the pointer is in a window other than the game's
+// (there is no hand there). Decided at every event and again every frame:
+// decided at events alone, a pointer that crossed into a kit's window before
+// ImGui noticed stayed hidden there until it moved again.
+static void syncSystemPointer(SDL_Window* gameWindow) {
 	auto& io = ImGui::GetIO();
-
-	static bool imguiHasCursorPrev = false;
-	bool imguiHasCursor = io.WantCaptureMouse || io.WantCaptureKeyboard;
-	if (imguiHasCursor != imguiHasCursorPrev) {
-		if (imguiHasCursor) {
+	static bool shownPrev = false;
+	SDL_Window* under = SDL_GetMouseFocus();
+	bool shown = io.WantCaptureMouse || io.WantCaptureKeyboard || (under && under != gameWindow);
+	if (shown != shownPrev) {
+		if (shown) {
 			io.ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
+			SDL_ShowCursor();
 		} else {
 			io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
 			SDL_HideCursor();
 		}
-		imguiHasCursorPrev = imguiHasCursor;
+		shownPrev = shown;
 	}
+}
+
+static bool ImGuiConsumeEvent(const SDL_Event& event, SDL_Window* gameWindow) {
+	ImGui_ImplSDL3_ProcessEvent(&event);
+
+	auto& io = ImGui::GetIO();
+	syncSystemPointer(gameWindow);
 
 	if (io.WantCaptureMouse && (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP || event.type == SDL_EVENT_MOUSE_WHEEL ||
 								   event.type == SDL_EVENT_PINCH_BEGIN || event.type == SDL_EVENT_PINCH_UPDATE || event.type == SDL_EVENT_PINCH_END)) {
@@ -336,7 +348,7 @@ retry:
 		if (!SDL_ConvertEventToRenderCoordinates(renderer, &event)) {
 			throw Exception(fmt::format("error converting event to render coordinates: {}", SDL_GetError()));
 		}
-		if (ImGuiConsumeEvent(viewports ? raw : event)) {
+		if (ImGuiConsumeEvent(viewports ? raw : event, window)) {
 			goto retry;
 		}
 	}
@@ -928,6 +940,7 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 			SDL_StartTextInput(window);
 
 		applyUiWindows(*this);
+		syncSystemPointer(window);
 		if (g_beforeUiFrame && g_beforeUiFrame())
 			uploadImGuiFontTexture();
 		ImGui_ImplSDLRenderer3_NewFrame();
@@ -943,10 +956,19 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 		if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
 			// kits in their own windows: the game window's part, then each
 			// other window (its own renderer, presented at once)
+			// (developer aid: OPENC2E_WATCH_KIT_WINDOWS=1 prints the frames
+			// over 40 ms spent here, with how many windows there are)
+			static const bool watch = devenv("OPENC2E_WATCH_KIT_WINDOWS") != nullptr;
+			Uint64 t0 = watch ? SDL_GetTicksNS() : 0;
 			SDLViewports::renderMainDrawData(ImGui::GetDrawData(), renderer);
 			ImGui::UpdatePlatformWindows();
 			ImGui::RenderPlatformWindowsDefault();
 			SDL_SetRenderTarget(renderer, nullptr);
+			if (watch) {
+				double ms = (SDL_GetTicksNS() - t0) / 1e6;
+				if (ms > 40)
+					fmt::print("* Kit windows: {:.0f} ms drawing {} windows\n", ms, ImGui::GetPlatformIO().Viewports.Size);
+			}
 		} else {
 			ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
 		}

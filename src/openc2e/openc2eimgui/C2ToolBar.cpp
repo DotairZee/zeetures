@@ -1662,11 +1662,10 @@ static void DrawPreferences() {
 				}
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("Drag a kit, the Creature's View or this window by its title bar out of the game window,\n"
-									  "and it becomes a window of its own (on another monitor, say); drag it back in to return it.\n"
-									  "Kits can also be docked together as tabs: drag one by its title onto another.");
+									  "and it becomes a window of its own (on another monitor, say); drag it back in to return it.");
 				if (own && !get_backend()->uiWindowsActive()) {
 					ImGui::Indent();
-					ImGui::TextDisabled("Kits can be docked together now; they leave the game window\nonce Zeetures is started again.");
+					ImGui::TextDisabled("Kits leave the game window once Zeetures is started again.");
 					ImGui::Unindent();
 				}
 			}

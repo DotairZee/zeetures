@@ -39,6 +39,12 @@
 // - a destroyed texture (the font atlas is remade as it gains letters) is
 //   noticed through a cleanup callback on its SDL properties, and its copies
 //   dropped before anything is drawn (the address may be reused at once).
+//
+// A static texture's pixels, once read back, are kept (one copy for all
+// windows), so a new window uploads them without asking the GPU again. A
+// window's renderer, and its copies, live as long as its SDL window, which
+// imgui_impl_sdl3 (openc2e) hides and reuses rather than destroying: a kit
+// dragged in and out again finds its pictures already there.
 
 namespace SDLViewports {
 
@@ -58,8 +64,16 @@ struct WindowRenderer {
 	std::unordered_map<SDL_Texture*, Mirror> mirrors;
 };
 
+const char* const RENDERER_PROP = "zeetures.window.renderer";
+
+struct Pixels {
+	SDL_Surface* surface = nullptr;
+	Sint64 version = -1;
+};
+
 SDL_Renderer* s_main = nullptr;
 std::vector<WindowRenderer*> s_windows;
+std::unordered_map<SDL_Texture*, Pixels> s_pixels; // static textures' pixels, read back once
 std::vector<SDL_Texture*> s_gone; // main textures destroyed since the last sweep
 SDL_Texture* s_scratch = nullptr; // main-renderer target for reading back static textures
 int s_scratch_w = 0, s_scratch_h = 0;
@@ -74,7 +88,12 @@ void SDLCALL onTextureGone(void*, void* value) {
 void sweepGone() {
 	if (s_gone.empty())
 		return;
-	for (SDL_Texture* t : s_gone)
+	for (SDL_Texture* t : s_gone) {
+		auto px = s_pixels.find(t);
+		if (px != s_pixels.end()) {
+			SDL_DestroySurface(px->second.surface);
+			s_pixels.erase(px);
+		}
 		for (WindowRenderer* w : s_windows) {
 			auto it = w->mirrors.find(t);
 			if (it != w->mirrors.end()) {
@@ -83,6 +102,7 @@ void sweepGone() {
 				w->mirrors.erase(it);
 			}
 		}
+	}
 	s_gone.clear();
 }
 
@@ -160,13 +180,27 @@ SDL_Texture* mirrorOf(WindowRenderer& wr, SDL_Texture* t) {
 			SDL_DestroyTexture(m.copy);
 			m.copy = nullptr;
 		}
-		if (SDL_Surface* px = readBack(t, target, w, h)) {
+		SDL_Surface* px = nullptr;
+		if (target) {
+			px = readBack(t, true, w, h);
+		} else {
+			Pixels& kept = s_pixels[t];
+			if (!kept.surface || kept.version != version || kept.surface->w != w || kept.surface->h != h) {
+				if (kept.surface)
+					SDL_DestroySurface(kept.surface);
+				kept.surface = readBack(t, false, w, h);
+				kept.version = version;
+			}
+			px = kept.surface;
+		}
+		if (px) {
 			if (!m.copy)
 				m.copy = SDL_CreateTexture(wr.renderer, SDL_PIXELFORMAT_ARGB8888,
 					target ? SDL_TEXTUREACCESS_STREAMING : SDL_TEXTUREACCESS_STATIC, w, h);
 			if (m.copy)
 				SDL_UpdateTexture(m.copy, nullptr, px->pixels, px->pitch);
-			SDL_DestroySurface(px);
+			if (target)
+				SDL_DestroySurface(px);
 		}
 		m.version = version;
 		m.frame = s_frame;
@@ -270,10 +304,22 @@ SDL_Window* windowOf(ImGuiViewport* vp) {
 	return SDL_GetWindowFromID((SDL_WindowID)(intptr_t)vp->PlatformHandle);
 }
 
+// the SDL window went (for good): its renderer and copies went with it
+void SDLCALL onWindowGone(void*, void* value) {
+	auto* wr = (WindowRenderer*)value;
+	s_windows.erase(std::remove(s_windows.begin(), s_windows.end(), wr), s_windows.end());
+	delete wr;
+}
+
 void rendererCreateWindow(ImGuiViewport* vp) {
 	SDL_Window* window = windowOf(vp);
 	if (!window)
 		return;
+	// a window used before (kept by imgui_impl_sdl3) still has its renderer
+	if (auto* kept = (WindowRenderer*)SDL_GetPointerProperty(SDL_GetWindowProperties(window), RENDERER_PROP, nullptr)) {
+		vp->RendererUserData = kept;
+		return;
+	}
 	auto* wr = new WindowRenderer();
 	// the same kind of renderer as the game window's
 	wr->renderer = SDL_CreateRenderer(window, SDL_GetRendererName(s_main));
@@ -289,19 +335,12 @@ void rendererCreateWindow(ImGuiViewport* vp) {
 	SDL_SetRenderVSync(wr->renderer, 0);
 	vp->RendererUserData = wr;
 	s_windows.push_back(wr);
+	SDL_SetPointerPropertyWithCleanup(SDL_GetWindowProperties(window), RENDERER_PROP, wr, onWindowGone, nullptr);
 }
 
 void rendererDestroyWindow(ImGuiViewport* vp) {
-	auto* wr = (WindowRenderer*)vp->RendererUserData;
-	if (!wr)
-		return;
-	for (auto& [t, m] : wr->mirrors)
-		if (m.copy)
-			SDL_DestroyTexture(m.copy);
-	if (wr->renderer)
-		SDL_DestroyRenderer(wr->renderer);
-	s_windows.erase(std::remove(s_windows.begin(), s_windows.end(), wr), s_windows.end());
-	delete wr;
+	// (the renderer stays with its SDL window, which may be kept for reuse;
+	// it goes when the window does: onWindowGone)
 	vp->RendererUserData = nullptr;
 }
 
@@ -349,6 +388,9 @@ void shutdown() {
 	if (s_scratch)
 		SDL_DestroyTexture(s_scratch);
 	s_scratch = nullptr;
+	for (auto& [t, px] : s_pixels)
+		SDL_DestroySurface(px.surface);
+	s_pixels.clear();
 }
 
 void renderMainDrawData(ImDrawData* draw_data, SDL_Renderer* main) {
@@ -367,7 +409,7 @@ void renderMainDrawData(ImDrawData* draw_data, SDL_Renderer* main) {
 }
 
 void textureUpdated(SDL_Texture* tex) {
-	if (!tex || s_windows.empty()) // (no copies anywhere: nothing to mark)
+	if (!tex || (s_windows.empty() && s_pixels.empty())) // (no copies anywhere: nothing to mark)
 		return;
 	SDL_PropertiesID props = SDL_GetTextureProperties(tex);
 	SDL_SetNumberProperty(props, VERSION_PROP, SDL_GetNumberProperty(props, VERSION_PROP, 0) + 1);

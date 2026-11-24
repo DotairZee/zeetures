@@ -57,6 +57,7 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_sdl3.h"
+#include "imgui_internal.h" // (openc2e: who is moving a window, below)
 
 // Clang warnings with -Weverything
 #if defined(__clang__)
@@ -454,9 +455,17 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
                 return false;
             if (event->type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
                 viewport->PlatformRequestClose = true;
-            if (event->type == SDL_EVENT_WINDOW_MOVED)
+            // (openc2e: not while Dear ImGui itself is moving or resizing the
+            // window. A window manager answers each move late (mutter under
+            // XWayland several frames late), and taking those older places
+            // back fought the drag: the window stuck, jumped back or stopped
+            // short of the pointer.)
+            ImGuiContext& g = *GImGui;
+            bool imgui_driven = viewport != ImGui::GetMainViewport() &&
+                ((g.MovingWindow && g.MovingWindow->Viewport == viewport) || (g.ActiveId != 0 && g.ActiveIdWindow && g.ActiveIdWindow->Viewport == viewport));
+            if (event->type == SDL_EVENT_WINDOW_MOVED && !imgui_driven)
                 viewport->PlatformRequestMove = true;
-            if (event->type == SDL_EVENT_WINDOW_RESIZED)
+            if (event->type == SDL_EVENT_WINDOW_RESIZED && !imgui_driven)
                 viewport->PlatformRequestResize = true;
             return true;
         }
@@ -640,6 +649,22 @@ static void ImGui_ImplSDL3_UpdateMouseData()
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
     ImGuiIO& io = ImGui::GetIO();
+
+    // (openc2e: a button released while its window went away, as a dragged
+    // window joins or leaves another, never reached us, and Dear ImGui went on
+    // thinking it held: clicks stopped working and the pointer stayed
+    // captured. A button the system says is up is let go here.)
+    if (bd->MouseButtonsDown != 0 && bd->MouseCanUseGlobalState)
+    {
+        SDL_MouseButtonFlags held = SDL_GetGlobalMouseState(nullptr, nullptr);
+        static const int sdl_button[5] = { SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT, SDL_BUTTON_MIDDLE, SDL_BUTTON_X1, SDL_BUTTON_X2 };
+        for (int b = 0; b < 5; b++)
+            if ((bd->MouseButtonsDown & (1 << b)) && !(held & SDL_BUTTON_MASK(sdl_button[b])))
+            {
+                io.AddMouseButtonEvent(b, false);
+                bd->MouseButtonsDown &= ~(1 << b);
+            }
+    }
 
     // We forward mouse input when hovered or captured (via SDL_EVENT_MOUSE_MOTION) or when focused (below)
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE
@@ -962,6 +987,15 @@ static SDL_Window* ImGui_ImplSDL3_GetSDLWindowFromViewportID(ImGuiID viewport_id
     return nullptr;
 }
 
+// (openc2e: windows kept for reuse. A window dragged across the game
+// window's edge is made and unmade each time; making one (and its renderer,
+// and its copies of the pictures) took long enough to see, and the window
+// manager played its opening animation each time. A window that goes is
+// hidden and kept, a few of each kind, and the next one made takes it.)
+struct ImGui_ImplSDL3_PooledWindow { SDL_Window* Window; SDL_WindowFlags Flags; };
+static ImVector<ImGui_ImplSDL3_PooledWindow> g_openc2e_window_pool;
+static const char* const OPENC2E_POOL_FLAGS = "openc2e.pool.flags";
+
 static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
@@ -990,7 +1024,21 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) ? SDL_WINDOW_UTILITY : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
-    vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+    vd->Window = nullptr;
+    if (!use_opengl)
+        for (int n = 0; n < g_openc2e_window_pool.Size; n++)
+            if (g_openc2e_window_pool[n].Flags == sdl_flags)
+            {
+                vd->Window = g_openc2e_window_pool[n].Window;
+                g_openc2e_window_pool.erase(g_openc2e_window_pool.Data + n);
+                SDL_SetWindowSize(vd->Window, (int)viewport->Size.x, (int)viewport->Size.y);
+                break;
+            }
+    if (!vd->Window)
+    {
+        vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+        SDL_SetNumberProperty(SDL_GetWindowProperties(vd->Window), OPENC2E_POOL_FLAGS, (Sint64)sdl_flags);
+    }
     SDL_SetWindowParent(vd->Window, vd->ParentWindow);
     SDL_SetWindowPosition(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
     vd->WindowOwned = true;
@@ -1011,7 +1059,17 @@ static void ImGui_ImplSDL3_DestroyWindow(ImGuiViewport* viewport)
     {
         if (vd->GLContext && vd->WindowOwned)
             SDL_GL_DestroyContext(vd->GLContext);
-        if (vd->Window && vd->WindowOwned)
+        // (openc2e: hidden and kept, up to four of each kind; see above)
+        int same_kind = 0;
+        Sint64 kind = vd->Window ? SDL_GetNumberProperty(SDL_GetWindowProperties(vd->Window), OPENC2E_POOL_FLAGS, -1) : -1;
+        for (const ImGui_ImplSDL3_PooledWindow& w : g_openc2e_window_pool)
+            same_kind += (Sint64)w.Flags == kind;
+        if (vd->Window && vd->WindowOwned && !vd->GLContext && kind >= 0 && same_kind < 4)
+        {
+            SDL_HideWindow(vd->Window);
+            g_openc2e_window_pool.push_back({ vd->Window, (SDL_WindowFlags)kind });
+        }
+        else if (vd->Window && vd->WindowOwned)
             SDL_DestroyWindow(vd->Window);
         vd->GLContext = nullptr;
         vd->Window = nullptr;
@@ -1040,6 +1098,10 @@ static void ImGui_ImplSDL3_ShowWindow(ImGuiViewport* viewport)
 
     SDL_SetHint(SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing) ? "0" : "1");
     SDL_ShowWindow(vd->Window);
+    // (openc2e: and placed again once shown: a window manager may place a
+    // new window itself (mutter cascades them on the pointer's monitor),
+    // which put kits on the wrong monitor at start)
+    SDL_SetWindowPosition(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
 }
 
 static void ImGui_ImplSDL3_UpdateWindow(ImGuiViewport* viewport)
@@ -1178,6 +1240,10 @@ static void ImGui_ImplSDL3_InitMultiViewportSupport(SDL_Window* window, void* sd
 static void ImGui_ImplSDL3_ShutdownMultiViewportSupport()
 {
     ImGui::DestroyPlatformWindows();
+    // (openc2e: the windows kept for reuse)
+    for (const ImGui_ImplSDL3_PooledWindow& w : g_openc2e_window_pool)
+        SDL_DestroyWindow(w.Window);
+    g_openc2e_window_pool.clear();
 }
 
 //-----------------------------------------------------------------------------
