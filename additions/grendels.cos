@@ -33,6 +33,21 @@ scrp 2 5 4 9
 * as the game's norn eggs do; EGGL is the limit less the grendels and ettins
 * alive, so this compares all creatures with it; owner, 2026-11-16)
   doif totl 4 1 0 ge eggl tick 1200 stop endi
+* (one grendel at a time from the pile, as its keeper means: with a grendel
+* alive, or another of the pile's eggs hatching (OV02 1), it goes back to
+* the pile to wait for the keeper. Eggs the keeper had started while the
+* world was full waited in step and hatched together when room opened:
+* twelve grendels at once in Home; owner, 2026-11-24. INST: all in one go,
+* or each egg's look at the others is cut short, and every egg looks
+* before any marks itself)
+  inst
+  setv ov02 0
+  setv var0 0
+  enum 2 5 4 doif ov02 eq 1 addv var0 1 endi next
+  targ ownr
+  doif totl 4 2 0 gt 0 or var0 gt 0 pose 0 stop endi
+  setv ov02 1
+  slow
 * (the hatching cannot be cut off: a creature pushing, pulling or hitting
 * the egg runs the world's catch-all object script, 2 0 0 1-3, on it, which
 * ended this script mid-hatch with the timer stopped, and the egg never
