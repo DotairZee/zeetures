@@ -59,6 +59,7 @@ bool walkOffEndsInWater(const Room& r, bool east, int fit); // CreatureAI.cpp
 #include <array>
 #include <cmath>
 #include <cassert>
+#include <cstring>
 #include <stdint.h>
 #include <fmt/core.h>
 #include <map>
@@ -168,7 +169,8 @@ void SkeletalCreature::processGenes() {
 		} else if (creaturePoseGene* x = dynamic_cast<creaturePoseGene*>(gene.get())) {
 			posegenes[x->poseno] = x;
 		} else if (creatureGaitGene* x = dynamic_cast<creatureGaitGene*>(gene.get())) {
-			gaitgenes[x->drive] = x;
+			// (C2: the gait number wraps round, 0-15)
+			gaitgenes[engine.version == 2 ? x->drive % 16 : x->drive] = x;
 		}
 	}
 }
@@ -1427,6 +1429,13 @@ void SkeletalCreature::setPose(unsigned int p) {
 }
 
 void SkeletalCreature::setPose(std::string s) {
+	// C2: each character as the game reads it, wrapped into 32-90, and any
+	// but ? ! X and the digits taken as X
+	if (engine.version == 2)
+		for (auto& c : s) {
+			int v = 32 + (((unsigned char)c - 32) % 59 + 59) % 59;
+			c = strchr("?!X0123456789", v) ? (char)v : 'X';
+		}
 	switch (s[0]) {
 		case '?': // towards object of attention
 			switch (direction) {
@@ -1465,8 +1474,11 @@ void SkeletalCreature::setPose(std::string s) {
 			case '2': newpose = 2; break;
 			case '3': newpose = 3; break;
 			case '4': newpose = (engine.version < 3) ? 8 : 10; break; // 'to camera'
+			// toward (or away from: the same angle) the object of attention:
+			// legal for any part (C2's own poses have it); each part angles
+			// as the head does (our own choice)
 			case '?':
-				assert(i == 0);
+			case '!':
 				{ // TODO
 					// make the head look in the posedirection of _IT_
 					float attachmenty = attachmentY(1, 0) + y; // head attachment point, which we'll use to 'look' from atm
@@ -1483,7 +1495,6 @@ void SkeletalCreature::setPose(std::string s) {
 						newpose = 1;
 				}
 				break;
-			// TODO: '!' also?
 			case 'X': continue; // do nothing
 			default:
 				fmt::print("internal warning: SkeletalCreature::setPose didn't understand {} in pose '{}'.\n", s[i + 1], s);
@@ -1537,7 +1548,7 @@ void SkeletalCreature::setGaitGene(unsigned int gaitdrive) { // TODO: not sure i
 		return; // TODO: is there a better behaviour here?
 
 	creatureGaitGene* g = i->second;
-	assert(g->drive == gaitdrive);
+	assert(g->drive == gaitdrive || (engine.version == 2 && g->drive % 16 == gaitdrive));
 
 	if (g == gaitgene)
 		return;

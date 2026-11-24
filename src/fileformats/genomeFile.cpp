@@ -23,6 +23,7 @@
 #include "common/endianlove.h"
 #include "common/io/IOException.h"
 #include "common/io/Reader.h"
+#include "common/io/SpanReader.h"
 #include "common/io/Writer.h"
 
 #include <cstring>
@@ -103,21 +104,7 @@ void genomeFile::writeNotes(Writer&) const {
 	// TODO
 }
 
-gene* genomeFile::nextGene(Reader& s) {
-	uint8_t majic[3];
-	s.read((char*)majic, 3);
-	if (strncmp((char*)majic, "gen", 3) != 0)
-		throw Exception("bad majic for a gene");
-
-	majic[0] = read8(s);
-	if (majic[0] == 'd')
-		return 0;
-	if (majic[0] != 'e')
-		throw Exception("bad majic at stage2 for a gene");
-
-	uint8_t type = read8(s);
-	uint8_t subtype = read8(s);
-
+gene* genomeFile::makeGene(uint8_t type, uint8_t subtype) {
 	gene* g = 0;
 
 	// the switch statement of doom... is there a better way to do this?
@@ -166,6 +153,26 @@ gene* genomeFile::nextGene(Reader& s) {
 			break;
 	}
 
+	return g;
+}
+
+gene* genomeFile::nextGene(Reader& s) {
+	uint8_t majic[3];
+	s.read((char*)majic, 3);
+	if (strncmp((char*)majic, "gen", 3) != 0)
+		throw Exception("bad majic for a gene");
+
+	majic[0] = read8(s);
+	if (majic[0] == 'd')
+		return 0;
+	if (majic[0] != 'e')
+		throw Exception("bad majic at stage2 for a gene");
+
+	uint8_t type = read8(s);
+	uint8_t subtype = read8(s);
+
+	gene* g = makeGene(type, subtype);
+
 	if (g == 0)
 		throw Exception("genefactory failed");
 
@@ -173,6 +180,54 @@ gene* genomeFile::nextGene(Reader& s) {
 	s >> *g;
 
 	return g;
+}
+
+// C2 genomes: each gene runs from its "gene" marker to the next marker
+// ("gene", or "gend" at the end), found byte by byte, so a gene with bytes
+// too many or too few leaves the rest readable. A type past the last wraps
+// round (mod 4), and a subtype within its type (brain 2, chemistry 5,
+// creature 8, organ 1): a C3 gene in a C2 genome reads as the C2 gene of
+// that number. What a gene had past its known length is kept (rawTail), and
+// one too short is read as if padded with zeros.
+void genomeFile::readC2Genes(Reader& s) {
+	std::vector<uint8_t> d = s.read_to_end();
+	auto marker = [&](size_t at, const char* m) { return at + 4 <= d.size() && memcmp(&d[at], m, 4) == 0; };
+	auto nextMarker = [&](size_t from) {
+		for (size_t i = from; i + 4 <= d.size(); i++)
+			if (marker(i, "gene") || marker(i, "gend"))
+				return i;
+		return d.size();
+	};
+	static const uint8_t subtypes[4] = {2, 5, 8, 1};
+	size_t at = nextMarker(0);
+	while (at < d.size() && marker(at, "gene")) {
+		size_t end = nextMarker(at + 4);
+		size_t len = end - (at + 4);
+		if (len < 2)
+			break;
+		const uint8_t* rec = &d[at + 4];
+		uint8_t type = rec[0] % 4, subtype = rec[1] % subtypes[rec[0] % 4];
+		gene* g = makeGene(type, subtype);
+		if (!g)
+			throw Exception("genefactory failed");
+		if (type != rec[0] || subtype != rec[1]) {
+			g->rawType = rec[0];
+			g->rawSubtype = rec[1];
+		}
+		// (zeros after it, for a gene shorter than its kind)
+		std::vector<uint8_t> body(rec + 2, rec + len);
+		size_t have = body.size();
+		body.resize(have + 256, 0);
+		SpanReader r(body);
+		r >> *g;
+		size_t used = r.tell();
+		if (used < have)
+			g->rawTail.assign(body.begin() + used, body.begin() + have);
+		else if (used > have)
+			g->rawShortLength = (int)len;
+		genes.push_back(std::unique_ptr<gene>(g));
+		at = end;
+	}
 }
 
 Reader& operator>>(Reader& s, genomeFile& f) {
@@ -198,8 +253,11 @@ Reader& operator>>(Reader& s, genomeFile& f) {
 
 	//fmt::print("creaturesGenomeFile: reading genome of version {}.\n", (unsigned int)f.cversion);
 	f.currorgan = 0;
-	while (f.nextGene(s) != 0) {
-	}
+	if (f.cversion == 2)
+		f.readC2Genes(s);
+	else
+		while (f.nextGene(s) != 0) {
+		}
 	f.currorgan = 0;
 	//fmt::print("creaturesGenomeFile: read {} top-level genes.\n", (unsigned int)f.genes.size());
 
@@ -263,10 +321,26 @@ void geneFlags::operator()(uint8_t f) {
 	reserved2 = ((f & 128) != 0);
 }
 
+void writeGeneBody(Writer& s, const gene& g);
+
 Writer& operator<<(Writer& s, const gene& g) {
 	s.write("gene", 4);
-	write8(s, g.type());
-	write8(s, g.subtype());
+	if (g.rawShortLength < 0) {
+		writeGeneBody(s, g);
+		return s;
+	}
+	// (a gene that came shorter than its kind goes back as short)
+	VectorWriter w;
+	writeGeneBody(w, g);
+	std::vector<uint8_t> b = w.vector();
+	b.resize(std::min(b.size(), (size_t)g.rawShortLength));
+	s.write(reinterpret_cast<const char*>(b.data()), b.size());
+	return s;
+}
+
+void writeGeneBody(Writer& s, const gene& g) {
+	write8(s, g.rawType >= 0 ? (uint8_t)g.rawType : g.type());
+	write8(s, g.rawSubtype >= 0 ? (uint8_t)g.rawSubtype : g.subtype());
 
 	write8(s, g.note.which);
 	write8(s, g.header.generation);
@@ -278,8 +352,8 @@ Writer& operator<<(Writer& s, const gene& g) {
 		write8(s, g.header.variant);
 
 	g.write(s);
-
-	return s;
+	if (!g.rawTail.empty())
+		s.write(reinterpret_cast<const char*>(g.rawTail.data()), g.rawTail.size());
 }
 
 Reader& operator>>(Reader& s, gene& g) {
@@ -567,9 +641,14 @@ void creatureGaitGene::read(Reader& s) {
 void creatureGenusGene::write(Writer& s) const {
 	write8(s, genus);
 
-	// TODO: we read past the end of the returned buffer here!
-	s.write(mum.c_str(), (cversion == 3) ? 32 : 4);
-	s.write(dad.c_str(), (cversion == 3) ? 32 : 4);
+	// each moniker in its fixed field, zeros after a short one (it used to
+	// copy past the end of an empty one)
+	const size_t len = (cversion == 3) ? 32 : 4;
+	for (const std::string* m : {&mum, &dad}) {
+		std::string field = m->substr(0, len);
+		field.resize(len, '\0');
+		s.write(field.data(), len);
+	}
 }
 
 void creatureGenusGene::read(Reader& s) {

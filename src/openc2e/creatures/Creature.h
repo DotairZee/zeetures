@@ -132,6 +132,7 @@ class Creature {
 	void dieOfOldAge() { diedofoldage = true; die(); } // (a developer aid: OPENC2E_TEST_TOGETHER)
 
 	bool shouldProcessGene(gene*); // switches on at the current life stage
+	bool isGeneExpressedAtAll(gene*); // for its sex, and not switched off (any stage)
 	bool isGeneExpressed(gene*); // switched on at this or an earlier life stage
 };
 

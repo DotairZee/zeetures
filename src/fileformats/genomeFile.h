@@ -43,6 +43,8 @@ class genomeFile {
 	organGene* currorgan;
 
 	gene* nextGene(Reader&); // returns NULL upon 'gend'
+	gene* makeGene(uint8_t type, uint8_t subtype);
+	void readC2Genes(Reader&);
 	geneNote* findNote(uint8_t type, uint8_t subtype, uint8_t which);
 
 	friend Writer& operator<<(Writer&, const genomeFile&);
@@ -119,6 +121,7 @@ struct geneHeader {
 //! The base class for all Creatures genes.
 class gene {
 	friend Writer& operator<<(Writer&, const gene&);
+	friend void writeGeneBody(Writer&, const gene&);
 	friend Reader& operator>>(Reader&, gene&);
 
   protected:
@@ -135,6 +138,13 @@ class gene {
   public:
 	geneNote note;
 	geneHeader header;
+	// C2 genomes, read gene by gene from marker to marker: the bytes a
+	// gene had past its known length, and its own type and subtype numbers
+	// where they were out of range (wrapped to read it), so it is written
+	// back as it came
+	std::vector<uint8_t> rawTail;
+	int rawType = -1, rawSubtype = -1;
+	int rawShortLength = -1; // the bytes after "gene" of one shorter than its kind
 
 	gene(uint8_t v)
 		: cversion(v) {}

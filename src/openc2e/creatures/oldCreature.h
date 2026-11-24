@@ -440,6 +440,10 @@ class c2Creature : public oldCreature {
 	void tickBiochemistry();
 	void processGenes();
 	std::shared_ptr<c2Organ> addingorgan; // organ the gene being added follows in the genome
+	// the body organ every C2 creature has: chemistry genes before the
+	// genome's first organ gene belong to it (made when the first one comes)
+	std::unique_ptr<organGene> bodyOrganGene;
+	bool organsMade = false; // (all at birth)
 
   public:
 	c2Creature(std::shared_ptr<genomeFile> g, bool is_female, unsigned char _variant, CreatureAgent* a);

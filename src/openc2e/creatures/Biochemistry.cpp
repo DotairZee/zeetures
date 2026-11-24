@@ -573,7 +573,8 @@ c2Organ::c2Organ(c2Creature* p, organGene* g) {
 	assert(parent);
 	ourGene = g;
 	assert(ourGene);
-	lifeforce = ourGene->lifeforce * (1000000.0f / 255.0f);
+	// (a life force of 0 counts as 1)
+	lifeforce = std::max<int>(1, ourGene->lifeforce) * (1000000.0f / 255.0f);
 	longtermlifeforce = shorttermlifeforce = lifeforce;
 
 	biochemticks = 0;
@@ -624,12 +625,25 @@ void c2Organ::processGenes() {
 	// only the genes added since the last call (each life stage adds its own)
 	for (size_t i = genesprocessed; i < genes.size(); i++) {
 		gene* g = genes[i];
+		// (at most 127 reactions, 128 emitters and 128 receptors an organ)
 		if (typeid(*g) == typeid(bioReactionGene)) {
-			reactions.push_back(std::shared_ptr<c2Reaction>(new c2Reaction((bioReactionGene*)g)));
+			if (reactions.size() < 127)
+				reactions.push_back(std::shared_ptr<c2Reaction>(new c2Reaction((bioReactionGene*)g)));
 		} else if (typeid(*g) == typeid(bioEmitterGene)) {
-			emitters.push_back(c2Emitter((bioEmitterGene*)g, this));
+			// one emitter per place and chemical in an organ: a later gene
+			// for the same organ, tissue, locus and chemical takes over the
+			// earlier one's settings (a duplicated gene does not emit twice)
+			auto* eg = (bioEmitterGene*)g;
+			auto same = std::find_if(emitters.begin(), emitters.end(), [&](const c2Emitter& e) {
+				return e.data->organ % 3 == eg->organ % 3 && e.data->tissue == eg->tissue && e.data->locus == eg->locus && e.data->chemical == eg->chemical;
+			});
+			if (same != emitters.end())
+				*same = c2Emitter(eg, this);
+			else if (emitters.size() < 128)
+				emitters.push_back(c2Emitter(eg, this));
 		} else if (typeid(*g) == typeid(bioReceptorGene)) {
-			receptors.push_back(c2Receptor((bioReceptorGene*)g, this));
+			if (receptors.size() < 128)
+				receptors.push_back(c2Receptor((bioReceptorGene*)g, this));
 		}
 	}
 	genesprocessed = genes.size();
@@ -864,6 +878,11 @@ void c2Organ::processReaction(c2Reaction& d) {
 	// TODO: untested
 
 	bioReactionGene& g = *d.data;
+	// each amount 1-16; one outside wraps round (0 is 1, 17 is 2, 128 is 1),
+	// for mutated genes and custom genomes
+	int q[4];
+	for (int k = 0; k < 4; k++)
+		q[k] = (g.quantity[k] >= 1 && g.quantity[k] <= 16) ? g.quantity[k] : g.quantity[k] % 16 + 1;
 
 	// C2 reaction speed: openc2e's table "snaffled from real creatures" (also
 	// used for half-lives), on rate / 8: rates 0-6 react every organ step,
@@ -882,9 +901,9 @@ void c2Organ::processReaction(c2Reaction& d) {
 	if (!c1table) {
 		float avail = 255.0f;
 		if (g.reactant[0] != 0)
-			avail = std::min(avail, (float)parent->getChemical(g.reactant[0]) / std::max(1, (int)g.quantity[0]));
+			avail = std::min(avail, (float)parent->getChemical(g.reactant[0]) / (int)q[0]);
 		if (g.reactant[1] != 0)
-			avail = std::min(avail, (float)parent->getChemical(g.reactant[1]) / std::max(1, (int)g.quantity[1]));
+			avail = std::min(avail, (float)parent->getChemical(g.reactant[1]) / (int)(q[1]));
 		if (avail <= 0.0f)
 			return;
 		float half = powf(g.rate / curveK, curveP);
@@ -894,10 +913,10 @@ void c2Organ::processReaction(c2Reaction& d) {
 		d.carry = amount - n;
 		if (n <= 0)
 			return;
-		parent->subChemical(g.reactant[0], n * g.quantity[0]);
-		parent->subChemical(g.reactant[1], n * g.quantity[1]);
-		parent->addChemical(g.reactant[2], n * g.quantity[2]);
-		parent->addChemical(g.reactant[3], n * g.quantity[3]);
+		parent->subChemical(g.reactant[0], n * q[0]);
+		parent->subChemical(g.reactant[1], n * q[1]);
+		parent->addChemical(g.reactant[2], n * q[2]);
+		parent->addChemical(g.reactant[3], n * q[3]);
 		return;
 	}
 
@@ -913,11 +932,11 @@ void c2Organ::processReaction(c2Reaction& d) {
 	unsigned char ratio = 255, ratio2 = 255;
 	if (g.reactant[0] != 0) {
 		// (a mutated gene can have quantity 0: taken as 1)
-		ratio = parent->getChemical(g.reactant[0]) / std::max(1, (int)g.quantity[0]);
+		ratio = parent->getChemical(g.reactant[0]) / (int)q[0];
 	}
 	if (g.reactant[1] != 0) {
 		// (a mutated gene can have quantity 0: taken as 1)
-		ratio2 = parent->getChemical(g.reactant[1]) / std::max(1, (int)g.quantity[1]);
+		ratio2 = parent->getChemical(g.reactant[1]) / (int)(q[1]);
 	}
 
 	// pick lowest ratio, if zero then return
@@ -931,14 +950,14 @@ void c2Organ::processReaction(c2Reaction& d) {
 
 	static const bool watchreact = devenv("OPENC2E_WATCH_REACTIONS") != nullptr;
 	if (watchreact && (g.reactant[0] == 72 || g.reactant[1] == 72))
-		fmt::print("* REACT {}*{} + {}*{} -> {}*{} + {}*{} rate {} amount {} (glycogen was {})\n", (int)g.quantity[0], (int)g.reactant[0],
-			(int)g.quantity[1], (int)g.reactant[1], (int)g.quantity[2], (int)g.reactant[2], (int)g.quantity[3], (int)g.reactant[3],
+		fmt::print("* REACT {}*{} + {}*{} -> {}*{} + {}*{} rate {} amount {} (glycogen was {})\n", (int)q[0], (int)g.reactant[0],
+			(int)q[1], (int)g.reactant[1], (int)q[2], (int)g.reactant[2], (int)q[3], (int)g.reactant[3],
 			(int)g.rate, (int)ratio, (int)parent->getChemical(72));
 	// change chemical levels
-	parent->subChemical(g.reactant[0], ratio * g.quantity[0]);
-	parent->subChemical(g.reactant[1], ratio * g.quantity[1]);
-	parent->addChemical(g.reactant[2], ratio * g.quantity[2]);
-	parent->addChemical(g.reactant[3], ratio * g.quantity[3]);
+	parent->subChemical(g.reactant[0], ratio * q[0]);
+	parent->subChemical(g.reactant[1], ratio * q[1]);
+	parent->addChemical(g.reactant[2], ratio * q[2]);
+	parent->addChemical(g.reactant[3], ratio * q[3]);
 }
 
 void c2eOrgan::processReaction(c2eReaction& d) {
@@ -1331,7 +1350,8 @@ c1Receptor::c1Receptor(bioReceptorGene* g, c1Creature* parent) {
 c2Receptor::c2Receptor(bioReceptorGene* g, c2Organ* parent) {
 	data = g;
 	processed = false;
-	locus = parent->getLocusPointer(true, g->organ, g->tissue, g->locus, &receptors);
+	// (the organ field wraps round, 0-2: brain, creature, organ)
+	locus = parent->getLocusPointer(true, g->organ % 3, g->tissue, g->locus, &receptors);
 }
 
 c2eReceptor::c2eReceptor(bioReceptorGene* g, c2eOrgan* parent) {
@@ -1350,7 +1370,8 @@ c1Emitter::c1Emitter(bioEmitterGene* g, c1Creature* parent) {
 
 c2Emitter::c2Emitter(bioEmitterGene* g, c2Organ* parent) {
 	data = g;
-	locus = parent->getLocusPointer(false, g->organ, g->tissue, g->locus, 0);
+	// (the organ field wraps round, 0-2: brain, creature, organ)
+	locus = parent->getLocusPointer(false, g->organ % 3, g->tissue, g->locus, 0);
 }
 
 c2eEmitter::c2eEmitter(bioEmitterGene* g, c2eOrgan* parent) {

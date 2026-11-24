@@ -939,9 +939,12 @@ void oldBrain::processGenes() {
 	// each in genome order, so a duplicated lobe does not renumber the lobes
 	// after it (BrainProfiles::laterLobe)
 	const bool byGeneration = dynamic_cast<c2Creature*>(parent) != nullptr;
+	// C2: every lobe is built at birth, whatever its switch-on stage
+	if (byGeneration && !lobes.empty())
+		return;
 	for (int pass = 0; pass < (byGeneration ? 2 : 1); pass++)
 		for (auto& gene : genome->genes) {
-			if (!parent->shouldProcessGene(gene.get()))
+			if (!(byGeneration ? parent->isGeneExpressedAtAll(gene.get()) : parent->shouldProcessGene(gene.get())))
 				continue;
 			if (byGeneration && BrainProfiles::laterLobe(*genome, gene.get()) != (pass == 1))
 				continue;

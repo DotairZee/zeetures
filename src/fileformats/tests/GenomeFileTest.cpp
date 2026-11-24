@@ -110,3 +110,38 @@ TEST(GenomeFile, RealGenomesRoundTrip) {
 	}
 	EXPECT_GT(checked, 0);
 }
+
+// A C2 genome is read gene by gene from marker to marker: a gene with a stray
+// byte, or a C3-only gene, does not stop the rest being read, and each is
+// written back as it came.
+TEST(GenomeFile, C2GenesReadMarkerToMarker) {
+	std::vector<uint8_t> d = {'d', 'n', 'a', '2'};
+	auto add = [&](std::vector<uint8_t> g) {
+		d.insert(d.end(), {'g', 'e', 'n', 'e'});
+		d.insert(d.end(), g.begin(), g.end());
+	};
+	// genus gene (2 1): header, genus, mum, dad
+	add({2, 1, 1, 0, 0, 0, 128, 0, 'A', 'B', 'C', 'D', 0, 0, 0, 0});
+	// a half-lives gene (1 3) with one byte too many
+	std::vector<uint8_t> hl = {1, 3, 2, 0, 0, 1, 128};
+	for (int i = 0; i < 256; i++)
+		hl.push_back((uint8_t)i);
+	hl.push_back(77);
+	add(hl);
+	// a C3 facial expression gene (2 8): read as a stimulus gene (2 0)
+	add({2, 8, 3, 0, 0, 1, 128, 5, 6, 7, 8, 1, 10, 11, 12, 13, 14, 15});
+	// an organ gene (3 0)
+	add({3, 0, 4, 0, 0, 1, 128, 1, 2, 3, 4, 5});
+	d.insert(d.end(), {'g', 'e', 'n', 'd'});
+
+	genomeFile g;
+	SpanReader r(std::span<const uint8_t>(d.data(), d.size()));
+	ASSERT_NO_THROW(r >> g);
+	ASSERT_EQ(g.genes.size(), 4u);
+	EXPECT_EQ(g.genes[1]->rawTail, std::vector<uint8_t>{77});
+	EXPECT_EQ(g.genes[2]->geneType(), 2);
+	EXPECT_EQ(g.genes[2]->geneSubtype(), 0);
+	EXPECT_EQ(g.genes[3]->geneType(), 3);
+	auto out = roundTrip(d);
+	EXPECT_TRUE(d == upToEnd(out)) << firstDifference(d, upToEnd(out));
+}

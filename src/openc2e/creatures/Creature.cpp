@@ -116,6 +116,18 @@ bool Creature::shouldProcessGene(gene* g) {
 	return true;
 }
 
+// expressed for this creature at some stage (its sex, and not switched off)
+bool Creature::isGeneExpressedAtAll(gene* g) {
+	geneFlags& flags = g->header.flags;
+	if (flags.notexpressed)
+		return false;
+	if (flags.femaleonly && !female)
+		return false;
+	if (flags.maleonly && female)
+		return false;
+	return true;
+}
+
 bool Creature::isGeneExpressed(gene* g) {
 	geneFlags& flags = g->header.flags;
 	if (flags.notexpressed)
@@ -146,6 +158,10 @@ void c2Creature::processGenes() {
 	// organ happens to be last. Genes after the brain organ (not modelled)
 	// keep going to the organ before it, as before.
 	brain->processGenes();
+	// every organ is made at birth, whatever its switch-on stage (up to 128);
+	// the genes of each stage then join them
+	const bool birth = !organsMade;
+	organsMade = true;
 	std::shared_ptr<c2Organ> current;
 	for (auto& gp : genome->genes) {
 		gene* g = gp.get();
@@ -156,6 +172,17 @@ void c2Creature::processGenes() {
 					if (org->getGene() == o)
 						current = org;
 			}
+			if (birth && !o->isBrain() && isGeneExpressedAtAll(g) && !current) {
+				if (organs.size() < 128) {
+					addingorgan = nullptr;
+					addGene(g);
+					if (!organs.empty() && organs.back()->getGene() == o)
+						current = organs.back();
+				}
+				continue;
+			}
+			if (!o->isBrain())
+				continue; // (made at birth)
 		}
 		if (!shouldProcessGene(g))
 			continue;
@@ -1678,9 +1705,11 @@ bool c2Creature::breathesWater() {
 void oldCreature::addGene(gene* g) {
 	Creature::addGene(g);
 	if (typeid(*g) == typeid(bioInitialConcentrationGene)) {
-		// initialise chemical levels
+		// initialise chemical levels (C2: only those switching on at birth;
+		// a later one does nothing)
 		bioInitialConcentrationGene* b = (bioInitialConcentrationGene*)(g);
-		chemicals[b->chemical] = b->quantity;
+		if (engine.version != 2 || g->header.switchontime == baby)
+			chemicals[b->chemical] = b->quantity;
 	} else if (typeid(*g) == typeid(bioHalfLivesGene)) {
 		bioHalfLivesGene* d = dynamic_cast<bioHalfLivesGene*>(g);
 		assert(d);
@@ -1712,7 +1741,21 @@ void c2Creature::addGene(gene* g) {
 		}
 	} else if (typeid(*g) == typeid(bioReactionGene) || typeid(*g) == typeid(bioEmitterGene) || typeid(*g) == typeid(bioReceptorGene)) {
 		std::shared_ptr<c2Organ> organ = addingorgan ? addingorgan : (organs.empty() ? nullptr : organs.back());
-		THROW_IFNOT(organ);
+		if (!organ) {
+			// before the genome's first organ gene: the body organ every C2
+			// creature has (our own settings for it: quick, full life, no
+			// damage of its own)
+			if (!bodyOrganGene) {
+				bodyOrganGene = std::make_unique<organGene>(2, false);
+				bodyOrganGene->clockrate = 255;
+				bodyOrganGene->damagerate = 0;
+				bodyOrganGene->lifeforce = 255;
+				bodyOrganGene->biotickstart = 0;
+				bodyOrganGene->atpdamagecoefficient = 0;
+			}
+			organs.push_back(std::shared_ptr<c2Organ>(new c2Organ(this, bodyOrganGene.get())));
+			organ = organs.back();
+		}
 		organ->genes.push_back(g);
 	}
 }

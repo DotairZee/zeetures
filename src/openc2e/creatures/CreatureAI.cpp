@@ -886,8 +886,11 @@ void oldCreature::applyStimulusChemistry(StimulusEvent& s) {
 			if (auto* x = dynamic_cast<creatureStimulusGene*>(gene.get())) {
 				// genes that have switched on by now (shouldProcessGene only
 				// passes those switching on at this very stage, so adults
-				// felt nothing); the last one for this stimulus wins
-				if (x->stim == s.id && isGeneExpressed(x))
+				// felt nothing). C2: the stimulus number wraps round (mod
+				// 46), and the gene of the latest stage wins, whatever their
+				// order in the genome (of one stage, the last)
+				unsigned int stim = engine.version == 2 ? x->stim % 46 : x->stim;
+				if (stim == s.id && isGeneExpressed(x) && (!g || x->header.switchontime >= g->header.switchontime))
 					g = x;
 			}
 		}
