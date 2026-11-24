@@ -1,0 +1,15 @@
+* The lab lift shaft's landing (openc2e Creatures 2 project, our own script
+* and our own art from art/shaftfloor.py; owner, 2026-11-23: "there needs
+* to be a floor graphic in this shaft where the norn is walking"). The right
+* platform's floor (y 1739) runs on into the copper shaft (room 255, x
+* 4225-4349; lift.cos), where creatures wait for the pod; with the pod
+* elsewhere they stood on nothing to be seen. A slim landing in the pod's
+* own materials now crosses the shaft at that level, its top face's front
+* edge on the floor line. Plane 1395: behind the pod's far glass (1399) and
+* floor (1400), so the pod passes in front of it, and behind creatures; in
+* front of the shaft's rim piece (2 1 145, 1390). Not seen by creatures
+* (ATTR 16) and click-through (TRAN). Run by openc2e after the world loads
+* (Additions folder); made anew each load.
+
+enum 2 1 167 kill targ next
+inst new: simp zlsf 1 0 1395 0 setv cls2 2 1 167 setv attr 16 tran 1 0 mvto 4241 1736 slow
