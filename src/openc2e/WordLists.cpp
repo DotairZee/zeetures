@@ -9,6 +9,7 @@
 #include "openc2eimgui/WorldChooser.h"
 
 #include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <span>
 #include <sstream>
@@ -164,6 +165,60 @@ std::vector<Preset> worldPresets() {
 			out.push_back({"world:" + w.name, w.name, fitted(words)});
 	}
 	return out;
+}
+
+namespace {
+fs::path customDir() {
+	return getUserDataDir() / "word-lists";
+}
+
+// the name as a file name: letters of any alphabet kept, a few characters
+// no system allows left out
+fs::path customFile(const std::string& name) {
+	std::string clean;
+	for (char c : name)
+		if (!strchr("/\\:*?\"<>|", c) && (unsigned char)c >= 0x20)
+			clean += c;
+	while (!clean.empty() && (clean.back() == ' ' || clean.back() == '.'))
+		clean.pop_back();
+	while (!clean.empty() && clean.front() == ' ')
+		clean.erase(0, 1);
+	return clean.empty() ? fs::path() : customDir() / fs::u8path(clean + ".txt");
+}
+} // namespace
+
+std::vector<Preset> customPresets() {
+	std::vector<Preset> out;
+	std::error_code ec;
+	for (auto& e : fs::directory_iterator(customDir(), ec)) {
+		if (e.path().extension() != ".txt")
+			continue;
+		auto words = readFile(e.path());
+		if (!words.empty()) {
+			std::string name = (const char*)e.path().stem().u8string().c_str();
+			out.push_back({"custom:" + name, name, fitted(words)});
+		}
+	}
+	std::sort(out.begin(), out.end(), [](const Preset& a, const Preset& b) { return PixelText::lower(a.name) < PixelText::lower(b.name); });
+	return out;
+}
+
+bool customExists(const std::string& name) {
+	fs::path f = customFile(name);
+	std::error_code ec;
+	return !f.empty() && fs::exists(f, ec);
+}
+
+bool saveCustom(const std::string& name) {
+	fs::path f = customFile(name);
+	return !f.empty() && writeFile(f, engine.wordlist, "Zeetures words: " + name);
+}
+
+void deleteCustom(const std::string& name) {
+	fs::path f = customFile(name);
+	std::error_code ec;
+	if (!f.empty())
+		fs::remove(f, ec);
 }
 
 void applyForWorld(const fs::path& worlddir) {

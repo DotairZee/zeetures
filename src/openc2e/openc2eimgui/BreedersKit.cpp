@@ -1954,7 +1954,7 @@ static void BreedsPage() {
 	ImGui::SameLine();
 	if (ImGui::Button("Rescan"))
 		KnownBreeds(true);
-	KitNote("Slots run a-z, then aa ... zz, then aaa ... (16,384 for each species; a creature in a slot past iv cannot go back to the original game).");
+	KitNote("Slots run a-z, then aa ... zz, then aaa ... (16,384 for each species;\na creature in a slot past iv cannot go back to the original game).");
 }
 
 void DrawBreedersKit() {

@@ -1226,6 +1226,7 @@ void Engine::update() {
 //   shot FILE         a picture of the window (BMP)
 //   font F            the world's letters: original, 12, 10 or 8 (saved)
 //   type TEXT         the letters typed on the keyboard, then Return
+//   savewords NAME    the words in use saved as a custom list
 // For recording scripted shots with OPENC2E_RECORD.
 static void runDirector() {
 	static const char* file = devenv("OPENC2E_DIRECTOR");
@@ -1380,6 +1381,15 @@ static void runDirector() {
 			std::string f;
 			l >> f;
 			PixelText::setFace(f == "original" ? PixelText::ORIGINAL : f == "12" ? PixelText::PX12 : f == "8" ? PixelText::PX8 : PixelText::PX10);
+		} else if (cmd == "savewords") { // the words in use saved as a custom list (Preferences > Words > Save as...)
+			std::string name;
+			std::getline(l, name);
+			name.erase(0, name.find_first_not_of(" \t"));
+			bool ok = WordLists::saveCustom(name);
+			std::string all;
+			for (auto& p : WordLists::customPresets())
+				all += " [" + p.name + "]";
+			fmt::print("* Director: saved words as \"{}\": {}; custom lists:{}\n", name, ok ? "yes" : "no", all);
 		} else if (cmd == "type") { // letters typed on the keyboard (UTF-8), then Return
 			std::string text;
 			std::getline(l, text);

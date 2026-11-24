@@ -1580,7 +1580,7 @@ static void DrawPreferences() {
 		tabsW += ImGui::CalcTextSize(n).x + st.FramePadding.x * 2 + st.ItemInnerSpacing.x;
 	if (words) {
 		if (!wasWords)
-			ImGui::SetNextWindowSize(ImVec2(std::max(tabsW, 430.0f), 560));
+			ImGui::SetNextWindowSize(ImVec2(std::max(tabsW, 430.0f), 420));
 		ImGui::SetNextWindowSizeConstraints(ImVec2(std::max(tabsW, 400.0f), 300), ImVec2(FLT_MAX, FLT_MAX));
 	} else {
 		ImGui::SetNextWindowSizeConstraints(ImVec2(tabsW, 0), ImVec2(FLT_MAX, FLT_MAX));
@@ -1773,19 +1773,27 @@ static void DrawPreferences() {
 		}
 		if (tab("Status Bar")) {
 			bool statusbar = IsC2StatusBarShown();
-			if (ImGui::Checkbox("Show the status bar", &statusbar)) {
+			if (ImGui::Checkbox("Status bar", &statusbar)) {
 				SetC2StatusBarShown(statusbar);
 				writeFlag("status-bar", statusbar);
 			}
+			ImGui::SameLine();
+			ImGui::TextDisabled("(unticking it hides minimised kits too)");
 			ImGui::BeginDisabled(!statusbar);
 			ImGui::SeparatorText("What it shows");
-			for (int part = 0; part < STATUSBAR_PARTS; part++) {
-				bool on = StatusBarPartShown(part);
-				if (part % 2)
-					ImGui::SameLine(200);
-				if (ImGui::Checkbox(StatusBarPartName(part), &on))
-					SetStatusBarPartShown(part, on);
-			}
+			// by column: the left end's parts on the left, the rest on the right
+			const int half = (STATUSBAR_PARTS + 1) / 2;
+			for (int row = 0; row < half; row++)
+				for (int col = 0; col < 2; col++) {
+					int part = row + col * half;
+					if (part >= STATUSBAR_PARTS)
+						continue;
+					if (col)
+						ImGui::SameLine(170);
+					bool on = StatusBarPartShown(part);
+					if (ImGui::Checkbox(StatusBarPartName(part), &on))
+						SetStatusBarPartShown(part, on);
+				}
 			ImGui::TextDisabled("(Minimised kits always show there.)");
 			ImGui::SeparatorText("Notifications");
 			KitAllNoticeSwitches();

@@ -131,7 +131,7 @@ bool KitNoticeShown(int kind) {
 
 // Preferences > Notices (owner, 2026-11-23: moved there from the kits)
 void KitAllNoticeSwitches() {
-	ImGui::TextWrapped("Which happenings show as notices on the status bar. The life log records them all either way.");
+	ImGui::TextUnformatted("Which happenings show as notices on the status bar.\nThe life log records them all either way.");
 	ImGui::Spacing();
 	struct Row {
 		const char* kit;

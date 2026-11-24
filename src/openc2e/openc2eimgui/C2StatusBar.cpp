@@ -58,7 +58,7 @@ void SetC2StatusBarShown(bool shown) {
 // "status-bar-hide" in settings.txt lists the hidden ones' keys, joined by
 // commas. Minimised kits always show (they could not be brought back).
 static const char* const s_part_keys[STATUSBAR_PARTS] = {"season", "time", "temperature", "date", "notices", "health"};
-static const char* const s_part_names[STATUSBAR_PARTS] = {"Season", "Time of day", "Temperature", "Day and year", "Notices", "The selected creature's health"};
+static const char* const s_part_names[STATUSBAR_PARTS] = {"Season", "Time of day", "Temperature", "Day and year", "Notices", "Selected creature's health"};
 static int s_parts_hidden = -1; // bits
 
 static int partsHidden() {

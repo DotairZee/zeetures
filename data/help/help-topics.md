@@ -216,8 +216,8 @@ The toolbars, bubbles, and full screen stay in their menus too, to flip while yo
 Creatures learn 79 words: what to do (push, eat, come...), things (food, toy, Norn...), feelings (hungry, sleepy...), and a few others (yes, no, very...). File > Preferences > Words lists them by meaning; type a new word beside any meaning to change it.
 
 - **Each world has its own words,** unless "Use these words in all worlds" is ticked: then one list serves every world, and each world's own is kept for when you untick it.
-- **Load words from...** fills the list from the game's own languages (English, German, French, Italian, Dutch, and Spanish, read from your copy of Creatures 2), from Nornish (the creatures' own tongue: they never learn a human word), from translations made for Zeetures, or from another world. Translations marked "draft" have not yet been checked by a native speaker: corrections are welcome.
-- **The game's own** puts back Creatures 2's words in your system's language. Undo goes back to the words before a list was loaded.
+- **Load words from...** fills the list from your own saved lists (Custom), the game's own languages (English, German, French, Italian, Dutch, and Spanish, read from your copy of Creatures 2), from Nornish (the creatures' own tongue: they never learn a human word), from translations made for Zeetures, or from another world. Translations marked "draft" have not yet been checked by a native speaker: corrections are welcome.
+- **Save as...** keeps the words in use under a name of your own; they are listed under Custom at the top of Load words from..., for any world. Right-click one there to delete it. Undo goes back to the words before a list was loaded.
 - **Creatures keep what they know.** A word is learned by its meaning, so a creature that knew "push" knows its new word at once. They still understand the game's English words when you type them.
 - If two meanings share a word, the list says so: creatures would take it as both.
 

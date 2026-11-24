@@ -94,6 +94,23 @@ void DrawWordEditor() {
 	ImGui::SetNextItemWidth(200);
 	if (ImGui::BeginCombo("##load", "Load words from...")) {
 		auto& presets = WordLists::presets();
+		// the player's own, saved under a name (right-click one to delete it)
+		auto custom = WordLists::customPresets();
+		if (!custom.empty()) {
+			ImGui::SeparatorText("Custom");
+			for (auto& p : custom) {
+				std::string shown = UiShown(p.name);
+				if (ImGui::Selectable((shown + "##custom").c_str()))
+					choose(p);
+				if (ImGui::BeginPopupContextItem()) {
+					if (ImGui::Selectable(("Delete " + shown).c_str()))
+						WordLists::deleteCustom(p.name);
+					ImGui::EndPopup();
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Right-click to delete it");
+			}
+		}
 		ImGui::SeparatorText("Languages");
 		for (auto& p : presets)
 			if (!p.draft) {
@@ -119,14 +136,33 @@ void DrawWordEditor() {
 		}
 		ImGui::EndCombo();
 	}
+	// the words in use, saved under a name of your own (Custom, above)
 	ImGui::SameLine();
-	if (ImGui::Button("The game's own")) {
-		s_undo = engine.wordlist;
-		s_undoName = "the game's own";
-		WordLists::setWords(WordLists::defaultWords());
-	}
+	if (ImGui::Button("Save as..."))
+		ImGui::OpenPopup("Save the words as");
 	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Creatures 2's own words, in your system's language");
+		ImGui::SetTooltip("Keep these words under a name, to load in any world (Load words from... > Custom)");
+	if (ImGui::BeginPopup("Save the words as")) {
+		static char name[64] = "";
+		if (ImGui::IsWindowAppearing()) {
+			name[0] = 0;
+			ImGui::SetKeyboardFocusHere();
+		}
+		ImGui::SetNextItemWidth(200);
+		bool enter = ImGui::InputTextWithHint("##name", "Name", name, sizeof(name), ImGuiInputTextFlags_EnterReturnsTrue);
+		UiFontNeed(name);
+		bool exists = WordLists::customExists(name);
+		ImGui::SameLine();
+		ImGui::BeginDisabled(!name[0]);
+		if (ImGui::Button(exists ? "Replace" : "Save") || (enter && name[0])) {
+			WordLists::saveCustom(name);
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndDisabled();
+		if (exists)
+			ImGui::TextDisabled("A list of that name is there already");
+		ImGui::EndPopup();
+	}
 	if (s_undo) {
 		ImGui::SameLine();
 		if (ImGui::Button("Undo")) {

@@ -33,6 +33,14 @@ const std::vector<std::string>& english();
 const std::vector<Preset>& presets();
 // other worlds that have their own words, as presets
 std::vector<Preset> worldPresets();
+// lists the player saved under a name (word-lists/NAME.txt in the user
+// data folder), as presets "custom:NAME"
+std::vector<Preset> customPresets();
+// saves the words in use under that name (replacing one of the same name);
+// false if the name cannot be a file name
+bool saveCustom(const std::string& name);
+void deleteCustom(const std::string& name);
+bool customExists(const std::string& name);
 
 // at the start, once the world is chosen
 void applyForWorld(const std::filesystem::path& worlddir);
