@@ -100,9 +100,10 @@ void DrawC2StatusBar() {
 		return;
 	ImGuiIO& io = ImGui::GetIO();
 
-	ImGui::SetNextWindowPos(ImVec2(0, io.DisplaySize.y - s_last_c2statusbar_height));
+	ImGui::SetNextWindowPos(ImGuiUtils::GameWindowPos() + ImVec2(0, io.DisplaySize.y - s_last_c2statusbar_height));
 	ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, 0));
-	if (ImGui::Begin("Statusbar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+	ImGuiUtils::KeepInGameWindow();
+	if (ImGui::Begin("Statusbar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoDocking)) {
 		static std::array<Texture, 4> s_season_icons_texs;
 		if (!s_season_icons_texs[0]) {
 			s_season_icons_texs[0] = GetTextureFromExeFile(0x98);

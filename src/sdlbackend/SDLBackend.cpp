@@ -18,6 +18,7 @@
  */
 
 #include "SDLBackend.h"
+#include "SDLViewports.h"
 #include "common/devenv.h"
 
 #include "common/UiPinch.h"
@@ -36,6 +37,7 @@
 #include <cassert>
 #include <filesystem>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <memory>
 
 static void uploadImGuiFontTexture();
@@ -62,6 +64,12 @@ static void ImGuiInit(SDL_Window* window, SDL_Renderer* renderer) {
 	if (!ImGui_ImplSDLRenderer3_Init(renderer)) {
 		throw Exception("Couldn't initialize ImGui SDLRenderer");
 	}
+	SDLViewports::init(renderer);
+	// (kits in their own windows: a window dragged out of the game window
+	// becomes one only past the game window's edge, not while it still
+	// overlaps; and it keeps the system's title bar off, ImGui drawing its own)
+	io.ConfigViewportsNoAutoMerge = false;
+	io.ConfigViewportsNoDecoration = true;
 
 	io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines;
 
@@ -155,7 +163,61 @@ static void uploadImGuiFontTexture() {
 	io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
 }
 
+// Sets ImGui's flags to match SDLBackend::ui_windows, between frames.
+// Turned off, every window left outside comes back into the game window.
+static void applyUiWindows(SDLBackend& b) {
+	if (b.ui_windows_applied == b.ui_windows && ImGui::GetFrameCount() > 0)
+		return;
+	ImGuiIO& io = ImGui::GetIO();
+	if (b.ui_windows) {
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		if (io.BackendFlags & ImGuiBackendFlags_PlatformHasViewports)
+			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	} else if (io.ConfigFlags & (ImGuiConfigFlags_ViewportsEnable | ImGuiConfigFlags_DockingEnable)) {
+		ImGuiContext& g = *ImGui::GetCurrentContext();
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+			// from the desktop's coordinates to the game window's: windows in
+			// the game window keep their places in it, the others come in
+			// near its top-left corner, one below another
+			ImGuiViewport* main = ImGui::GetMainViewport();
+			float next = 120;
+			for (ImGuiWindow* w : g.Windows) {
+				if (w->ParentWindow || (w->Flags & ImGuiWindowFlags_ChildWindow))
+					continue;
+				if (w->Viewport == main || !w->Viewport) {
+					ImGui::SetWindowPos(w, ImVec2(w->Pos.x - main->Pos.x, w->Pos.y - main->Pos.y));
+				} else {
+					ImGui::SetWindowPos(w, ImVec2(120, next));
+					next = std::min(next + 40, main->Size.y * 0.5f);
+				}
+			}
+			// (only the kits' windows: ImGui::DestroyPlatformWindows() would
+			// also take the game window's handle from its viewport, after
+			// which ImGui ignored the game window's pointer and keys)
+			for (int i = 1; i < g.Viewports.Size; i++)
+				ImGui::DestroyPlatformWindow(g.Viewports[i]);
+		}
+		// undocked: each kit its own window again
+		for (ImGuiWindow* w : g.Windows)
+			if (w->DockNode || w->DockId)
+				ImGui::DockContextQueueUndockWindow(&g, w);
+		io.ConfigFlags &= ~(ImGuiConfigFlags_ViewportsEnable | ImGuiConfigFlags_DockingEnable);
+	}
+	b.ui_windows_applied = b.ui_windows;
+}
+
 void SDLBackend::init(const std::string& name, int32_t width, int32_t height) {
+	// Kits in their own windows: Wayland lets no program place its own
+	// windows or read where the pointer is outside them, which Dear ImGui's
+	// windows need (imgui_impl_sdl3 offers them only on x11, Windows and
+	// macOS). Under a Wayland session with XWayland, run as an X11 program
+	// instead. OPENC2E_KIT_WINDOWS_WAYLAND=1 stays on Wayland (to compare).
+#if defined(__linux__) || defined(__FreeBSD__)
+	if (ui_windows && getenv("WAYLAND_DISPLAY") && getenv("DISPLAY") && !getenv("SDL_VIDEO_DRIVER") && !getenv("OPENC2E_KIT_WINDOWS_WAYLAND")) {
+		SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
+		fmt::print("* Kits in their own windows: running through XWayland\n");
+	}
+#endif
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
 		throw Exception(std::string("SDL error during initialization: ") + SDL_GetError());
 	}
@@ -210,11 +272,23 @@ void SDLBackend::init(const std::string& name, int32_t width, int32_t height) {
 	SDL_StartTextInput(window);
 
 	ImGuiInit(window, renderer);
+	applyUiWindows(*this);
 }
 
 void SDLBackend::shutdown() {
 	rememberWindowDisplay(window);
+	if (ImGui::GetCurrentContext())
+		SDLViewports::shutdown();
 	SDL_Quit();
+}
+
+bool SDLBackend::uiWindowsActive() {
+	return ImGui::GetCurrentContext() && (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) &&
+		   (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_PlatformHasViewports);
+}
+
+void SDLBackend::setUiWindows(bool on) {
+	ui_windows = on; // (taken up at the next frame's start; before init, by init)
 }
 
 static bool ImGuiConsumeEvent(const SDL_Event& event) {
@@ -254,12 +328,34 @@ retry:
 	if (!SDL_PollEvent(&event))
 		return false;
 
-	if (!SDL_ConvertEventToRenderCoordinates(renderer, &event)) {
-		throw Exception(fmt::format("error converting event to render coordinates: {}", SDL_GetError()));
+	{
+		// (with kits in their own windows, ImGui works in the window system's
+		// own coordinates, and the game in the game window's render ones)
+		const bool viewports = ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable;
+		SDL_Event raw = event;
+		if (!SDL_ConvertEventToRenderCoordinates(renderer, &event)) {
+			throw Exception(fmt::format("error converting event to render coordinates: {}", SDL_GetError()));
+		}
+		if (ImGuiConsumeEvent(viewports ? raw : event)) {
+			goto retry;
+		}
 	}
 
-	if (ImGuiConsumeEvent(event)) {
-		goto retry;
+	// a kit's own window: closing the game window quits (SDL quits only when
+	// the last window closes); other windows' pointer and window events are
+	// ImGui's alone (keys and typing go on to the game, as from the game window)
+	if (SDL_Window* from = SDL_GetWindowFromEvent(&event); from && from != window) {
+		switch (event.type) {
+			case SDL_EVENT_KEY_DOWN:
+			case SDL_EVENT_KEY_UP:
+			case SDL_EVENT_TEXT_INPUT:
+				break;
+			default:
+				goto retry;
+		}
+	} else if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && ImGui::GetPlatformIO().Viewports.Size > 1) {
+		e.type = eventquit;
+		return true;
 	}
 
 	switch (event.type) {
@@ -497,6 +593,7 @@ void SDLBackend::updateTexture(Texture& tex, Rect2i location, const Image& image
 			converted->pixels, converted->pitch)) {
 		throw Exception(fmt::format("error updating texture: {}", SDL_GetError()));
 	};
+	SDLViewports::textureUpdated(tex.as<SDL_Texture*>()); // (its copies in kits' windows)
 }
 
 int32_t SDLRenderTarget::getWidth() const {
@@ -811,6 +908,8 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 		SDL_SetRenderScale(renderer, SDL_GetWindowDisplayScale(window), SDL_GetWindowDisplayScale(window));
 
 		bool focused = SDL_GetWindowFlags(window) & (SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS);
+		// (or one of the kits' own windows)
+		focused = focused || SDL_GetKeyboardFocus() || SDL_GetMouseFocus();
 		// (developer aid: OPENC2E_FULL_RATE draws at the focused window's rate,
 		// for measuring with a window nobody is looking at)
 		static const bool fullRate = devenv("OPENC2E_FULL_RATE") != nullptr;
@@ -828,6 +927,7 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 		if (!SDL_TextInputActive(window))
 			SDL_StartTextInput(window);
 
+		applyUiWindows(*this);
 		if (g_beforeUiFrame && g_beforeUiFrame())
 			uploadImGuiFontTexture();
 		ImGui_ImplSDLRenderer3_NewFrame();
@@ -840,7 +940,16 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 		}
 
 		ImGui::Render();
-		ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+		if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+			// kits in their own windows: the game window's part, then each
+			// other window (its own renderer, presented at once)
+			SDLViewports::renderMainDrawData(ImGui::GetDrawData(), renderer);
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+			SDL_SetRenderTarget(renderer, nullptr);
+		} else {
+			ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+		}
 
 		// developer aid (the trailer, owner 2026-11-21): OPENC2E_RECORD=FILE.mp4
 		// records what is drawn through ffmpeg at 30 frames a second of real

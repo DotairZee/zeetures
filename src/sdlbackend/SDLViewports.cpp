@@ -1,0 +1,376 @@
+/*
+ *  SDLViewports.cpp
+ *  Zeetures (openc2e fork): kits in their own windows (experimental)
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ */
+
+#include "SDLViewports.h"
+
+#include <SDL3/SDL.h>
+#include <algorithm>
+#include <cstdint>
+#include <imgui.h>
+#include <unordered_map>
+#include <vector>
+
+// How it works. Dear ImGui (docking branch, multi-viewports on) asks the
+// platform backend (imgui_impl_sdl3) for an SDL window per extra viewport,
+// and the renderer backend (here) to draw into it. An SDL_Texture belongs to
+// the renderer that made it, and every texture the kits draw with was made
+// by the game window's renderer. So each extra window keeps copies: the
+// first time a main texture is drawn there, its pixels are read back through
+// the main renderer and uploaded to the window's own renderer.
+//
+// A copy is made again when its original changes:
+// - a texture the game draws into (a render target: the Creature's View) is
+//   read back every frame it is shown in an extra window;
+// - a static texture is read back again after SDLBackend::updateTexture
+//   (a version number in the texture's SDL properties);
+// - a destroyed texture (the font atlas is remade as it gains letters) is
+//   noticed through a cleanup callback on its SDL properties, and its copies
+//   dropped before anything is drawn (the address may be reused at once).
+
+namespace SDLViewports {
+
+namespace {
+
+const char* const VERSION_PROP = "zeetures.mirror.version";
+const char* const WATCH_PROP = "zeetures.mirror.watch";
+
+struct Mirror {
+	SDL_Texture* copy = nullptr;
+	Sint64 version = -1;
+	Uint64 frame = 0; // when a render target was last read back
+};
+
+struct WindowRenderer {
+	SDL_Renderer* renderer = nullptr;
+	std::unordered_map<SDL_Texture*, Mirror> mirrors;
+};
+
+SDL_Renderer* s_main = nullptr;
+std::vector<WindowRenderer*> s_windows;
+std::vector<SDL_Texture*> s_gone; // main textures destroyed since the last sweep
+SDL_Texture* s_scratch = nullptr; // main-renderer target for reading back static textures
+int s_scratch_w = 0, s_scratch_h = 0;
+Uint64 s_frame = 0;
+std::vector<float> s_xy;
+std::vector<SDL_FColor> s_colors;
+
+void SDLCALL onTextureGone(void*, void* value) {
+	s_gone.push_back((SDL_Texture*)value);
+}
+
+void sweepGone() {
+	if (s_gone.empty())
+		return;
+	for (SDL_Texture* t : s_gone)
+		for (WindowRenderer* w : s_windows) {
+			auto it = w->mirrors.find(t);
+			if (it != w->mirrors.end()) {
+				if (it->second.copy)
+					SDL_DestroyTexture(it->second.copy);
+				w->mirrors.erase(it);
+			}
+		}
+	s_gone.clear();
+}
+
+// a main texture's pixels, through the main renderer (nullptr on failure)
+SDL_Surface* readBack(SDL_Texture* t, bool target, int w, int h) {
+	SDL_Texture* prev = SDL_GetRenderTarget(s_main);
+	SDL_Surface* got = nullptr;
+	if (target) {
+		SDL_SetRenderTarget(s_main, t);
+		got = SDL_RenderReadPixels(s_main, nullptr);
+	} else {
+		// draw it unblended onto a scratch target at its own size, and read that
+		if (!s_scratch || s_scratch_w < w || s_scratch_h < h) {
+			if (s_scratch)
+				SDL_DestroyTexture(s_scratch);
+			s_scratch_w = std::max(w, s_scratch_w);
+			s_scratch_h = std::max(h, s_scratch_h);
+			s_scratch = SDL_CreateTexture(s_main, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, s_scratch_w, s_scratch_h);
+			if (!s_scratch) {
+				SDL_SetRenderTarget(s_main, prev);
+				return nullptr;
+			}
+		}
+		SDL_SetRenderTarget(s_main, s_scratch);
+		SDL_SetRenderViewport(s_main, nullptr);
+		SDL_SetRenderClipRect(s_main, nullptr);
+		SDL_SetRenderDrawColor(s_main, 0, 0, 0, 0);
+		SDL_RenderClear(s_main);
+		SDL_BlendMode blend;
+		SDL_ScaleMode scale;
+		Uint8 alpha, r, g, b;
+		SDL_GetTextureBlendMode(t, &blend);
+		SDL_GetTextureScaleMode(t, &scale);
+		SDL_GetTextureAlphaMod(t, &alpha);
+		SDL_GetTextureColorMod(t, &r, &g, &b);
+		SDL_SetTextureBlendMode(t, SDL_BLENDMODE_NONE);
+		SDL_SetTextureScaleMode(t, SDL_SCALEMODE_NEAREST);
+		SDL_SetTextureAlphaMod(t, 255);
+		SDL_SetTextureColorMod(t, 255, 255, 255);
+		SDL_FRect dst{0, 0, (float)w, (float)h};
+		SDL_RenderTexture(s_main, t, nullptr, &dst);
+		SDL_SetTextureBlendMode(t, blend);
+		SDL_SetTextureScaleMode(t, scale);
+		SDL_SetTextureAlphaMod(t, alpha);
+		SDL_SetTextureColorMod(t, r, g, b);
+		SDL_Rect rect{0, 0, w, h};
+		got = SDL_RenderReadPixels(s_main, &rect);
+	}
+	SDL_SetRenderTarget(s_main, prev);
+	if (got && got->format != SDL_PIXELFORMAT_ARGB8888) {
+		SDL_Surface* conv = SDL_ConvertSurface(got, SDL_PIXELFORMAT_ARGB8888);
+		SDL_DestroySurface(got);
+		got = conv;
+	}
+	return got;
+}
+
+// the window's copy of a main texture, made or refreshed as needed
+SDL_Texture* mirrorOf(WindowRenderer& wr, SDL_Texture* t) {
+	if (!t)
+		return nullptr;
+	SDL_PropertiesID props = SDL_GetTextureProperties(t);
+	const bool target = SDL_GetNumberProperty(props, SDL_PROP_TEXTURE_ACCESS_NUMBER, 0) == SDL_TEXTUREACCESS_TARGET;
+	const Sint64 version = SDL_GetNumberProperty(props, VERSION_PROP, 0);
+	if (!SDL_HasProperty(props, WATCH_PROP))
+		SDL_SetPointerPropertyWithCleanup(props, WATCH_PROP, t, onTextureGone, nullptr);
+
+	Mirror& m = wr.mirrors[t];
+	bool fresh = m.copy && (target ? m.frame == s_frame : m.version == version);
+	if (!fresh) {
+		float fw = 0, fh = 0;
+		SDL_GetTextureSize(t, &fw, &fh);
+		int w = (int)fw, h = (int)fh;
+		if (m.copy && (m.copy->w != w || m.copy->h != h)) {
+			SDL_DestroyTexture(m.copy);
+			m.copy = nullptr;
+		}
+		if (SDL_Surface* px = readBack(t, target, w, h)) {
+			if (!m.copy)
+				m.copy = SDL_CreateTexture(wr.renderer, SDL_PIXELFORMAT_ARGB8888,
+					target ? SDL_TEXTUREACCESS_STREAMING : SDL_TEXTUREACCESS_STATIC, w, h);
+			if (m.copy)
+				SDL_UpdateTexture(m.copy, nullptr, px->pixels, px->pitch);
+			SDL_DestroySurface(px);
+		}
+		m.version = version;
+		m.frame = s_frame;
+	}
+	if (m.copy) {
+		// drawn as the original is drawn now
+		SDL_BlendMode blend;
+		SDL_ScaleMode scale;
+		Uint8 alpha, r, g, b;
+		if (SDL_GetTextureBlendMode(t, &blend))
+			SDL_SetTextureBlendMode(m.copy, blend);
+		if (SDL_GetTextureScaleMode(t, &scale))
+			SDL_SetTextureScaleMode(m.copy, scale);
+		if (SDL_GetTextureAlphaMod(t, &alpha))
+			SDL_SetTextureAlphaMod(m.copy, alpha);
+		if (SDL_GetTextureColorMod(t, &r, &g, &b))
+			SDL_SetTextureColorMod(m.copy, r, g, b);
+	}
+	return m.copy;
+}
+
+// imgui_impl_sdlrenderer3's RenderDrawData, with two changes: vertices are
+// placed relative to the viewport (DisplayPos: the window's place on the
+// desktop), and textures can be swapped for a window's copies
+void renderDrawData(ImDrawData* draw_data, SDL_Renderer* renderer, WindowRenderer* mirrors) {
+	float rsx = 1.0f, rsy = 1.0f;
+	SDL_GetRenderScale(renderer, &rsx, &rsy);
+	ImVec2 render_scale;
+	render_scale.x = (rsx == 1.0f) ? draw_data->FramebufferScale.x : 1.0f;
+	render_scale.y = (rsy == 1.0f) ? draw_data->FramebufferScale.y : 1.0f;
+	int fb_width = (int)(draw_data->DisplaySize.x * render_scale.x);
+	int fb_height = (int)(draw_data->DisplaySize.y * render_scale.y);
+	if (fb_width <= 0 || fb_height <= 0)
+		return;
+
+	SDL_Rect old_viewport, old_clip;
+	bool old_viewport_set = SDL_RenderViewportSet(renderer);
+	bool old_clip_set = SDL_RenderClipEnabled(renderer);
+	SDL_GetRenderViewport(renderer, &old_viewport);
+	SDL_GetRenderClipRect(renderer, &old_clip);
+	SDL_SetRenderViewport(renderer, nullptr);
+	SDL_SetRenderClipRect(renderer, nullptr);
+
+	const ImVec2 off = draw_data->DisplayPos;
+	const ImVec2 clip_scale = render_scale;
+	for (int n = 0; n < draw_data->CmdListsCount; n++) {
+		const ImDrawList* list = draw_data->CmdLists[n];
+		const int nv = list->VtxBuffer.Size;
+		s_xy.resize((size_t)nv * 2);
+		s_colors.resize((size_t)nv);
+		for (int i = 0; i < nv; i++) {
+			const ImDrawVert& v = list->VtxBuffer[i];
+			s_xy[i * 2] = v.pos.x - off.x;
+			s_xy[i * 2 + 1] = v.pos.y - off.y;
+			s_colors[i].r = ((v.col >> IM_COL32_R_SHIFT) & 0xFF) / 255.0f;
+			s_colors[i].g = ((v.col >> IM_COL32_G_SHIFT) & 0xFF) / 255.0f;
+			s_colors[i].b = ((v.col >> IM_COL32_B_SHIFT) & 0xFF) / 255.0f;
+			s_colors[i].a = ((v.col >> IM_COL32_A_SHIFT) & 0xFF) / 255.0f;
+		}
+		for (int c = 0; c < list->CmdBuffer.Size; c++) {
+			const ImDrawCmd* pcmd = &list->CmdBuffer[c];
+			if (pcmd->UserCallback) {
+				if (pcmd->UserCallback == ImDrawCallback_ResetRenderState) {
+					SDL_SetRenderViewport(renderer, nullptr);
+					SDL_SetRenderClipRect(renderer, nullptr);
+				} else {
+					pcmd->UserCallback(list, pcmd);
+				}
+				continue;
+			}
+			ImVec2 clip_min((pcmd->ClipRect.x - off.x) * clip_scale.x, (pcmd->ClipRect.y - off.y) * clip_scale.y);
+			ImVec2 clip_max((pcmd->ClipRect.z - off.x) * clip_scale.x, (pcmd->ClipRect.w - off.y) * clip_scale.y);
+			clip_min.x = std::max(clip_min.x, 0.0f);
+			clip_min.y = std::max(clip_min.y, 0.0f);
+			clip_max.x = std::min(clip_max.x, (float)fb_width);
+			clip_max.y = std::min(clip_max.y, (float)fb_height);
+			if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
+				continue;
+			SDL_Rect r = {(int)clip_min.x, (int)clip_min.y, (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y)};
+			SDL_SetRenderClipRect(renderer, &r);
+
+			SDL_Texture* tex = (SDL_Texture*)(intptr_t)pcmd->GetTexID();
+			if (mirrors)
+				tex = mirrorOf(*mirrors, tex);
+			const float* xy = s_xy.data() + (size_t)pcmd->VtxOffset * 2;
+			const float* uv = (const float*)(const void*)((const char*)(list->VtxBuffer.Data + pcmd->VtxOffset) + offsetof(ImDrawVert, uv));
+			SDL_RenderGeometryRaw(renderer, tex,
+				xy, (int)(sizeof(float) * 2),
+				s_colors.data() + pcmd->VtxOffset, (int)sizeof(SDL_FColor),
+				uv, (int)sizeof(ImDrawVert),
+				nv - (int)pcmd->VtxOffset,
+				list->IdxBuffer.Data + pcmd->IdxOffset, (int)pcmd->ElemCount, sizeof(ImDrawIdx));
+		}
+	}
+
+	SDL_SetRenderViewport(renderer, old_viewport_set ? &old_viewport : nullptr);
+	SDL_SetRenderClipRect(renderer, old_clip_set ? &old_clip : nullptr);
+}
+
+SDL_Window* windowOf(ImGuiViewport* vp) {
+	return SDL_GetWindowFromID((SDL_WindowID)(intptr_t)vp->PlatformHandle);
+}
+
+void rendererCreateWindow(ImGuiViewport* vp) {
+	SDL_Window* window = windowOf(vp);
+	if (!window)
+		return;
+	auto* wr = new WindowRenderer();
+	// the same kind of renderer as the game window's
+	wr->renderer = SDL_CreateRenderer(window, SDL_GetRendererName(s_main));
+	if (!wr->renderer)
+		wr->renderer = SDL_CreateRenderer(window, nullptr);
+	if (!wr->renderer) {
+		SDL_Log("Zeetures: no renderer for a kit's window: %s", SDL_GetError());
+		delete wr;
+		return;
+	}
+	// (the game paces its frames itself; each window waiting for its own
+	// vertical blank would halve the frame rate with two windows)
+	SDL_SetRenderVSync(wr->renderer, 0);
+	vp->RendererUserData = wr;
+	s_windows.push_back(wr);
+}
+
+void rendererDestroyWindow(ImGuiViewport* vp) {
+	auto* wr = (WindowRenderer*)vp->RendererUserData;
+	if (!wr)
+		return;
+	for (auto& [t, m] : wr->mirrors)
+		if (m.copy)
+			SDL_DestroyTexture(m.copy);
+	if (wr->renderer)
+		SDL_DestroyRenderer(wr->renderer);
+	s_windows.erase(std::remove(s_windows.begin(), s_windows.end(), wr), s_windows.end());
+	delete wr;
+	vp->RendererUserData = nullptr;
+}
+
+void rendererSetWindowSize(ImGuiViewport*, ImVec2) {
+	// (SDL resizes the window's drawing area with the window)
+}
+
+void rendererRenderWindow(ImGuiViewport* vp, void*) {
+	auto* wr = (WindowRenderer*)vp->RendererUserData;
+	if (!wr)
+		return;
+	sweepGone();
+	SDL_Window* window = windowOf(vp);
+	float density = window ? SDL_GetWindowPixelDensity(window) : 1.0f;
+	SDL_SetRenderTarget(wr->renderer, nullptr);
+	SDL_SetRenderScale(wr->renderer, density, density);
+	if (!(vp->Flags & ImGuiViewportFlags_NoRendererClear)) {
+		SDL_SetRenderDrawColor(wr->renderer, 0, 0, 0, 255);
+		SDL_RenderClear(wr->renderer);
+	}
+	renderDrawData(vp->DrawData, wr->renderer, wr);
+}
+
+void rendererSwapBuffers(ImGuiViewport* vp, void*) {
+	if (auto* wr = (WindowRenderer*)vp->RendererUserData)
+		SDL_RenderPresent(wr->renderer);
+}
+
+} // namespace
+
+void init(SDL_Renderer* main) {
+	s_main = main;
+	ImGuiIO& io = ImGui::GetIO();
+	io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
+	ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
+	pio.Renderer_CreateWindow = rendererCreateWindow;
+	pio.Renderer_DestroyWindow = rendererDestroyWindow;
+	pio.Renderer_SetWindowSize = rendererSetWindowSize;
+	pio.Renderer_RenderWindow = rendererRenderWindow;
+	pio.Renderer_SwapBuffers = rendererSwapBuffers;
+}
+
+void shutdown() {
+	ImGui::DestroyPlatformWindows();
+	if (s_scratch)
+		SDL_DestroyTexture(s_scratch);
+	s_scratch = nullptr;
+}
+
+void renderMainDrawData(ImDrawData* draw_data, SDL_Renderer* main) {
+	s_frame++;
+	sweepGone();
+	// with multi-viewports on, ImGui's coordinates are the desktop's, in the
+	// window system's units: drawn at the window's pixel density (the game
+	// itself draws at the display scale, set by SDLBackend::run)
+	float sx = 1, sy = 1;
+	SDL_GetRenderScale(main, &sx, &sy);
+	SDL_Window* window = SDL_GetRenderWindow(main);
+	float density = window ? SDL_GetWindowPixelDensity(window) : 1.0f;
+	SDL_SetRenderScale(main, density, density);
+	renderDrawData(draw_data, main, nullptr);
+	SDL_SetRenderScale(main, sx, sy);
+}
+
+void textureUpdated(SDL_Texture* tex) {
+	if (!tex || s_windows.empty()) // (no copies anywhere: nothing to mark)
+		return;
+	SDL_PropertiesID props = SDL_GetTextureProperties(tex);
+	SDL_SetNumberProperty(props, VERSION_PROP, SDL_GetNumberProperty(props, VERSION_PROP, 0) + 1);
+}
+
+} // namespace SDLViewports

@@ -1,4 +1,5 @@
 #include "WorldChooser.h"
+#include "ImGuiUtils.h"
 #include "common/devenv.h"
 
 #include "Engine.h"
@@ -334,9 +335,10 @@ std::string RunWorldChooser() {
 
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::SetNextFrameWantCaptureMouse(true); // (the pointer shows everywhere: there is no hand yet)
-		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x / 2, io.DisplaySize.y / 2), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+		ImGui::SetNextWindowPos(ImGuiUtils::GameWindowPos() + ImVec2(io.DisplaySize.x / 2, io.DisplaySize.y / 2), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 		ImGui::SetNextWindowSize(ImVec2(360, 0));
-		ImGui::Begin("Choose a World", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
+		ImGuiUtils::KeepInGameWindow();
+		ImGui::Begin("Choose a World", nullptr, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 		static int s_selected = 0;
 		auto worlds = ListWorlds();
 		if (static bool first = true; first) {

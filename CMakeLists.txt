@@ -252,6 +252,7 @@ target_link_libraries(openc2e-mngmusic PRIVATE openc2e-fileformats)
 
 add_library(openc2e_sdlbackend OBJECT
 	src/sdlbackend/SDLBackend.cpp
+	src/sdlbackend/SDLViewports.cpp
 	src/sdlbackend/SDLMixerBackend.cpp
 )
 target_link_libraries(openc2e_sdlbackend

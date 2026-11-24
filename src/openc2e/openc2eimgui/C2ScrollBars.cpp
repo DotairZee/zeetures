@@ -1,4 +1,5 @@
 #include "C2ScrollBars.h"
+#include "ImGuiUtils.h"
 
 #include "C2StatusBar.h"
 #include "C2ToolBar.h"
@@ -142,24 +143,27 @@ void DrawC2ScrollBars() {
 	int camw = (int)engine.camera->getWidth(), camh = (int)engine.camera->getHeight();
 	int newx = -1, newy = -1;
 
-	ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoFocusOnAppearing;
+	const ImVec2 o = ImGuiUtils::GameWindowPos();
+	ImGuiWindowFlags flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoFocusOnAppearing;
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
 
 	// vertical, along the right edge of the world view
-	ImGui::SetNextWindowPos(ImVec2(right - BAR, top));
+	ImGui::SetNextWindowPos(o + ImVec2(right - BAR, top));
 	ImGui::SetNextWindowSize(ImVec2(BAR, bottom - BAR - top));
+	ImGuiUtils::KeepInGameWindow();
 	if (ImGui::Begin("##c2vscroll", nullptr, flags)) {
-		newy = ScrollBar("v", true, ImVec2(right - BAR, top), bottom - BAR - top, camy, camh, (int)m->y(), (int)m->height());
+		newy = ScrollBar("v", true, o + ImVec2(right - BAR, top), bottom - BAR - top, camy, camh, (int)m->y(), (int)m->height());
 	}
 	ImGui::End();
 
 	// horizontal, along the bottom of the world view (corner square left empty)
-	ImGui::SetNextWindowPos(ImVec2(0, bottom - BAR));
+	ImGui::SetNextWindowPos(o + ImVec2(0, bottom - BAR));
 	ImGui::SetNextWindowSize(ImVec2(right, BAR));
+	ImGuiUtils::KeepInGameWindow();
 	if (ImGui::Begin("##c2hscroll", nullptr, flags)) {
-		newx = ScrollBar("h", false, ImVec2(0, bottom - BAR), right - BAR, camx, camw, (int)m->x(), (int)m->width(), m->wraparound());
+		newx = ScrollBar("h", false, o + ImVec2(0, bottom - BAR), right - BAR, camx, camw, (int)m->x(), (int)m->width(), m->wraparound());
 	}
 	ImGui::End();
 

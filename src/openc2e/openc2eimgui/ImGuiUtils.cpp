@@ -129,4 +129,12 @@ void EndWindow() {
 	return ImGui::End();
 }
 
+ImVec2 GameWindowPos() {
+	return ImGui::GetMainViewport()->Pos;
+}
+
+void KeepInGameWindow() {
+	ImGui::SetNextWindowViewport(ImGui::GetMainViewport()->ID);
+}
+
 } // namespace ImGuiUtils

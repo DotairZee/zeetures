@@ -5,6 +5,7 @@
 // note pops up over the world when one goes off.
 
 #include "C2EyeView.h"
+#include "ImGuiUtils.h"
 #include "common/devenv.h"
 #include "Agent.h"
 #include "C2KitsInternal.h"
@@ -252,10 +253,11 @@ void KitAlarmsTick() {
 		if (now - e.shownAt > 10 || shown >= 3)
 			continue;
 		ImGuiIO& io = ImGui::GetIO();
-		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 16, io.DisplaySize.y - 60 - shown * 64), ImGuiCond_Always, ImVec2(1, 1));
+		ImGui::SetNextWindowPos(ImGuiUtils::GameWindowPos() + ImVec2(io.DisplaySize.x - 16, io.DisplaySize.y - 60 - shown * 64), ImGuiCond_Always, ImVec2(1, 1));
 		ImGui::SetNextWindowBgAlpha(0.92f);
+		ImGuiUtils::KeepInGameWindow();
 		std::string id = fmt::format("##alarm{}", (const void*)&e);
-		if (ImGui::Begin(id.c_str(), nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav)) {
+		if (ImGui::Begin(id.c_str(), nullptr, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav)) {
 			ImGui::TextColored(ImVec4(1, 0.8f, 0.3f, 1), "Alarm");
 			ImGui::SameLine();
 			ImGui::TextUnformatted(e.text.c_str());

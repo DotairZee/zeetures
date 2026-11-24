@@ -87,6 +87,11 @@ class SDLBackend : public Backend {
 	void setWindowTitle(const std::string& title) override;
 	bool isFullscreen() override;
 	void setFullscreen(bool on) override;
+	void setUiWindows(bool on) override;
+	bool uiWindows() override { return ui_windows; }
+	bool uiWindowsActive() override;
+	bool ui_windows = false; // asked for
+	bool ui_windows_applied = false; // ImGui's flags set to match
 	SDL_Window* window = nullptr;
 
 	static Backend* get_instance();

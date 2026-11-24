@@ -14,6 +14,7 @@
 // Player-visible: British spelling.
 
 #include "HelpWindow.h"
+#include "ImGuiUtils.h"
 
 #include "EmbeddedFiles.h"
 #include "common/Ascii.h"
@@ -349,7 +350,7 @@ void DrawHelpWindow() {
 	load();
 	const ImVec2 screen = ImGui::GetMainViewport()->WorkSize;
 	ImGui::SetNextWindowSize(ImVec2(std::min(900.0f, screen.x * 0.94f), std::min(600.0f, screen.y * 0.8f)), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowPos(ImVec2(screen.x * 0.5f, screen.y * 0.5f), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->WorkPos + ImVec2(screen.x * 0.5f, screen.y * 0.5f), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
 	ImGui::SetNextWindowSizeConstraints(ImVec2(520, 260), ImVec2(FLT_MAX, FLT_MAX));
 	if (s_focus) {
 		ImGui::SetNextWindowFocus();

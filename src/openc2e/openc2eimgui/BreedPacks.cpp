@@ -14,6 +14,7 @@
 // files from that folder instead of downloading them (tests, offline).
 
 #include "C2KitsInternal.h"
+#include "ImGuiUtils.h"
 #include "common/devenv.h"
 #include "Engine.h"
 #include "PathResolver.h"
@@ -216,7 +217,8 @@ void BreedPacksTick() {
 		ImGuiViewport* vp = ImGui::GetMainViewport();
 		ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + 8, vp->WorkPos.y + vp->WorkSize.y - 48), ImGuiCond_Always, ImVec2(0, 1));
 		ImGui::SetNextWindowBgAlpha(0.85f);
-		ImGui::Begin("##breedpacks", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs);
+		ImGuiUtils::KeepInGameWindow();
+		ImGui::Begin("##breedpacks", nullptr, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs);
 		ImGui::PushTextWrapPos(520);
 		ImGui::TextUnformatted(s_status.c_str());
 		ImGui::PopTextWrapPos();

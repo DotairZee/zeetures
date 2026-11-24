@@ -1191,10 +1191,11 @@ void DrawC2Toolbar() {
 				fmt::print("* TEST TOOLBAR DRAG: layout now {}\n", BandLayoutText());
 		}
 	}
-	ImGui::SetNextWindowPos(ImVec2(0, 0));
+	ImGui::SetNextWindowPos(ImGuiUtils::GameWindowPos());
 	ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, 0));
+	ImGuiUtils::KeepInGameWindow();
 
-	if (ImGui::Begin("MainMenuBar", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBringToFrontOnFocus)) {
+	if (ImGui::Begin("MainMenuBar", nullptr, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBringToFrontOnFocus)) {
 		if (ImGui::BeginMenuBar()) {
 			DrawC2MenuBar();
 			ImGui::EndMenuBar();
@@ -1652,6 +1653,23 @@ static void DrawPreferences() {
 			bool full = get_backend()->isFullscreen();
 			if (ImGui::Checkbox("Full screen (F12)", &full))
 				get_backend()->setFullscreen(full);
+			{
+				// experimental (branch kit-windows): Dear ImGui's multi-viewports
+				bool own = get_backend()->uiWindows();
+				if (ImGui::Checkbox("Kits in their own windows (experimental)", &own)) {
+					get_backend()->setUiWindows(own);
+					writeFlag("kit-windows", own);
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Drag a kit, the Creature's View or this window by its title bar out of the game window,\n"
+									  "and it becomes a window of its own (on another monitor, say); drag it back in to return it.\n"
+									  "Kits can also be docked together as tabs: drag one by its title onto another.");
+				if (own && !get_backend()->uiWindowsActive()) {
+					ImGui::Indent();
+					ImGui::TextDisabled("Kits can be docked together now; they leave the game window\nonce Zeetures is started again.");
+					ImGui::Unindent();
+				}
+			}
 			ImGui::SeparatorText("Toolbars");
 			PrefCheck("Standard", s_show_standard, "toolbar-standard");
 			ImGui::SameLine(0, 18);

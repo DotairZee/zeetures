@@ -2485,6 +2485,10 @@ bool Engine::initialSetup() {
 	Backend* b = possible_backends[preferred_backend];
 	if (!b)
 		throw Exception("No such backend " + preferred_backend);
+	// Kits in their own windows (experimental, File > Preferences > Display):
+	// asked for before the window opens, as it can choose the window system
+	if (version == 2 && readPlayerSetting("kit-windows") == "1")
+		b->setUiWindows(true);
 	int window_width = OPENC2E_DEFAULT_WIDTH, window_height = OPENC2E_DEFAULT_HEIGHT;
 	if (const char* size = getenv("OPENC2E_WINDOW_SIZE")) // developer aid, e.g. 1200x950
 		sscanf(size, "%dx%d", &window_width, &window_height);

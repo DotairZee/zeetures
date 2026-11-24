@@ -1,4 +1,5 @@
 #include "C2Kits.h"
+#include "ImGuiUtils.h"
 #include "madeart/MadeArt.h"
 #include "common/devenv.h"
 #include "C2ToolBar.h"
@@ -1292,9 +1293,9 @@ void DrawC2Kits() {
 			s_focus_next.clear();
 		}
 		if (s_test_kits)
-			ImGui::SetNextWindowPos(ImVec2(8, 96), ImGuiCond_Always);
+			ImGui::SetNextWindowPos(ImGuiUtils::GameWindowPos() + ImVec2(8, 96), ImGuiCond_Always);
 		else
-			ImGui::SetNextWindowPos(ImVec2(120, 120), ImGuiCond_FirstUseEver);
+			ImGui::SetNextWindowPos(ImGuiUtils::GameWindowPos() + ImVec2(120, 120), ImGuiCond_FirstUseEver);
 		bool open = true;
 		std::string title = fmt::format("{}###kit_{}", k.title, k.id);
 		if (k.resizable)

@@ -35,6 +35,15 @@ Texture GetTextureFromExeFileWithTransparentTopLeft(uint32_t resource);
 std::vector<Texture> LoadImageWithTransparentTopLeft(const std::string& name);
 
 bool BeginWindow(const char* title, bool* is_open, ImGuiWindowFlags flags = ImGuiWindowFlags_None);
+
+// Kits in their own windows (experimental): with ImGui's multi-viewports on,
+// window places are the desktop's, so a place in the game window is offset
+// by the game window's corner (0,0 otherwise)
+ImVec2 GameWindowPos();
+// the next window stays in the game window (the menus and toolbars, the
+// status bar, scroll bars and notices): no window of its own, and with
+// ImGuiWindowFlags_NoDocking in its flags nothing docks to it
+void KeepInGameWindow();
 void EndWindow();
 
 void DrawTexture(Texture texture, ImVec2 p, float transparency = 1.0);

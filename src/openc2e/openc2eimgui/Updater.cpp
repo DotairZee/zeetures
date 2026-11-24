@@ -33,6 +33,7 @@
 // Player-visible text: British spelling.
 
 #include "Updater.h"
+#include "ImGuiUtils.h"
 
 #include "Engine.h"
 #include "PathResolver.h"
@@ -400,7 +401,7 @@ void drawWindow() {
 		canInstall = install().kind != Kind::none && s_sha.size() == 64;
 	}
 	const ImVec2 screen = ImGui::GetMainViewport()->WorkSize;
-	ImGui::SetNextWindowPos(ImVec2(screen.x * 0.5f, 110), ImGuiCond_Appearing, ImVec2(0.5f, 0));
+	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->WorkPos + ImVec2(screen.x * 0.5f, 110), ImGuiCond_Appearing, ImVec2(0.5f, 0));
 	ImGui::SetNextWindowSizeConstraints(ImVec2(420, 0), ImVec2(520, FLT_MAX));
 	if (!ImGui::Begin("Zeetures Update", &s_window, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse)) {
 		ImGui::End();

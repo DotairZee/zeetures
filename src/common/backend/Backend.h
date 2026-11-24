@@ -103,6 +103,15 @@ class Backend {
 	virtual void setFullscreen(bool) {}
 	// developer aid: save the next presented frame as a BMP file
 	virtual void requestScreenshot(const std::string&) {}
+	// Kits in their own windows (experimental, branch kit-windows): the
+	// interface's windows can be dragged out of the game window into windows
+	// of their own (Dear ImGui's multi-viewports), and dock together as tabs.
+	// Asked for before init, it also picks a window system that allows it
+	// (XWayland under a Wayland session). uiWindowsActive: windows can leave
+	// the game window now (false when the window system cannot place them).
+	virtual void setUiWindows(bool) {}
+	virtual bool uiWindows() { return false; }
+	virtual bool uiWindowsActive() { return false; }
 
 	virtual ~Backend() {}
 };
