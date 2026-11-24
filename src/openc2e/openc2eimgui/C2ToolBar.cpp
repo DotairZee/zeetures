@@ -879,6 +879,7 @@ static const char* const BAND_NAMES[BAND_COUNT] = {"Standard", "Pointer", "Apple
 static std::vector<std::vector<int>> s_band_rows = {{BAND_STANDARD, BAND_POINTER, BAND_APPLETS}, {BAND_FAVOURITES}};
 static ImVec2 s_band_min[BAND_COUNT], s_band_max[BAND_COUNT]; // last frame (screen)
 static bool s_band_drawn[BAND_COUNT];
+static float s_band_content[BAND_COUNT]; // each band's contents' height
 static int s_drag_band = -1;
 static const float GRIP_W = 9;
 
@@ -1051,7 +1052,10 @@ static void DrawToolbarBands(const std::array<std::function<void()>, BAND_COUNT>
 			onLine = anyDrawn = true;
 			ImGui::BeginGroup();
 			ImVec2 g = ImGui::GetCursorScreenPos();
-			float h = s_band_drawn[b] ? s_band_max[b].y - s_band_min[b].y : ImGui::GetFrameHeight() + 6;
+			// (the grip is as tall as what the band held last frame: its
+			// contents only, so a band is no taller than they are; owner,
+			// 2026-11-23)
+			float h = s_band_drawn[b] && s_band_content[b] > 0 ? s_band_content[b] : ImGui::GetFrameHeight();
 			ImGui::InvisibleButton(BAND_KEYS[b], ImVec2(GRIP_W, h));
 			bool hovered = ImGui::IsItemHovered(), active = ImGui::IsItemActive();
 			if (hovered || active)
@@ -1061,7 +1065,10 @@ static void DrawToolbarBands(const std::array<std::function<void()>, BAND_COUNT>
 			if (active && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 3))
 				s_drag_band = b;
 			DrawGrip(g, h, hovered || active);
+			ImGui::BeginGroup();
 			draw[b]();
+			ImGui::EndGroup();
+			s_band_content[b] = ImGui::GetItemRectSize().y;
 			ImGui::EndGroup();
 			s_band_min[b] = ImGui::GetItemRectMin();
 			s_band_max[b] = ImGui::GetItemRectMax();
@@ -1375,6 +1382,7 @@ void DrawC2Toolbar() {
 		TextureRect icon_say{s_favtoolbaricons_tex, 0, 0, 22, 21};
 
 		// ImGui::GetCurrentWindow()->DC.LayoutType = ImGuiLayoutType_Vertical;
+		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Speech History:");
 		ImGui::SetNextItemWidth(150);
 		// what creatures and the hand said lately (newest first); pick a
@@ -1394,7 +1402,10 @@ void DrawC2Toolbar() {
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Speech History: what creatures and you said lately");
-		if (ToolButton(icon_say, !s_line.empty(), "Say"))
+		// (as tall as the lists and the Places + button, so the toolbar
+		// is no taller than they are; owner, 2026-11-23)
+		bool say = s_text_labels ? ToolButton(icon_say, !s_line.empty(), "Say") : ImageButtonFit(icon_say, !s_line.empty(), ImGui::GetFrameHeight());
+		if (say)
 			handSays(s_line);
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 			ImGui::SetTooltip("Say: the hand says the chosen line again (creatures nearby hear it)");

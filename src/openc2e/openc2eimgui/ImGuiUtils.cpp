@@ -79,7 +79,17 @@ bool ImageButton(Texture tex, bool enabled) {
 	return ImageButton(TextureRect{tex, 0, 0, tex.width, tex.height}, enabled);
 }
 
-bool ImageButton(TextureRect tex, bool enabled) {
+bool ImageButtonFit(TextureRect tex, bool enabled, float side) {
+	const float pad = 1;
+	float k = std::min(1.0f, (side - 2 * pad) / std::max(tex.w, tex.h));
+	ImVec2 img(std::round(tex.w * k), std::round(tex.h * k));
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2((side - img.x) / 2, (side - img.y) / 2));
+	bool ret = ImageButton(TextureRect{tex.parent, tex.x, tex.y, tex.w, tex.h}, enabled, img);
+	ImGui::PopStyleVar();
+	return ret;
+}
+
+bool ImageButton(TextureRect tex, bool enabled, ImVec2 size) {
 	ImVec4 tint(1, 1, 1, 1);
 	if (!enabled) {
 		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
@@ -92,7 +102,7 @@ bool ImageButton(TextureRect tex, bool enabled) {
 	bool ret = ImGui::ImageButton(
 		fmt::format("{}_{}_{}_{}_{}", tex.parent.as<uintptr_t>(), tex.x, tex.y, tex.w, tex.h).c_str(),
 		tex.parent.as<ImTextureID>(),
-		ImVec2(tex.w, tex.h),
+		size.x > 0 ? size : ImVec2(tex.w, tex.h),
 		ImVec2(tex.x * 1.0 / tex.parent.width, tex.y * 1.0 / tex.parent.height),
 		ImVec2((tex.x + tex.w) * 1.0 / tex.parent.width, (tex.y + tex.h) * 1.0 / tex.parent.height),
 		ImVec4(0, 0, 0, 0), // bgcolor

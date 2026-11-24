@@ -54,6 +54,10 @@ class TextureRect {
 	int32_t w;
 	int32_t h;
 };
-bool ImageButton(TextureRect texture, bool enabled = true);
+// (drawn at size, when given; else at the picture's own)
+bool ImageButton(TextureRect texture, bool enabled = true, ImVec2 size = ImVec2(0, 0));
+// the picture fitted, at its own shape, into a square button `side` pixels
+// tall (as tall as the lists beside it)
+bool ImageButtonFit(TextureRect tex, bool enabled, float side);
 
 } // namespace ImGuiUtils
