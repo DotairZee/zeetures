@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 659 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 661 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.36.0](#version-0360): 2 commits, 24 November 2026
 - [0.35.0](#version-0350): 7 commits, 23 November 2026
 - [0.34.1](#version-0341): 1 commits, 23 November 2026
 - [0.34.0](#version-0340): 1 commits, 23 November 2026
@@ -90,6 +91,45 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.36.0
+
+The music follows the creatures in view: their contentment and the danger they face shape it, it falls silent with none in view, and births, deaths and creatures close to death have their own pieces; CAOS MUSC.
+
+### 24 November 2026
+
+#### Version 0.36.0
+
+[`ecb1bd2a`](https://github.com/DotairZee/zeetures/commit/ecb1bd2a008c923d53a5c9d9ef25854c37a2bccf)
+
+The C2 music follows the creatures in view. README's hours brought up
+to date.
+
+#### Music: C2's score follows the creatures in view
+
+[`d51c43f1`](https://github.com/DotairZee/zeetures/commit/d51c43f1a9e6eb18c9f2aa7ec8adbe613743cdd8)
+
+The C2 music now reacts to what is on screen instead of always playing
+the room at the middle of the view with a fixed mood and threat.
+
+- Mood is how content the creatures in view are, on average (the mind's
+  own contentment, as the Mind Kit shows it). Threat is the greatest
+  danger any of them is in: pain, fear, injury, want of breath, or a
+  grendel close to a norn or ettin. Both ease toward their targets a
+  step each tick (mood slowly, threat faster) and start at 0.
+- With no live creature in view the music falls silent.
+- The track is the room of the selected creature if it is in view,
+  else the room at the middle of the view (the metaroom's music is no
+  longer a fallback).
+- A hatching or a death in view plays the Birth or Death piece, and a
+  creature close to death (fainted, nearly out of breath under water,
+  or an organ failing fast) the NearDeath one; the room's music waits
+  15 ticks after each.
+- CAOS MUSC (C2): 0 volume, 1 mood target, 2 threat target, 3 the
+  automatic choice off (0) or on.
+- A track asked for again while it fades out starts over once it has
+  faded, rather than fading back in.
+- OPENC2E_DEBUG_MUSIC=1 prints the choices (developer aid).
 
 ## Version 0.35.0
 
