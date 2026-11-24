@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 655 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 656 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [0.35.0](#version-0350): 3 commits, 23 November 2026
+- [0.35.0](#version-0350): 4 commits, 23 November 2026
 - [0.34.1](#version-0341): 1 commits, 23 November 2026
 - [0.34.0](#version-0340): 1 commits, 23 November 2026
 - [0.33.5](#version-0335): 1 commits, 23 November 2026
@@ -93,9 +93,29 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 
 ## Version 0.35.0
 
-Preferences gathers every setting in one window; the words creatures learn can be changed per world or for all, with the game's six languages, Nornish and 19 draft translations; speech bubbles and the computers use Fusion Pixel, with Greek, Cyrillic, Japanese, Chinese, Korean, Hebrew, Arabic and Thai; the Creature's View can be resized and its blinking turned off; a landing in the lab lift's shaft.
+Preferences gathers every setting in one window; the words creatures learn can be changed per world or for all, with the game's six languages, Nornish and 19 draft translations; speech bubbles and the computers use Fusion Pixel, with Greek, Cyrillic, Japanese, Chinese, Korean, Hebrew, Arabic and Thai; the Creature's View can be resized and its blinking turned off; the status bar's parts can each be hidden; a landing in the lab lift's shaft.
 
 ### 23 November 2026
+
+#### Preferences reshaped; a Status Bar section; the eye's screen at any size
+
+[`34f1c01f`](https://github.com/DotairZee/zeetures/commit/34f1c01f3613ded2e15319059d30b7832befc2e2)
+
+From the owner's first play. Each section is no wider than it needs (and
+no narrower than the row of tabs): Display's lists narrower, Smooth
+scrolling under Screen; Creatures' thought bubbles a dropdown, the Norn
+indicator left to the toolbar and Camera menu, the drag hint a tooltip;
+Words' columns narrower; World without the Creatures 2 folder's path (the
+chooser opens at it). The Sound section is gone (File &gt; Sound keeps it).
+
+Notices became Status Bar: whether the bar shows, which of its parts show
+(season, time of day, temperature, day and year, notices, the selected
+creature's health; "status-bar-hide" in settings.txt; minimised kits always
+show), and the notifications.
+
+The Creature's View's checkered screen clumped at any size but 320 x 240:
+the eye was painted at that size and stretched. It is now painted at the
+size shown, its shapes scaled and the checker still one pixel.
 
 #### Toolbar: the Say button and each band only as tall as their contents
 
