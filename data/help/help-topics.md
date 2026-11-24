@@ -181,7 +181,7 @@ Births, deaths, pregnancies, eggs laid, illnesses and recoveries, faints, and ch
 - **Right-click** one to dismiss it, to clear them all, or to open the life log.
 - **+N** lists the older ones that do not fit.
 - **To hide a kind of notice,** untick it in File > Preferences > Status Bar. The life log still records it.
-- **To hide a part of the bar,** or the whole bar, use File > Preferences > Status Bar too: the season, the time of day, the temperature, the day and year, the notices, and the selected creature's health can each be left out. Minimised kits always show.
+- **To hide a part of the bar,** or the whole bar, use File > Preferences > Status Bar too: the season, the time of day, the temperature, the day and year, minimised kits, the notices, and the selected creature's health can each be left out. A minimised kit that is not shown comes back from its toolbar button, where it was and on the same page.
 
 The whole record is in the [[Chronicles Kit]].
 

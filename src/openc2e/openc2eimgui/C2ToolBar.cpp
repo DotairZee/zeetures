@@ -1778,7 +1778,7 @@ static void DrawPreferences() {
 				writeFlag("status-bar", statusbar);
 			}
 			ImGui::SameLine();
-			ImGui::TextDisabled("(unticking it hides minimised kits too)");
+			ImGui::TextDisabled("(unticking hides minimised kits)");
 			ImGui::BeginDisabled(!statusbar);
 			ImGui::SeparatorText("What it shows");
 			// by column: the left end's parts on the left, the rest on the right
@@ -1793,8 +1793,9 @@ static void DrawPreferences() {
 					bool on = StatusBarPartShown(part);
 					if (ImGui::Checkbox(StatusBarPartName(part), &on))
 						SetStatusBarPartShown(part, on);
+					if (part == SB_KITS && ImGui::IsItemHovered())
+						ImGui::SetTooltip("Hidden, a minimised kit comes back from its toolbar button, where it was and on the same page");
 				}
-			ImGui::TextDisabled("(Minimised kits always show there.)");
 			ImGui::SeparatorText("Notifications");
 			KitAllNoticeSwitches();
 			ImGui::EndDisabled();

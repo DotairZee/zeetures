@@ -56,9 +56,10 @@ void SetC2StatusBarShown(bool shown) {
 
 // which parts it shows (Preferences > Status Bar; owner, 2026-11-23):
 // "status-bar-hide" in settings.txt lists the hidden ones' keys, joined by
-// commas. Minimised kits always show (they could not be brought back).
-static const char* const s_part_keys[STATUSBAR_PARTS] = {"season", "time", "temperature", "date", "notices", "health"};
-static const char* const s_part_names[STATUSBAR_PARTS] = {"Season", "Time of day", "Temperature", "Day and year", "Notices", "Selected creature's health"};
+// commas. Minimised kits can be hidden too (owner, 2026-11-23): the
+// toolbar's kit buttons still bring each back where it was, on its page.
+static const char* const s_part_keys[STATUSBAR_PARTS] = {"season", "time", "temperature", "date", "kits", "notices", "health"};
+static const char* const s_part_names[STATUSBAR_PARTS] = {"Season", "Time of day", "Temperature", "Day and year", "Minimised kits", "Notices", "Selected creature's health"};
 static int s_parts_hidden = -1; // bits
 
 static int partsHidden() {
@@ -203,7 +204,8 @@ void DrawC2StatusBar() {
 		}
 
 		// minimized kits, as chips that bring them back
-		Openc2eImgui::DrawC2KitChips();
+		if (StatusBarPartShown(SB_KITS))
+			Openc2eImgui::DrawC2KitChips();
 
 		// births, deaths and pregnancies (newest on the right), then health:
 		// the notices get the room the left side and the health leave
