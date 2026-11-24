@@ -59,6 +59,20 @@
 #include "imgui_impl_sdl3.h"
 #include "imgui_internal.h" // (openc2e: who is moving a window, below)
 
+// (openc2e: with multi-viewports on, Dear ImGui works in the desktop's
+// coordinates. On Windows and X11 those are pixels whatever the display
+// scaling, so at 150% the kits would be laid out and drawn at 1x, smaller
+// than the game's interface. ImGui is given the desktop in pixels over the
+// game window's display scale instead (as it lays out the game window's
+// own interface, in render coordinates), and every window is placed and
+// drawn at that scale. 1 on macOS, where windows are in points already.)
+static float g_openc2e_ui_scale = 1.0f;
+float ImGui_ImplSDL3_Openc2eUiScale() { return g_openc2e_ui_scale; }
+static float ImGui_ImplSDL3_UiScale()
+{
+    return (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) ? g_openc2e_ui_scale : 1.0f;
+}
+
 // Clang warnings with -Weverything
 #if defined(__clang__)
 #pragma clang diagnostic push
@@ -166,8 +180,9 @@ static void ImGui_ImplSDL3_PlatformSetImeData(ImGuiContext*, ImGuiViewport* view
     {
         // (openc2e: from render coordinates to the window's own; with
         // multi-viewports on, ImGui's coordinates are the desktop's already)
-        float x0 = data->InputPos.x - viewport->Pos.x, y0 = data->InputPos.y - viewport->Pos.y;
-        float x1 = x0 + 1, y1 = y0 + data->InputLineHeight;
+        const float us = ImGui_ImplSDL3_UiScale();
+        float x0 = (data->InputPos.x - viewport->Pos.x) * us, y0 = (data->InputPos.y - viewport->Pos.y) * us;
+        float x1 = x0 + 1, y1 = y0 + data->InputLineHeight * us;
         if (bd->Renderer && !(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
         {
             SDL_RenderCoordinatesToWindow(bd->Renderer, x0, y0, &x0, &y0);
@@ -354,8 +369,8 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
             {
                 int window_x, window_y;
                 SDL_GetWindowPosition(SDL_GetWindowFromID(event->motion.windowID), &window_x, &window_y);
-                mouse_pos.x += window_x;
-                mouse_pos.y += window_y;
+                mouse_pos.x = (mouse_pos.x + window_x) / g_openc2e_ui_scale;
+                mouse_pos.y = (mouse_pos.y + window_y) / g_openc2e_ui_scale;
             }
             io.AddMouseSourceEvent(event->motion.which == SDL_TOUCH_MOUSEID ? ImGuiMouseSource_TouchScreen : ImGuiMouseSource_Mouse);
             io.AddMousePosEvent(mouse_pos.x, mouse_pos.y);
@@ -720,6 +735,11 @@ static void ImGui_ImplSDL3_UpdateMouseData()
                 if (bd->Renderer)
                     SDL_RenderCoordinatesFromWindow(bd->Renderer, mouse_x, mouse_y, &mouse_x, &mouse_y);
             }
+            else
+            {
+                mouse_x /= g_openc2e_ui_scale;
+                mouse_y /= g_openc2e_ui_scale;
+            }
             io.AddMousePosEvent((float)mouse_x, (float)mouse_y);
         }
     }
@@ -887,12 +907,13 @@ static void ImGui_ImplSDL3_UpdateMonitors()
         SDL_DisplayID display_id = displays[n];
         ImGuiPlatformMonitor monitor;
         SDL_Rect r;
+        const float us = g_openc2e_ui_scale; // (openc2e)
         SDL_GetDisplayBounds(display_id, &r);
-        monitor.MainPos = monitor.WorkPos = ImVec2((float)r.x, (float)r.y);
-        monitor.MainSize = monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
+        monitor.MainPos = monitor.WorkPos = ImVec2(r.x / us, r.y / us);
+        monitor.MainSize = monitor.WorkSize = ImVec2(r.w / us, r.h / us);
         SDL_GetDisplayUsableBounds(display_id, &r);
-        monitor.WorkPos = ImVec2((float)r.x, (float)r.y);
-        monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
+        monitor.WorkPos = ImVec2(r.x / us, r.y / us);
+        monitor.WorkSize = ImVec2(r.w / us, r.h / us);
         // FIXME-VIEWPORT: On MacOS SDL reports actual monitor DPI scale, ignoring OS configuration. We may want to set
         //  DpiScale to cocoa_window.backingScaleFactor here.
         monitor.DpiScale = SDL_GetDisplayContentScale(display_id);
@@ -934,6 +955,27 @@ void ImGui_ImplSDL3_NewFrame()
         {
             io.DisplaySize = ImVec2(dw, dh);
             io.DisplayFramebufferScale = ImVec2(display_w / dw, display_h / dh);
+        }
+    }
+
+    // (openc2e: the scale above, from the game window: its display scale
+    // over its pixel density; monitors are measured again when it changes)
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        float density = SDL_GetWindowPixelDensity(bd->Window);
+        float scale = SDL_GetWindowDisplayScale(bd->Window);
+        float us = (density > 0 && scale > 0) ? scale / density : 1.0f;
+        if (us < 0.5f || us > 4.0f)
+            us = 1.0f;
+        if (us != g_openc2e_ui_scale)
+        {
+            g_openc2e_ui_scale = us;
+            bd->WantUpdateMonitors = true;
+        }
+        if (w > 0 && h > 0)
+        {
+            io.DisplaySize = ImVec2(w / us, h / us);
+            io.DisplayFramebufferScale = ImVec2(display_w / io.DisplaySize.x, display_h / io.DisplaySize.y);
         }
     }
 
@@ -1045,7 +1087,7 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
             {
                 vd->Window = g_openc2e_window_pool[n].Window;
                 g_openc2e_window_pool.erase(g_openc2e_window_pool.Data + n);
-                SDL_SetWindowSize(vd->Window, (int)viewport->Size.x, (int)viewport->Size.y);
+                SDL_SetWindowSize(vd->Window, (int)(viewport->Size.x * g_openc2e_ui_scale), (int)(viewport->Size.y * g_openc2e_ui_scale));
                 break;
             }
     if (!vd->Window)
@@ -1054,11 +1096,11 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
         // it was on screen, black, before its first frame was drawn: the
         // first kit dragged out in a session flickered, later ones (reused,
         // hidden, windows) did not. Platform_ShowWindow shows it.)
-        vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags | SDL_WINDOW_HIDDEN);
+        vd->Window = SDL_CreateWindow("No Title Yet", (int)(viewport->Size.x * g_openc2e_ui_scale), (int)(viewport->Size.y * g_openc2e_ui_scale), sdl_flags | SDL_WINDOW_HIDDEN);
         SDL_SetNumberProperty(SDL_GetWindowProperties(vd->Window), OPENC2E_POOL_FLAGS, (Sint64)sdl_flags);
     }
     SDL_SetWindowParent(vd->Window, vd->ParentWindow);
-    SDL_SetWindowPosition(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
+    SDL_SetWindowPosition(vd->Window, (int)(viewport->Pos.x * g_openc2e_ui_scale), (int)(viewport->Pos.y * g_openc2e_ui_scale));
     vd->WindowOwned = true;
     if (use_opengl)
     {
@@ -1119,7 +1161,7 @@ static void ImGui_ImplSDL3_ShowWindow(ImGuiViewport* viewport)
     // (openc2e: and placed again once shown: a window manager may place a
     // new window itself (mutter cascades them on the pointer's monitor),
     // which put kits on the wrong monitor at start)
-    SDL_SetWindowPosition(vd->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
+    SDL_SetWindowPosition(vd->Window, (int)(viewport->Pos.x * g_openc2e_ui_scale), (int)(viewport->Pos.y * g_openc2e_ui_scale));
 }
 
 static void ImGui_ImplSDL3_UpdateWindow(ImGuiViewport* viewport)
@@ -1141,12 +1183,13 @@ static ImVec2 ImGui_ImplSDL3_GetWindowPos(ImGuiViewport* viewport)
     ImGui_ImplSDL3_ViewportData* vd = (ImGui_ImplSDL3_ViewportData*)viewport->PlatformUserData;
     int x = 0, y = 0;
     SDL_GetWindowPosition(vd->Window, &x, &y);
-    return ImVec2((float)x, (float)y);
+    return ImVec2(x / g_openc2e_ui_scale, y / g_openc2e_ui_scale); // (openc2e: scale, above)
 }
 
 static void ImGui_ImplSDL3_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
 {
     ImGui_ImplSDL3_ViewportData* vd = (ImGui_ImplSDL3_ViewportData*)viewport->PlatformUserData;
+    pos = ImVec2((float)(int)(pos.x * g_openc2e_ui_scale), (float)(int)(pos.y * g_openc2e_ui_scale)); // (openc2e: scale, above)
     SDL_SetWindowPosition(vd->Window, (int)pos.x, (int)pos.y);
     // (openc2e: the place asked for, and when: see SDL_EVENT_WINDOW_MOVED)
     SDL_PropertiesID props = SDL_GetWindowProperties(vd->Window);
@@ -1160,13 +1203,13 @@ static ImVec2 ImGui_ImplSDL3_GetWindowSize(ImGuiViewport* viewport)
     ImGui_ImplSDL3_ViewportData* vd = (ImGui_ImplSDL3_ViewportData*)viewport->PlatformUserData;
     int w = 0, h = 0;
     SDL_GetWindowSize(vd->Window, &w, &h);
-    return ImVec2((float)w, (float)h);
+    return ImVec2(w / g_openc2e_ui_scale, h / g_openc2e_ui_scale); // (openc2e: scale, above)
 }
 
 static void ImGui_ImplSDL3_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGui_ImplSDL3_ViewportData* vd = (ImGui_ImplSDL3_ViewportData*)viewport->PlatformUserData;
-    SDL_SetWindowSize(vd->Window, (int)size.x, (int)size.y);
+    SDL_SetWindowSize(vd->Window, (int)(size.x * g_openc2e_ui_scale), (int)(size.y * g_openc2e_ui_scale)); // (openc2e: scale, above)
 }
 
 static void ImGui_ImplSDL3_SetWindowTitle(ImGuiViewport* viewport, const char* title)

@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <imgui.h>
+#include "imgui_impl_sdl3.h"
 #include <unordered_map>
 #include <vector>
 
@@ -375,7 +376,9 @@ void rendererRenderWindow(ImGuiViewport* vp, void*) {
 		return;
 	sweepGone();
 	SDL_Window* window = windowOf(vp);
-	float density = window ? SDL_GetWindowPixelDensity(window) : 1.0f;
+	// (the window's pixel density, times the interface scale: see
+	// ImGui_ImplSDL3_Openc2eUiScale)
+	float density = (window ? SDL_GetWindowPixelDensity(window) : 1.0f) * ImGui_ImplSDL3_Openc2eUiScale();
 	SDL_SetRenderTarget(wr->renderer, nullptr);
 	SDL_SetRenderScale(wr->renderer, density, density);
 	if (!(vp->Flags & ImGuiViewportFlags_NoRendererClear)) {
@@ -461,12 +464,14 @@ void renderMainDrawData(ImDrawData* draw_data, SDL_Renderer* main) {
 		}
 	}
 	// with multi-viewports on, ImGui's coordinates are the desktop's, in the
-	// window system's units: drawn at the window's pixel density (the game
-	// itself draws at the display scale, set by SDLBackend::run)
+	// window system's units over the interface scale (on Windows and X11,
+	// pixels over the display scale): drawn at the window's pixel density
+	// times that scale, which comes to the display scale the game itself
+	// draws at (set by SDLBackend::run)
 	float sx = 1, sy = 1;
 	SDL_GetRenderScale(main, &sx, &sy);
 	SDL_Window* window = SDL_GetRenderWindow(main);
-	float density = window ? SDL_GetWindowPixelDensity(window) : 1.0f;
+	float density = (window ? SDL_GetWindowPixelDensity(window) : 1.0f) * ImGui_ImplSDL3_Openc2eUiScale();
 	SDL_SetRenderScale(main, density, density);
 	renderDrawData(draw_data, main, nullptr);
 	SDL_SetRenderScale(main, sx, sy);

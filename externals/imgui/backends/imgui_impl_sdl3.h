@@ -42,6 +42,9 @@ IMGUI_IMPL_API bool     ImGui_ImplSDL3_InitForSDLGPU(SDL_Window* window);
 IMGUI_IMPL_API bool     ImGui_ImplSDL3_InitForOther(SDL_Window* window);
 IMGUI_IMPL_API void     ImGui_ImplSDL3_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplSDL3_NewFrame();
+// (openc2e: with multi-viewports on, desktop pixels per Dear ImGui unit:
+// the game window's display scale over its pixel density; 1 otherwise)
+IMGUI_IMPL_API float    ImGui_ImplSDL3_Openc2eUiScale();
 IMGUI_IMPL_API bool     ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event);
 
 // Gamepad selection automatically starts in AutoFirst mode, picking first available SDL_Gamepad. You may override this.
