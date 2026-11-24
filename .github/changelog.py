@@ -350,6 +350,8 @@ VERSIONS = [
      "The music follows the creatures in view: their contentment and the danger they face shape it, it falls silent with none in view, and births, deaths and creatures close to death have their own pieces; CAOS MUSC."),
     ("0.36.1", "98253461",
      "The grendel egg pile hatches one grendel at a time: eggs that waited while the world was full no longer all hatch together."),
+    ("0.36.2", "20c074ae",
+     "Instincts and brain genes are read for any C2 brain (Nova, Canny, Akamai and their hybrids): an instinct keeps the conditions it can read, lobes are found by what reads them, and hybrids missing added lobes keep their object instincts."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

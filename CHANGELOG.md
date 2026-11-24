@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 663 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 665 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.36.2](#version-0362): 2 commits, 24 November 2026
 - [0.36.1](#version-0361): 2 commits, 24 November 2026
 - [0.36.0](#version-0360): 2 commits, 24 November 2026
 - [0.35.0](#version-0350): 7 commits, 23 November 2026
@@ -92,6 +93,68 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.36.2
+
+Instincts and brain genes are read for any C2 brain (Nova, Canny, Akamai and their hybrids): an instinct keeps the conditions it can read, lobes are found by what reads them, and hybrids missing added lobes keep their object instincts.
+
+### 24 November 2026
+
+#### Version 0.36.2
+
+[`20c074ae`](https://github.com/DotairZee/zeetures/commit/20c074ae29fa04d3ddbd58d6946803aea6c41503)
+
+Instinct and brain genes are read for any C2 brain, custom ones and
+hybrids included. README's hours brought up to date.
+
+#### Instinct and brain genes read for any C2 brain
+
+[`b7397a72`](https://github.com/DotairZee/zeetures/commit/b7397a7239ddea98cc690f480d5725e4941de9b4)
+
+Custom C2 brains (Nova Subterra, Canny Norns, Akamai and others) and bred
+hybrids lost instincts, or read brain loci wrongly, because the genes
+were read against the game's own lobe layout only.
+
+Instincts:
+- An instinct keeps the conditions that can be read; only one with no
+  condition left is skipped (before, one unreadable condition, such as
+  a decision-lobe cell, dropped the whole instinct).
+- Each byte is taken within its range: the lobe 0-7 (lobe 0: no
+  condition), the cell within the named lobe's cells, the action 0-15.
+- A condition's lobe is read directly if the brain perceives it (its
+  perception flag), else through the first lobe of the same size whose
+  dendrites read it; with neither, the condition is dropped. Its
+  meaning is the role of the lobe it comes to: the game's lobes by
+  their place, an added lobe by its BrainProfiles role. In the game's
+  genomes the source lobe (2) and the noun lobe (4) both come to
+  attention, so a noun-lobe condition is now the object's category.
+- Chemical 53 punishes and any other chemical rewards (before, any
+  chemical but 52 and 53 dropped the instinct).
+
+Brain wiring and loci:
+- A dendrite's source lobe past the genome's last lobe wraps round
+  (lobe mod count), in the brain's wiring and in the instinct reading.
+  Hybrids descended from Canny Norns that did not inherit its added
+  lobes have an attention lobe naming lobe 12 of 10: it now reads lobe
+  2, so their object instincts stay (before: "left unconnected").
+- A brain locus's lobe number past the last lobe wraps round the same
+  way.
+- Receptor cells follow the chemical slots with no other shift (the
+  inherited "cell 40 and up less 24" is gone).
+- Lobe genes are placed in two passes: duplicated lobes (a later
+  generation of a lobe gene before them, same gene id) after the rest,
+  so a duplication does not renumber the lobes after it. A lobe gene
+  whose generation was raised by a mutation keeps its place.
+
+Breeding:
+- A gene's generation (header byte 7) goes up by one on the duplicated
+  copy only; a mutation no longer raises it.
+
+On Home: 4009 instinct genes read, 3998 kept; the 11 skipped name no
+condition at all (as before).
+
+OPENC2E_DEBUG_INSTINCTS=1 prints each creature's lobes and how each
+instinct gene was read (developer aid).
 
 ## Version 0.36.1
 
