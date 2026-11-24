@@ -348,6 +348,8 @@ VERSIONS = [
      "Preferences gathers every setting in one window; the words creatures learn can be changed per world or for all, with the game's six languages, Nornish and 19 draft translations; speech bubbles and the computers use Fusion Pixel, with Greek, Cyrillic, Japanese, Chinese, Korean, Hebrew, Arabic and Thai; the Creature's View can be resized and its blinking turned off; the status bar's parts can each be hidden; a landing in the lab lift's shaft."),
     ("0.36.0", "ecb1bd2a",
      "The music follows the creatures in view: their contentment and the danger they face shape it, it falls silent with none in view, and births, deaths and creatures close to death have their own pieces; CAOS MUSC."),
+    ("0.36.1", "98253461",
+     "The grendel egg pile hatches one grendel at a time: eggs that waited while the world was full no longer all hatch together."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

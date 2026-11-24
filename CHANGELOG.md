@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 661 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 663 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.36.1](#version-0361): 2 commits, 24 November 2026
 - [0.36.0](#version-0360): 2 commits, 24 November 2026
 - [0.35.0](#version-0350): 7 commits, 23 November 2026
 - [0.34.1](#version-0341): 1 commits, 23 November 2026
@@ -91,6 +92,37 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.36.1
+
+The grendel egg pile hatches one grendel at a time: eggs that waited while the world was full no longer all hatch together.
+
+### 24 November 2026
+
+#### Version 0.36.1
+
+[`98253461`](https://github.com/DotairZee/zeetures/commit/98253461ca975d606fdbd03b1484956972ed2339)
+
+The grendel egg pile hatches one grendel at a time. README's hours
+brought up to date.
+
+#### Grendel egg pile: one grendel at a time
+
+[`2951a8aa`](https://github.com/DotairZee/zeetures/commit/2951a8aa6437231549647b55da8527e0a2447488)
+
+Twelve grendels hatched together in Home. The pile's keeper starts an
+egg whenever there is no grendel; while the world sits at its limit the
+started eggs wait, and the keeper starts more. They wait in step, so
+when room opened every waiting egg passed the check in the same tick
+and hatched.
+
+A pile egg now hatches only while no grendel is alive and no other pile
+egg is hatching (marked in its OV02); otherwise it goes back to the
+pile (picture 0, no timer) for the keeper to start again. The check
+runs under INST: without it each egg's look at the others was cut short
+by the script time slice, and every egg looked before any marked
+itself. Tested headless: twenty pile eggs started at once, with no
+grendel alive, hatch one grendel; nineteen go back to the pile.
 
 ## Version 0.36.0
 
