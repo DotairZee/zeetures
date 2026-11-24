@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 654 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 655 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [0.35.0](#version-0350): 2 commits, 23 November 2026
+- [0.35.0](#version-0350): 3 commits, 23 November 2026
 - [0.34.1](#version-0341): 1 commits, 23 November 2026
 - [0.34.0](#version-0340): 1 commits, 23 November 2026
 - [0.33.5](#version-0335): 1 commits, 23 November 2026
@@ -96,6 +96,17 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Preferences gathers every setting in one window; the words creatures learn can be changed per world or for all, with the game's six languages, Nornish and 19 draft translations; speech bubbles and the computers use Fusion Pixel, with Greek, Cyrillic, Japanese, Chinese, Korean, Hebrew, Arabic and Thai; the Creature's View can be resized and its blinking turned off; a landing in the lab lift's shaft.
 
 ### 23 November 2026
+
+#### Toolbar: the Say button and each band only as tall as their contents
+
+[`dc6e2986`](https://github.com/DotairZee/zeetures/commit/dc6e2986372c2fb27910083d92b470a86fc464d5)
+
+The Favourites toolbar's Say button drew its 22 x 21 picture with frame
+padding, taller than the lists beside it; it is now fitted into a square
+as tall as the Places + button (ImageButtonFit). Each toolbar band's grip
+took last frame's height of the whole band, grip included, so a band never
+grew shorter than the list height plus 6 it started at: it now takes the
+height of the band's contents. "Speech History:" lines up with its list.
 
 #### Version 0.35.0: Preferences; words in any language; Fusion Pixel
 
