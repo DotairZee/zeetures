@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 656 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 658 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [0.35.0](#version-0350): 4 commits, 23 November 2026
+- [0.35.0](#version-0350): 6 commits, 23 November 2026
 - [0.34.1](#version-0341): 1 commits, 23 November 2026
 - [0.34.0](#version-0340): 1 commits, 23 November 2026
 - [0.33.5](#version-0335): 1 commits, 23 November 2026
@@ -96,6 +96,36 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 Preferences gathers every setting in one window; the words creatures learn can be changed per world or for all, with the game's six languages, Nornish and 19 draft translations; speech bubbles and the computers use Fusion Pixel, with Greek, Cyrillic, Japanese, Chinese, Korean, Hebrew, Arabic and Thai; the Creature's View can be resized and its blinking turned off; the status bar's parts can each be hidden; a landing in the lab lift's shaft.
 
 ### 23 November 2026
+
+#### Kits show Zeetures's own pictures in place of the game's
+
+[`c5ccb1c3`](https://github.com/DotairZee/zeetures/commit/c5ccb1c3c9633fb019ee2eca6a4974978c970247)
+
+The kits read pictures straight from the game's files (KitSprites), so
+the Breeder's Kit's Breeds page showed the game's own female ettin, not
+the head Zeetures rebuilds from the male's (MadeArt a60a) and the world
+shows. A picture MadeArt makes in place of the game's is now taken from
+MadeArt, as the world takes it.
+
+#### Words: lists saved under a name; Status Bar section by column
+
+[`5cce3a9e`](https://github.com/DotairZee/zeetures/commit/5cce3a9e22d89318cdf0b942d5927a3c7de6d330)
+
+Preferences &gt; Words: Save as... keeps the words in use under a name
+(word-lists/NAME.txt in the user data folder; characters no file name
+allows are left out), listed under Custom at the top of Load words from...
+(right-click to delete). The "The game's own" button is gone; the section
+opens shorter.
+
+Preferences &gt; Status Bar: "Status bar" with a note that unticking it hides
+minimised kits too; the parts in two columns, read down (Season, Time of
+day, Temperature; Day and year, Notices, Selected creature's health); the
+notifications' note on two lines.
+
+Breeder's Kit, Breeds: the slot note's second clause on its own line, not
+a lone "a" at the end of the first.
+
+Developer aid: the director's savewords cue.
 
 #### Preferences reshaped; a Status Bar section; the eye's screen at any size
 
