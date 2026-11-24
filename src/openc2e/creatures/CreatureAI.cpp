@@ -43,6 +43,7 @@
 #include "Temperament.h"
 #include "BrainProfiles.h"
 #include <map>
+#include <optional>
 #include <sstream>
 
 #include <algorithm>
@@ -1649,36 +1650,118 @@ void oldCreature::updateBrainCells(MindPerception& p) {
 }
 
 // Genome instincts, translated for a mind (gene-translation.md, section 3).
-// C2 instinct inputs name a lobe and a neuron; in the C2 genomes' standard
-// lobe layout (the C2 CAOS guide's order: perception, drive, source, verb,
-// noun, sense, decision, attention, concept) lobe 1 holds the drives, 2 the
-// source (the category of what stimulated it), 3 heard verbs, 4 heard
-// nouns, 5 senses and 7 attention. Source and attention both name the
-// object. (Lobe 7 was read as heard nouns until 2026-11-17: the game's
-// norns' "hungry, attending to a flower: push or pull it" waited; the
-// genomes' wiring shows 7 reading 2 and 4, as attention does.) Lobe 0 neuron 0 marks an unused input. The reinforcer is chemical 52
-// (reward) or 53 (punishment).
+// A C2 instinct has up to three conditions, each a lobe and a cell, an
+// action, a reinforcing chemical and a strength. Read so that any genome's
+// brain works, custom ones (Nova, Canny, Akamai...) and bred hybrids
+// included:
+// - each byte is taken modulo its range: the lobe 0-7 (lobe 0: no
+//   condition, whatever the cell), the cell within the named lobe's cells,
+//   the action 0-15;
+// - a lobe the brain perceives directly (its gene's perception flag) is
+//   read as it is. Another is read through the first lobe (from lobe 1 up)
+//   of the same size whose dendrites read it: in the game's genomes the
+//   source lobe (2) and the noun lobe (4) both come to attention (7), which
+//   reads them (a dendrite's source past the last lobe wraps round, lobe
+//   mod count). A lobe nothing perceives drops that condition;
+// - the condition's meaning is the role of the lobe it comes to: the
+//   game's lobes by their place (1 drives, 2 and 7 the object's category,
+//   3 heard verbs, 4 heard nouns, 5 senses), an added lobe by the role
+//   BrainProfiles gives it (object roles: the object's category; noticing
+//   needs change: drives);
+// - a condition that cannot be read is dropped, not the instinct; an
+//   instinct with no condition left is skipped;
+// - chemical 53 punishes, any other rewards.
 // Sense 19 (the other sex of the creature's own genus in sight, set by
 // feedSensoryCells) names the object of the act: a creature of its own genus
 // (category 35 + genus), as the sex instincts mean it (Sex Drive with the
 // other sex in sight: kiss).
-static bool translateInstinct(creatureInstinctGene* g, InnateInstinct& out, int genus) {
-	if (g->drive != 52 && g->drive != 53)
-		return false;
-	out.reward = (g->drive == 52);
-	out.decision = g->action;
+namespace {
+
+struct InstinctLobe {
+	unsigned int cells = 0; // as its gene sizes it
+	bool perceived = false; // its gene's perception flag
+	int reads[2] = {-1, -1}; // the lobes its two dendrite sets read
+	std::string role; // an added lobe's role (BrainProfiles), or ""
+};
+
+std::vector<InstinctLobe> instinctLobes(oldBrain* brain, const genomeFile& genome) {
+	std::vector<InstinctLobe> out;
+	if (!brain)
+		return out;
+	for (oldLobe* lobe : brain->lobes) {
+		InstinctLobe l;
+		if (oldBrainLobeGene* g = lobe ? lobe->getGene() : nullptr) {
+			l.cells = (unsigned int)g->width * g->height;
+			l.perceived = g->perceptflag != 0;
+			l.reads[0] = g->dendrite1.srclobe;
+			l.reads[1] = g->dendrite2.srclobe;
+		}
+		out.push_back(l);
+	}
+	for (auto& a : BrainProfiles::read(genome).addOns)
+		if (a.lobe >= 0 && (size_t)a.lobe < out.size())
+			out[a.lobe].role = a.role;
+	return out;
+}
+
+// the lobe a condition on this one is read through, or -1
+int perceivedThrough(int named, const std::vector<InstinctLobe>& lobes) {
+	if (named < 0 || (size_t)named >= lobes.size())
+		return -1;
+	if (lobes[named].perceived)
+		return named;
+	// (a dendrite's source lobe past the last wraps round, lobe mod count, as
+	// the brain is wired: a hybrid that lost an added lobe reads lobe 2 again)
+	const int count = (int)lobes.size();
+	for (size_t j = 1; j < lobes.size(); j++)
+		if (lobes[j].cells == lobes[named].cells && ((lobes[j].reads[0] >= 0 && lobes[j].reads[0] % count == named) || (lobes[j].reads[1] >= 0 && lobes[j].reads[1] % count == named)))
+			return (int)j;
+	return -1;
+}
+
+// what a condition read through this lobe means, if anything
+std::optional<InnateCondition::Kind> lobeMeaning(int lobe, const InstinctLobe& l) {
+	switch (lobe) {
+		case 1: return InnateCondition::Drive;
+		case 2:
+		case 7: return InnateCondition::Attention;
+		case 3: return InnateCondition::HeardVerb;
+		case 4: return InnateCondition::HeardNoun;
+		case 5: return InnateCondition::Sense;
+	}
+	if (l.role == "object-good" || l.role == "object-bad" || l.role == "search" || l.role == "choice")
+		return InnateCondition::Attention;
+	if (l.role == "drive-change")
+		return InnateCondition::Drive;
+	return std::nullopt;
+}
+
+} // namespace
+
+static bool translateInstinct(creatureInstinctGene* g, InnateInstinct& out, int genus, const std::vector<InstinctLobe>& lobes, std::string* why = nullptr) {
+	out.reward = (g->drive != 53);
+	out.decision = g->action % 16;
 	out.strength = g->level / 255.0f;
 	out.signature = fmt::format("{}.{}.{}.{}.{}.{}-{}-{}-{}", g->lobes[0], g->neurons[0], g->lobes[1], g->neurons[1],
 		g->lobes[2], g->neurons[2], g->action, g->drive, g->level);
+	int read = 0;
 	for (int i = 0; i < 3; i++) {
-		int lobe = g->lobes[i], neuron = g->neurons[i];
-		if (lobe == 0 && neuron == 0)
+		int named = g->lobes[i] % 8;
+		if (named == 0)
 			continue;
-		switch (lobe) {
-			case 1: out.conditions.push_back({InnateCondition::Drive, neuron}); break;
-			case 2: out.conditions.push_back({InnateCondition::Attention, neuron}); break;
-			case 3: out.conditions.push_back({InnateCondition::HeardVerb, neuron}); break;
-			case 5:
+		int at = perceivedThrough(named, lobes);
+		auto meaning = at >= 0 && lobes[named].cells > 0 ? lobeMeaning(at, lobes[at]) : std::nullopt;
+		if (!meaning) {
+			if (why)
+				*why += fmt::format(" [lobe {} cell {}: dropped]", named, (int)g->neurons[i]);
+			continue;
+		}
+		int neuron = g->neurons[i] % lobes[named].cells;
+		if (why)
+			*why += fmt::format(" [lobe {} cell {} -> lobe {}]", named, neuron, at);
+		read++;
+		switch (*meaning) {
+			case InnateCondition::Sense:
 				if (neuron == 19 && genus >= 1 && genus <= 4)
 					out.conditions.push_back({InnateCondition::Attention, 35 + genus});
 				else if (neuron == 15) {
@@ -1690,12 +1773,10 @@ static bool translateInstinct(creatureInstinctGene* g, InnateInstinct& out, int 
 				else
 					out.conditions.push_back({InnateCondition::Sense, neuron});
 				break;
-			case 4: out.conditions.push_back({InnateCondition::HeardNoun, neuron}); break;
-			case 7: out.conditions.push_back({InnateCondition::Attention, neuron}); break;
-			default: return false; // not a lobe these genomes use for instincts
+			default: out.conditions.push_back({*meaning, neuron}); break;
 		}
 	}
-	return true;
+	return read > 0;
 }
 
 void oldCreature::tickMind() {
@@ -1713,11 +1794,27 @@ void oldCreature::tickMind() {
 	PROFILE_SCOPE("creature: tickMind after perception");
 	updateBrainCells(p);
 	pendingstimuli.clear();
-	if (engine.version == 2) {
+	if (engine.version == 2 && !unprocessedinstincts.empty()) {
+		// developer aid: OPENC2E_DEBUG_INSTINCTS=1 prints how each instinct
+		// gene was read
+		static const bool debug = devenv("OPENC2E_DEBUG_INSTINCTS") != nullptr;
+		std::vector<InstinctLobe> lobes = instinctLobes(brain, *genome);
+		if (debug) {
+			std::string t;
+			for (size_t i = 0; i < lobes.size(); i++)
+				t += fmt::format(" {}:{}{}<{},{}{}", i, lobes[i].cells, lobes[i].perceived ? "p" : "", lobes[i].reads[0], lobes[i].reads[1],
+					lobes[i].role.empty() ? "" : " " + lobes[i].role);
+			fmt::print("* Instinct lobes {}:{}\n", world.history ? world.history->findMoniker(genome) : std::string(), t);
+		}
 		while (!unprocessedinstincts.empty()) {
 			InnateInstinct inst;
-			if (translateInstinct(unprocessedinstincts.front(), inst, parentagent->genus))
+			std::string why;
+			bool kept = translateInstinct(unprocessedinstincts.front(), inst, parentagent->genus, lobes, debug ? &why : nullptr);
+			if (kept)
 				p.newInstincts.push_back(inst);
+			if (debug)
+				fmt::print("* Instinct {} {}:{} -> action {} {} ({} conditions)\n", world.history ? world.history->findMoniker(genome) : std::string(),
+					inst.signature, why, inst.decision, kept ? "kept" : "skipped", inst.conditions.size());
 			unprocessedinstincts.pop_front();
 		}
 	}

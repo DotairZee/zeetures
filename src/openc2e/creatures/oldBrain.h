@@ -100,6 +100,7 @@ class oldLobe {
 	void wipe();
 
 	oldBrainLobeGene* getGene() { return ourGene; }
+	unsigned int wiredSource(unsigned int named) const; // a dendrite's source, as wired
 
 	unsigned int getNoNeurons() { return neurons.size(); }
 	// Chemical relays (see oldBrain::tickChemicalRelays): genes write chemical

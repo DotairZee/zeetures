@@ -132,6 +132,18 @@ const Table& table() {
 
 } // namespace
 
+bool laterLobe(const genomeFile& genome, const gene* g) {
+	if (!g || g->header.generation == 0)
+		return false;
+	for (auto& e : genome.genes) {
+		if (e.get() == g)
+			break;
+		if (dynamic_cast<oldBrainLobeGene*>(e.get()) && e->note.which == g->note.which && e->header.generation < g->header.generation)
+			return true;
+	}
+	return false;
+}
+
 Result read(const genomeFile& genome) {
 	const Table& t = table();
 	Result r;
@@ -144,9 +156,15 @@ Result read(const genomeFile& genome) {
 	// drive and its decrease, as the drive eases)
 	std::set<int> driveMade;
 	auto isDriveChem = [](int c) { return c >= 1 && c <= 51; };
+	// (the lobes in the brain's order: duplicated lobes after the rest, as
+	// oldBrain places them)
+	for (int pass = 0; pass < 2; pass++)
+		for (auto& g : genome.genes)
+			if (auto* l = dynamic_cast<oldBrainLobeGene*>(g.get()); l && laterLobe(genome, l) == (pass == 1))
+				lobes.push_back(l);
 	for (auto& g : genome.genes) {
-		if (auto* l = dynamic_cast<oldBrainLobeGene*>(g.get()))
-			lobes.push_back(l);
+		if (dynamic_cast<oldBrainLobeGene*>(g.get()))
+			continue;
 		else if (auto* rc = dynamic_cast<bioReceptorGene*>(g.get()); rc && rc->organ == 0)
 			brainReceptors.push_back(rc);
 		else if (auto* re = dynamic_cast<bioReactionGene*>(g.get())) {

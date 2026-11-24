@@ -18,6 +18,7 @@
  */
 
 #include "oldBrain.h"
+#include "BrainProfiles.h"
 #include "common/devenv.h"
 
 #include "common/Random.h"
@@ -424,11 +425,20 @@ void oldLobe::init() {
 	// (don't set inited here, wait until connect() call)
 }
 
+// C2: a dendrite's source lobe past the genome's last lobe wraps round
+// (lobe mod count), so a hybrid that lost an added lobe reads one it has
+// (Canny-descended hybrids: attention, lobe 7, named lobe 12 of 10)
+unsigned int oldLobe::wiredSource(unsigned int named) const {
+	if (dynamic_cast<c2Creature*>(parent->getParent()) && !parent->lobes.empty())
+		return named % parent->lobes.size();
+	return named;
+}
+
 void oldLobe::connect() {
 	oldDendriteInfo* dend_info[2] = {&ourGene->dendrite1, &ourGene->dendrite2};
 
 	for (unsigned int type = 0; type < 2; type++) {
-		oldLobe* src = parent->getLobeByTissue(dend_info[type]->srclobe);
+		oldLobe* src = parent->getLobeByTissue(wiredSource(dend_info[type]->srclobe));
 		if (!src) {
 			// A bred genome can name a source lobe it does not have (a
 			// crossover or mutation moved the dendrite's source, or the lobe
@@ -597,7 +607,7 @@ void oldLobe::tick() {
 	oldDendriteInfo* dend_info[2] = {&ourGene->dendrite1, &ourGene->dendrite2};
 	for (unsigned int type = 0; type < 2; type++) {
 		if (dend_info[type]->migrateflag == 1) {
-			oldLobe* src = parent->getLobeByTissue(dend_info[type]->srclobe);
+			oldLobe* src = parent->getLobeByTissue(wiredSource(dend_info[type]->srclobe));
 			// TODO: see fix srclobe comment above (in oldLobe::connect)
 			assert(src);
 
@@ -925,15 +935,21 @@ void oldBrain::processGenes() {
 
 	std::shared_ptr<genomeFile> genome = parent->getGenome();
 
-	for (auto& gene : genome->genes) {
-		if (!parent->shouldProcessGene(gene.get()))
-			continue;
-
-		if (oldBrainLobeGene* g = dynamic_cast<oldBrainLobeGene*>(gene.get())) {
-			oldLobe* l = new oldLobe(this, g);
-			lobes.push_back(l);
+	// C2: lobe genes of a later generation (duplicated lobes) after the rest,
+	// each in genome order, so a duplicated lobe does not renumber the lobes
+	// after it (BrainProfiles::laterLobe)
+	const bool byGeneration = dynamic_cast<c2Creature*>(parent) != nullptr;
+	for (int pass = 0; pass < (byGeneration ? 2 : 1); pass++)
+		for (auto& gene : genome->genes) {
+			if (!parent->shouldProcessGene(gene.get()))
+				continue;
+			if (byGeneration && BrainProfiles::laterLobe(*genome, gene.get()) != (pass == 1))
+				continue;
+			if (oldBrainLobeGene* g = dynamic_cast<oldBrainLobeGene*>(gene.get())) {
+				oldLobe* l = new oldLobe(this, g);
+				lobes.push_back(l);
+			}
 		}
-	}
 
 	// TODO: this is a problem right now because oldLobe wants a copy of the genome objects
 	/*while (lobes.size() < 8) {

@@ -38,6 +38,7 @@
 #include <vector>
 
 class genomeFile;
+class gene;
 
 namespace BrainProfiles {
 
@@ -60,6 +61,12 @@ struct Result {
 };
 
 Result read(const genomeFile& genome);
+// A lobe gene of a later generation: a duplicate of a lobe gene before it
+// in the genome (the same gene id, a lower generation). The brain places
+// these after the other lobes, so a duplicated lobe does not renumber the
+// lobes after it. (A lobe gene whose generation Zeetures raised by a
+// mutation, before 0.36.2, has no such twin and keeps its place.)
+bool laterLobe(const genomeFile& genome, const gene* g);
 // a few plain lines, for the Breeder's Kit and the log
 std::vector<std::string> describe(const Result& r);
 

@@ -119,8 +119,6 @@ void mutate(Record& r, int version) {
 		v += rand_bool() ? step : -step;
 	}
 	r.bytes[i] = (uint8_t)std::clamp(v, 0, 255);
-	if (r.bytes[7] < 255)
-		r.bytes[7]++; // the gene's generation
 }
 
 } // namespace
@@ -167,6 +165,12 @@ std::shared_ptr<genomeFile> crossGenomes(genomeFile& mum, genomeFile& dad, const
 		}
 		child.push_back(r);
 		if (canDup && rand_float(0, 1) < DUPLICATION_CHANCE * scale) {
+			// the copy is a generation on (the gene header's generation,
+			// byte 7); a mutation leaves it as it is. The brain places a
+			// duplicated lobe after the rest (BrainProfiles::laterLobe), so
+			// it does not renumber the lobes after it
+			if (r.bytes[7] < 255)
+				r.bytes[7]++;
 			child.push_back(r);
 			rep.duplications++;
 		}

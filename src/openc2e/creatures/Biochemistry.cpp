@@ -278,6 +278,10 @@ unsigned char* oldCreature::getLocusPointer(bool receptor, unsigned char o, unsi
 	switch (o) {
 		case 0: // brain
 		{
+			// C2: a lobe number past the genome's last lobe wraps round (lobe
+			// mod count), so a hybrid missing lobes still reaches one
+			if (dynamic_cast<c2Creature*>(this) && brain && !brain->lobes.empty())
+				t = t % brain->lobes.size();
 			oldLobe* lobe = brain->getLobeByTissue(t);
 			if (!lobe)
 				return 0;
@@ -330,13 +334,10 @@ unsigned char* oldCreature::getLocusPointer(bool receptor, unsigned char o, unsi
 							return lobe->getChemPointer(chemid);
 						}
 
-						// The Genetics Kit limits to 0-15 in c1 and 0-39 in c2. We don't bother..
+						// a cell's state: the cells follow the chemical slots (C2:
+						// locus 19 is cell 0), with no other shift; a cell past
+						// the lobe's last reads nothing
 						unsigned int cellid = l - 13 - nochems;
-						if (c2) {
-							// TODO: this is because c2 has 16-212 *after* 0-39 in the genetics kit, is it needed?!
-							if (cellid >= 40)
-								cellid -= 24;
-						}
 						if (cellid >= lobe->getNoNeurons())
 							return 0;
 						lobe->receptor_fed = true;
