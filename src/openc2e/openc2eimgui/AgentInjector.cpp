@@ -360,6 +360,11 @@ void SetAgentInjectorOpen(bool is_open) {
 		s_agent_injector_minimized = false; // opened again from the toolbar: shown
 }
 
+// the toolbar's button: closes it when open and showing (owner, 2026-11-24)
+void ToggleAgentInjector() {
+	SetAgentInjectorOpen(!(s_agent_injector_open && !s_agent_injector_minimized));
+}
+
 // C2: minimized to a chip on the status bar, like the kits (owner, 2026-11-11)
 void DrawAgentInjectorChip() {
 	if (engine.version != 2 || !s_agent_injector_open || !s_agent_injector_minimized)

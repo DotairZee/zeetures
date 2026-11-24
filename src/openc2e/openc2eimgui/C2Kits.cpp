@@ -18,6 +18,7 @@
 #include "common/Ascii.h"
 #include "fileformats/c2cobfile.h"
 #include "common/backend/Backend.h"
+#include "creatures/CreatureSpeech.h" // readPlayerSetting
 #include "creatures/CreatureAgent.h"
 #include "creatures/oldCreature.h"
 #include "creatures/Disease.h"
@@ -115,6 +116,20 @@ void OpenC2Kit(const char* id) {
 	st.minimized = false;
 	s_focus_next = id;
 	ImGui::MarkIniSettingsDirty();
+}
+
+// the toolbar's buttons (owner, 2026-11-24): a kit open and showing is
+// closed; otherwise opened (or brought back from the status bar)
+void ToggleC2Kit(const char* id) {
+	if (!findKit(id))
+		return;
+	auto& st = s_state[id];
+	if (st.open && !st.minimized) {
+		st.open = false;
+		ImGui::MarkIniSettingsDirty();
+	} else {
+		OpenC2Kit(id);
+	}
 }
 
 // ---- kept between sessions -------------------------------------------------
@@ -293,6 +308,11 @@ static void SetUpKitSettings() {
 		return;
 	}
 	ImGui::LoadIniSettingsFromDisk(path.c_str());
+	// Kits in their own windows (experimental): places outside the game
+	// window are used only while windows may leave it, and when the player
+	// keeps them (Preferences > Display, "Remember where kit windows were")
+	if (!get_backend()->uiWindowsActive() || readPlayerSetting("kit-windows-remember") == "0")
+		ImGuiUtils::ForgetOutsidePlaces();
 	ImGui::GetIO().IniFilename = path.c_str(); // saved every few seconds when changed, and on exit
 }
 

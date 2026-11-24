@@ -44,6 +44,9 @@ ImVec2 GameWindowPos();
 // status bar, scroll bars and notices): no window of its own, and with
 // ImGuiWindowFlags_NoDocking in its flags nothing docks to it
 void KeepInGameWindow();
+// the places saved for windows outside the game window are forgotten: they
+// open in the game window, one below another from near its top-left corner
+void ForgetOutsidePlaces();
 void EndWindow();
 
 void DrawTexture(Texture texture, ImVec2 p, float transparency = 1.0);

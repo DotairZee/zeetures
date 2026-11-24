@@ -1564,6 +1564,11 @@ void SetHatcheryOpen(bool value) {
 		s_hatchery_minimized = false; // opened again from the toolbar: shown
 }
 
+// the toolbar's button: closes it when open and showing (owner, 2026-11-24)
+void ToggleHatchery() {
+	SetHatcheryOpen(!(s_hatchery_open && !s_hatchery_minimized));
+}
+
 // C2: minimized to a chip on the status bar, like the kits (owner, 2026-11-11)
 void DrawHatcheryChip() {
 	if (engine.version != 2 || !s_hatchery_open || !s_hatchery_minimized)

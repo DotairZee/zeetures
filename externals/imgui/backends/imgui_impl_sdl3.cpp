@@ -1050,7 +1050,11 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
             }
     if (!vd->Window)
     {
-        vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+        // (openc2e: made hidden. SDL shows a new window as it makes it, so
+        // it was on screen, black, before its first frame was drawn: the
+        // first kit dragged out in a session flickered, later ones (reused,
+        // hidden, windows) did not. Platform_ShowWindow shows it.)
+        vd->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags | SDL_WINDOW_HIDDEN);
         SDL_SetNumberProperty(SDL_GetWindowProperties(vd->Window), OPENC2E_POOL_FLAGS, (Sint64)sdl_flags);
     }
     SDL_SetWindowParent(vd->Window, vd->ParentWindow);

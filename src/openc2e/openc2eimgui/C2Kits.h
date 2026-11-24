@@ -21,6 +21,7 @@ std::string KitGivenName(Agent* a);
 // Kit ids: "health", "science", "breeders", "owners", "observation".
 bool IsC2KitAvailable(const char* id);
 void OpenC2Kit(const char* id);
+void ToggleC2Kit(const char* id); // the toolbar's: closes a kit open and showing
 // closes every kit (the trailer director)
 void CloseC2Kits();
 // opens a kit at one of its pages ("Registration", "Reproductive")

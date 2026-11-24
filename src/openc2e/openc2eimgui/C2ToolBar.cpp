@@ -1324,53 +1324,53 @@ void DrawC2Toolbar() {
 
 		auto bandApplets = [&] {
 		if (ToolButton(icon_hatchery, IsHatcheryEnabled(), "Hatchery")) {
-			SetHatcheryOpen(true);
+			ToggleHatchery();
 		};
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 			ImGui::SetTooltip("Hatchery: choose eggs to hatch");
 		if (ToolButton(icon_ownerskit, IsC2KitAvailable("owners"), "Owner's"))
-			OpenC2Kit("owners");
+			ToggleC2Kit("owners");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Owner's Kit: name, photos, family, temperament, relationships and life story");
 		if (ToolButton(icon_healthkit, IsC2KitAvailable("health"), "Health"))
-			OpenC2Kit("health");
+			ToggleC2Kit("health");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Health Kit: fitness, mind, drives and medicine");
 		if (ToolButton(icon_graveyard, IsC2KitAvailable("graveyard"), "Graveyard"))
-			OpenC2Kit("graveyard");
+			ToggleC2Kit("graveyard");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Graveyard Kit: the gravestones of the creatures that have died");
 		ImGui::Separator();
 		if (ToolButton(icon_unknown_maybe_breederskit, IsC2KitAvailable("breeders"), "Breeder's"))
-			OpenC2Kit("breeders");
+			ToggleC2Kit("breeders");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Breeder's Kit: fertility and pregnancy, aphrodisiacs and breeds");
 		if (ToolButton(icon_unknown_maybe_sciencekit, IsC2KitAvailable("science"), "Science"))
-			OpenC2Kit("science");
+			ToggleC2Kit("science");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Science Kit: body, genes, biochemistry and the syringe");
 		// (C2's Neuroscience Kit button opens our Mind Kit: our creatures
 		// have no neurons to show; owner, 2026-11-11)
 		if (ToolButton(icon_unknown_maybe_neurosciencekit, IsC2KitAvailable("mind"), "Mind"))
-			OpenC2Kit("mind");
+			ToggleC2Kit("mind");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Mind Kit: what the creature feels, is weighing, has learned and remembers");
 		if (ToolButton(icon_unknown_maybe_observationkit, IsC2KitAvailable("observation"), "Observation"))
-			OpenC2Kit("observation");
+			ToggleC2Kit("observation");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Observation Kit: every creature at a glance, and alarms");
 		ImGui::Separator();
 		if (ToolButton(icon_agent_injector, IsAgentInjectorEnabled(), "Injector")) {
-			SetAgentInjectorOpen(true);
+			ToggleAgentInjector();
 		}
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 			ImGui::SetTooltip("Agent Injector: add objects to the world");
 		if (ToolButton(icon_unknown_maybe_historykit, IsC2KitAvailable("chronicles"), "Chronicles"))
-			OpenC2Kit("chronicles");
+			ToggleC2Kit("chronicles");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Chronicles Kit: the world's history and statistics");
 		if (ToolButton(icon_unknown_maybe_ecologykit, IsC2KitAvailable("ecology"), "Ecology"))
-			OpenC2Kit("ecology");
+			ToggleC2Kit("ecology");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Ecology Kit: the world's rooms (light, warmth, air, soil), watching rooms, and a census");
 		};
@@ -1663,9 +1663,15 @@ static void DrawPreferences() {
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("Drag a kit, the Creature's View or this window by its title bar out of the game window,\n"
 									  "and it becomes a window of its own (on another monitor, say); drag it back in to return it.");
-				if (own && !get_backend()->uiWindowsActive()) {
+				if (own) {
 					ImGui::Indent();
-					ImGui::TextDisabled("Kits leave the game window once Zeetures is started again.");
+					if (!get_backend()->uiWindowsActive())
+						ImGui::TextDisabled("Kits leave the game window once Zeetures is started again.");
+					static bool remember = readFlag("kit-windows-remember", true);
+					PrefCheck("Remember where kit windows were", remember, "kit-windows-remember",
+						"Kits left outside the game window open there again when Zeetures starts;\n"
+						"unticked, they open in the game window.\n"
+						"A kit on a monitor that is no longer connected always comes back into the game window.");
 					ImGui::Unindent();
 				}
 			}

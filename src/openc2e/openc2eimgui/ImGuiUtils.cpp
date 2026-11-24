@@ -137,4 +137,17 @@ void KeepInGameWindow() {
 	ImGui::SetNextWindowViewport(ImGui::GetMainViewport()->ID);
 }
 
+void ForgetOutsidePlaces() {
+	ImGuiContext& g = *ImGui::GetCurrentContext();
+	short next = 120;
+	for (ImGuiWindowSettings* s = g.SettingsWindows.begin(); s != nullptr; s = g.SettingsWindows.next_chunk(s)) {
+		if (s->ViewportId == 0)
+			continue; // (in the game window: its place is kept)
+		s->ViewportId = 0;
+		s->ViewportPos = ImVec2ih(0, 0);
+		s->Pos = ImVec2ih(120, next);
+		next = (short)std::min(next + 40, 400);
+	}
+}
+
 } // namespace ImGuiUtils

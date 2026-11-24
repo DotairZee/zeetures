@@ -352,7 +352,8 @@ void rendererCreateWindow(ImGuiViewport* vp) {
 	// vertical blank would halve the frame rate with two windows)
 	SDL_SetRenderVSync(wr->renderer, 0);
 	if (watching())
-		SDL_Log("Kit windows: made a renderer in %.1f ms", (SDL_GetTicksNS() - t0) / 1e6);
+		SDL_Log("Kit windows: made a renderer in %.1f ms (window %s)", (SDL_GetTicksNS() - t0) / 1e6,
+			(SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) ? "still hidden" : "already shown");
 	vp->RendererUserData = wr;
 	s_windows.push_back(wr);
 	SDL_SetPointerPropertyWithCleanup(SDL_GetWindowProperties(window), RENDERER_PROP, wr, onWindowGone, nullptr);

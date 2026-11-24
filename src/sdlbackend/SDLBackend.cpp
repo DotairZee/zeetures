@@ -38,6 +38,7 @@
 #include <filesystem>
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <map>
 #include <memory>
 
 static void uploadImGuiFontTexture();
@@ -166,6 +167,41 @@ static void uploadImGuiFontTexture() {
 	io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
 }
 
+// Kits in their own windows: a window whose title bar is on no connected
+// monitor (its monitor unplugged, or a place remembered from a two-monitor
+// desk) comes back into the game window, one below another from near its
+// top-left corner (owner, 2026-11-24). Between frames.
+static void bringLostWindowsHome() {
+	ImGuiContext& g = *ImGui::GetCurrentContext();
+	const ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
+	if (!(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) || pio.Monitors.Size == 0)
+		return;
+	ImGuiViewport* main = ImGui::GetMainViewport();
+	float next = 120;
+	for (int i = 1; i < g.Viewports.Size; i++) {
+		ImGuiWindow* w = g.Viewports[i]->Window;
+		if (!w || (w->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)))
+			continue;
+		// (not before it has a size: a window sizing itself to its contents
+		// is 0 wide on its first frame, and was taken for one off every monitor)
+		if (w->Hidden || w->Size.x < 48 || w->Size.y < 8)
+			continue;
+		const float x0 = w->Pos.x, x1 = w->Pos.x + w->Size.x, y0 = w->Pos.y, y1 = w->Pos.y + std::min(w->Size.y, 24.0f);
+		bool seen = false;
+		for (const ImGuiPlatformMonitor& m : pio.Monitors) {
+			float ox = std::min(x1, m.MainPos.x + m.MainSize.x) - std::max(x0, m.MainPos.x);
+			float oy = std::min(y1, m.MainPos.y + m.MainSize.y) - std::max(y0, m.MainPos.y);
+			if (ox >= 48 && oy >= 8)
+				seen = true;
+		}
+		if (seen)
+			continue;
+		ImGui::SetWindowPos(w, ImVec2(main->Pos.x + 120, main->Pos.y + next));
+		next = std::min(next + 40, main->Size.y * 0.5f);
+		fmt::print("* Kit windows: {} was on no monitor; brought into the game window\n", w->Name);
+	}
+}
+
 // Sets ImGui's flags to match SDLBackend::ui_windows, between frames.
 // Turned off, every window left outside comes back into the game window.
 static void applyUiWindows(SDLBackend& b) {
@@ -277,6 +313,11 @@ void SDLBackend::init(const std::string& name, int32_t width, int32_t height) {
 
 void SDLBackend::shutdown() {
 	rememberWindowDisplay(window);
+	// the windows' places saved as they are at the end (ImGui saves them
+	// every few seconds; without this the last save could be one made in
+	// the middle of a drag)
+	if (ImGui::GetCurrentContext() && ImGui::GetIO().IniFilename)
+		ImGui::SaveIniSettingsToDisk(ImGui::GetIO().IniFilename);
 	if (ImGui::GetCurrentContext())
 		SDLViewports::shutdown();
 	SDL_Quit();
@@ -941,6 +982,7 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 			SDL_StartTextInput(window);
 
 		applyUiWindows(*this);
+		bringLostWindowsHome();
 		syncSystemPointer(window);
 		if (g_beforeUiFrame && g_beforeUiFrame())
 			uploadImGuiFontTexture();
@@ -969,6 +1011,22 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 				double ms = (SDL_GetTicksNS() - t0) / 1e6;
 				if (ms > 40)
 					fmt::print("* Kit windows: {:.0f} ms drawing {} windows\n", ms, ImGui::GetPlatformIO().Viewports.Size);
+				// where ImGui thinks each window is, and where it is, when either changes
+				static std::map<ImGuiID, std::string> said;
+				for (ImGuiViewport* vp : ImGui::GetPlatformIO().Viewports) {
+					if (vp == ImGui::GetMainViewport())
+						continue;
+					SDL_Window* w = SDL_GetWindowFromID((SDL_WindowID)(intptr_t)vp->PlatformHandle);
+					int x = 0, y = 0;
+					if (w)
+						SDL_GetWindowPosition(w, &x, &y);
+					auto* iw = ((ImGuiViewportP*)vp)->Window;
+					std::string now = fmt::format("{} imgui {:.0f},{:.0f} sdl {},{}", iw ? iw->Name : "?", vp->Pos.x, vp->Pos.y, x, y);
+					if (said[vp->ID] != now) {
+						said[vp->ID] = now;
+						fmt::print("* Kit windows: {}\n", now);
+					}
+				}
 			}
 		} else {
 			ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
