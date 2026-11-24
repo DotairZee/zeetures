@@ -73,6 +73,50 @@ static float ImGui_ImplSDL3_UiScale()
     return (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) ? g_openc2e_ui_scale : 1.0f;
 }
 
+// (openc2e: the scale changed while playing (Windows display settings, or the
+// game window taken to a monitor with another scale). Every place ImGui holds
+// is in the old units, so it is converted: kits in their own windows keep
+// their place on the desktop, kits in the game window their place in it, and
+// the extra windows are sized again for the new scale. Without this a kit
+// outside was taken for lost (no monitor under it) and one inside popped out.)
+static void ImGui_ImplSDL3_Openc2eRescale(ImVec2 game_window_px, ImVec2 game_size_px, float old_us, float new_us)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.FrameCount == 0)
+        return; // (no windows yet; places read from kits.ini are taken as they are)
+    ImGuiViewportP* main_vp = (ImGuiViewportP*)ImGui::GetMainViewport();
+    const ImVec2 old_main = main_vp->Pos;
+    const ImVec2 new_main(game_window_px.x / new_us, game_window_px.y / new_us);
+    const ImVec2 new_size(game_size_px.x / new_us, game_size_px.y / new_us);
+    const float f = old_us / new_us;
+    for (ImGuiWindow* window : g.Windows)
+    {
+        if (window->Flags & ImGuiWindowFlags_ChildWindow)
+            continue; // (placed by their parents)
+        ImGuiViewportP* vp = window->Viewport;
+        ImVec2 pos;
+        if (vp && vp != main_vp && vp->PlatformWindowCreated)
+            pos = ImVec2(window->Pos.x * f, window->Pos.y * f);
+        else
+        {
+            // (kept inside where it fits: it has grown with the interface)
+            pos = ImVec2(new_main.x + window->Pos.x - old_main.x, new_main.y + window->Pos.y - old_main.y);
+            pos.x = ImMax(new_main.x, ImMin(pos.x, new_main.x + new_size.x - window->Size.x));
+            pos.y = ImMax(new_main.y, ImMin(pos.y, new_main.y + new_size.y - window->Size.y));
+        }
+        ImGui::SetWindowPos(window, pos, ImGuiCond_Always);
+    }
+    for (ImGuiViewportP* vp : g.Viewports)
+    {
+        if (vp == main_vp)
+            continue;
+        vp->Pos = ImVec2(vp->Pos.x * f, vp->Pos.y * f);
+        vp->LastPlatformPos = vp->Pos; // (not moved on the desktop)
+        vp->LastPlatformSize = ImVec2(FLT_MAX, FLT_MAX); // (its pixel size changes: set again)
+    }
+    main_vp->Pos = new_main;
+}
+
 // Clang warnings with -Weverything
 #if defined(__clang__)
 #pragma clang diagnostic push
@@ -969,6 +1013,9 @@ void ImGui_ImplSDL3_NewFrame()
             us = 1.0f;
         if (us != g_openc2e_ui_scale)
         {
+            int wx = 0, wy = 0;
+            SDL_GetWindowPosition(bd->Window, &wx, &wy);
+            ImGui_ImplSDL3_Openc2eRescale(ImVec2((float)wx, (float)wy), ImVec2((float)w, (float)h), g_openc2e_ui_scale, us);
             g_openc2e_ui_scale = us;
             bd->WantUpdateMonitors = true;
         }
