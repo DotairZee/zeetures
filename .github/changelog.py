@@ -344,7 +344,7 @@ VERSIONS = [
      "View > Creature Frame Rate: choose how smoothly creatures move, from the original 5 per second to 60."),
     ("0.34.1", "8c12ec45",
      "Room heat is saved, so the boiler room no longer starts each session hotter than the volcano; the incubator's cave is lit, so newborns there get less sleepy."),
-    ("0.35.0", "c5ccb1c3",
+    ("0.35.0", "7e0b3908",
      "Preferences gathers every setting in one window; the words creatures learn can be changed per world or for all, with the game's six languages, Nornish and 19 draft translations; speech bubbles and the computers use Fusion Pixel, with Greek, Cyrillic, Japanese, Chinese, Korean, Hebrew, Arabic and Thai; the Creature's View can be resized and its blinking turned off; the status bar's parts can each be hidden; a landing in the lab lift's shaft."),
 ]
 
