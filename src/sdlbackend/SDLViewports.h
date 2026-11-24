@@ -10,6 +10,8 @@
 struct ImDrawData;
 struct SDL_Renderer;
 struct SDL_Texture;
+struct SDL_Surface;
+struct SDL_Rect;
 
 namespace SDLViewports {
 
@@ -23,7 +25,9 @@ void shutdown();
 void renderMainDrawData(ImDrawData* draw_data, SDL_Renderer* main);
 
 // a main-renderer texture's pixels changed (SDLBackend::updateTexture):
-// its mirrors are made again the next time they are drawn
-void textureUpdated(SDL_Texture* tex);
+// its mirrors are made again the next time they are drawn, from `pixels`
+// (what was uploaded, in the texture's format, at `rect` or the whole
+// texture when null) rather than read back from the GPU
+void textureUpdated(SDL_Texture* tex, SDL_Surface* pixels, const SDL_Rect* rect);
 
 } // namespace SDLViewports

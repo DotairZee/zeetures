@@ -463,6 +463,20 @@ bool ImGui_ImplSDL3_ProcessEvent(const SDL_Event* event)
             ImGuiContext& g = *GImGui;
             bool imgui_driven = viewport != ImGui::GetMainViewport() &&
                 ((g.MovingWindow && g.MovingWindow->Viewport == viewport) || (g.ActiveId != 0 && g.ActiveIdWindow && g.ActiveIdWindow->Viewport == viewport));
+            // (openc2e: nor, for a moment after, a place we asked for before
+            // the last: the window manager's late answers still arriving once
+            // a drag has ended put the window back where it was a few frames
+            // earlier, short of where it was dropped)
+            if (event->type == SDL_EVENT_WINDOW_MOVED && !imgui_driven)
+                if (SDL_Window* w = SDL_GetWindowFromID(event->window.windowID))
+                {
+                    SDL_PropertiesID props = SDL_GetWindowProperties(w);
+                    Sint64 asked_at = SDL_GetNumberProperty(props, "openc2e.setpos.ms", 0);
+                    bool latest = SDL_GetNumberProperty(props, "openc2e.setpos.x", INT32_MIN) == event->window.data1 &&
+                                  SDL_GetNumberProperty(props, "openc2e.setpos.y", INT32_MIN) == event->window.data2;
+                    if (asked_at != 0 && !latest && (Sint64)SDL_GetTicks() - asked_at < 500)
+                        imgui_driven = true;
+                }
             if (event->type == SDL_EVENT_WINDOW_MOVED && !imgui_driven)
                 viewport->PlatformRequestMove = true;
             if (event->type == SDL_EVENT_WINDOW_RESIZED && !imgui_driven)
@@ -1130,6 +1144,11 @@ static void ImGui_ImplSDL3_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
 {
     ImGui_ImplSDL3_ViewportData* vd = (ImGui_ImplSDL3_ViewportData*)viewport->PlatformUserData;
     SDL_SetWindowPosition(vd->Window, (int)pos.x, (int)pos.y);
+    // (openc2e: the place asked for, and when: see SDL_EVENT_WINDOW_MOVED)
+    SDL_PropertiesID props = SDL_GetWindowProperties(vd->Window);
+    SDL_SetNumberProperty(props, "openc2e.setpos.x", (int)pos.x);
+    SDL_SetNumberProperty(props, "openc2e.setpos.y", (int)pos.y);
+    SDL_SetNumberProperty(props, "openc2e.setpos.ms", (Sint64)SDL_GetTicks());
 }
 
 static ImVec2 ImGui_ImplSDL3_GetWindowSize(ImGuiViewport* viewport)

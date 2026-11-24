@@ -62,6 +62,7 @@ struct Mirror {
 struct WindowRenderer {
 	SDL_Renderer* renderer = nullptr;
 	std::unordered_map<SDL_Texture*, Mirror> mirrors;
+	bool showPending = false; // shown once its first frame is drawn
 };
 
 const char* const RENDERER_PROP = "zeetures.window.renderer";
@@ -72,6 +73,7 @@ struct Pixels {
 };
 
 SDL_Renderer* s_main = nullptr;
+void (*s_platformShowWindow)(ImGuiViewport*) = nullptr; // imgui_impl_sdl3's
 std::vector<WindowRenderer*> s_windows;
 std::unordered_map<SDL_Texture*, Pixels> s_pixels; // static textures' pixels, read back once
 std::vector<SDL_Texture*> s_gone; // main textures destroyed since the last sweep
@@ -106,8 +108,23 @@ void sweepGone() {
 	s_gone.clear();
 }
 
+bool watching() {
+	static const bool w = getenv("OPENC2E_WATCH_KIT_WINDOWS") != nullptr;
+	return w;
+}
+
 // a main texture's pixels, through the main renderer (nullptr on failure)
 SDL_Surface* readBack(SDL_Texture* t, bool target, int w, int h) {
+	struct Timer {
+		Uint64 t0 = SDL_GetTicksNS();
+		int w, h;
+		bool target;
+		~Timer() {
+			double ms = (SDL_GetTicksNS() - t0) / 1e6;
+			if (watching() && !target && ms > 2)
+				SDL_Log("Kit windows: read back %dx%d in %.1f ms", w, h, ms);
+		}
+	} timer{SDL_GetTicksNS(), w, h, target};
 	SDL_Texture* prev = SDL_GetRenderTarget(s_main);
 	SDL_Surface* got = nullptr;
 	if (target) {
@@ -320,6 +337,7 @@ void rendererCreateWindow(ImGuiViewport* vp) {
 		vp->RendererUserData = kept;
 		return;
 	}
+	Uint64 t0 = SDL_GetTicksNS();
 	auto* wr = new WindowRenderer();
 	// the same kind of renderer as the game window's
 	wr->renderer = SDL_CreateRenderer(window, SDL_GetRendererName(s_main));
@@ -333,6 +351,8 @@ void rendererCreateWindow(ImGuiViewport* vp) {
 	// (the game paces its frames itself; each window waiting for its own
 	// vertical blank would halve the frame rate with two windows)
 	SDL_SetRenderVSync(wr->renderer, 0);
+	if (watching())
+		SDL_Log("Kit windows: made a renderer in %.1f ms", (SDL_GetTicksNS() - t0) / 1e6);
 	vp->RendererUserData = wr;
 	s_windows.push_back(wr);
 	SDL_SetPointerPropertyWithCleanup(SDL_GetWindowProperties(window), RENDERER_PROP, wr, onWindowGone, nullptr);
@@ -365,8 +385,32 @@ void rendererRenderWindow(ImGuiViewport* vp, void*) {
 }
 
 void rendererSwapBuffers(ImGuiViewport* vp, void*) {
-	if (auto* wr = (WindowRenderer*)vp->RendererUserData)
+	auto* wr = (WindowRenderer*)vp->RendererUserData;
+	if (!wr)
+		return;
+	SDL_RenderPresent(wr->renderer);
+	if (wr->showPending) {
+		// its first frame is drawn: show it now, and draw it again so the
+		// first frame seen has the kit in it (a window shown before it was
+		// drawn was black for as long as its first frame took: the first
+		// kit dragged out each session flickered, owner 2026-11-23)
+		wr->showPending = false;
+		if (watching())
+			SDL_Log("Kit windows: shown after its first frame");
+		if (s_platformShowWindow)
+			s_platformShowWindow(vp);
+		rendererRenderWindow(vp, nullptr);
 		SDL_RenderPresent(wr->renderer);
+	}
+}
+
+// imgui_impl_sdl3 shows a window as soon as it is made, before it is drawn;
+// with a renderer of ours it waits for its first frame (rendererSwapBuffers)
+void deferredShowWindow(ImGuiViewport* vp) {
+	if (auto* wr = (WindowRenderer*)vp->RendererUserData)
+		wr->showPending = true;
+	else if (s_platformShowWindow)
+		s_platformShowWindow(vp);
 }
 
 } // namespace
@@ -381,6 +425,10 @@ void init(SDL_Renderer* main) {
 	pio.Renderer_SetWindowSize = rendererSetWindowSize;
 	pio.Renderer_RenderWindow = rendererRenderWindow;
 	pio.Renderer_SwapBuffers = rendererSwapBuffers;
+	if (pio.Platform_ShowWindow != deferredShowWindow) {
+		s_platformShowWindow = pio.Platform_ShowWindow;
+		pio.Platform_ShowWindow = deferredShowWindow;
+	}
 }
 
 void shutdown() {
@@ -396,6 +444,21 @@ void shutdown() {
 void renderMainDrawData(ImDrawData* draw_data, SDL_Renderer* main) {
 	s_frame++;
 	sweepGone();
+	// the font's pixels read back now, at the start (or after it gains
+	// letters), not as the first kit is dragged out
+	if (auto* font = (SDL_Texture*)(intptr_t)ImGui::GetIO().Fonts->TexID) {
+		SDL_PropertiesID props = SDL_GetTextureProperties(font);
+		const Sint64 version = SDL_GetNumberProperty(props, VERSION_PROP, 0);
+		Pixels& kept = s_pixels[font];
+		if (!kept.surface || kept.version != version) {
+			if (!SDL_HasProperty(props, WATCH_PROP))
+				SDL_SetPointerPropertyWithCleanup(props, WATCH_PROP, font, onTextureGone, nullptr);
+			if (kept.surface)
+				SDL_DestroySurface(kept.surface);
+			kept.surface = readBack(font, false, font->w, font->h);
+			kept.version = version;
+		}
+	}
 	// with multi-viewports on, ImGui's coordinates are the desktop's, in the
 	// window system's units: drawn at the window's pixel density (the game
 	// itself draws at the display scale, set by SDLBackend::run)
@@ -408,11 +471,32 @@ void renderMainDrawData(ImDrawData* draw_data, SDL_Renderer* main) {
 	SDL_SetRenderScale(main, sx, sy);
 }
 
-void textureUpdated(SDL_Texture* tex) {
+void textureUpdated(SDL_Texture* tex, SDL_Surface* pixels, const SDL_Rect* rect) {
 	if (!tex || (s_windows.empty() && s_pixels.empty())) // (no copies anywhere: nothing to mark)
 		return;
 	SDL_PropertiesID props = SDL_GetTextureProperties(tex);
-	SDL_SetNumberProperty(props, VERSION_PROP, SDL_GetNumberProperty(props, VERSION_PROP, 0) + 1);
+	const Sint64 version = SDL_GetNumberProperty(props, VERSION_PROP, 0) + 1;
+	SDL_SetNumberProperty(props, VERSION_PROP, version);
+	// a picture already kept is brought up to date from what was uploaded
+	// (the Creature's View's picture changes many times a second: reading
+	// it back each time stalled the GPU)
+	auto kept = s_pixels.find(tex);
+	if (kept == s_pixels.end() || !kept->second.surface || !pixels)
+		return;
+	SDL_Surface* dst = kept->second.surface;
+	SDL_Rect whole{0, 0, dst->w, dst->h};
+	const SDL_Rect& at = rect ? *rect : whole;
+	if (at.w != pixels->w || at.h != pixels->h || at.x < 0 || at.y < 0 || at.x + at.w > dst->w || at.y + at.h > dst->h)
+		return; // (left to be read back)
+	// the pixels as uploaded, without the colour key the surface may carry
+	SDL_Surface* raw = SDL_CreateSurfaceFrom(pixels->w, pixels->h, pixels->format, pixels->pixels, pixels->pitch);
+	if (!raw)
+		return;
+	SDL_SetSurfaceBlendMode(raw, SDL_BLENDMODE_NONE);
+	SDL_Rect to = at;
+	if (SDL_BlitSurface(raw, nullptr, dst, &to))
+		kept->second.version = version;
+	SDL_DestroySurface(raw);
 }
 
 } // namespace SDLViewports

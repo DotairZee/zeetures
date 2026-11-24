@@ -605,7 +605,8 @@ void SDLBackend::updateTexture(Texture& tex, Rect2i location, const Image& image
 			converted->pixels, converted->pitch)) {
 		throw Exception(fmt::format("error updating texture: {}", SDL_GetError()));
 	};
-	SDLViewports::textureUpdated(tex.as<SDL_Texture*>()); // (its copies in kits' windows)
+	// (its copies in kits' windows)
+	SDLViewports::textureUpdated(tex.as<SDL_Texture*>(), converted.get(), location == Rect2i{} ? nullptr : &rect);
 }
 
 int32_t SDLRenderTarget::getWidth() const {
