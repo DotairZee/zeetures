@@ -296,8 +296,6 @@ void DrawHealthKit() {
 		}
 		ImGui::EndTabBar();
 	}
-	KitNoticeSwitches({{lifeLogEntry::fellIll, "Illness"}, {lifeLogEntry::recovered, "Recovery"},
-		{lifeLogEntry::unconscious, "Fainting"}, {lifeLogEntry::cameRound, "Coming round"}});
 }
 
 } // namespace Openc2eImgui

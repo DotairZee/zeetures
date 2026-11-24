@@ -35,18 +35,21 @@ def main():
     parts.append("const Entry entries[] = {\n")
     for name, i, size in names:
         parts.append(f'\t{{"{name}", file{i}, {size}}},\n')
+    if not names:  # (a set with no files yet: an empty entry, skipped)
+        parts.append('\t{nullptr, nullptr, 0},\n')
     parts.append("};\n} // namespace\n\n")
     parts.append(
         f"std::span<const uint8_t> {func}(const std::string& name) {{\n"
         "\tfor (const Entry& e : entries)\n"
-        "\t\tif (name == e.name)\n"
+        "\t\tif (e.name && name == e.name)\n"
         "\t\t\treturn {e.data, e.size};\n"
         "\treturn {};\n"
         "}\n\n"
         f"std::vector<std::string> {func}Names() {{\n"
         "\tstd::vector<std::string> names;\n"
         "\tfor (const Entry& e : entries)\n"
-        "\t\tnames.push_back(e.name);\n"
+        "\t\tif (e.name)\n"
+        "\t\t\tnames.push_back(e.name);\n"
         "\treturn names;\n"
         "}\n"
     )

@@ -1653,7 +1653,6 @@ void DrawOwnersKit() {
 		}
 		ImGui::EndTabBar();
 	}
-	KitNoticeSwitches({{lifeLogEntry::changed, "Changes"}});
 }
 
 } // namespace Openc2eImgui

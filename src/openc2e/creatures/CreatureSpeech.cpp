@@ -17,6 +17,8 @@
  */
 
 #include "CreatureSpeech.h"
+#include "PixelText.h"
+#include "WordLists.h"
 #include "common/devenv.h"
 
 #include "Agent.h"
@@ -54,10 +56,45 @@ bool watching() {
 	return watch;
 }
 
-std::string lower(std::string s) {
-	for (auto& ch : s)
-		ch = (char)std::tolower((unsigned char)ch);
-	return s;
+// (any language's letters: PixelText)
+std::string lower(const std::string& s) {
+	return PixelText::lower(s);
+}
+
+// a line said, for finding words in it: lower case, punctuation as spaces,
+// padded with a space at each end
+std::string spacedText(const std::string& text) {
+	std::u32string out = U" ";
+	for (char32_t c : PixelText::decode(lower(text))) {
+		bool letter = c < 0x80 ? std::isalnum((int)c) != 0 : !((c >= 0x2000 && c <= 0x206F) || (c >= 0x3000 && c <= 0x303F) || (c >= 0xFF00 && c <= 0xFF0F) || (c >= 0xFF1A && c <= 0xFF20) || c == 0xA0 || c == 0xBF || c == 0xA1 || c == 0xAB || c == 0xBB);
+		out += letter ? c : U' ';
+	}
+	out += U' ';
+	return PixelText::encode(out);
+}
+
+// where a word of the list is in such a line (npos: not there). Words of
+// the languages written without spaces (Chinese, Japanese, Thai) are found
+// anywhere in it; the rest only whole.
+size_t findWord(const std::string& spaced, const std::string& word) {
+	std::u32string w = PixelText::decode(word);
+	bool unspaced = !w.empty() && ((w[0] >= 0x2E80 && w[0] <= 0x9FFF) || (w[0] >= 0xF900 && w[0] <= 0xFAFF) || (w[0] >= 0x0E00 && w[0] <= 0x0E7F) || (w[0] >= 0xFF66 && w[0] <= 0xFF9F));
+	if (unspaced)
+		return spaced.find(word);
+	return spaced.find(" " + word + " ");
+}
+
+std::string trim(const std::string& s);
+
+// where a slot of the list is said in such a line: its word now, or the
+// game's English one (understood whatever the world's words: WordLists)
+size_t findSlot(const std::string& spaced, size_t w) {
+	std::string word = lower(trim(engine.wordlist[w]));
+	size_t at = word.empty() ? std::string::npos : findWord(spaced, word);
+	auto& en = WordLists::english();
+	if (at == std::string::npos && w < en.size() && !en[w].empty() && lower(en[w]) != word)
+		at = findWord(spaced, lower(en[w]));
+	return at;
 }
 
 std::string trim(const std::string& s) {
@@ -369,18 +406,11 @@ void hearSpeech(Agent* speaker, const std::string& text, int amount) {
 	if (!speaker || engine.version >= 3 || engine.wordlist.empty())
 		return;
 	// the words in the text: lower case, punctuation as spaces, each padded
-	std::string t = " ";
-	for (char ch : lower(text))
-		t += std::isalnum((unsigned char)ch) || (unsigned char)ch >= 128 ? ch : ' ';
-	t += " ";
+	std::string t = spacedText(text);
 	std::vector<int> heard;
-	for (size_t w = 0; w < engine.wordlist.size(); w++) {
-		std::string word = lower(trim(engine.wordlist[w]));
-		if (word.empty())
-			continue;
-		if (t.find(" " + word + " ") != std::string::npos)
+	for (size_t w = 0; w < engine.wordlist.size(); w++)
+		if (findSlot(t, w) != std::string::npos)
 			heard.push_back((int)w);
-	}
 	hearWords(speaker, heard, amount);
 }
 
@@ -658,19 +688,12 @@ void answerHand(const std::string& text) {
 	Agent* hand = (Agent*)world.hand();
 	if (!hand || engine.version != 2 || engine.wordlist.empty())
 		return;
-	std::string t = " ";
-	for (char ch : lower(text))
-		t += std::isalnum((unsigned char)ch) || (unsigned char)ch >= 128 ? ch : ' ';
-	t += " ";
+	std::string t = spacedText(text);
 	// the list's words in it, in the order said
 	std::vector<std::pair<size_t, int>> said;
-	for (size_t w = 0; w < engine.wordlist.size(); w++) {
-		std::string word = lower(trim(engine.wordlist[w]));
-		if (word.empty())
-			continue;
-		if (size_t at = t.find(" " + word + " "); at != std::string::npos)
+	for (size_t w = 0; w < engine.wordlist.size(); w++)
+		if (size_t at = findSlot(t, w); at != std::string::npos)
 			said.push_back({at, (int)w});
-	}
 	std::sort(said.begin(), said.end());
 	// the words of it, and a name it may be teaching: the one word of at
 	// least two letters that is no word of the list, no creature's name and
@@ -684,6 +707,9 @@ void answerHand(const std::string& text) {
 	auto listed = [&](const std::string& w) {
 		for (auto& l : engine.wordlist)
 			if (lower(trim(l)) == w)
+				return true;
+		for (auto& l : WordLists::english())
+			if (lower(l) == w)
 				return true;
 		return false;
 	};

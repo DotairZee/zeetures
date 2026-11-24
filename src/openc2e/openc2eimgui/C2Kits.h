@@ -49,6 +49,8 @@ void KitLookAt(const std::shared_ptr<Agent>& a);
 
 // Draws every open kit (call once a frame, C2 only).
 void DrawC2Kits();
+// Preferences > Notices: which happenings show on the status bar
+void KitAllNoticeSwitches();
 
 // Draws the chips for minimized kits, in the status bar's horizontal row
 // (and the Hatchery's, when it is minimized).

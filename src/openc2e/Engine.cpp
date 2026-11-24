@@ -46,6 +46,8 @@
 #include "CobManager.h"
 
 #include "Bubble.h"
+#include "PixelText.h"
+#include "WordLists.h"
 #include "Camera.h"
 #include "CompoundAgent.h"
 #include "DullPart.h"
@@ -183,7 +185,8 @@ static std::vector<std::string> read_wordlist(peFile* exefile, PeLanguage lang) 
 		return {};
 	}
 
-	std::string wordlistdata = utf8_to_cp1252(strings[5]);
+	// (kept in UTF-8: any language's letters, PixelText)
+	std::string wordlistdata = strings[5];
 	std::vector<std::string> wordlist;
 	std::string s;
 	for (char i : wordlistdata) {
@@ -327,6 +330,15 @@ void Engine::loadGameData() {
 			for (size_t i = 0; i < wordlist.size(); i++)
 				fmt::print("* WORD {} {}\n", i, wordlist[i]);
 	}
+}
+
+std::vector<std::string> Engine::gameWordList(const std::string& lang) {
+	if (!exefile)
+		return {};
+	static const std::map<std::string, PeLanguage> codes = {{"en", PE_LANGUAGE_ENGLISH}, {"de", PE_LANGUAGE_GERMAN}, {"fr", PE_LANGUAGE_FRENCH},
+		{"it", PE_LANGUAGE_ITALIAN}, {"nl", PE_LANGUAGE_DUTCH}, {"es", PE_LANGUAGE_SPANISH}};
+	auto it = codes.find(lang);
+	return it == codes.end() ? std::vector<std::string>() : read_wordlist(exefile, it->second);
 }
 
 std::string Engine::translateWordlistWord(const std::string& s) {
@@ -1211,6 +1223,9 @@ void Engine::update() {
 //   smooth on|off     smooth movement on or off
 //   rate N            View > Creature Frame Rate set to N (saved)
 //   steps K           creatures drawn K steps a tick (0: every frame)
+//   shot FILE         a picture of the window (BMP)
+//   font F            the world's letters: original, 12, 10 or 8 (saved)
+//   type TEXT         the letters typed on the keyboard, then Return
 // For recording scripted shots with OPENC2E_RECORD.
 static void runDirector() {
 	static const char* file = devenv("OPENC2E_DIRECTOR");
@@ -1357,6 +1372,24 @@ static void runDirector() {
 			auto* ca = dynamic_cast<CreatureAgent*>(world.selectedcreature.get());
 			if (ca && ca->getCreature() && ca->getCreature()->isAlive())
 				ca->getCreature()->die();
+		} else if (cmd == "shot") { // a picture of the window (BMP)
+			std::string file;
+			l >> file;
+			get_backend()->requestScreenshot(file);
+		} else if (cmd == "font") { // the world's letters: original, 12, 10 or 8 (saved)
+			std::string f;
+			l >> f;
+			PixelText::setFace(f == "original" ? PixelText::ORIGINAL : f == "12" ? PixelText::PX12 : f == "8" ? PixelText::PX8 : PixelText::PX10);
+		} else if (cmd == "type") { // letters typed on the keyboard (UTF-8), then Return
+			std::string text;
+			std::getline(l, text);
+			text.erase(0, text.find_first_not_of(" \t"));
+			for (char32_t u : PixelText::decode(text))
+				engine.handleTypedLetter(u);
+			BackendEvent e;
+			e.type = eventrawkeydown;
+			e.key = OPENC2E_KEY_RETURN;
+			engine.handleRawKeyDown(e);
 		}
 		next++;
 	}
@@ -1803,36 +1836,37 @@ void Engine::handleMouseButton(BackendEvent& event) {
 }
 
 void Engine::handleTextInput(BackendEvent& event) {
-	std::string cp1252_text;
+	// any language's letters (owner, 2026-11-23): one event can hold several,
+	// as an input method (Japanese, Chinese, Korean) sends a word at once
+	for (char32_t u : PixelText::decode(event.text))
+		handleTypedLetter(u);
+}
+
+void Engine::handleTypedLetter(char32_t u) {
+	// only letters that print: some systems send Backspace as a character
+	// too, "\b", after its key, and the hand's typing showed it as a block
+	// where the letter had been (a player, 2026-11-22)
+	bool prints = u >= 0x20 && u != 0x7F && !(u >= 0x80 && u < 0xA0);
+	if (!prints)
+		return;
+	// the game's scripts get the letter in Windows-1252, when it has one
+	int translated_char = (int)u;
 	try {
-		cp1252_text = utf8_to_cp1252(event.text);
-	} catch (std::domain_error& e) {
-		// ignore, will be printed next
-	}
-	if (cp1252_text.size() != 1) {
-		fmt::print(stderr, "bad text input: ");
-		for (unsigned char c : event.text) {
-			fmt::print(stderr, "0x{:02x} ", c);
-		}
-		fmt::print(stderr, "\n");
+		std::string b = utf8_to_cp1252(PixelText::encode(u));
+		if (b.size() == 1)
+			translated_char = (unsigned char)b[0];
+	} catch (std::domain_error&) {
 	}
 
-	int translated_char = cp1252_text[0];
-
-	if (cp1252_isprint(translated_char)) {
-		if (version < 3 && !world.focusagent) {
-			Bubble::newBubble(world.hand(), false, std::string());
-		}
+	if (version < 3 && !world.focusagent) {
+		Bubble::newBubble(world.hand(), false, std::string());
 	}
 
-	// tell the agent with keyboard focus (only characters that print: some
-	// systems send Backspace as a character too, "\b", after its key, and
-	// the hand's typing showed it as a block where the letter had been; a
-	// player, 2026-11-22)
-	if (world.focusagent && cp1252_isprint(translated_char)) {
+	// tell the agent with keyboard focus
+	if (world.focusagent) {
 		CompoundPart* t = world.focusagent.get()->part(world.focuspart);
 		if (t && t->canGainFocus())
-			t->handleTranslatedChar(translated_char);
+			t->handleTranslatedChar(u);
 	}
 
 	// notify agents
@@ -2551,6 +2585,9 @@ bool Engine::initialSetup() {
 		}
 		currentworld = w->name;
 		currentworlddir = w->dir;
+		// its words (WordLists: its own, every world's, or the game's)
+		if (version == 2)
+			WordLists::applyForWorld(currentworlddir);
 		cmdline_bootstrap = {Openc2eImgui::WorldFile(w->dir).string()};
 		fmt::print("* World: {}\n", currentworld);
 		// (C2: this fork's name, Zeetures; owner, 2026-11-15)

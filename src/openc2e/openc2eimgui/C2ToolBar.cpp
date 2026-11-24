@@ -19,6 +19,8 @@
 #include "AgentInjector.h"
 #include "C2Kits.h"
 #include "C2EyeView.h"
+#include "PixelText.h"
+#include "WordEditor.h"
 #include "WorldChooser.h"
 #include "common/backend/Backend.h"
 #include "WorldSave.h"
@@ -244,7 +246,7 @@ static const char* GenusName(int genus) {
 // 0.5.0 (2026-11-14, night): every object kept between launches (stage 3).
 // 0.6.0 (2026-11-14, night): signature scents; the hand takes things from
 // creatures and keeps its mode; the gene lab's east end sealed.
-#define OPENC2E_FORK_VERSION "0.34.1"
+#define OPENC2E_FORK_VERSION "0.35.0"
 
 const char* ZeeturesVersion() {
 	return OPENC2E_FORK_VERSION;
@@ -339,6 +341,8 @@ static void DrawCitations() {
 #define FORK_NAME "Zeetures"
 #define FORK_WEB "https://github.com/DotairZee/zeetures"
 static bool s_open_about = false;
+static bool s_prefs_open = false;
+static void DrawPreferences();
 
 // Add Favourite Place (the Camera menu or the + by Places) opens the naming
 // popup on the menu bar's next draw
@@ -377,13 +381,6 @@ static bool s_set_aside_was_paused = false;
 			}
 			ImGui::EndMenu();
 		}
-		if (!engine.currentworlddir.empty()) {
-			bool atlaunch = DefaultWorld() == engine.currentworld;
-			if (ImGui::MenuItem("Open This World at Launch", nullptr, atlaunch))
-				SetDefaultWorld(atlaunch ? "" : engine.currentworld);
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("Starts in this world, without asking which");
-		}
 		if (ImGui::MenuItem("Save World", nullptr, false, !engine.currentworlddir.empty())) {
 			std::string err;
 			s_save_message = WorldSave::SaveWorldState(engine.currentworlddir, err) ? "World saved." : err;
@@ -393,18 +390,6 @@ static bool s_set_aside_was_paused = false;
 			ImGui::SetTooltip("Saves the whole world now: creatures (bodies and minds), eggs and objects. It also saves itself (Autosave, and when you quit).");
 		if (ImGui::MenuItem("Save World As...", nullptr, false, !engine.currentworlddir.empty()))
 			s_open_save_as = true;
-		// openc2e addition (owner, 2026-11-11): saves every few minutes
-		if (ImGui::BeginMenu("Autosave")) {
-			int cur = autosaveMinutes();
-			for (int m : {1, 5, 10, 15, 30})
-				if (ImGui::MenuItem(fmt::format("Every {} minute{}", m, m == 1 ? "" : "s").c_str(), nullptr, cur == m))
-					setAutosaveMinutes(m);
-			if (ImGui::MenuItem("Only when quitting", nullptr, cur == 0))
-				setAutosaveMinutes(0);
-			ImGui::EndMenu();
-		}
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("How often the world saves itself (it always saves when you quit).");
 		ImGui::Separator();
 		ImGui::MenuItem("Export Current Creature...", nullptr, false, false);
 		ImportCreatureMenuItem();
@@ -433,12 +418,10 @@ static bool s_set_aside_was_paused = false;
 			ImGui::EndMenu();
 		}
 		ImGui::Separator();
-		// not in C2's menu: the player's own game folder (GameFolder.cpp)
-		if (ImGui::MenuItem("Creatures 2 Folder..."))
-			GameFolder::chooseAnother(SDL_GetKeyboardFocus());
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Playing from %s\nChoose another folder for the next start",
-				(const char*)GameFolder::currentFolder().u8string().c_str());
+		// the settings that were in the menus and kits, in one window (owner,
+		// 2026-11-23)
+		if (ImGui::MenuItem("Preferences..."))
+			s_prefs_open = true;
 		ImGui::Separator();
 		if (ImGui::MenuItem("Exit"))
 			engine.done = true; // (as the window's close button: paused too)
@@ -465,9 +448,6 @@ static bool s_set_aside_was_paused = false;
 				writeFlag("toolbar-applets", s_show_applets);
 			if (ImGui::MenuItem("Favourites", nullptr, &s_show_favorites))
 				writeFlag("toolbar-favourites", s_show_favorites);
-			ImGui::Separator();
-			if (ImGui::MenuItem("Text Labels", nullptr, &s_text_labels))
-				writeFlag("text-labels", s_text_labels);
 			ImGui::EndMenu();
 		}
 		// not in C2's menu; openc2e addition (owner, 2026-11-11)
@@ -490,35 +470,6 @@ static bool s_set_aside_was_paused = false;
 		}
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("What creatures are thinking, in pictures, when they set about something new");
-		// openc2e addition (owner, 2026-11-23): how smoothly creatures move,
-		// from the game's own five poses a second to every frame (C2 only)
-		if (engine.version == 2) {
-			if (ImGui::BeginMenu("Creature Frame Rate")) {
-				static const std::pair<int, const char*> rates[] = {{5, "5 per Second (Original)"}, {10, "10 per Second (World Pace)"}, {15, "15 per Second"},
-					{20, "20 per Second"}, {30, "30 per Second"}, {60, "60 per Second"}};
-				const int now = SkeletalCreature::creatureFrameRate();
-				for (auto& [rate, label] : rates)
-					if (ImGui::MenuItem(label, nullptr, now == rate))
-						SkeletalCreature::setCreatureFrameRate(rate);
-				ImGui::EndMenu();
-			}
-			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("How often creatures move on screen: the game's own 5 poses a second, or smoothly between them.\nThe world's other objects change about 10 times a second.");
-		}
-		bool statusbar = IsC2StatusBarShown();
-		if (ImGui::MenuItem("Status Bar", nullptr, &statusbar)) {
-			SetC2StatusBarShown(statusbar);
-			writeFlag("status-bar", statusbar);
-		}
-		if (ImGui::MenuItem("ToolTips for Objects", nullptr, &s_object_tips))
-			writeFlag("object-tooltips", s_object_tips);
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Name what the hand rests on: a creature, or the kind of object");
-		bool scrollbars = AreC2ScrollBarsShown();
-		if (ImGui::MenuItem("Scroll Bars", nullptr, &scrollbars)) { // not in C2's menu; openc2e addition
-			SetC2ScrollBarsShown(scrollbars);
-			writeFlag("scroll-bars", scrollbars);
-		}
 		ImGui::Separator();
 		if (ImGui::MenuItem("Full Screen", "F12", get_backend()->isFullscreen()))
 			get_backend()->setFullscreen(!get_backend()->isFullscreen());
@@ -536,10 +487,6 @@ static bool s_set_aside_was_paused = false;
 			ToggleHalo();
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 			ImGui::SetTooltip("A halo over the selected creature (the toolbar's Halo button)");
-		if (ImGui::MenuItem("Smooth Scrolling", nullptr, &s_smooth_scrolling))
-			writeFlag("smooth-scrolling", s_smooth_scrolling);
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Glide to places and creatures you choose, instead of jumping");
 		ImGui::Separator();
 		bool hasfree = false, hasnamed = false;
 		for (auto& f : world.favoriteplaces) {
@@ -685,6 +632,10 @@ static bool s_set_aside_was_paused = false;
 							"is free software under the GNU Lesser General Public License 2.1, and so are " FORK_NAME "'s changes to it.");
 		ImGui::TextDisabled("Based on openc2e " OPENC2E_UPSTREAM_BASE ".");
 		ImGui::TextDisabled("The game's art, sounds and worlds come from your own copy of Creatures 2.");
+		// (the fonts' licences, OFL 1.1, ship beside the program: font-licenses)
+		ImGui::TextDisabled("The world's letters: Fusion Pixel Font by TakWolf (with Ark Pixel, Galmuri by Lee Minseo, and Cubic 11) and "
+							"GNU Unifont by Roman Czyborra, Paul Hardy and contributors, under the SIL Open Font License 1.1, and "
+							"Markus Kuhn's public-domain misc-fixed fonts.");
 		ImGui::Spacing();
 		// openc2e's developers, from its AUTHORS file and its history up to
 		// the commit this fork started from (most commits first)
@@ -746,6 +697,8 @@ static bool s_set_aside_was_paused = false;
 		}
 		ImGui::EndPopup();
 	}
+
+	DrawPreferences();
 
 	// Save World As: a new world folder from the same starting world file,
 	// with the current state saved into it; the session continues there
@@ -1576,6 +1529,280 @@ void DrawC2Toolbar() {
 		ImGui::End();
 	}
 	DrawObjectToolTip();
+}
+
+
+// Preferences (owner, 2026-11-23): the settings from the menus and kits in
+// one window. Kept in the menus too: the toolbars, bubbles, Full Screen,
+// Norn Indicator and File > Sound, flipped during play; the rest only here.
+static void PrefCheck(const char* label, bool& v, const char* flag, const char* tip = nullptr) {
+	if (ImGui::Checkbox(label, &v) && flag)
+		writeFlag(flag, v);
+	if (tip && ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", tip);
+}
+
+static void DrawPreferences() {
+	// developer aid: OPENC2E_OPEN_KITS="prefs" (or "prefs:Words") opens it at a section
+	static const char* testOpen = devenv("OPENC2E_OPEN_KITS") ? strstr(devenv("OPENC2E_OPEN_KITS"), "prefs") : nullptr;
+	static std::string testTab;
+	if (testOpen && world.worldtickcount > 5) {
+		s_prefs_open = true;
+		if (testOpen[5] == ':') {
+			testTab = testOpen + 6;
+			testTab = testTab.substr(0, testTab.find(','));
+		}
+		testOpen = nullptr;
+	}
+	if (!s_prefs_open)
+		return;
+	// each section sizes the window to what it holds (owner, 2026-11-23: no
+	// unused space); Words, a long scrolling list, is tall and can be resized
+	static std::string shownTab;
+	bool words = shownTab == "Words";
+	static bool wasWords = false;
+	if (words) {
+		if (!wasWords)
+			ImGui::SetNextWindowSize(ImVec2(600, 560));
+		ImGui::SetNextWindowSizeConstraints(ImVec2(520, 300), ImVec2(FLT_MAX, FLT_MAX));
+	} else {
+		ImGui::SetNextWindowSizeConstraints(ImVec2(540, 0), ImVec2(540, FLT_MAX));
+	}
+	wasWords = words;
+	ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | (words ? 0 : ImGuiWindowFlags_AlwaysAutoResize);
+	if (!ImGui::Begin("Preferences", &s_prefs_open, flags)) {
+		ImGui::End();
+		return;
+	}
+	auto tab = [&](const char* name) {
+		ImGuiTabItemFlags f = testTab == name ? ImGuiTabItemFlags_SetSelected : 0;
+		bool open = ImGui::BeginTabItem(name, nullptr, f);
+		if (open && testTab == name)
+			testTab.clear();
+		if (open)
+			shownTab = name;
+		return open;
+	};
+	if (ImGui::BeginTabBar("prefs")) {
+		if (tab("Display")) {
+			ImGui::SeparatorText("Letters in the world");
+			{
+				// speech bubbles, the teaching computers, notices (PixelText)
+				static const std::pair<PixelText::Face, const char*> faces[] = {{PixelText::PX10, "Fusion Pixel, 10 pixels"}, {PixelText::PX12, "Fusion Pixel, 12 pixels"},
+					{PixelText::PX8, "Fusion Pixel, 8 pixels"}, {PixelText::ORIGINAL, "The game's own (English letters only)"}};
+				PixelText::Face now = PixelText::face();
+				const char* shown = faces[0].second;
+				for (auto& [f, n] : faces)
+					if (f == now)
+						shown = n;
+				ImGui::SetNextItemWidth(300);
+				if (ImGui::BeginCombo("Font##worldfont", shown)) {
+					for (auto& [f, n] : faces)
+						if (ImGui::Selectable(n, f == now))
+							PixelText::setFace(f);
+					ImGui::EndCombo();
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Speech bubbles, the teaching computers' screens and the world's notices.\nFusion Pixel has every alphabet the word lists use; the game's own font only plain English letters.");
+			}
+			ImGui::SeparatorText("Movement");
+			if (engine.version == 2) {
+				static const std::pair<int, const char*> rates[] = {{5, "5 per second (original)"}, {10, "10 per second (world pace)"}, {15, "15 per second"},
+					{20, "20 per second"}, {30, "30 per second"}, {60, "60 per second"}};
+				const int now = SkeletalCreature::creatureFrameRate();
+				std::string shown = fmt::format("{} per second", now);
+				for (auto& [r, n] : rates)
+					if (r == now)
+						shown = n;
+				ImGui::SetNextItemWidth(300);
+				if (ImGui::BeginCombo("Creature frame rate", shown.c_str())) {
+					for (auto& [r, n] : rates)
+						if (ImGui::Selectable(n, r == now))
+							SkeletalCreature::setCreatureFrameRate(r);
+					ImGui::EndCombo();
+				}
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("How often creatures move on screen: the game's own 5 poses a second, or smoothly between them.\nThe world's other objects change about 10 times a second.");
+			}
+			PrefCheck("Smooth scrolling", s_smooth_scrolling, "smooth-scrolling", "Glide to places and creatures you choose, instead of jumping");
+			ImGui::SeparatorText("Screen");
+			bool statusbar = IsC2StatusBarShown();
+			if (ImGui::Checkbox("Status bar", &statusbar)) {
+				SetC2StatusBarShown(statusbar);
+				writeFlag("status-bar", statusbar);
+			}
+			bool scrollbars = AreC2ScrollBarsShown();
+			if (ImGui::Checkbox("Scroll bars", &scrollbars)) {
+				SetC2ScrollBarsShown(scrollbars);
+				writeFlag("scroll-bars", scrollbars);
+			}
+			PrefCheck("Tooltips for objects", s_object_tips, "object-tooltips", "Name what the hand rests on: a creature, or the kind of object");
+			bool full = get_backend()->isFullscreen();
+			if (ImGui::Checkbox("Full screen (F12)", &full))
+				get_backend()->setFullscreen(full);
+			ImGui::SeparatorText("Toolbars");
+			PrefCheck("Standard", s_show_standard, "toolbar-standard");
+			ImGui::SameLine(0, 18);
+			PrefCheck("Pointer", s_show_pointer, "toolbar-pointer");
+			ImGui::SameLine(0, 18);
+			PrefCheck("Applets", s_show_applets, "toolbar-applets");
+			ImGui::SameLine(0, 18);
+			PrefCheck("Favourites", s_show_favorites, "toolbar-favourites");
+			PrefCheck("Text labels under the buttons", s_text_labels, "text-labels");
+			ImGui::EndTabItem();
+		}
+		if (tab("Creatures")) {
+			ImGui::SeparatorText("Bubbles");
+			bool bubbles = speechBubblesShown();
+			if (ImGui::Checkbox("Speech bubbles", &bubbles))
+				setSpeechBubblesShown(bubbles);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Creatures' words in bubbles (their voices go on; Bibble under Sound)");
+			Thoughts::Mode tm = Thoughts::mode();
+			int t = tm == Thoughts::EVERY ? 0 : tm == Thoughts::SELECTED ? 1 : 2;
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted("Thought bubbles:");
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Every creature", t == 0))
+				Thoughts::setMode(Thoughts::EVERY);
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Selected creature only", t == 1))
+				Thoughts::setMode(Thoughts::SELECTED);
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Off##thoughts", t == 2))
+				Thoughts::setMode(Thoughts::OFF);
+			ImGui::SeparatorText("The selected creature");
+			bool halo = HaloShown();
+			ImGui::BeginDisabled(!CanToggleHalo());
+			if (ImGui::Checkbox("Norn indicator", &halo))
+				ToggleHalo();
+			ImGui::EndDisabled();
+			if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+				ImGui::SetTooltip("A halo over the selected creature (the toolbar's Halo button)");
+			ImGui::SeparatorText("Creature's View");
+			int b = EyeViewBlinking();
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted("The eye's lids:");
+			if (ImGui::RadioButton("Blink, droop when sleepy, close in sleep", b == 0))
+				SetEyeViewBlinking(0);
+			if (ImGui::RadioButton("No blinking: only droop and close with sleep", b == 1))
+				SetEyeViewBlinking(1);
+			if (ImGui::RadioButton("Always open", b == 2))
+				SetEyeViewBlinking(2);
+			ImGui::Spacing();
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted("Size:");
+			for (auto [w, n] : {std::pair<int, const char*>{200, "Small"}, {320, "Normal"}, {480, "Large"}}) {
+				ImGui::SameLine();
+				if (ImGui::Button(n))
+					SetEyeViewWidth(w);
+			}
+			ImGui::SameLine();
+			ImGui::TextDisabled("(or drag the window's corner)");
+			ImGui::EndTabItem();
+		}
+		if (tab("Words")) {
+			DrawWordEditor();
+			ImGui::EndTabItem();
+		}
+		if (tab("Sound")) {
+			bool music = !engine.musicmanager->isMuted();
+			if (ImGui::Checkbox("Ambient music", &music)) {
+				engine.musicmanager->setMuted(!music);
+				engine.musicmanager->setMIDIMuted(!music);
+				writeFlag("ambient-music", music);
+			}
+			bool world_sounds = !soundmanager.isMuted();
+			if (ImGui::Checkbox("World sounds", &world_sounds)) {
+				soundmanager.setMuted(!world_sounds);
+				writeFlag("world-sounds", world_sounds);
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Machines, objects, creatures' noises: every sound but music and speech");
+			bool bibble = !soundmanager.areVoicesMutedByPlayer();
+			if (ImGui::Checkbox("Bibble", &bibble)) {
+				soundmanager.setVoicesMutedByPlayer(!bibble);
+				writeFlag("bibble", bibble);
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Creatures' speech");
+			ImGui::Spacing();
+			ImGui::TextDisabled("(Also under File > Sound)");
+			ImGui::EndTabItem();
+		}
+		if (tab("World")) {
+			ImGui::SeparatorText("Saving");
+			int cur = autosaveMinutes();
+			std::string shown = cur == 0 ? "Only when quitting" : fmt::format("Every {} minute{}", cur, cur == 1 ? "" : "s");
+			ImGui::SetNextItemWidth(220);
+			if (ImGui::BeginCombo("Autosave", shown.c_str())) {
+				for (int m : {1, 5, 10, 15, 30})
+					if (ImGui::Selectable(fmt::format("Every {} minute{}", m, m == 1 ? "" : "s").c_str(), cur == m))
+						setAutosaveMinutes(m);
+				if (ImGui::Selectable("Only when quitting", cur == 0))
+					setAutosaveMinutes(0);
+				ImGui::EndCombo();
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("How often the world saves itself (it always saves when you quit).");
+			if (!engine.currentworlddir.empty()) {
+				bool atlaunch = DefaultWorld() == engine.currentworld;
+				if (ImGui::Checkbox(fmt::format("Open {} at launch", engine.currentworld).c_str(), &atlaunch))
+					SetDefaultWorld(atlaunch ? engine.currentworld : "");
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Starts in this world, without asking which (also in the world chooser)");
+			}
+			ImGui::SeparatorText("Creatures in this world");
+			ImGui::Checkbox("All creatures fertile", &world.allFertile);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Unticked, no creature conceives or fathers young, except those set fertile in the Breeder's Kit.\nA creature's own setting there always wins.");
+			int limit = populationLimit();
+			bool on = limit > 0;
+			if (ImGui::Checkbox("Limit the number of creatures", &on)) {
+				int creatures = 0;
+				for (auto& a : world.agents)
+					if (a && dynamic_cast<CreatureAgent*>(a.get()) && !a->isDying())
+						creatures++;
+				setPopulationLimit(on ? std::max(creatures, 16) : 0);
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Counts every creature: norns, grendels and ettins.\nAt the limit, creatures stop mating, and eggs of every kind wait to hatch until there are fewer.");
+			if (on) {
+				ImGui::SameLine();
+				ImGui::TextUnformatted("at most");
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(110);
+				int v = limit;
+				if (ImGui::InputInt("##poplimit", &v, 1, 10))
+					setPopulationLimit(std::clamp(v, 2, 999));
+			}
+			ImGui::SeparatorText("The game");
+			bool packs = readPlayerSetting("breed-packs") != "off";
+			if (ImGui::Checkbox("Recommended breed packs", &packs))
+				writePlayerSetting("breed-packs", packs ? "on" : "off");
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Boney Grendels and Frog Norns V3, fetched from the community archive the first time a world runs without them (from the next start)");
+			if (ImGui::Button("Creatures 2 folder..."))
+				GameFolder::chooseAnother(SDL_GetKeyboardFocus());
+			ImGui::SameLine();
+			ImGui::PushTextWrapPos(0);
+			ImGui::TextDisabled("%s", (const char*)GameFolder::currentFolder().u8string().c_str());
+			ImGui::PopTextWrapPos();
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Choose another folder for the next start");
+			ImGui::EndTabItem();
+		}
+		if (tab("Notices")) {
+			KitAllNoticeSwitches();
+			ImGui::EndTabItem();
+		}
+		if (tab("Updates")) {
+			UpdaterPreferences();
+			ImGui::EndTabItem();
+		}
+		ImGui::EndTabBar();
+	}
+	ImGui::End();
 }
 
 } // namespace Openc2eImgui

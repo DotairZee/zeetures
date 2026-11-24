@@ -1,4 +1,5 @@
 #include "TextEntryPart.h"
+#include "PixelText.h"
 
 #include "Agent.h"
 #include "Engine.h"
@@ -38,10 +39,19 @@ int TextEntryPart::handleClick(float, float) {
 	return -1; // TODO: this shouldn't be passed onto the parent agent?
 }
 
-void TextEntryPart::handleTranslatedChar(unsigned char c) {
-	if (!cp1252_isprint(c)) {
+void TextEntryPart::handleTranslatedChar(char32_t u) {
+	// (C3's text parts keep Windows-1252: a letter it lacks is left out)
+	std::string one = PixelText::encode(u);
+	std::string b;
+	try {
+		b = utf8_to_cp1252(one);
+	} catch (std::domain_error&) {
 		return;
 	}
+	if (b.size() != 1 || !cp1252_isprint((unsigned char)b[0])) {
+		return;
+	}
+	char c = b[0];
 	text.insert(caretpos, 1, c);
 	caretpos++;
 	recalculateData();

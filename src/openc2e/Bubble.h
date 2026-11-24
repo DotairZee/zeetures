@@ -77,7 +77,7 @@ class BubblePart : public CompoundPart {
 	bool canGainFocus() override { return editable; }
 	void gainFocus() override;
 	void loseFocus() override;
-	void handleTranslatedChar(unsigned char c) override;
+	void handleTranslatedChar(char32_t c) override;
 	void handleRawKey(uint8_t key) override;
 };
 

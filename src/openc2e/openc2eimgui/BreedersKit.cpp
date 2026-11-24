@@ -1978,7 +1978,6 @@ void DrawBreedersKit() {
 		}
 		ImGui::EndTabBar();
 	}
-	KitNoticeSwitches({{lifeLogEntry::birth, "Births"}, {lifeLogEntry::pregnancy, "Pregnancies"}, {lifeLogEntry::eggLaid, "Eggs laid"}});
 }
 
 } // namespace Openc2eImgui

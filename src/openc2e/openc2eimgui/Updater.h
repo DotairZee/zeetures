@@ -11,6 +11,8 @@ namespace Openc2eImgui {
 void UpdaterTick();
 // the Help menu's items
 void UpdaterMenuItems();
+// Preferences > Updates: checking and installing automatically
+void UpdaterPreferences();
 // looks for a new version now and says what it found (Help > Check for
 // Updates, and About Zeetures)
 void CheckForUpdatesNow();

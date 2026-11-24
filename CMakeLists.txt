@@ -273,6 +273,10 @@ add_library(openc2e_core OBJECT
 	src/openc2e/creatures/Biochemistry.cpp
 	src/openc2e/Blackboard.cpp
 	src/openc2e/Bubble.cpp
+	src/openc2e/PixelText.cpp
+	src/openc2e/WordLists.cpp
+	src/openc2e/openc2eimgui/UiFont.cpp
+	src/openc2e/openc2eimgui/WordEditor.cpp
 	src/openc2e/bytecode.cpp
 	src/openc2e/creatures/c2eBrain.cpp
 	src/openc2e/CallButton.cpp
@@ -310,6 +314,7 @@ add_library(openc2e_core OBJECT
 	${GEN}/cmddata.cpp
 	${GEN}/embedded_files.cpp
 	${GEN}/embedded_additions.cpp
+	${GEN}/embedded_wordlists.cpp
 	src/openc2e/Additions.cpp
 	src/openc2e/madeart/MadeArt.cpp
 	src/openc2e/madeart/pillarfoot.cpp
@@ -456,6 +461,7 @@ endif()
 add_executable(test_openc2e
 	src/openc2e/tests/CaosTest.cpp
 	src/openc2e/tests/WorldSaveTest.cpp
+	src/openc2e/tests/PixelTextTest.cpp
 )
 target_link_libraries(test_openc2e openc2e_core gtest_main)
 
@@ -519,6 +525,13 @@ set(EMBEDDED_FILES
 	${SRC}/data/hatchery/nests.txt
 	${SRC}/data/thoughts/icons.png
 	${SRC}/data/help/help-topics.md
+	${SRC}/data/fonts/fusion-12.zpf
+	${SRC}/data/fonts/fusion-10.zpf
+	${SRC}/data/fonts/fusion-8.zpf
+	${SRC}/data/fonts/fixed-6x10.zpf
+	${SRC}/data/fonts/fixed-5x8.zpf
+	${SRC}/data/fonts/fixed-6x13.zpf
+	${SRC}/data/fonts/unifont-part.zpf
 	${SRC}/CITATIONS.md)
 add_custom_command(
 	OUTPUT ${GEN}/embedded_files.cpp
@@ -534,6 +547,15 @@ add_custom_command(
 	OUTPUT ${GEN}/embedded_additions.cpp
 	COMMAND ${Python_EXECUTABLE} scripts/embed_files.py ${GEN}/embedded_additions.cpp --func EmbeddedAddition ${ADDITION_FILES}
 	DEPENDS scripts/embed_files.py ${ADDITION_FILES}
+	WORKING_DIRECTORY ${SRC})
+
+# Zeetures's draft translations of the word list (data/words), built in
+file(GLOB WORDLIST_FILES CONFIGURE_DEPENDS ${SRC}/data/words/*.txt)
+list(SORT WORDLIST_FILES)
+add_custom_command(
+	OUTPUT ${GEN}/embedded_wordlists.cpp
+	COMMAND ${Python_EXECUTABLE} scripts/embed_files.py ${GEN}/embedded_wordlists.cpp --func EmbeddedWordList ${WORDLIST_FILES}
+	DEPENDS scripts/embed_files.py ${WORDLIST_FILES}
 	WORKING_DIRECTORY ${SRC})
 
 # Zeetures's own sprites for the world additions (art/sprites, drawn from
@@ -553,6 +575,8 @@ install(FILES
 	README.md
 	DESTINATION "."
 )
+# the licences of the fonts the world's text is drawn with (data/fonts)
+install(DIRECTORY data/fonts/LICENSES/ DESTINATION "font-licenses")
 install(TARGETS
 	openc2e
 	DESTINATION "."

@@ -1387,31 +1387,22 @@ static void DrawNursery() {
 		ImGui::Dummy(ImVec2(1, 2));
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Creatures in the world: %d", norns);
-		// whether the world's creatures can breed at all (owner, 2026-11-14:
-		// on the same line, left of the limit); each creature's own setting in
-		// the Breeder's Kit overrides this
-		ImGui::SameLine(0, 24);
-		ImGui::Checkbox("All creatures fertile", &world.allFertile);
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Unticked, no creature conceives or fathers young, except those set fertile in the Breeder's Kit.\nA creature's own setting there always wins.");
-		ImGui::SameLine(0, 24);
-		if (ImGui::Checkbox("Limit the number of creatures", &on))
-			setPopulationLimit(on ? std::max(norns, 16) : 0);
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Counts every creature: norns, grendels and ettins.\nAt the limit, creatures stop mating, and eggs of every kind wait to hatch until there are fewer.");
+		// (the limit and fertility are set in Preferences > World now: owner,
+		// 2026-11-23; shown here)
 		if (on) {
-			ImGui::SameLine();
-			ImGui::TextUnformatted("at most");
-			ImGui::SameLine();
-			ImGui::SetNextItemWidth(110);
-			int v = limit;
-			if (ImGui::InputInt("##poplimit", &v, 1, 10))
-				setPopulationLimit(std::clamp(v, 2, 999));
+			ImGui::SameLine(0, 12);
+			ImGui::TextDisabled("(at most %d)", limit);
 			if (norns >= limit) {
 				ImGui::SameLine(0, 12);
 				ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kGold), "At the limit");
 			}
 		}
+		if (!world.allFertile) {
+			ImGui::SameLine(0, 12);
+			ImGui::TextDisabled("Breeding off");
+		}
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Set in File > Preferences > World");
 	}
 
 }

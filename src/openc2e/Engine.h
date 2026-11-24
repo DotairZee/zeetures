@@ -42,7 +42,6 @@ class Engine {
 	unsigned int lasttimestamp;
 
 	bool w_down, a_down, s_down, d_down;
-	std::map<std::string, std::string> wordlist_translations;
 
 	bool cmdline_enable_sound;
 	bool cmdline_norun;
@@ -62,13 +61,15 @@ class Engine {
 	void handleMouseMove(BackendEvent& event);
 	void handleMouseButton(BackendEvent& event);
 	void handleTextInput(BackendEvent& event);
-	void handleRawKeyDown(BackendEvent& event);
 	void handleRawKeyUp(BackendEvent& event);
 
 	class peFile* exefile;
 	void loadGameData();
 
   public:
+	// a letter typed (any language), as from the keyboard
+	void handleTypedLetter(char32_t letter);
+	void handleRawKeyDown(BackendEvent& event);
 	std::map<std::string, caosValue> eame_variables; // non-serialised
 
 	std::shared_ptr<class NetBackend> net;
@@ -86,7 +87,10 @@ class Engine {
 	std::shared_ptr<class RenderTarget> zoomtarget;
 
 	std::vector<std::string> wordlist;
+	std::map<std::string, std::string> wordlist_translations; // the game's English word -> the one in use (WordLists)
 	std::string translateWordlistWord(const std::string& s);
+	// the game's own word list in a language its program holds (en de fr it nl es; UTF-8)
+	std::vector<std::string> gameWordList(const std::string& lang);
 	class peFile* getExeFile() {
 		return exefile;
 	}

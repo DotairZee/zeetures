@@ -1,0 +1,84 @@
+* Tiếng Việt (Vietnamese)
+* Draft translation for Zeetures; corrections welcome.
+0 ở
+1 đẩy
+2 kéo
+3 dừng
+4 đến
+5 chạy
+6 lấy
+7 thả
+8 sao
+9 nghỉ
+10 trái
+11 phải
+12 ăn
+13 đánh
+14
+15
+16 tôi
+17 tay
+18 nút
+19 thiên nhiên
+20 cây
+21 trứng
+22 đồ ăn
+23 đồ uống
+24 máy bán
+25 dụng cụ
+26 vách đá
+27 rác
+28 thuốc
+29 đồ chơi
+30 thời tiết
+31 cây độc
+32 tổ
+33 bọ độc
+34 bọ
+35 thú dữ
+36 con vật
+37 hạt
+38 lá
+39 rễ
+40 hoa
+41 quả
+42 xe
+43 thang máy
+44 máy tính
+45 đài
+46 tin nhắn
+47 cửa
+48 lò ấp
+49 dịch chuyển
+50
+51 máy
+52 Norn
+53 Grendel
+54 Ettin
+55 Shee
+56 đau
+57 buồn
+58 đói
+59 lạnh
+60 nóng
+61 mệt
+62 buồn ngủ
+63 cô đơn
+64 chật
+65 sợ
+66 chán
+67 giận
+68 thân thiện
+69 bị thương
+70 nghẹn
+71 khát
+72 căng thẳng
+73 vâng
+74 không
+75 nhìn
+76 gì
+77 rất
+78 thật
+79 quá
+80 cực kỳ
+81 vô cùng

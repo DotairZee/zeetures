@@ -65,7 +65,6 @@ void OpenGraveyardAt(const std::string& moniker) {
 }
 
 static void graveyardNoticeSwitches() {
-	KitNoticeSwitches({{lifeLogEntry::death, "Deaths"}, {lifeLogEntry::together, "Grew old together"}});
 }
 
 void DrawGraveyardKit() {

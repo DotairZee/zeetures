@@ -563,15 +563,27 @@ void CheckForUpdatesNow() {
 void UpdaterMenuItems() {
 	if (ImGui::MenuItem("Check for Updates..."))
 		CheckForUpdatesNow();
+}
+
+// Preferences > Updates (owner, 2026-11-23: from the Help menu)
+void UpdaterPreferences() {
 	bool on = checkOn(), au = autoOn();
-	if (ImGui::MenuItem("Check for Updates Automatically", nullptr, on))
-		writePlayerSetting("update-check", on ? "0" : "1");
-	if (ImGui::MenuItem("Install Updates Automatically", nullptr, au, on && install().kind != Kind::none))
-		writePlayerSetting("update-auto", au ? "0" : "1");
+	if (ImGui::Checkbox("Check for updates automatically", &on))
+		writePlayerSetting("update-check", on ? "1" : "0");
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("When Zeetures starts, and every six hours while it runs");
+	ImGui::BeginDisabled(!on || install().kind == Kind::none);
+	if (ImGui::Checkbox("Install updates automatically", &au))
+		writePlayerSetting("update-auto", au ? "1" : "0");
+	ImGui::EndDisabled();
 	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 		ImGui::SetTooltip(install().kind == Kind::none ? "This copy cannot update itself: get new versions from the download page"
 													   : "Download new versions without asking, and install them when you quit");
+	ImGui::Spacing();
+	if (ImGui::Button("Check for updates now"))
+		CheckForUpdatesNow();
 }
+
 
 void UpdaterAtExit() {
 	fs::path file;

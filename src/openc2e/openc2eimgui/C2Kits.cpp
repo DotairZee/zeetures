@@ -129,21 +129,35 @@ bool KitNoticeShown(int kind) {
 	return s_notices_off.count(kind) == 0;
 }
 
-void KitNoticeSwitches(std::initializer_list<std::pair<int, const char*>> kinds) {
-	ImGui::Separator();
-	ImGui::AlignTextToFramePadding();
-	ImGui::TextUnformatted("Notices on the status bar:");
-	if (ImGui::IsItemHovered())
-		ImGui::SetTooltip("Untick one to stop its notices appearing on the status bar.\nThe life log still records them.");
-	for (auto& [kind, label] : kinds) {
-		ImGui::SameLine();
-		bool on = KitNoticeShown(kind);
-		if (ImGui::Checkbox(fmt::format("{}##notice{}", label, kind).c_str(), &on)) {
-			if (on)
-				s_notices_off.erase(kind);
-			else
-				s_notices_off.insert(kind);
-			ImGui::MarkIniSettingsDirty();
+// Preferences > Notices (owner, 2026-11-23: moved there from the kits)
+void KitAllNoticeSwitches() {
+	ImGui::TextWrapped("Which happenings show as notices on the status bar. The life log records them all either way.");
+	ImGui::Spacing();
+	struct Row {
+		const char* kit;
+		std::vector<std::pair<int, const char*>> kinds;
+	};
+	static const Row rows[] = {
+		{"Breeding", {{lifeLogEntry::birth, "Births"}, {lifeLogEntry::pregnancy, "Pregnancies"}, {lifeLogEntry::eggLaid, "Eggs laid"}}},
+		{"Health", {{lifeLogEntry::fellIll, "Illness"}, {lifeLogEntry::recovered, "Recovery"}, {lifeLogEntry::unconscious, "Fainting"}, {lifeLogEntry::cameRound, "Coming round"}}},
+		{"Deaths", {{lifeLogEntry::death, "Deaths"}, {lifeLogEntry::together, "Grew old together"}}},
+		{"Changes", {{lifeLogEntry::changed, "Changes made in the Owner's Kit"}}},
+	};
+	for (auto& r : rows) {
+		ImGui::SeparatorText(r.kit);
+		bool first = true;
+		for (auto& [kind, label] : r.kinds) {
+			if (!first)
+				ImGui::SameLine(0, 18);
+			first = false;
+			bool on = KitNoticeShown(kind);
+			if (ImGui::Checkbox(fmt::format("{}##notice{}", label, kind).c_str(), &on)) {
+				if (on)
+					s_notices_off.erase(kind);
+				else
+					s_notices_off.insert(kind);
+				ImGui::MarkIniSettingsDirty();
+			}
 		}
 	}
 }

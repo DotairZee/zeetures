@@ -67,7 +67,7 @@ void CompoundPart::loseFocus() {
 	throw Exception("impossible loseFocus() call");
 }
 
-void CompoundPart::handleTranslatedChar(unsigned char) {
+void CompoundPart::handleTranslatedChar(char32_t) {
 	throw Exception("impossible handleTranslatedChar() call");
 }
 

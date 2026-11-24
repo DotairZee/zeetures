@@ -18,6 +18,7 @@
  */
 
 #include "VoiceData.h"
+#include "PixelText.h"
 
 #include "Catalogue.h"
 #include "common/Exception.h"
@@ -108,8 +109,9 @@ std::vector<VoiceEntry> VoiceData::GetSyllablesFor(std::string speech) {
 }
 
 std::vector<unsigned int> VoiceData::GetSentenceFor(std::string speech) {
-	// we work in lowercase
-	std::transform(speech.begin(), speech.end(), speech.begin(), (int (*)(int))tolower);
+	// we work in lowercase, in a-z (the word in any language spelled so:
+	// PixelText::voiceSpelling)
+	speech = PixelText::voiceSpelling(speech);
 
 	// we want the string in the form ' word word ', compressing multiple spaces into one;
 	// we rewrite the letters as 0-25 and spaces to 26

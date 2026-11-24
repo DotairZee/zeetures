@@ -18,6 +18,7 @@
 #include "creatures/oldCreature.h"
 #include "Room.h"
 #include "common/Image.h"
+#include "creatures/CreatureSpeech.h" // readPlayerSetting
 #include "fileformats/genomeFile.h"
 
 #include <algorithm>
@@ -50,10 +51,29 @@ class EyeViewCamera : public Camera {
 };
 
 static bool s_eye_view_open = false;
+static float s_eye_view_resize = 0; // (Preferences: a size asked for)
+static int s_blinking = -1;
 static std::unique_ptr<EyeViewCamera> s_camera;
 static std::shared_ptr<RenderTarget> s_target;
 static AgentRef s_followed;
 static float s_cx = 0, s_cy = 0; // the view's center, in world pixels
+
+int EyeViewBlinking() {
+	if (s_blinking < 0) {
+		std::string v = readPlayerSetting("eye-blink");
+		s_blinking = v == "sleep" ? 1 : v == "never" ? 2 : 0;
+	}
+	return s_blinking;
+}
+
+void SetEyeViewBlinking(int mode) {
+	s_blinking = std::clamp(mode, 0, 2);
+	writePlayerSetting("eye-blink", s_blinking == 1 ? "sleep" : s_blinking == 2 ? "never" : "all");
+}
+
+void SetEyeViewWidth(int width) {
+	s_eye_view_resize = (float)std::clamp(width, 120, 960);
+}
 
 bool IsEyeViewOpen() {
 	return s_eye_view_open;
@@ -238,7 +258,7 @@ float noise2(int x, int y) {
 
 // The view, then the eye over it: whatever is not the pupil is iris,
 // white of the eye or lid. Built as a picture each frame (the eye moves).
-static void drawThroughEye(ImTextureID view, ImVec2 o, Agent* c, Creature* cr) {
+static void drawThroughEye(ImTextureID view, ImVec2 o, ImVec2 size, Agent* c, Creature* cr) {
 	EyeState& e = s_eye;
 	if (e.who != world.selectedcreature) {
 		e.who = world.selectedcreature;
@@ -263,15 +283,20 @@ static void drawThroughEye(ImTextureID view, ImVec2 o, Agent* c, Creature* cr) {
 	e.pupil += (wantPupil - e.pupil) * 0.08f;
 	// the lids: a blink every few seconds, drooping as it grows sleepy,
 	// shut in sleep (and in death)
+	// (Preferences: blinks can be left out, or the lids kept open; a
+	// player, 2026-11-23: "as a player it's pretty distracting sometimes")
+	int blinks = EyeViewBlinking();
 	if (now >= e.nextBlink) {
-		e.blinkUntil = now + 2;
+		e.blinkUntil = blinks == 0 ? now + 2 : 0;
 		e.nextBlink = now + 30 + (unsigned int)(noise2((int)now, 7) * 50);
 	}
 	float wantOpen = asleep || dead ? 0.0f : now < e.blinkUntil ? 0.05f : 1.0f - 0.5f * std::clamp((sleepy - 0.5f) / 0.5f, 0.0f, 1.0f);
+	if (blinks == 2)
+		wantOpen = 1.0f;
 	e.open += (wantOpen - e.open) * (now < e.blinkUntil ? 0.7f : 0.25f);
 
 	ImDrawList* dl = ImGui::GetWindowDrawList();
-	ImVec2 o1(o.x + VIEW_W, o.y + VIEW_H);
+	ImVec2 o1(o.x + size.x, o.y + size.y);
 	dl->PushClipRect(o, o1, true);
 	// what it sees: rippling under water, doubled when hurt
 	if (underwater) {
@@ -280,7 +305,7 @@ static void drawThroughEye(ImTextureID view, ImVec2 o, Agent* c, Creature* cr) {
 		for (int i = 0; i < strips; i++) {
 			float v0 = (float)i / strips, v1 = (float)(i + 1) / strips;
 			float dx = 4.0f * std::sin(t + i * 0.6f);
-			dl->AddImage(view, ImVec2(o.x + dx, o.y + v0 * VIEW_H), ImVec2(o1.x + dx, o.y + v1 * VIEW_H), ImVec2(0, v0), ImVec2(1, v1));
+			dl->AddImage(view, ImVec2(o.x + dx, o.y + v0 * size.y), ImVec2(o1.x + dx, o.y + v1 * size.y), ImVec2(0, v0), ImVec2(1, v1));
 		}
 		dl->AddRectFilled(o, o1, IM_COL32(20, 90, 110, 70));
 	} else
@@ -439,13 +464,37 @@ void DrawEyeView() {
 	// it does not see itself; owner, 2026-11-13)
 	world.drawWorld(s_camera.get(), s_target.get(), false, nullptr, false, c);
 
-	ImGui::SetNextWindowSize(ImVec2(VIEW_W + 16, VIEW_H + 62), ImGuiCond_FirstUseEver);
-	if (ImGui::Begin("Creature's View", &s_eye_view_open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar)) {
+	// any size, dragged by its corner, keeping the picture's shape (a
+	// player, 2026-11-23: "a click-n-draggable size changer"); remembered
+	// ("eye-view-width" in settings.txt)
+	const float padW = 16, padH = 62;
+	static float savedW = -1;
+	if (savedW < 0) {
+		savedW = (float)atoi(readPlayerSetting("eye-view-width").c_str());
+		if (savedW < 120)
+			savedW = VIEW_W;
+		ImGui::SetNextWindowSize(ImVec2(savedW + padW, savedW * 3 / 4 + padH));
+	}
+	if (s_eye_view_resize > 0) {
+		ImGui::SetNextWindowSize(ImVec2(s_eye_view_resize + padW, s_eye_view_resize * 3 / 4 + padH));
+		s_eye_view_resize = 0;
+	}
+	ImGui::SetNextWindowSizeConstraints(ImVec2(120 + padW, 90 + padH), ImVec2(960 + padW, 720 + padH), [](ImGuiSizeCallbackData* d) {
+		float w = std::clamp(d->DesiredSize.x - 16, 120.0f, 960.0f);
+		d->DesiredSize = ImVec2(w + 16, std::round(w * 3 / 4) + 62);
+	});
+	if (ImGui::Begin("Creature's View", &s_eye_view_open, ImGuiWindowFlags_NoScrollbar)) {
 		void* tex = s_target->getNativeTexture();
+		float w = std::max(120.0f, ImGui::GetContentRegionAvail().x);
+		ImVec2 size(w, std::round(w * 3 / 4));
 		if (tex) {
 			ImVec2 o = ImGui::GetCursorScreenPos();
-			ImGui::Dummy(ImVec2(VIEW_W, VIEW_H));
-			drawThroughEye((ImTextureID)(uintptr_t)tex, o, c, cr);
+			ImGui::Dummy(size);
+			drawThroughEye((ImTextureID)(uintptr_t)tex, o, size, c, cr);
+		}
+		if (std::fabs(w - savedW) >= 1 && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+			savedW = w;
+			writePlayerSetting("eye-view-width", std::to_string((int)w));
 		}
 		if (cr && cr->isAsleep())
 			ImGui::TextUnformatted("Asleep");

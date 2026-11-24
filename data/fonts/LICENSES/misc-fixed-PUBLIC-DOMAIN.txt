@@ -1,0 +1,5 @@
+misc-fixed fonts (6x10, 6x13, 5x8), by Markus Kuhn and contributors
+https://www.cl.cam.ac.uk/~mgk25/ucs-fonts.html
+
+Public domain. The fonts state: "Public domain font.  Share and enjoy."
+Zeetures carries their Hebrew (6x10, 5x8) and Thai (6x13) letters.

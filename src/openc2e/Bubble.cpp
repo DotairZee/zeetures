@@ -18,6 +18,7 @@
  */
 
 #include "Bubble.h"
+#include "PixelText.h"
 
 #include "Additions.h"
 #include "creatures/CreatureSpeech.h"
@@ -197,12 +198,8 @@ BubblePart::BubblePart(Bubble* p, unsigned int _id, int x, int y, unsigned int t
 }
 
 void BubblePart::partRender(RenderTarget* renderer, int xoffset, int yoffset) {
-	unsigned int charpos = 0;
-	for (unsigned char c : text) {
-		assert(c < charsetsprite->numframes()); // handled in setText
-		renderer->renderCreaturesImage(charsetsprite, c, xoffset + x + textoffset + charpos, yoffset + y);
-		charpos += charsetsprite->width(c) + 1;
-	}
+	// (any language's letters: PixelText)
+	PixelText::draw(renderer, xoffset + x + textoffset, yoffset + y, text, textcolour, charsetsprite.get());
 }
 
 void BubblePart::gainFocus() {
@@ -213,8 +210,8 @@ void BubblePart::loseFocus() {
 	parent->kill();
 }
 
-void BubblePart::handleTranslatedChar(unsigned char c) {
-	setText(text + (char)c);
+void BubblePart::handleTranslatedChar(char32_t c) {
+	setText(text + PixelText::encode(c));
 }
 
 void BubblePart::handleRawKey(uint8_t key) {
@@ -224,11 +221,7 @@ void BubblePart::handleRawKey(uint8_t key) {
 				loseFocus();
 				return;
 			}
-			{
-				std::string s = text;
-				s.erase(s.begin() + (s.size() - 1));
-				setText(s);
-			}
+			setText(PixelText::dropLast(text));
 			if (text.size() == 0) {
 				loseFocus();
 				return;
@@ -254,20 +247,13 @@ unsigned int BubblePart::poseForWidth(unsigned int width) {
 }
 
 void BubblePart::setText(std::string str) {
-	unsigned int twidth = 0;
+	// the letters the chosen font can draw (the game's own lacks all but
+	// plain English ones)
 	std::string newtext;
-	for (unsigned char c : str) {
-		if (c >= charsetsprite->numframes()) {
-			// skip accented characters when we only have CHARSET.DTA
-			// TODO: convert to non-accented characters (CP1252->ASCII)
-			continue;
-		}
-		twidth += charsetsprite->width(c) + 1;
-		newtext.push_back(c);
-	}
-	if (twidth > 0) {
-		twidth -= 1;
-	}
+	for (char32_t c : PixelText::decode(str))
+		if (PixelText::canDraw(c, charsetsprite.get()))
+			newtext += PixelText::encode(c);
+	unsigned int twidth = PixelText::width(newtext, charsetsprite.get());
 
 	if (engine.version == 2) {
 		unsigned int pose = poseForWidth(twidth);
@@ -385,11 +371,7 @@ void AnnouncementTextPart::layout() {
 	if (!charset)
 		return;
 	auto widthOf = [&](const std::string& w) {
-		unsigned int n = 0;
-		for (unsigned char c : w)
-			if (c < charset->numframes())
-				n += charset->width(c) + 1;
-		return n;
+		return (unsigned int)PixelText::width(w, charset.get());
 	};
 	std::string line;
 	std::string word;
@@ -419,21 +401,14 @@ void AnnouncementTextPart::layout() {
 	flushWord();
 	if (!line.empty())
 		lines.push_back(line);
-	unsigned int lh = charset->numframes() > 'A' ? charset->height('A') + 2 : 12;
+	unsigned int lh = PixelText::lineHeight(charset.get()) + 2;
 	height = lh * lines.size();
 }
 
 void AnnouncementTextPart::partRender(RenderTarget* renderer, int xoffset, int yoffset) {
 	if (!charset)
 		return;
-	unsigned int lh = charset->numframes() > 'A' ? charset->height('A') + 2 : 12;
-	for (size_t i = 0; i < lines.size(); i++) {
-		unsigned int charpos = 0;
-		for (unsigned char c : lines[i]) {
-			if (c >= charset->numframes())
-				continue;
-			renderer->renderCreaturesImage(charset, c, xoffset + x + charpos, yoffset + y + (int)(i * lh));
-			charpos += charset->width(c) + 1;
-		}
-	}
+	unsigned int lh = PixelText::lineHeight(charset.get()) + 2;
+	for (size_t i = 0; i < lines.size(); i++)
+		PixelText::draw(renderer, xoffset + x, yoffset + y + (int)(i * lh), lines[i], colour, charset.get());
 }

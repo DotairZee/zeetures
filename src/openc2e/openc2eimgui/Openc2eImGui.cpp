@@ -14,6 +14,8 @@
 #include "Engine.h"
 #include "Hatchery.h"
 #include "MainMenu.h"
+#include "UiFont.h"
+#include "common/backend/Backend.h"
 #include "common/Exception.h"
 
 #include <imgui.h>
@@ -26,6 +28,8 @@ void Init() {
 	// crashed here at startup)
 	if (!ImGui::GetCurrentContext())
 		return;
+	// (letters of any alphabet for the program's own windows: UiFont)
+	g_beforeUiFrame = Openc2eImgui::UiFontUpdate;
 	{
 		// {
 		// 	io.Fonts->Clear();

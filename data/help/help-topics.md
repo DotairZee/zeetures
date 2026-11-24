@@ -29,7 +29,7 @@ Zeetures runs the world of Creatures 2 from your own copy of the game, with crea
 - **Wheel, or two fingers on a touchpad:** move the view in any direction.
 - **Middle button, held and dragged:** pull the world about.
 - **Ctrl and wheel, or a two-finger pinch:** zoom about the pointer.
-- **Scroll bars:** move the view (View > Scroll Bars shows or hides them).
+- **Scroll bars:** move the view (File > Preferences > Display shows or hides them).
 
 ### The keyboard
 
@@ -52,9 +52,9 @@ Albia is much larger than the window, and it has no ends: go far enough east and
 - **Follow:** Follow on the toolbar (Camera > Track Norn) keeps the selected creature in view. Choose another creature, however you do it, and the view follows that one instead. Moving the view yourself stops it.
 - **Halo:** shows a halo over the selected creature, so that you can find it in a crowd.
 - **Places:** press + beside Places on the Favourites toolbar to name the spot you are looking at (six at most), and choose it from the list to go back. Camera > Remove Favourite Place takes one off.
-- **Smooth Scrolling** (Camera menu): the view glides to places and creatures instead of jumping.
-- **Creature Frame Rate** (View menu): how often creatures move on screen. 5 per Second is the original game, jumping from pose to pose. Above that, creatures move smoothly between their poses, drawn 10, 15, 20, 30, or 60 times a second; the world's other objects change about 10 times a second, so a lower rate matches them more closely. Every breed has it.
-- **ToolTips for Objects** (View menu): names whatever the hand rests on.
+- **Smooth scrolling** (File > Preferences > Display): the view glides to places and creatures instead of jumping.
+- **Creature frame rate** (File > Preferences > Display): how often creatures move on screen. 5 per Second is the original game, jumping from pose to pose. Above that, creatures move smoothly between their poses, drawn 10, 15, 20, 30, or 60 times a second; the world's other objects change about 10 times a second, so a lower rate matches them more closely. Every breed has it.
+- **Tooltips for objects** (File > Preferences > Display): names whatever the hand rests on.
 
 ## Worlds and saving
 
@@ -64,7 +64,7 @@ Each world is its own copy of Albia, with its own creatures and history. When Ze
 
 - **New World** (File menu, or the first window): name it, and choose what to start from. Eden is a fresh Albia; other worlds you have installed are listed too.
 - **Open World** (File menu): switches worlds. The one you leave is saved first.
-- **Always open this world at launch:** a tick box in the first window, and File > Open This World at Launch in the game. Zeetures then starts in that world without asking. Untick the menu item to be asked again. If Zeetures closed while opening the world last time, it asks, so that you are never stuck.
+- **Always open this world at launch:** a tick box in the first window, and in File > Preferences > World. Zeetures then starts in that world without asking. Untick it to be asked again. If Zeetures closed while opening the world last time, it asks, so that you are never stuck.
 
 ### What is saved
 
@@ -76,7 +76,7 @@ Each world is its own copy of Albia, with its own creatures and history. When Ze
 ### When it is saved
 
 - When you quit, and when you switch worlds.
-- Every five minutes, unless you change it (File > Autosave; from every minute to only when quitting).
+- Every five minutes, unless you change it (File > Preferences > World; from every minute to only when quitting).
 - Whenever you choose File > Save World. Save World As makes a copy under a new name, photos and all, and you go on in the copy.
 
 Worlds saved by earlier versions open in later ones. If a saved game cannot be read, or some creatures in it cannot be loaded (a breed's files removed, perhaps), Zeetures keeps the saved game safe beside the world, says so, and lets you quit and put things right.
@@ -85,9 +85,9 @@ Worlds saved by earlier versions open in later ones. If a saved game cannot be r
 
 Zeetures can update itself, if it was installed with Zeetures-Setup.exe on Windows, from the disk image on a Mac, or as the AppImage on Linux. Your worlds are never touched.
 
-- **Checking:** Zeetures looks for a new version when it starts and every six hours while it runs. Help > Check for Updates looks now, and so does the button in About Zeetures. Help > Check for Updates Automatically turns the regular checks off and on.
+- **Checking:** Zeetures looks for a new version when it starts and every six hours while it runs. Help > Check for Updates looks now, and so do the buttons in About Zeetures and File > Preferences > Updates, where the regular checks can be turned off and on.
 - **When one is out,** a window says so. Update Now downloads it while you play; then Restart Now saves your world, installs it, and starts again in the same world, or When I Quit installs it as you leave. What's New lists the changes. Not Now leaves it until next time.
-- **Installing automatically:** with Help > Install Updates Automatically ticked (it starts unticked), new versions are downloaded without asking and installed when you quit.
+- **Installing automatically:** with "Install updates automatically" ticked in File > Preferences > Updates (it starts unticked), new versions are downloaded without asking and installed when you quit.
 - **Safety:** each download is checked against the release's own record of it, and thrown away if it does not match.
 - **Other copies:** the .zip and .tar.gz, or a copy built from the source, cannot update themselves. They are told about a new version, with a button to the download page.
 
@@ -100,9 +100,9 @@ The check asks GitHub, where Zeetures is published, and sends nothing about you 
 - **No eggs hatch.** The world may be at its limit, set at the foot of the [[Hatchery]]. Eggs in water wait until they are on dry land.
 - **Nobody breeds.** See the list in [[Breeding and eggs]]: their age, their feelings for each other, kinship, the Hatchery's fertility setting, the season, and radiation all count.
 - **A creature is unconscious.** It has run out of energy. Food dropped on it is eaten for it. See [[Illness and medicine]].
-- **The game runs slowly.** Large populations are the main cause: lower the limit in the [[Hatchery]]. At more than 1x, the Speed box's tooltip says when the world cannot keep up.
+- **The game runs slowly.** Large populations are the main cause: lower the limit in File > Preferences > World. At more than 1x, the Speed box's tooltip says when the world cannot keep up.
 - **An add-on does not look right.** Its pictures may be missing: import the whole package, not only its COB. See [[Breeds, objects, and genomes]].
-- **The wrong game folder.** File > Creatures 2 Folder chooses another, used from the next start.
+- **The wrong game folder.** File > Preferences > World > Creatures 2 folder chooses another, used from the next start.
 - **Reporting a bug.** Help > Zeetures on GitHub opens the project's page. Say which version you have (Help > About Zeetures) and what you did. On Windows, the file zeetures-log.txt in Documents\My Games holds the program's messages from its last run.
 
 ## What differs from Creatures 2
@@ -124,20 +124,20 @@ If you know the original game, these are the main differences.
 
 ## The menus
 
-- **File:** worlds, saving and autosave, importing a creature, sound, your Creatures 2 folder, and Exit.
-- **View:** the Creature's View, zoom, toolbars and their text labels, speech and thought bubbles, the creature frame rate, the status bar, tooltips for objects, scroll bars, and full screen.
-- **Camera:** following, the halo, smooth scrolling, and favourite places.
+- **File:** worlds, saving, importing a creature, sound, [[Preferences]], and Exit.
+- **View:** the Creature's View, zoom, toolbars, speech and thought bubbles, and full screen.
+- **Camera:** following, the halo, and favourite places.
 - **Tools:** the Hatchery and every kit.
 - **Creatures:** every living creature; choose one to select it and go to it.
-- **Help:** this window, the projects on the web, checking for updates and the switches for it (see [[Updating Zeetures]]), and About Zeetures, which also lists the research behind the creatures' minds.
+- **Help:** this window, the projects on the web, checking for updates (see [[Updating Zeetures]]), and About Zeetures, which also lists the research behind the creatures' minds.
 
 ### Sound
 
-File > Sound has three switches: Ambient Music, World Sounds (machines, objects, and creatures' noises), and Bibble (creatures' speech).
+File > Sound (and File > Preferences > Sound) has three switches: Ambient Music, World Sounds (machines, objects, and creatures' noises), and Bibble (creatures' speech).
 
 ## The toolbars
 
-There are four toolbars. Drag one by the grip at its left end to move it; View > Toolbars shows or hides each, and puts text labels under the pictures.
+There are four toolbars. Drag one by the grip at its left end to move it; View > Toolbars shows or hides each; File > Preferences > Display puts text labels under the pictures.
 
 ### Standard
 
@@ -180,7 +180,7 @@ Births, deaths, pregnancies, eggs laid, illnesses and recoveries, faints, and ch
 - **Click** one to go there: to the egg, the creature, or its gravestone.
 - **Right-click** one to dismiss it, to clear them all, or to open the life log.
 - **+N** lists the older ones that do not fit.
-- **To hide a kind of notice,** untick it at the foot of its kit (births in the Breeder's Kit, deaths in the Graveyard Kit, illness in the Health Kit, changes in the Owner's Kit). The life log still records it.
+- **To hide a kind of notice,** untick it in File > Preferences > Notices. The life log still records it.
 
 The whole record is in the [[Chronicles Kit]].
 
@@ -191,8 +191,43 @@ View > Creature's View, or the toolbar's Eye View, shows the world as the select
 The eye is its own: a norn's round pupil, a grendel's slit, an ettin's coarse sight, in the creature's colouring.
 
 - The pupil narrows in bright rooms and widens in the dark, and with fear.
-- The lids blink, droop when it is sleepy, and close when it sleeps.
+- The lids blink, droop when it is sleepy, and close when it sleeps. File > Preferences > Creatures can stop the blinking, or keep the lids open.
 - Its sight reddens and doubles when it is hurt or ill, and ripples under water.
+- **Size:** drag the window's corner to make it larger or smaller; it keeps its shape, and is remembered. File > Preferences > Creatures has Small, Normal, and Large.
+
+## Preferences
+
+File > Preferences gathers the settings in one window, in seven sections. Each takes effect at once and is remembered.
+
+- **Display:** the letters in the world (see [[Words and languages]]), the creature frame rate, smooth scrolling, the status bar, scroll bars, tooltips for objects, full screen, and the toolbars and their text labels.
+- **Creatures:** speech and thought bubbles, the halo, and the Creature's View: its eye's lids (blinking; no blinking, only drooping and closing with sleep; or always open) and its size.
+- **Words:** the words creatures learn and the teaching computers show. See [[Words and languages]].
+- **Sound:** ambient music, world sounds, and Bibble (also under File > Sound).
+- **World:** how often the world saves itself; opening this world at launch; in this world, whether all creatures are fertile and the limit on their number; Zeetures's recommended breed packs; and your Creatures 2 folder.
+- **Notices:** which happenings show on the status bar.
+- **Updates:** checking for new versions and installing them by themselves, and a button to check now.
+
+The toolbars, bubbles, halo, full screen, and sound stay in their menus too, to flip while you play.
+
+## Words and languages
+
+### The words
+
+Creatures learn 79 words: what to do (push, eat, come...), things (food, toy, Norn...), feelings (hungry, sleepy...), and a few others (yes, no, very...). File > Preferences > Words lists them by meaning; type a new word beside any meaning to change it.
+
+- **Each world has its own words,** unless "Use these words in all worlds" is ticked: then one list serves every world, and each world's own is kept for when you untick it.
+- **Load words from...** fills the list from the game's own languages (English, German, French, Italian, Dutch, and Spanish, read from your copy of Creatures 2), from Nornish (the creatures' own tongue: they never learn a human word), from translations made for Zeetures, or from another world. Translations marked "draft" have not yet been checked by a native speaker: corrections are welcome.
+- **The game's own** puts back Creatures 2's words in your system's language. Undo goes back to the words before a list was loaded.
+- **Creatures keep what they know.** A word is learned by its meaning, so a creature that knew "push" knows its new word at once. They still understand the game's English words when you type them.
+- If two meanings share a word, the list says so: creatures would take it as both.
+
+The teaching computers show the words in use, and creatures say them in speech bubbles.
+
+### Letters
+
+Speech bubbles, the teaching computers, and the world's notices are drawn with Fusion Pixel, a pixel font with the Latin alphabets, Greek, Cyrillic, Japanese, Chinese, and Korean; small public-domain fonts and GNU Unifont add Hebrew, Thai, and Arabic. File > Preferences > Display chooses 10 pixels (the size of the game's own letters), 12, or 8, or the game's own font, which has only plain English letters. Hebrew and Arabic read right to left, and Arabic letters join.
+
+You can type in any of these alphabets, including with your system's input method for Japanese, Chinese, or Korean.
 
 # Living with creatures
 
@@ -301,7 +336,7 @@ If you are showing nothing and have not touched it lately, a creature takes the 
 
 ### Thought bubbles
 
-When a creature sets about something new, a bubble shows why, in pictures: the need on its mind, the thing or creature it is thinking of, or which way it means to go. View > Thought Bubbles chooses every creature, the selected creature only, or none.
+When a creature sets about something new, a bubble shows why, in pictures: the need on its mind, the thing or creature it is thinking of, or which way it means to go. View > Thought Bubbles (or File > Preferences > Creatures) chooses every creature, the selected creature only, or none.
 
 - **Needs:** an apple for hunger, a sun for heat, a snowflake for cold, Zs for sleep, a battery running low for tiredness, people for company, a frightened face for fear, a jagged burst for pain, a sticking plaster for injury, and rising bubbles for air.
 - **An apple and a thing:** it remembers that food, and is going to it. **A nose:** it is following the smell of food.
@@ -458,7 +493,7 @@ Two creatures of one kind and opposite sexes may mate from adolescence on. They 
 - **kinship:** parents and children, brothers and sisters, and other close kin do not breed while either has an unrelated partner alive;
 - **the season:** more in spring and less in winter;
 - **radiation:** the more either has lately been in, the less;
-- **you:** the Hatchery's "All creatures fertile", the Infertile box in the Breeder's Kit, and the limit on the number of creatures.
+- **you:** "All creatures fertile" (File > Preferences > World), the Infertile box in the Breeder's Kit, and the limit on the number of creatures.
 
 ### The child
 
@@ -610,7 +645,7 @@ Open kits from the Tools menu or the Applets toolbar.
 - **Minimise** a kit with the line at the right of its title bar: it becomes a button on the status bar. The cross closes it.
 - **Where they were:** kits open next time where you left them.
 - **Hover:** nearly everything in a kit explains itself when the pointer rests on it.
-- **Notices on the status bar:** tick boxes at the foot of some kits. See [[The status bar and notices]].
+- **Notices on the status bar:** chosen in File > Preferences > Notices. See [[The status bar and notices]].
 
 ### Which kit?
 
@@ -645,8 +680,7 @@ Every egg you can hatch, on its shelf: norns, grendels, ettins, and others. Eggs
 
 ### The line at the foot
 
-- **All creatures fertile:** untick it, and nobody conceives or fathers young, except those set fertile one by one in the [[Breeder's Kit]].
-- **Limit the number of creatures:** counts norns, grendels, and ettins. At the limit, creatures stop mating, and eggs of every kind wait to hatch until there are fewer. The limit is 150 until you change it, and is the same in every world.
+How many creatures the world holds, the limit if there is one, and whether breeding is off. Both are set in File > Preferences > World (see [[Preferences]]).
 
 ## Owner's Kit
 
@@ -736,7 +770,7 @@ Notices kept here: deaths, and those who grew old together.
 ### Reproductive
 
 - **Sex drive, fertility, and, for females, receptiveness** as they are now.
-- **Infertile:** ticked, this creature cannot conceive or father young. Its own setting always beats the Hatchery's; Follow the Hatchery gives it up again.
+- **Infertile:** ticked, this creature cannot conceive or father young. Its own setting always beats "All creatures fertile" in Preferences; Follow the Hatchery gives it up again.
 - **Pregnancy:** how far along she is.
 - **Hormones:** the chemicals behind it all.
 

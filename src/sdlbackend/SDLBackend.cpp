@@ -38,6 +38,8 @@
 #include <imgui.h>
 #include <memory>
 
+static void uploadImGuiFontTexture();
+
 Backend* SDLBackend::get_instance() {
 	static SDLBackend s_sdl_backend;
 	return &s_sdl_backend;
@@ -95,22 +97,7 @@ static void ImGuiInit(SDL_Window* window, SDL_Renderer* renderer) {
 		}
 	}
 
-	// fix for imgui#4768
-	{
-		ImGui_ImplSDLRenderer3_DestroyFontsTexture();
-		auto* bd = ImGui_ImplSDLRenderer3_GetBackendData();
-		unsigned char* pixels;
-		int width, height;
-		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-		bd->FontTexture = SDL_CreateTexture(bd->Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, width, height);
-		if (bd->FontTexture == nullptr) {
-			throw Exception("Couldn't create ImGui font texture");
-		}
-		SDL_UpdateTexture(bd->FontTexture, nullptr, pixels, 4 * width);
-		SDL_SetTextureBlendMode(bd->FontTexture, SDL_BLENDMODE_BLEND);
-		SDL_SetTextureScaleMode(bd->FontTexture, SDL_SCALEMODE_NEAREST);
-		io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
-	}
+	uploadImGuiFontTexture();
 }
 
 // Where the window opens (owner, 2026-11-10: on the monitor it was last on).
@@ -147,6 +134,25 @@ static bool rememberedWindowPos(int& wx, int& wy) {
 		return false;
 	SDL_Point p{wx, wy};
 	return SDL_GetDisplayForPoint(&p) != 0; // that monitor is connected now
+}
+
+// the program's own windows' font, as a picture (fix for imgui#4768); again
+// whenever it gains letters (g_beforeUiFrame)
+static void uploadImGuiFontTexture() {
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui_ImplSDLRenderer3_DestroyFontsTexture();
+	auto* bd = ImGui_ImplSDLRenderer3_GetBackendData();
+	unsigned char* pixels;
+	int width, height;
+	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+	bd->FontTexture = SDL_CreateTexture(bd->Renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, width, height);
+	if (bd->FontTexture == nullptr) {
+		throw Exception("Couldn't create ImGui font texture");
+	}
+	SDL_UpdateTexture(bd->FontTexture, nullptr, pixels, 4 * width);
+	SDL_SetTextureBlendMode(bd->FontTexture, SDL_BLENDMODE_BLEND);
+	SDL_SetTextureScaleMode(bd->FontTexture, SDL_SCALEMODE_NEAREST);
+	io.Fonts->SetTexID((ImTextureID)(intptr_t)bd->FontTexture);
 }
 
 void SDLBackend::init(const std::string& name, int32_t width, int32_t height) {
@@ -822,6 +828,8 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 		if (!SDL_TextInputActive(window))
 			SDL_StartTextInput(window);
 
+		if (g_beforeUiFrame && g_beforeUiFrame())
+			uploadImGuiFontTexture();
 		ImGui_ImplSDLRenderer3_NewFrame();
 		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();

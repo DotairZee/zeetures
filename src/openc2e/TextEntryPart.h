@@ -25,7 +25,7 @@ class TextEntryPart : public TextPart {
 	}
 	void loseFocus() override { focused = false; }
 	int handleClick(float, float) override;
-	void handleTranslatedChar(unsigned char c) override;
+	void handleTranslatedChar(char32_t c) override;
 	void handleRawKey(uint8_t c) override;
 	void tick() override;
 	void partRender(class RenderTarget* renderer, int xoffset, int yoffset) override;

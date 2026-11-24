@@ -30,6 +30,7 @@ cp -R "$installed/zeetures-art" "$appdir/usr/bin/zeetures-art"
 for f in COPYING AUTHORS README.md; do
 	cp "$installed/$f" "$appdir/usr/share/doc/zeetures/$f"
 done
+cp -R "$installed/font-licenses" "$appdir/usr/share/doc/zeetures/font-licenses"
 
 cat > "$appdir/AppRun" <<'EOF'
 #!/bin/sh

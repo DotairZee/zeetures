@@ -56,7 +56,7 @@ class CompoundPart : public renderable {
 	virtual void gainFocus();
 	virtual void loseFocus();
 	virtual int handleClick(float, float);
-	virtual void handleTranslatedChar(unsigned char c);
+	virtual void handleTranslatedChar(char32_t c); // a letter typed (Unicode)
 	virtual void handleRawKey(uint8_t c);
 
 	virtual unsigned int getWidth() = 0;

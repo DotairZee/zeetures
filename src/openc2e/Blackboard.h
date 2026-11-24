@@ -34,10 +34,15 @@ class Blackboard : public CompoundAgent {
 
 	// state
 	std::vector<std::pair<unsigned int, std::string> > strings;
+	// which strings are words of the word list (BBD: VOCB, or the world
+	// file's own word for its slot): shown as the list has it now, so new
+	// words (WordLists) reach the screens at once
+	std::vector<bool> listWords;
 	std::string currenttext;
 	bool editing;
 	unsigned int editingindex;
 	std::shared_ptr<creaturesImage> charsetsprite;
+	uint32_t textcolour = 0; // (0xRRGGBB in C2; drawn by PixelText)
 
 	void renderText(class RenderTarget* renderer, int xoffset, int yoffset);
 	std::string getText();
@@ -50,7 +55,7 @@ class Blackboard : public CompoundAgent {
 		unsigned int tx, unsigned int ty, uint32_t bgcolour, uint32_t ckcolour,
 		uint32_t alcolour);
 
-	void addBlackboardString(unsigned int n, unsigned int id, std::string text);
+	void addBlackboardString(unsigned int n, unsigned int id, std::string text, bool fromList = false);
 	void showText(bool show);
 
 	void addPart(CompoundPart*); // override
@@ -75,7 +80,7 @@ class BlackboardPart : public CompoundPart {
 	bool canGainFocus() override { return true; }
 	void gainFocus() override;
 	void loseFocus() override;
-	void handleTranslatedChar(unsigned char c) override;
+	void handleTranslatedChar(char32_t c) override;
 	void handleRawKey(uint8_t key) override;
 };
 

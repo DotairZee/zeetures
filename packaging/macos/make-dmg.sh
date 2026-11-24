@@ -29,6 +29,7 @@ cp "$repo/packaging/icons/zeetures.icns" "$app/Contents/Resources/Zeetures.icns"
 for f in COPYING AUTHORS README.md; do
 	cp "$installed/$f" "$app/Contents/Resources/$f"
 done
+cp -R "$installed/font-licenses" "$app/Contents/Resources/font-licenses"
 
 sed -e "s/@VERSION@/$version/g" "$here/Info.plist.in" > "$app/Contents/Info.plist"
 printf 'APPL????' > "$app/Contents/PkgInfo"

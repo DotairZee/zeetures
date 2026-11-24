@@ -72,6 +72,11 @@ class RenderTarget {
 	virtual ~RenderTarget() {}
 };
 
+// Called before each frame of the program's own windows (ImGui), outside
+// one: true when it gave their font new letters (Openc2eImgui UiFont), and
+// the backend then sends the font's picture to the screen again.
+inline std::function<bool()> g_beforeUiFrame;
+
 class Backend {
   public:
 	virtual void init(const std::string& name, int32_t width, int32_t height) = 0;

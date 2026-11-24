@@ -663,7 +663,7 @@ void c_BBD_VOCB(caosVM* vm) {
 	THROW_IFNOT((unsigned int)globalstart < engine.wordlist.size());
 
 	for (unsigned int i = 0; (i < (unsigned int)count) && ((unsigned int)globalstart + i < engine.wordlist.size()); i++) {
-		b->addBlackboardString(blackboardstart + i, globalstart + i, engine.wordlist[globalstart + i]);
+		b->addBlackboardString(blackboardstart + i, globalstart + i, engine.wordlist[globalstart + i], true);
 	}
 }
 

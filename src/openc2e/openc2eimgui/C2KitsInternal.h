@@ -160,7 +160,6 @@ void KitAlarmsWrite(ImGuiTextBuffer* buf);
 // life log; it only does not appear on the status bar. Kept in kits.ini.
 bool KitNoticeShown(int kind);
 // a row of checkboxes at the bottom of a kit, one per kind it owns
-void KitNoticeSwitches(std::initializer_list<std::pair<int, const char*>> kinds);
 
 // a page tab (ImGui::BeginTabItem; the test aid can pick one)
 bool KitTab(const char* label);

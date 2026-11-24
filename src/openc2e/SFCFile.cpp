@@ -17,6 +17,8 @@
  *
  */
 
+#include "PixelText.h"
+#include "WordLists.h"
 #include "SFCFile.h"
 
 #include "Agent.h"
@@ -1145,8 +1147,15 @@ void SFCBlackboard::copyToWorld() {
 
 	SFCCompoundObject::copyToWorld();
 
+	// (a word of the word list in its own slot follows the list: WordLists)
+	auto& en = WordLists::english();
 	for (unsigned int i = 0; i < strings.size(); i++) {
-		a->addBlackboardString(i, strings[i].first, engine.translateWordlistWord(strings[i].second));
+		std::string text = strings[i].second;
+		while (!text.empty() && text.back() == ' ')
+			text.pop_back();
+		unsigned int id = strings[i].first;
+		bool fromList = id < en.size() && !text.empty() && PixelText::lower(text) == PixelText::lower(en[id]);
+		a->addBlackboardString(i, id, engine.translateWordlistWord(strings[i].second), fromList);
 	}
 }
 
