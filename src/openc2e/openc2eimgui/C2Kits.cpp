@@ -1,4 +1,5 @@
 #include "C2Kits.h"
+#include "madeart/MadeArt.h"
 #include "common/devenv.h"
 #include "C2ToolBar.h"
 
@@ -317,6 +318,19 @@ const std::vector<Texture>& KitSprites(const std::string& name) {
 	auto it = cache.find(name);
 	if (it != cache.end())
 		return it->second;
+	// a picture Zeetures makes in place of the game's (MadeArt: the female
+	// ettin's head, a60a), as the world shows it (owner, 2026-11-23: the
+	// Breeds page showed the game's own female ettin)
+	std::filesystem::path p(name);
+	std::string stem = p.stem().string();
+	if (p.parent_path() == "Images" && MadeArt::replacesGame(stem)) {
+		if (auto img = MadeArt::make(stem)) {
+			std::vector<Texture> textures(img->numframes());
+			for (unsigned int i = 0; i < img->numframes(); i++)
+				textures[i] = get_backend()->createTextureFromImage(img->getImageForFrame(i));
+			return cache[name] = textures;
+		}
+	}
 	return cache[name] = LoadImageWithTransparentTopLeft(name);
 }
 
