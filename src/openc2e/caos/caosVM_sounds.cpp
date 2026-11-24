@@ -250,6 +250,20 @@ void c_STRK(caosVM* vm) {
 }
 
 /**
+ MUSC (command) setting (integer) value (integer)
+ %status maybe
+ %variants c2
+
+ Steers the dynamic music; value is 0 to 255. Setting 0 is the music's volume, 1 the mood it aims for and 2 the threat it aims for (as the music file's Mood and Threat). Setting 3 with 0 stops the game choosing the music, and the mood and threat, from the creatures in view; any other value starts it again.
+*/
+void c_MUSC(caosVM* vm) {
+	VM_PARAM_INTEGER(value)
+	VM_PARAM_INTEGER(setting)
+
+	engine.musicmanager->setMusicControl(setting, value / 255.0f);
+}
+
+/**
  VOLM (command) type (integer) volume (integer)
  %status maybe
 

@@ -1023,6 +1023,8 @@ class HomeostatMind : public CreatureMind {
 		return worst > 0 ? std::clamp(1.0f - D / worst, 0.0f, 1.0f) : 1.0f;
 	}
 
+	float contentment() const override { return contentOf(viewD); }
+
 	bool view(MindView& v) const override {
 		v.tick = viewTick;
 		for (int i = 0; i < NUM_DRIVES && i < 17; i++) {

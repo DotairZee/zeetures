@@ -33,6 +33,7 @@
 #include "MetaRoom.h"
 #include "Lift.h"
 #include "Map.h"
+#include "MusicManager.h"
 #include "c2eBrain.h"
 #include "c2eCreature.h"
 #include "common/throw_ifnot.h"
@@ -257,6 +258,8 @@ void Creature::born() {
 			if (m.name.empty())
 				m.name = world.history->nextDefaultName(m.genus);
 			world.history->logLife(lifeLogEntry::birth, mon, (int)stage);
+			if (engine.musicmanager) // (C2's Birth piece, if it hatched in view)
+				engine.musicmanager->creatureBorn(parentagent);
 			world.history->tell(mon, storyEntry::born);
 			// and in each parent's story: a child of theirs hatched
 			for (const std::string* p : {&m.mother, &m.father})
@@ -282,6 +285,8 @@ void Creature::die() {
 		if (!m.died) {
 			m.died = true;
 			m.diedtick = world.worldtickcount;
+			if (engine.musicmanager) // (C2's Death piece, if it died in view)
+				engine.musicmanager->creatureDied(parentagent);
 			m.diedstage = (int)stage;
 			// its genes, kept for the Breeder's Kit's Insemination (Breeding.h)
 			if (engine.version == 2 && genome)

@@ -40,6 +40,9 @@ class MNGMusic {
 	void playSilence();
 
 	bool playing_silence = true;
+	// a track asked for again while it fades out starts over from the
+	// beginning once it has faded (C2), rather than fading back in
+	bool restart_returning_track = false;
 };
 
 class MusicStage {

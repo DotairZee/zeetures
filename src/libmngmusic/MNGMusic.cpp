@@ -47,9 +47,11 @@ void MNGMusic::playTrack(MNGFile* file, std::string trackname) {
 			// already playing this track!
 			if (!playing_silence && !nexttrack)
 				return;
-			nexttrack.reset();
-			currenttrack->startFadeIn();
-			return;
+			if (!restart_returning_track) {
+				nexttrack.reset();
+				currenttrack->startFadeIn();
+				return;
+			}
 		}
 	}
 

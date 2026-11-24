@@ -391,6 +391,9 @@ class CreatureMind {
 	virtual std::string debugState() const { return {}; }
 	// a snapshot for the Mind Kit; false if this mind has none
 	virtual bool view(MindView&) const { return false; }
+	// how content it is now, 0-1 (the Mind Kit's measure), or -1 if this
+	// mind has none; cheap enough to ask every tick (the music follows it)
+	virtual float contentment() const { return -1; }
 	// World saving: the mind's learned state as text, and restoring it.
 	virtual std::string saveState() const { return {}; }
 	virtual void loadState(const std::string&) {}
