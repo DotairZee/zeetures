@@ -1429,11 +1429,14 @@ void SkeletalCreature::setPose(unsigned int p) {
 }
 
 void SkeletalCreature::setPose(std::string s) {
-	// C2: each character as the game reads it, wrapped into 32-90, and any
-	// but ? ! X and the digits taken as X
+	// C2: each character as the game reads it: one within 32-90 as it is,
+	// one outside as (value mod 59) + 32; then any but ? ! X and the digits
+	// taken as X
 	if (engine.version == 2)
 		for (auto& c : s) {
-			int v = 32 + (((unsigned char)c - 32) % 59 + 59) % 59;
+			int v = (unsigned char)c;
+			if (v < 32 || v > 90)
+				v = v % 59 + 32;
 			c = strchr("?!X0123456789", v) ? (char)v : 'X';
 		}
 	switch (s[0]) {
