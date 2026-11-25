@@ -244,11 +244,14 @@ SDL_Texture* mirrorOf(WindowRenderer& wr, SDL_Texture* t) {
 // placed relative to the viewport (DisplayPos: the window's place on the
 // desktop), and textures can be swapped for a window's copies
 void renderDrawData(ImDrawData* draw_data, SDL_Renderer* renderer, WindowRenderer* mirrors) {
-	float rsx = 1.0f, rsy = 1.0f;
-	SDL_GetRenderScale(renderer, &rsx, &rsy);
-	ImVec2 render_scale;
-	render_scale.x = (rsx == 1.0f) ? draw_data->FramebufferScale.x : 1.0f;
-	render_scale.y = (rsy == 1.0f) ? draw_data->FramebufferScale.y : 1.0f;
+	// (both callers set the renderer's scale to the window's own pixel
+	// density times the interface scale, and SDL scales clip rectangles with
+	// it, so clip rectangles are in ImGui's units here. Upstream's guess, the
+	// draw data's FramebufferScale when the renderer's scale is 1, took the
+	// game window's: on a Mac with the game on the Retina screen (2) and a kit
+	// on a 1x monitor, every clip rectangle was doubled and the top of each
+	// panel drawn black (owner's Mac test, 2026-11-24).)
+	const ImVec2 render_scale(1.0f, 1.0f);
 	int fb_width = (int)(draw_data->DisplaySize.x * render_scale.x);
 	int fb_height = (int)(draw_data->DisplaySize.y * render_scale.y);
 	if (fb_width <= 0 || fb_height <= 0)
