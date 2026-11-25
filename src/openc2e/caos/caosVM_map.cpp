@@ -1410,14 +1410,19 @@ void s_RMND(caosVM* vm) {
 }
 /**
  DELN (command) room (integer) direction (integer)
- %status stub
+ %status maybe
  %variants c2
+
+ Removes the given room's links to every room on the given side (0 = left, 1 = right, 2 = up, 3 = down; see RMN#). The rooms are kept, and so are the other rooms' own links back to it. Scripts that reshape rooms use it before linking them again with SETV DOOR. Without a link, objects cannot pass from the room into the other one.
 */
 void c_DELN_c2(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(direction)
-	VM_PARAM_INTEGER_UNUSED(room)
+	VM_PARAM_INTEGER(direction)
+	VM_PARAM_INTEGER(room)
 
-	// TODO
+	std::shared_ptr<Room> r = world.map->getRoom(room);
+	THROW_IFNOT(r);
+	THROW_IFNOT(direction >= 0 && direction <= 3);
+	world.map->removeNeighbours(r, direction);
 }
 
 /* vim: set noet: */
