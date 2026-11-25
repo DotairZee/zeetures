@@ -1931,11 +1931,12 @@ void c_SNEZ(caosVM* vm) {
 */
 void v_DRIV_c1(caosVM* vm) {
 	VM_PARAM_INTEGER(drive)
-	THROW_IFNOT(drive < 16);
 
 	oldCreature* c = getoldCreature(vm->targ.get());
-	// TODO: c2 support
 	THROW_IFNOT(c);
+	// 16 drives in C1, 17 (0-16) in C2
+	int count = dynamic_cast<c2Creature*>(c) ? 17 : 16;
+	THROW_IFNOT(drive >= 0 && drive < count);
 
 	vm->result.setInt(c->getDrive(drive));
 }
