@@ -127,6 +127,8 @@ static void ImGui_ImplSDL3_Openc2eRescale(ImVec2 game_window_px, ImVec2 game_siz
 #include <SDL3/SDL.h>
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
+#include <objc/message.h>
+#include <objc/runtime.h>
 #endif
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -1099,6 +1101,27 @@ struct ImGui_ImplSDL3_PooledWindow { SDL_Window* Window; SDL_WindowFlags Flags; 
 static ImVector<ImGui_ImplSDL3_PooledWindow> g_openc2e_window_pool;
 static const char* const OPENC2E_POOL_FLAGS = "openc2e.pool.flags";
 
+#if defined(__APPLE__) && !TARGET_OS_IOS
+// (openc2e: on macOS the kit windows are not child windows of the game window
+// (SDLBackend sets ConfigViewportsNoDefaultParent): macOS shows a child window
+// only on its parent's display. Instead they are what Mac apps use for tool
+// palettes: above the game window (floating level, through SDL's always on
+// top), hidden while another app is active and back with the game, and
+// allowed beside the game when it is full screen. Plain Objective-C runtime
+// calls, so this file stays C++.)
+static void ImGui_ImplSDL3_Openc2eMacPalette(SDL_Window* window)
+{
+    SDL_SetWindowAlwaysOnTop(window, true);
+    id nswindow = (id)SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, nullptr);
+    if (!nswindow)
+        return;
+    ((void (*)(id, SEL, BOOL))objc_msgSend)(nswindow, sel_registerName("setHidesOnDeactivate:"), YES);
+    const unsigned long full_screen_auxiliary = 1UL << 8; // NSWindowCollectionBehaviorFullScreenAuxiliary
+    unsigned long behavior = ((unsigned long (*)(id, SEL))objc_msgSend)(nswindow, sel_registerName("collectionBehavior"));
+    ((void (*)(id, SEL, unsigned long))objc_msgSend)(nswindow, sel_registerName("setCollectionBehavior:"), behavior | full_screen_auxiliary);
+}
+#endif
+
 static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
 {
     ImGui_ImplSDL3_Data* bd = ImGui_ImplSDL3_GetBackendData();
@@ -1147,6 +1170,9 @@ static void ImGui_ImplSDL3_CreateWindow(ImGuiViewport* viewport)
         SDL_SetNumberProperty(SDL_GetWindowProperties(vd->Window), OPENC2E_POOL_FLAGS, (Sint64)sdl_flags);
     }
     SDL_SetWindowParent(vd->Window, vd->ParentWindow);
+#if defined(__APPLE__) && !TARGET_OS_IOS
+    ImGui_ImplSDL3_Openc2eMacPalette(vd->Window);
+#endif
     SDL_SetWindowPosition(vd->Window, (int)(viewport->Pos.x * g_openc2e_ui_scale), (int)(viewport->Pos.y * g_openc2e_ui_scale));
     vd->WindowOwned = true;
     if (use_opengl)

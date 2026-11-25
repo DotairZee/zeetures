@@ -74,6 +74,14 @@ static void ImGuiInit(SDL_Window* window, SDL_Renderer* renderer) {
 	io.ConfigViewportsNoAutoMerge = false;
 	io.ConfigViewportsNoDecoration = true;
 	io.ConfigViewportsNoTaskBarIcon = true;
+#ifdef __APPLE__
+	// (macOS: not child windows of the game window. With "Displays have
+	// separate Spaces" (the default), macOS shows a child window only on its
+	// parent's display, so a kit dragged to another monitor vanished (owner's
+	// Mac test, 2026-11-24). They are floating palettes instead: see
+	// ImGui_ImplSDL3_Openc2eMacPalette in imgui_impl_sdl3.cpp.)
+	io.ConfigViewportsNoDefaultParent = true;
+#endif
 
 	io.Fonts->Flags |= ImFontAtlasFlags_NoBakedLines;
 
