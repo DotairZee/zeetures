@@ -24,7 +24,9 @@
 #include "Room.h"
 #include "common/Exception.h"
 
+#include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <fmt/core.h>
 #include <memory>
 
@@ -102,6 +104,57 @@ void Map::setDoorPerm(const std::shared_ptr<Room>& r1, const std::shared_ptr<Roo
 void Map::markDoorOpenable(const std::shared_ptr<Room>& r1, const std::shared_ptr<Room>& r2) {
 	if (hasDoor(r1, r2))
 		r1->doors[r2].everOpen = r2->doors[r1].everOpen = true;
+}
+
+int Map::sideOf(Room& from, Room& to) {
+	float fx = ((float)from.x_left + from.x_right) / 2.0f, tx = ((float)to.x_left + to.x_right) / 2.0f;
+	float fy = ((float)from.y_left_ceiling + from.y_right_ceiling + from.y_left_floor + from.y_right_floor) / 4.0f;
+	float ty = ((float)to.y_left_ceiling + to.y_right_ceiling + to.y_left_floor + to.y_right_floor) / 4.0f;
+	bool left = to.x_right <= from.x_left, right = to.x_left >= from.x_right;
+	if (left || right) {
+		// across a wrapping metaroom's seam, the far end is the near side
+		MetaRoom* m = metaRoomAt((unsigned int)fx, (unsigned int)fy);
+		if (m && m->wraparound() && std::fabs(tx - fx) > m->width() / 2.0f)
+			std::swap(left, right);
+		return left ? 0 : 1;
+	}
+	return ty < fy ? 2 : 3;
+}
+
+std::vector<std::shared_ptr<Room>> Map::neighbours(const std::shared_ptr<Room>& r, int side) {
+	std::vector<std::shared_ptr<Room>> out;
+	for (auto& [other, door] : r->getDoors())
+		if (sideOf(*r, *other) == side)
+			out.push_back(other);
+	auto along = [side](Room& n) {
+		return side < 2 ? ((float)n.y_left_ceiling + n.y_right_ceiling + n.y_left_floor + n.y_right_floor) / 4.0f
+						: ((float)n.x_left + n.x_right) / 2.0f;
+	};
+	std::sort(out.begin(), out.end(), [&](auto& a, auto& b) {
+		float pa = along(*a), pb = along(*b);
+		return pa != pb ? pa < pb : a->id < b->id;
+	});
+	return out;
+}
+
+void Map::removeNeighbours(const std::shared_ptr<Room>& r, int side) {
+	for (auto& n : neighbours(r, side))
+		r->doors.erase(n);
+}
+
+void Map::setOwnDoorPerm(const std::shared_ptr<Room>& r, const std::shared_ptr<Room>& other, int perm) {
+	r->doors[other].perm = perm;
+	if (perm > 0)
+		r->doors[other].everOpen = true;
+}
+
+void Map::relinkNeighbour(const std::shared_ptr<Room>& r, const std::shared_ptr<Room>& oldroom, const std::shared_ptr<Room>& newroom) {
+	auto i = r->doors.find(oldroom);
+	if (i == r->doors.end() || oldroom == newroom)
+		return;
+	RoomDoor d = i->second;
+	r->doors.erase(i);
+	r->doors[newroom] = d;
 }
 
 int Map::getDoorPerm(const std::shared_ptr<Room>& r1, const std::shared_ptr<Room>& r2) {

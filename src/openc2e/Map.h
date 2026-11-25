@@ -67,6 +67,21 @@ class Map {
 	// shut now: a script can open it
 	void markDoorOpenable(const std::shared_ptr<Room>& r1, const std::shared_ptr<Room>& r2);
 
+	// C2's per-side neighbor lists (RMN#, RMNR, RMND, DELN). A room's links
+	// are one map (Room::doors), not lists by side: the side of each linked
+	// room is told from where the two rooms sit (0 left, 1 right, 2 up,
+	// 3 down; a wrapping metaroom's far end counts as next door), and a
+	// side's links are ordered along that edge (top to bottom, left to
+	// right), then by room number. Only the given room's own links are read
+	// or changed; the other room keeps its link back.
+	int sideOf(Room& from, Room& to);
+	std::vector<std::shared_ptr<Room>> neighbours(const std::shared_ptr<Room>& r, int side);
+	void removeNeighbours(const std::shared_ptr<Room>& r, int side);
+	// the permeability of r's own link to other (other's link back unchanged)
+	void setOwnDoorPerm(const std::shared_ptr<Room>& r, const std::shared_ptr<Room>& other, int perm);
+	// r's link to oldroom now leads to newroom, keeping its permeability
+	void relinkNeighbour(const std::shared_ptr<Room>& r, const std::shared_ptr<Room>& oldroom, const std::shared_ptr<Room>& newroom);
+
 	unsigned int getMetaRoomCount();
 	std::shared_ptr<Room> getRoom(unsigned int);
 	unsigned int getRoomCount();

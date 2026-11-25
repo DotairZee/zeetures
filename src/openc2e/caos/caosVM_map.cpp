@@ -1311,67 +1311,102 @@ void c_SSFC(caosVM* vm) {
 }
 /**
  RMNO (integer)
- %status stub
+ %status maybe
  %variants c2
+
+ Returns the number of the room the centre of the target agent is in, or -1 if it is in none.
 */
 void v_RMNO(caosVM* vm) {
-	vm->result.setInt(0); // TODO
+	valid_agent(vm->targ);
+	std::shared_ptr<Room> r = roomContainingAgent(vm->targ);
+	vm->result.setInt(r ? (int)r->id : -1);
+}
+
+// the side (0 left, 1 right, 2 up, 3 down) and its links, for RMN#, RMNR, RMND
+static std::vector<std::shared_ptr<Room>> sideLinks(int roomno, int side, std::shared_ptr<Room>& r) {
+	r = world.map->getRoom(roomno);
+	THROW_IFNOT(r);
+	THROW_IFNOT(side >= 0 && side <= 3);
+	return world.map->neighbours(r, side);
 }
 
 /**
  RMN# (integer) room (integer) direction (integer)
- %status stub
+ %status maybe
  %variants c2
+
+ Returns how many rooms the given room links to on the given side (0 = left, 1 = right, 2 = up, 3 = down). The side of each linked room is worked out from where the two rooms are.
 */
 void v_RMN(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(door)
-	VM_PARAM_INTEGER_UNUSED(direction)
+	VM_PARAM_INTEGER(direction)
+	VM_PARAM_INTEGER(room)
 
-	vm->result.setInt(0); // TODO
+	std::shared_ptr<Room> r;
+	vm->result.setInt((int)sideLinks(room, direction, r).size());
 }
 
 /**
  RMNR (variable) room (integer) direction (integer) door (integer)
- %status stub
+ %status maybe
  %variants c2
+
+ The number of the room that the given room's door-th link (1 for the first) on the given side leads to (0 = left, 1 = right, 2 = up, 3 = down), or -1 if there is no such link. A side's links are counted along the edge, top to bottom or left to right. Setting it makes that link lead to another room, keeping its door value; the other rooms' own links are not changed.
 */
 void v_RMNR(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(door)
-	VM_PARAM_INTEGER_UNUSED(direction)
-	VM_PARAM_INTEGER_UNUSED(room)
+	VM_PARAM_INTEGER(door)
+	VM_PARAM_INTEGER(direction)
+	VM_PARAM_INTEGER(room)
 
-	vm->result.setInt(0); // TODO
+	std::shared_ptr<Room> r;
+	auto links = sideLinks(room, direction, r);
+	if (door < 1 || door > (int)links.size())
+		vm->result.setInt(-1);
+	else
+		vm->result.setInt((int)links[door - 1]->id);
 }
 void s_RMNR(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(door)
-	VM_PARAM_INTEGER_UNUSED(direction)
-	VM_PARAM_INTEGER_UNUSED(room)
+	VM_PARAM_INTEGER(door)
+	VM_PARAM_INTEGER(direction)
+	VM_PARAM_INTEGER(room)
+	VM_PARAM_INTEGER(newvalue)
 
-	VM_PARAM_INTEGER_UNUSED(newvalue)
-
-	// TODO
+	std::shared_ptr<Room> r;
+	auto links = sideLinks(room, direction, r);
+	THROW_IFNOT(door >= 1 && door <= (int)links.size());
+	std::shared_ptr<Room> to = world.map->getRoom(newvalue);
+	THROW_IFNOT(to);
+	world.map->relinkNeighbour(r, links[door - 1], to);
 }
 
 /**
  RMND (variable) room (integer) direction (integer) door (integer)
- %status stub
+ %status maybe
  %variants c2
+
+ The door value (how open it is, as SETV DOOR sets it) of the given room's door-th link (1 for the first) on the given side (0 = left, 1 = right, 2 = up, 3 = down), or -1 if there is no such link. Setting it changes only the given room's own link, not the other room's link back.
 */
 void v_RMND(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(door)
-	VM_PARAM_INTEGER_UNUSED(direction)
-	VM_PARAM_INTEGER_UNUSED(room)
+	VM_PARAM_INTEGER(door)
+	VM_PARAM_INTEGER(direction)
+	VM_PARAM_INTEGER(room)
 
-	vm->result.setInt(0); // TODO
+	std::shared_ptr<Room> r;
+	auto links = sideLinks(room, direction, r);
+	if (door < 1 || door > (int)links.size())
+		vm->result.setInt(-1);
+	else
+		vm->result.setInt(world.map->getDoorPerm(r, links[door - 1]));
 }
 void s_RMND(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(door)
-	VM_PARAM_INTEGER_UNUSED(direction)
-	VM_PARAM_INTEGER_UNUSED(room)
+	VM_PARAM_INTEGER(door)
+	VM_PARAM_INTEGER(direction)
+	VM_PARAM_INTEGER(room)
+	VM_PARAM_INTEGER(newvalue)
 
-	VM_PARAM_INTEGER_UNUSED(newvalue)
-
-	// TODO
+	std::shared_ptr<Room> r;
+	auto links = sideLinks(room, direction, r);
+	THROW_IFNOT(door >= 1 && door <= (int)links.size());
+	world.map->setOwnDoorPerm(r, links[door - 1], newvalue);
 }
 /**
  DELN (command) room (integer) direction (integer)
