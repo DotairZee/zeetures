@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 681 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 683 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.37.1](#version-0371): 2 commits, 24 November 2026
 - [0.37.0](#version-0370): 12 commits, 24 November 2026
 - [0.36.4](#version-0364): 2 commits, 24 November 2026
 - [0.36.3](#version-0363): 2 commits, 24 November 2026
@@ -96,6 +97,46 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.37.1
+
+The airlock stays open to the sea, flooded and shut to land while the submarine comes to it, so creatures in the chamber no longer drain it in the submarine's way; it works as before once the submarine has docked.
+
+### 24 November 2026
+
+#### Version 0.37.1
+
+[`fb44a41d`](https://github.com/DotairZee/zeetures/commit/fb44a41de7a3bce5925c7444701e5853fb15b4cd)
+
+The airlock stays open to the sea while the submarine comes.
+
+#### The airlock stays open to the sea while the submarine comes
+
+[`92579052`](https://github.com/DotairZee/zeetures/commit/925790523a478b16713c7c981845086a9c89de1e)
+
+The self-cycling airlock's watcher (2 1 148) cycled the airlock for
+creatures in its chamber or at the foot of the sea column even while the
+submarine was on its way: the submarine's trip opens the sea door and
+floods the chamber as it sets off, then a creature had the watcher shut
+the sea door, drain and open the land door, and the submarine went in
+through the shut sea door into an airlock open to land; its arrival,
+which cycles the land door, then shut that door instead of opening it.
+
+While the submarine travels to the airlock (the trip makes the doors
+unpressable, ATTR 4 off, until it arrives), or leaves it and is still in
+the chamber, the watcher now holds the airlock open to the sea, flooded,
+with the land door shut: after 4 s for the trip's own opening, it shuts
+the land door, then opens the sea door, one step every 4 s. It starts no
+cycle for creatures while the submarine travels to the airlock (the
+submarine is unpressable from the moment it is called, a tick before its
+doors). Once it has arrived, everything works as before.
+
+Tested in copies of Home with every creature frozen: called from the
+west dock with the airlock drained and open to land, it was flooded and
+open to the sea within 3 s and stayed so until the submarine docked and
+drained it; with a creature put in the chamber as it was called, it
+stayed open to the sea throughout; leaving with a creature aboard, the
+sea door no longer shuts on it.
 
 ## Version 0.37.0
 

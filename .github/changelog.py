@@ -358,6 +358,8 @@ VERSIONS = [
      "Damaged pose genes are read as the game reads them: a stray character becomes the pose the game would show."),
     ("0.37.0", "66a5014d",
      "Old objects' CAOS works: objects show speech and thought bubbles (BBLE: Holo Doc, Zora Castle, the Borg Doozer); eggs made by scripts get an \"Egg laid\" notice and objects can clear theirs (EVNT, RMEV); rooms' links can be read and dropped (RMNO, RMN#, RMNR, RMND, DELN: Volcano Garden, Plato Project); DRV! gives a creature's strongest drive, OBSV the door value ahead, and TELE lets a vehicle's riders out elsewhere."),
+    ("0.37.1", "fb44a41d",
+     "The airlock stays open to the sea, flooded and shut to land while the submarine comes to it, so creatures in the chamber no longer drain it in the submarine's way; it works as before once the submarine has docked."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
