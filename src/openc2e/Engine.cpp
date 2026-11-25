@@ -1722,6 +1722,9 @@ void Engine::processEvents() {
 					}
 					acc = std::clamp(acc, -step, step);
 				}
+				static const bool watchPinch = devenv("OPENC2E_WATCH_PINCH") != nullptr;
+				if (watchPinch)
+					fmt::print("* WATCH PINCH world: scale {:.4f}, spread so far {:.3f} of {:.3f} for a step, zoom {:.2f}\n", event.pinch, acc, step, zoom);
 				break;
 			}
 			case eventmousebuttonup:

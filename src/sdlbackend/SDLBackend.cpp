@@ -367,6 +367,15 @@ static bool ImGuiConsumeEvent(const SDL_Event& event, SDL_Window* gameWindow) {
 	ImGui_ImplSDL3_ProcessEvent(&event);
 
 	auto& io = ImGui::GetIO();
+
+	// developer aid: OPENC2E_WATCH_PINCH=1 prints each touchpad pinch event
+	// as it arrives, and whether the interface takes it
+	static const bool watchPinch = devenv("OPENC2E_WATCH_PINCH") != nullptr;
+	if (watchPinch && (event.type == SDL_EVENT_PINCH_BEGIN || event.type == SDL_EVENT_PINCH_UPDATE || event.type == SDL_EVENT_PINCH_END))
+		fmt::print("* WATCH PINCH {} scale {:.4f} window {} interface {}\n",
+			event.type == SDL_EVENT_PINCH_BEGIN ? "begin" : event.type == SDL_EVENT_PINCH_UPDATE ? "update" : "end",
+			event.pinch.scale, event.pinch.windowID, io.WantCaptureMouse ? "takes it" : "no");
+
 	syncSystemPointer(gameWindow);
 
 	if (io.WantCaptureMouse && (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP || event.type == SDL_EVENT_MOUSE_WHEEL ||
