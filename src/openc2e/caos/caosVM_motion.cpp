@@ -23,6 +23,7 @@
 #include "Camera.h" // FLTX/FLTY
 #include "Engine.h" // version
 #include "Map.h"
+#include "MetaRoom.h"
 #include "Room.h"
 #include "World.h"
 #include "caosScript.h"
@@ -296,18 +297,50 @@ void v_OBDT(caosVM* vm) {
 
 /**
  OBSV (integer) direction (integer)
- %status stub
+ %status maybe
  %variants c2
 
- Returns the permeability of the first door the TARG agent would collide with in
- the given direction.
+ Obstacle value: the door value of the edge of the target's room in the
+ given direction (0 = left, 1 = right, 2 = up, 3 = down), straight out from
+ the target's centre: the link to the room just past that edge, or 0 if
+ there is no such room or the room does not link to it (a wall). 0 too if
+ the target is not in a room.
 */
 void v_OBSV(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(direction)
+	VM_PARAM_INTEGER(direction)
 
 	valid_agent(vm->targ);
-	// TODO: implement
-	vm->result.setInt(INT_MAX);
+	THROW_IFNOT(direction >= 0 && direction <= 3);
+	float cx = vm->targ->x + vm->targ->getWidth() / 2.0f;
+	float cy = vm->targ->y + vm->targ->getHeight() / 2.0f;
+	std::shared_ptr<Room> r = world.map->roomAt(cx, cy);
+	if (!r) {
+		vm->result.setInt(0);
+		return;
+	}
+
+	// a point just past the edge, straight out from the centre
+	float px = cx, py = cy;
+	switch (direction) {
+		case 0: px = r->x_left - 1.0f; break;
+		case 1: px = r->x_right + 1.0f; break;
+		case 2: py = r->top.pointAtX(cx).y - 1.0f; break;
+		case 3: py = r->bottom.pointAtX(cx).y + 1.0f; break;
+	}
+	std::shared_ptr<Room> next = world.map->roomAt(px, py);
+	if (!next) { // past a wrapping metaroom's side edge: its other end
+		MetaRoom* m = world.map->metaRoomAt((unsigned int)cx, (unsigned int)cy);
+		if (m && m->wraparound()) {
+			if (px < m->x())
+				next = world.map->roomAt(px + m->width(), py);
+			else if (px >= m->x() + m->width())
+				next = world.map->roomAt(px - m->width(), py);
+		}
+	}
+	if (!next || next == r || !world.map->hasDoor(r, next))
+		vm->result.setInt(0);
+	else
+		vm->result.setInt(world.map->getDoorPerm(r, next));
 }
 
 /**
