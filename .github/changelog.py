@@ -356,6 +356,8 @@ VERSIONS = [
      "C2 genomes are read whole, whatever their genes: a damaged or imported gene no longer refuses the genome; chemistry, stimulus, gait and pose genes are read within the game's ranges. (0.36.2 had no installers; its change is in this one.)"),
     ("0.36.4", "b02c3a2e",
      "Damaged pose genes are read as the game reads them: a stray character becomes the pose the game would show."),
+    ("0.37.0", "66a5014d",
+     "Old objects' CAOS works: objects show speech and thought bubbles (BBLE: Holo Doc, Zora Castle, the Borg Doozer); eggs made by scripts get an \"Egg laid\" notice and objects can clear theirs (EVNT, RMEV); rooms' links can be read and dropped (RMNO, RMN#, RMNR, RMND, DELN: Volcano Garden, Plato Project); DRV! gives a creature's strongest drive, OBSV the door value ahead, and TELE lets a vehicle's riders out elsewhere."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

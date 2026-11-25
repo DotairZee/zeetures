@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 669 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 681 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.37.0](#version-0370): 12 commits, 24 November 2026
 - [0.36.4](#version-0364): 2 commits, 24 November 2026
 - [0.36.3](#version-0363): 2 commits, 24 November 2026
 - [0.36.2](#version-0362): 2 commits, 24 November 2026
@@ -95,6 +96,157 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.37.0
+
+Old objects' CAOS works: objects show speech and thought bubbles (BBLE: Holo Doc, Zora Castle, the Borg Doozer); eggs made by scripts get an "Egg laid" notice and objects can clear theirs (EVNT, RMEV); rooms' links can be read and dropped (RMNO, RMN#, RMNR, RMND, DELN: Volcano Garden, Plato Project); DRV! gives a creature's strongest drive, OBSV the door value ahead, and TELE lets a vehicle's riders out elsewhere.
+
+### 24 November 2026
+
+#### Version 0.37.0
+
+[`66a5014d`](https://github.com/DotairZee/zeetures/commit/66a5014d21bac03c9d0b4beb29ca2710674533e8)
+
+CAOS commands old objects use: bubbles, status bar notices, room links,
+the strongest drive, door values ahead and vehicle teleports.
+
+#### DELR keeps the room, and says so
+
+[`5b10a8e1`](https://github.com/DotairZee/zeetures/commit/5b10a8e1add218463c8b98ae3d4e8fe061be1c3e)
+
+DELR's doc said it removes the room; it never has. It now says what it
+does: the room stays, links and all. Sea Ledge II deletes five rooms and
+makes them again with ROOM under the same numbers, without linking them;
+removed and made new, they would have no links, and nothing could leave
+them. Kept so by the owner's choice.
+
+#### BBLE: a plainer comment on the duration
+
+[`5518d3dd`](https://github.com/DotairZee/zeetures/commit/5518d3dddccfd48809dae0713f1dec156cca3d7f)
+
+#### SIZE, XVEC, YVEC and C2 BHVR are not stubs
+
+[`cac7f7dc`](https://github.com/DotairZee/zeetures/commit/cac7f7dc438d0d89a599ee1abd7d7ef4ca74316c)
+
+The command docs labelled them stubs, but each works: SIZE is the size
+the physics compares with door values, XVEC and YVEC are a vehicle's
+speed, and C2's BHVR sets what clicks and touches do. Their labels now
+say "maybe" like their neighbors', and SIZE says what it is.
+
+#### EVNT and RMEV add and remove status bar notices
+
+[`95bb853f`](https://github.com/DotairZee/zeetures/commit/95bb853f8120d7e9b8fd672c76adbd121afdad7d)
+
+Both were stubs. Zeetures' status bar has its own notices, raised as
+creatures are born, die and lay eggs, so a script's event is the notice
+of that kind for that agent: a creature's birth (living) or death
+(dying), or a new egg's (an object whose OBV0 names the genome in it, as
+eggs carry it). EVNT adds it unless the agent has one already, so births
+and laid eggs, which have theirs, show once; eggs made by scripts (the
+world's egg machines, the Inseminator, Holo Doc) get an "Egg laid: New
+egg" notice that goes to the egg when clicked. RMEV removes it (Egg
+Pauser). An agent that is none of these has no notice.
+
+The world's laying script makes the egg and calls EVNT a tick before
+the engine sees the pregnancy end: the engine's notice, naming the
+mother, replaces the script's for the same egg.
+
+#### BBLE shows a bubble over the target object
+
+[`b575429d`](https://github.com/DotairZee/zeetures/commit/b575429d80fcb0414671dece475b3fcaef0f2960)
+
+BBLE was a stub. It now shows the text in a bubble over the target
+object for the given ticks (a byte; 0 is taken as one tick, since a
+bubble with no timeout would stay up for good), drawn in front of
+everything else (plane 9999), with the existing Bubble code
+(Bubble::newScriptBubble). The bubble's pictures are the pair of three in
+syst for its style, from (side + 6 + style x 2) x 3: style 0 a speech
+bubble and 1 a thought bubble, as creatures' own, and the side by which
+half of the view the object is in. The last number follows the C2 CAOS
+guide: 0 keeps the bubble over the object as it moves, 1 puts it in the
+middle of the view. An object riding out of sight shows none.
+
+Holo Doc, Zora Castle, the Inseminator, the Borg Doozer and Ball Update
+use it (durations 8-26 ticks, styles 0 and 1, both placings). A bubble
+whose object was in the right half of the view and no floated-to agent
+could not be resized: Bubble's text sizing no longer assumes one.
+
+#### TELE lets a vehicle's riders out at a given place
+
+[`f942090a`](https://github.com/DotairZee/zeetures/commit/f942090ad15b64ddd5ee05198c8ad6a10bc8ad15)
+
+TELE was a stub. It now lets out everything riding in the target
+vehicle and moves each to the given place as MVTO does (each finds its
+room from there); the vehicle stays where it is. The view, when it
+follows a creature that was riding, goes with it, as following does.
+The Flying Saucer TNG uses it. Tried with a norn put in a cage lift:
+set down at 5100,780, the lift unmoved, the norn walking off.
+
+#### DELN removes a room's links on one side
+
+[`ddb63797`](https://github.com/DotairZee/zeetures/commit/ddb63797294fa8f94de6f3bc59710790e77feb34)
+
+DELN was a stub. It now removes the given room's own links to every room
+on the given side (0 left, 1 right, 2 up, 3 down, told as RMN# tells
+them). The rooms stay, and so do the other rooms' links back. Scripts
+that reshape rooms (ROOM, SSFC) use it to drop links left over from the
+old shapes before linking the rooms again with SETV DOOR; SSFC does not
+touch links, so nothing it made is removed. Without a link, objects
+cannot pass from the room into the other one.
+
+Volcano Garden and Plato Project use it. Volcano Garden's lake rooms
+(164-166) now keep no links up to the beach rooms above, as the script
+asks, while the beach rooms keep theirs down; norns put on the beach
+walk it and leave it as before (five norns, a minute, old and new
+builds).
+
+#### OBSV gives the door value of the edge ahead
+
+[`8cc8af66`](https://github.com/DotairZee/zeetures/commit/8cc8af66e205b4eac98a9b36596fb31b6bae4434)
+
+OBSV was a stub that always gave the largest number. It now gives the
+door value of the edge of the target's room in the given direction,
+straight out from the target's centre: the room's link to the room just
+past that edge (across a wrapping metaroom's seam, the room at its other
+end), or 0 if there is no room there or no link to it, or the target is
+in no room. The Halloween pack and the Solar Powered Helicopter use it.
+
+#### RMNO, RMN#, RMNR and RMND read rooms and their links
+
+[`1c515f9d`](https://github.com/DotairZee/zeetures/commit/1c515f9d3a311b3ae065008e788b043bb98bb90d)
+
+All four were stubs giving 0. RMNO now gives the number of the room the
+target's centre is in (-1 if none). RMN#, RMNR and RMND read a room's
+links on one side (0 left, 1 right, 2 up, 3 down): how many there are,
+the room the nth one (counted from 1) leads to, and its door value, -1
+for a link that is not there. Holo Doc and the Halloween pack use RMNO.
+
+A room's links are kept in one map, not in lists by side, so the side
+of each linked room is worked out from where the two rooms sit (across
+a wrapping metaroom's seam, the far end counts as next door), and a
+side's links are counted along that edge (top to bottom, left to
+right), then by room number (Map::sideOf, Map::neighbours). Setting RMNR
+or RMND changes only that room's own link, not the other room's link
+back. RMN# also read its two numbers under the wrong names.
+
+#### DRIV reads all 17 C2 drives
+
+[`b604cf04`](https://github.com/DotairZee/zeetures/commit/b604cf04b0a4272cb00657cee79f2aaa389441e4)
+
+DRIV refused drive 16, which C2 creatures have (they have 17, 0-16), and
+let a negative number through to an assertion. It now takes 0-15 in C1
+and 0-16 in C2 and stops the script on anything else.
+
+#### DRV! gives the strongest drive in C1 and C2
+
+[`1795ee00`](https://github.com/DotairZee/zeetures/commit/1795ee00f11b974b728d2cd240cfec52bd16c21a)
+
+DRV! was a stub that always gave 0 (and stopped the script on an agent
+that is not a creature). It now gives the number of the target
+creature's strongest drive, the lowest-numbered when several are equal
+(16 drives in C1, 17 in C2), and 0 for an agent that is not a creature.
+C2 objects use it to react to what a creature wants most. C3 is
+unchanged.
 
 ## Version 0.36.4
 
