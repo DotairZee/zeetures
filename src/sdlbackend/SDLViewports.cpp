@@ -18,6 +18,7 @@
 
 #include <SDL3/SDL.h>
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <imgui.h>
 #include "imgui_impl_sdl3.h"
@@ -373,6 +374,29 @@ void rendererSetWindowSize(ImGuiViewport*, ImVec2) {
 	// (SDL resizes the window's drawing area with the window)
 }
 
+// A window's pixels per window unit, taken from what its renderer really
+// draws into (its output size over the window's size) rather than from
+// SDL_GetWindowPixelDensity. They differ for a moment when a window moves
+// between displays of different scale: macOS reports the new density at
+// once, but the Metal drawing surface is resized only when SDL handles the
+// change, and drawing at the new density into the old surface showed the
+// kit at twice its size for a frame or two (owner's Mac test, 2026-11-24:
+// Retina laptop and 1x monitors). Elsewhere the two agree.
+static float drawDensity(SDL_Renderer* renderer, SDL_Window* window) {
+	if (!window)
+		return 1.0f;
+	int ow = 0, oh = 0, ww = 0, wh = 0;
+	float density = SDL_GetWindowPixelDensity(window);
+	if (SDL_GetRenderOutputSize(renderer, &ow, &oh) && SDL_GetWindowSize(window, &ww, &wh) && ww > 0 && ow > 0) {
+		const float drawn = (float)ow / (float)ww;
+		if (watching() && std::fabs(drawn - density) > 0.01f)
+			SDL_Log("Kit windows: window %u drawn at %.2f while its density is %.2f (output %dx%d, window %dx%d)",
+				(unsigned)SDL_GetWindowID(window), drawn, density, ow, oh, ww, wh);
+		density = drawn;
+	}
+	return density > 0.0f ? density : 1.0f;
+}
+
 void rendererRenderWindow(ImGuiViewport* vp, void*) {
 	auto* wr = (WindowRenderer*)vp->RendererUserData;
 	if (!wr)
@@ -381,8 +405,8 @@ void rendererRenderWindow(ImGuiViewport* vp, void*) {
 	SDL_Window* window = windowOf(vp);
 	// (the window's pixel density, times the interface scale: see
 	// ImGui_ImplSDL3_Openc2eUiScale)
-	float density = (window ? SDL_GetWindowPixelDensity(window) : 1.0f) * ImGui_ImplSDL3_Openc2eUiScale();
 	SDL_SetRenderTarget(wr->renderer, nullptr);
+	float density = drawDensity(wr->renderer, window) * ImGui_ImplSDL3_Openc2eUiScale();
 	SDL_SetRenderScale(wr->renderer, density, density);
 	if (!(vp->Flags & ImGuiViewportFlags_NoRendererClear)) {
 		SDL_SetRenderDrawColor(wr->renderer, 0, 0, 0, 255);
@@ -474,7 +498,7 @@ void renderMainDrawData(ImDrawData* draw_data, SDL_Renderer* main) {
 	float sx = 1, sy = 1;
 	SDL_GetRenderScale(main, &sx, &sy);
 	SDL_Window* window = SDL_GetRenderWindow(main);
-	float density = (window ? SDL_GetWindowPixelDensity(window) : 1.0f) * ImGui_ImplSDL3_Openc2eUiScale();
+	float density = drawDensity(main, window) * ImGui_ImplSDL3_Openc2eUiScale();
 	SDL_SetRenderScale(main, density, density);
 	renderDrawData(draw_data, main, nullptr);
 	SDL_SetRenderScale(main, sx, sy);
