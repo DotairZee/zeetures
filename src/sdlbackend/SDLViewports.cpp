@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <imgui.h>
 #include "imgui_impl_sdl3.h"
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -393,6 +394,22 @@ static float drawDensity(SDL_Renderer* renderer, SDL_Window* window) {
 			SDL_Log("Kit windows: window %u drawn at %.2f while its density is %.2f (output %dx%d, window %dx%d)",
 				(unsigned)SDL_GetWindowID(window), drawn, density, ow, oh, ww, wh);
 		density = drawn;
+	}
+	if (watching()) {
+		// (each window's display, scales, drawing size and place, logged
+		// when any of them changes: to see what macOS does to a kit window
+		// that straddles two displays of different scale)
+		static std::unordered_map<SDL_WindowID, std::string> said;
+		int x = 0, y = 0;
+		SDL_GetWindowPosition(window, &x, &y);
+		char now[200];
+		SDL_snprintf(now, sizeof now, "display %u scale %.2f density %.2f output %dx%d window %dx%d at %d,%d",
+			(unsigned)SDL_GetDisplayForWindow(window), SDL_GetWindowDisplayScale(window), SDL_GetWindowPixelDensity(window),
+			ow, oh, ww, wh, x, y);
+		std::string& was = said[SDL_GetWindowID(window)];
+		if (was.compare(0, was.find(" at "), now, std::string(now).find(" at ")) != 0)
+			SDL_Log("Kit windows: window %u %s", (unsigned)SDL_GetWindowID(window), now);
+		was = now;
 	}
 	return density > 0.0f ? density : 1.0f;
 }
