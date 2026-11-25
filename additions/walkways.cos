@@ -1,7 +1,7 @@
 * Walkways (openc2e Creatures 2 project, our own script and our own art).
 * Where they go was inspired by JayD's "Plato Project" (Creatures 2 COB)
 * and Helen and NORNGod's "Walls and Bridges Pack"; none of their files are
-* used. Sprites zbw1-zbw4 are drawn by art/bamboo.py. Run by
+* used. Sprites zbw1-zbw5 are drawn by art/bamboo.py. Run by
 * openc2e after the world loads (Additions folder); safe to repeat.
 * ROOM takes all of a room's data, so each room's own values are passed back.
 
@@ -231,6 +231,25 @@ enum 2 3 232 kill targ next
 inst new: simp zbw3 1 0 600 0 setv cls2 2 3 232 setv attr 0 mvto 2903 2116 slow
 enum 2 3 233 kill targ next
 inst new: simp zbw4 1 0 600 0 setv cls2 2 3 233 setv attr 0 mvto 3053 2146 slow
+
+* From the flying fox's landing up to the rock ledge before the stone arches
+* (owner, 2026-11-24, a marked screenshot): the landing (room 61, floor
+* 1285, flyingfox.cos) ends at x 3512, and east of it the open air over the
+* upper hut (rooms 250, x 3512-3768, and 62, x 3768-3917, both floored by
+* open doors into room 60 below) dropped creatures walking east onto the
+* hut's deck. The ledge (room 24, from x 3917, floor 1165 at its west end)
+* leads on to the arch lift. A floor now rises in a straight line from the
+* landing (1285 at x 3512) to the ledge's lip (1166 at x 3884) and runs on
+* level to room 24; the doors under it are as solid as the landing's own
+* floor (100), and things can be put down on it (drop status 1).
+room 250 3512 840 3768 1285 room 250 4 room 250 5 room 250 6 room 250 7 room 250 8 room 250 9 room 250 12 room 250 13 room 250 14 room 250 15 room 250 16 room 250 17 1
+ssfc 250 2 0 0 256 82
+ssfc 62 3 0 82 116 119 149 120
+setv door 3 250 60 100
+setv door 3 62 60 100
+* its picture (zbw5: the landing end at x 3512, the lip at 3884)
+enum 2 3 263 kill targ next
+inst new: simp zbw5 1 0 600 0 setv cls2 2 3 263 setv attr 0 mvto 3507 1132 slow
 
 * The east sea's east dock to the land beyond (after JayD's Plato Project,
 * which opened this): room 233 (x 7380-7530) lies between the dock (room

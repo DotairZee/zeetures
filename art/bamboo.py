@@ -45,6 +45,11 @@ SITES = {
     # carries on to x 3310 and the ground, so creatures step off onto it)
     'mist-b': {'p0': (3058, 2180), 'p1': (3278, 2249), 'matte': (170, 170, 165), 'shade': 0.72,
                'supports': [(3061, 2258), (3135, 2258), (3215, 2258)], 'ground': 2259},
+    # from the flying fox's landing on the bamboo scaffold (its end, x 3512,
+    # floor 1285) up across the leaves to the rock ledge before the stone
+    # arches (its lip at x 3884, floor 1166; owner, 2026-11-24, marked
+    # screenshot); in the jungle's shade, dappled
+    'arch-ledge': {'p0': (3512, 1285), 'p1': (3884, 1166), 'matte': (42, 49, 25), 'dapple': 0.14},
 }
 
 PLANK = np.array([192, 94, 28], np.float32)
