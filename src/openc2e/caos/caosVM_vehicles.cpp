@@ -19,6 +19,7 @@
 
 #include "AgentHelpers.h" // agentsTouching
 #include "Vehicle.h"
+#include "creatures/SkeletalCreature.h"
 #include "World.h"
 #include "caosVM.h"
 #include "common/throw_ifnot.h"
@@ -310,20 +311,28 @@ void v_BUMP(caosVM* vm) {
 
 /**
  TELE (command) x (integer) y (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 
- Teleport occupants of target vehicle to (x, y).
+ Lets out everything riding in the target vehicle and moves each to (x, y), as MVTO does. The vehicle stays where it is. A creature the view follows takes the view with it.
 */
 void c_TELE(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(y)
-	VM_PARAM_INTEGER_UNUSED(x)
+	VM_PARAM_INTEGER(y)
+	VM_PARAM_INTEGER(x)
 
 	valid_agent(vm->targ);
 	Vehicle* v = dynamic_cast<Vehicle*>(vm->targ.get());
 	THROW_IFNOT(v);
 
-	// TODO
+	std::vector<AgentRef> riders = v->passengers;
+	for (auto& a : riders) {
+		if (!a || a->invehicle != AgentRef(v))
+			continue;
+		v->drop(a);
+		a->moveTo(x, y);
+		if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()))
+			sc->scriptMoved();
+	}
 }
 
 /**
