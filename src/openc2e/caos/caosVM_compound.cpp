@@ -784,8 +784,8 @@ void c_BBLE(caosVM* vm) {
 	valid_agent(vm->targ);
 	if (Bubble::hiddenRider(vm->targ.get()))
 		return;
-	// a byte, as C2 keeps it; 0 is one tick here (no timeout at all would
-	// leave the bubble up for good)
+	// kept to a byte (0-255 ticks); 0 is one tick here (no timeout at all
+	// would leave the bubble up for good)
 	unsigned int t = (unsigned int)ticks & 0xff;
 	Bubble::newScriptBubble(vm->targ.get(), text, t ? t : 1, type, track);
 }
