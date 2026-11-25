@@ -48,6 +48,8 @@ class Bubble : public CompoundAgent {
 	void tick();
 
 	static Bubble* newBubble(Agent* parent, bool speech, std::string text);
+	// BBLE (C2 scripts): an object's own bubble (see Bubble.cpp)
+	static Bubble* newScriptBubble(Agent* parent, const std::string& text, unsigned int ticks, int style, int location);
 	// riding out of sight, in a vehicle creatures can't see (ATTR 16): no
 	// speech bubble is shown for it
 	static bool hiddenRider(Agent* a);

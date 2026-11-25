@@ -770,18 +770,24 @@ void c_KMSG(caosVM* vm) {
 
 /**
  BBLE (command) text (string) ticks (integer) type (integer) track (integer)
- %status stub
+ %status maybe
  %variants c2
 
- Display the given text for the given number of ticks, in a bubble (type is 0 for speech or 1 for thought).
+ Shows the text in a bubble over the target object for the given number of ticks (creatures' speech stays about 20). Type 0 is a speech bubble, 1 a thought bubble. Track 0 keeps the bubble over the object as it moves; 1 puts it in the middle of the view. The bubble is drawn in front of everything else.
 */
 void c_BBLE(caosVM* vm) {
-	VM_PARAM_INTEGER_UNUSED(track)
-	VM_PARAM_INTEGER_UNUSED(type)
-	VM_PARAM_INTEGER_UNUSED(ticks)
-	VM_PARAM_STRING_UNUSED(text)
+	VM_PARAM_INTEGER(track)
+	VM_PARAM_INTEGER(type)
+	VM_PARAM_INTEGER(ticks)
+	VM_PARAM_STRING(text)
 
-	// TODO
+	valid_agent(vm->targ);
+	if (Bubble::hiddenRider(vm->targ.get()))
+		return;
+	// a byte, as C2 keeps it; 0 is one tick here (no timeout at all would
+	// leave the bubble up for good)
+	unsigned int t = (unsigned int)ticks & 0xff;
+	Bubble::newScriptBubble(vm->targ.get(), text, t ? t : 1, type, track);
 }
 
 /**

@@ -181,6 +181,44 @@ Bubble* Bubble::newBubble(Agent* parent, bool speech, std::string text) {
 	return ourBubble;
 }
 
+// BBLE (C2 scripts): a bubble with the text over the given object, for the
+// given ticks, drawn in front of everything else (plane 9999; creatures'
+// speech is behind it). Its pictures are a pair of three in the game's syst
+// sprite file for each style (0 speech, 1 thought, as creatures' bubbles;
+// other numbers the pairs after them, the last picture of the file if past
+// its end), (side + 6 + style x 2) x 3 onward, the side's by which half of
+// the view the object is in: to its right in the left half (side 1), to
+// its left in the right half (0). Location 0 (the C2 CAOS guide: "track
+// owner") keeps it over the object as it moves; 1 ("centre in viewport")
+// puts it in the middle of the view, where it stays as the view scrolls.
+Bubble* Bubble::newScriptBubble(Agent* parent, const std::string& text, unsigned int ticks, int style, int location) {
+	assert(engine.version == 2);
+	assert(parent);
+
+	bool leftside = parent->x - engine.camera->getX() < engine.camera->getWidth() / 2;
+	int pose = ((leftside ? 1 : 0) + 6 + std::max(0, style) * 2) * 3;
+
+	Bubble* b = new Bubble(2, 1, 2, 9999, "syst", pose, 3, 8, 8, 95, 12, 0x080810, 0xC0FFFF);
+	b->finishInit();
+	b->leftside = leftside;
+	b->attr = 32; // floating
+	if (location == 1) {
+		b->floatTo(AgentRef()); // with the view
+		b->setText(text);
+		b->moveTo(engine.camera->getX() + (int)engine.camera->getWidth() / 2 - (int)b->getWidth() / 2,
+			engine.camera->getY() + (int)engine.camera->getHeight() / 2 - (int)b->getHeight() / 2);
+	} else {
+		b->floatTo(parent);
+		if (leftside)
+			b->moveTo(parent->x + parent->getWidth() - 2, parent->y - b->getHeight());
+		else
+			b->moveTo(parent->x - b->getWidth() + 2, parent->y - b->getHeight());
+		b->setText(text);
+	}
+	b->setTimeout(ticks);
+	return b;
+}
+
 BubblePart::BubblePart(Bubble* p, unsigned int _id, int x, int y, unsigned int tcolour, unsigned int bgcolour)
 	: CompoundPart(p, _id, x, y, 0) {
 	editable = false;
@@ -263,7 +301,7 @@ void BubblePart::setText(std::string str) {
 				s->setPose(pose);
 				textwidth = s->getWidth() - 17;
 				Bubble* p = (Bubble*)parent; // TODO: omg hax
-				if (!p->leftside)
+				if (!p->leftside && p->floatingagent)
 					p->moveTo(p->floatingagent->x - p->getWidth() + 2, p->floatingagent->y - p->getHeight());
 			}
 		}
