@@ -997,6 +997,7 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 		ImGui_ImplSDLRenderer3_NewFrame();
 		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
+		ImGui_ImplSDL3_Openc2eKeepOnOneDisplay(); // (macOS only)
 
 		bool result = update_callback();
 		if (should_quit || !result) {

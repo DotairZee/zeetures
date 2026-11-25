@@ -1101,6 +1101,63 @@ struct ImGui_ImplSDL3_PooledWindow { SDL_Window* Window; SDL_WindowFlags Flags; 
 static ImVector<ImGui_ImplSDL3_PooledWindow> g_openc2e_window_pool;
 static const char* const OPENC2E_POOL_FLAGS = "openc2e.pool.flags";
 
+// (openc2e: macOS only. With "Displays have separate Spaces" (the default) a
+// window belongs to one display, and one straddling two was handed back and
+// forth between them by macOS, which moved it each time; the kit flashed at
+// the other display's scale for a frame, dozens of times while it crossed
+// (owner's Mac test, 2026-11-25). So kit windows are kept wholly on one
+// display: while one is dragged, the display under the pointer (it slides
+// up to the edge and hops across when the pointer does), otherwise the one
+// under its middle. Called after ImGui::NewFrame(), before the windows are
+// drawn: Begin() then moves their own windows to match.)
+void ImGui_ImplSDL3_Openc2eKeepOnOneDisplay()
+{
+#if defined(__APPLE__) && !TARGET_OS_IOS
+    ImGuiContext& g = *GImGui;
+    if (!(g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable))
+        return;
+    ImGuiViewport* main_vp = ImGui::GetMainViewport();
+    const float us = g_openc2e_ui_scale;
+    float mx = 0.0f, my = 0.0f;
+    SDL_GetGlobalMouseState(&mx, &my);
+    for (ImGuiWindow* window : g.Windows)
+    {
+        if ((window->Flags & ImGuiWindowFlags_ChildWindow) || !window->WasActive)
+            continue;
+        const bool moving = g.MovingWindow && g.MovingWindow->RootWindowDockTree == window;
+        // (a kit being dragged is kept on the pointer's display even while it
+        // is in the game window: otherwise, with the game filling the laptop
+        // screen, a kit pushed back to the edge would rejoin the game window,
+        // stick out again with the pointer, and so on every frame. Kits not
+        // being dragged are left alone in the game window.)
+        const bool own = window->ViewportOwned && window->Viewport && window->Viewport != main_vp;
+        if (!moving && !own)
+            continue;
+        SDL_Point p;
+        if (moving)
+            p = { (int)mx, (int)my };
+        else
+            p = { (int)((window->Pos.x + window->Size.x * 0.5f) * us), (int)((window->Pos.y + window->Size.y * 0.5f) * us) };
+        SDL_Rect r;
+        const SDL_DisplayID d = SDL_GetDisplayForPoint(&p);
+        if (!d || !SDL_GetDisplayBounds(d, &r))
+            continue;
+        const ImVec2 lo(r.x / us, r.y / us);
+        const ImVec2 hi(ImMax(lo.x, (r.x + r.w) / us - window->Size.x), ImMax(lo.y, (r.y + r.h) / us - window->Size.y));
+        const ImVec2 pos(ImClamp(window->Pos.x, lo.x, hi.x), ImClamp(window->Pos.y, lo.y, hi.y));
+        if (pos.x != window->Pos.x || pos.y != window->Pos.y)
+        {
+            ImGui::SetWindowPos(window, pos, ImGuiCond_Always);
+            if (own)
+            {
+                window->Viewport->Pos = pos;
+                window->Viewport->UpdateWorkRect();
+            }
+        }
+    }
+#endif
+}
+
 #if defined(__APPLE__) && !TARGET_OS_IOS
 // (openc2e: on macOS the kit windows are not child windows of the game window
 // (SDLBackend sets ConfigViewportsNoDefaultParent): macOS shows a child window
