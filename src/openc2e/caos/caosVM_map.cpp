@@ -747,18 +747,17 @@ void v_ERID(caosVM* vm) {
 
 /**
  DELR (command) room_id (integer)
- %status stub
+ %status maybe
  %variants c2 cv c3 sm
 
- Removes the given room from the map.
+ Leaves the given room in the map, with its links (the room must exist). Scripts that delete rooms and then make them again with ROOM, under the same numbers (Sea Ledge II), so reshape the old rooms, which keep their links: a room made new has no links, and nothing could leave it.
 */
 void c_DELR(caosVM* vm) {
 	VM_PARAM_INTEGER(room_id)
 
 	std::shared_ptr<Room> r = world.map->getRoom(room_id);
 	THROW_IFNOT(r);
-
-	// TODO
+	// kept on purpose (owner, 2026-11-24): see above
 }
 
 /**
