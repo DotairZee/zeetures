@@ -1485,6 +1485,14 @@ void oldCreature::watchPregnancy() {
 			if (world.history->notices.size() > before) {
 				world.history->notices.back().child = child;
 				world.history->lifelog.back().child = child;
+				// the laying script's own notice for the egg (EVNT, made
+				// a tick or so before): this one, with the mother, replaces it
+				if (!child.empty())
+					for (auto* list : {&world.history->notices, &world.history->shownNotices})
+						list->erase(std::remove_if(list->begin(), list->end(), [&](const lifeLogEntry& e) {
+							return e.kind == lifeLogEntry::eggLaid && e.child == child && e.moniker.empty();
+						}),
+							list->end());
 			}
 		}
 #endif

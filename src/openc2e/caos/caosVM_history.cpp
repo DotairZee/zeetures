@@ -21,6 +21,12 @@
 #include "caosVM.h"
 #include "common/throw_ifnot.h"
 #include "historyManager.h"
+#include "Engine.h"
+#include "creatures/CreatureAgent.h"
+#include "creatures/Creature.h"
+
+#include <algorithm>
+#include <cctype>
 
 /*
  * TODO:
@@ -515,26 +521,96 @@ void v_OOWW(caosVM* vm) {
 	}
 }
 
+// EVNT and RMEV (C2): the status bar's notices are Zeetures' own, raised
+// as creatures are born, die and lay eggs (historyManager::logLife), so a
+// script's event is the notice of the same kind for the same agent: a
+// creature's birth (living) or death, or a new egg's (an object whose OBV0
+// names the genome in it, as eggs carry it). An object that is neither has
+// no notice.
+struct ScriptEvent {
+	int kind = -1;
+	std::string moniker, child; // a creature's moniker, or an egg's genome
+	int genus = 1;
+};
+
+static ScriptEvent scriptEvent(Agent* a) {
+	ScriptEvent ev;
+	if (engine.version != 2 || !world.history)
+		return ev;
+	if (auto* ca = dynamic_cast<CreatureAgent*>(a)) {
+		ev.moniker = world.history->findMoniker(AgentRef(a));
+		if (!ev.moniker.empty()) {
+			ev.kind = ca->getCreature()->isAlive() && !a->isDying() ? lifeLogEntry::birth : lifeLogEntry::death;
+			ev.genus = a->genus;
+		}
+		return ev;
+	}
+	if (a->var[0].hasInt() && a->var[0].getInt() != 0) {
+		int v = a->var[0].getInt();
+		std::string name((const char*)&v, 4);
+		for (char ch : name)
+			if (!std::isalnum((unsigned char)ch))
+				return ev;
+		ev.kind = lifeLogEntry::eggLaid;
+		ev.child = name;
+	}
+	return ev;
+}
+
+static bool sameEvent(const lifeLogEntry& e, const ScriptEvent& ev) {
+	if (e.kind != ev.kind)
+		return false;
+	return ev.kind == lifeLogEntry::eggLaid ? e.child == ev.child : e.moniker == ev.moniker;
+}
+
 /**
  EVNT (command) object (agent)
- %status stub
+ %status maybe
  %variants c1 c2
+
+ Adds a notice to the status bar for the given object, unless it has one already: a creature's birth (a living creature) or death (one dying), or a new egg's (an object whose OBV0 holds the name of the genome in it). Births, deaths and laid eggs have their notices already; eggs made by scripts get theirs from this. Clicking a notice goes to what it is about, as for the others.
 */
 void c_EVNT(caosVM* vm) {
 	VM_PARAM_VALIDAGENT(object)
 
-	// TODO
+	ScriptEvent ev = scriptEvent(object.get());
+	if (ev.kind < 0)
+		return;
+	for (auto* list : {&world.history->notices, &world.history->shownNotices})
+		for (auto& e : *list)
+			if (sameEvent(e, ev))
+				return;
+	lifeLogEntry e;
+	e.kind = ev.kind;
+	e.tick = world.worldtickcount;
+	e.genus = ev.genus;
+	if (ev.kind == lifeLogEntry::eggLaid) {
+		e.child = ev.child;
+		e.name = "New egg";
+	} else {
+		e.moniker = ev.moniker;
+		monikerData& m = world.history->getMoniker(ev.moniker);
+		e.name = m.name;
+		e.female = m.gender == 2;
+	}
+	world.history->notices.push_back(e);
 }
 
 /**
  RMEV (command) object (agent)
- %status stub
+ %status maybe
  %variants c1 c2
+
+ Removes the status bar's notice of that kind for the given object (see EVNT).
 */
 void c_RMEV(caosVM* vm) {
 	VM_PARAM_VALIDAGENT(object)
 
-	// TODO
+	ScriptEvent ev = scriptEvent(object.get());
+	if (ev.kind < 0)
+		return;
+	for (auto* list : {&world.history->notices, &world.history->shownNotices})
+		list->erase(std::remove_if(list->begin(), list->end(), [&](const lifeLogEntry& e) { return sameEvent(e, ev); }), list->end());
 }
 
 /**
