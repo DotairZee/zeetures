@@ -360,6 +360,8 @@ VERSIONS = [
      "Old objects' CAOS works: objects show speech and thought bubbles (BBLE: Holo Doc, Zora Castle, the Borg Doozer); eggs made by scripts get an \"Egg laid\" notice and objects can clear theirs (EVNT, RMEV); rooms' links can be read and dropped (RMNO, RMN#, RMNR, RMND, DELN: Volcano Garden, Plato Project); DRV! gives a creature's strongest drive, OBSV the door value ahead, and TELE lets a vehicle's riders out elsewhere."),
     ("0.37.1", "fb44a41d",
      "The airlock stays open to the sea, flooded and shut to land while the submarine comes to it, so creatures in the chamber no longer drain it in the submarine's way; it works as before once the submarine has docked."),
+    ("0.38.0", "b2fc3a84",
+     "Kits in their own windows (experimental; File > Preferences > Display): a kit, the Creature's View or Preferences dragged out of the game becomes a window of its own, on another monitor if you like, and comes back when dragged in; a bamboo bridge from the flying fox's landing up to the ledge before the stone arches."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

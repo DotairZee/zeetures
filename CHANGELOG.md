@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 683 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 698 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.38.0](#version-0380): 15 commits, 23 November 2026 to 25 November 2026
 - [0.37.1](#version-0371): 2 commits, 24 November 2026
 - [0.37.0](#version-0370): 12 commits, 24 November 2026
 - [0.36.4](#version-0364): 2 commits, 24 November 2026
@@ -97,6 +98,258 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.38.0
+
+Kits in their own windows (experimental; File > Preferences > Display): a kit, the Creature's View or Preferences dragged out of the game becomes a window of its own, on another monitor if you like, and comes back when dragged in; a bamboo bridge from the flying fox's landing up to the ledge before the stone arches.
+
+### 25 November 2026
+
+#### Version 0.38.0
+
+[`b2fc3a84`](https://github.com/DotairZee/zeetures/commit/b2fc3a84a401dda2fe0535a097ba0e2ef7c9e048)
+
+Kits in their own windows (experimental); a bamboo bridge from the flying
+fox landing up to the arch ledge.
+
+#### OPENC2E_WATCH_PINCH prints touchpad pinch events
+
+[`a8b8a46a`](https://github.com/DotairZee/zeetures/commit/a8b8a46afa67ad46fc44e50893a115a8c62a7d24)
+
+A developer aid for pinch-zoom on the Mac (owner, 2026-11-25: it does
+not zoom there): each pinch event as SDL delivers it (begin, update with
+its scale, end; its window) and whether the interface takes it, then
+what the world zoom made of it (the spread so far against a step).
+
+#### Kit windows: on macOS, a kit window stays on one display and hops across
+
+[`066cfee7`](https://github.com/DotairZee/zeetures/commit/066cfee79325ab40587f003584e5bd6a5c7aea21)
+
+With "Displays have separate Spaces" (macOS's default) a window belongs to
+one display. A kit window straddling the Retina laptop screen and a 1x
+monitor was handed back and forth between them by macOS about 40 times in
+10 seconds, moved by it each time, and flashed at the other display's
+scale for a frame (owner's test on ZH_MAC, logged with bbf6fc56).
+
+On macOS a kit being dragged is now kept wholly on the display under the
+pointer: it slides up to the edge and hops across when the pointer does.
+That also holds while it is still in the game window, so a kit at the
+edge of a game window filling the screen does not leave and rejoin it
+every frame. Kit windows not being dragged are kept on the display under
+their middle. Linux and Windows are unchanged.
+
+#### Kit windows: log each window's display and scales when they change
+
+[`12b1c03c`](https://github.com/DotairZee/zeetures/commit/12b1c03c6eeb584ca82e580cffb2bcab2c41a44e)
+
+Developer aid (OPENC2E_WATCH_KIT_WINDOWS): to see what macOS does to a kit
+window straddling two displays of different scale, where it still flashes
+larger for single frames.
+
+### 24 November 2026
+
+#### A bamboo bridge from the flying fox landing up to the arch ledge
+
+[`47e213dc`](https://github.com/DotairZee/zeetures/commit/47e213dcf473b148a6e0c7116056bed901de2cee)
+
+The flying fox's landing on the bamboo scaffold (room 61, floor 1285)
+ended at x 3512 in open air over the upper hut, and the rock ledge before
+the stone arches (room 24, floor 1165) was out of reach above it (owner,
+2026-11-24, a marked screenshot). A plank-and-bamboo walkway now rises in a
+straight line from the landing's end to the ledge's lip (1166 at x 3884):
+rooms 250 and 62 get a floor along it, the doors under them are as solid
+as the landing's floor, and room 250 lets things be put down on it. Its
+picture, zbw5, is drawn by art/bamboo.py (site arch-ledge) like the
+waterfall walkways, in the jungle's shade, behind creatures.
+
+Tried in a copy of Home: norns put on the landing, the bridge and the
+ledge stood on its line (feet at 1250 where it is 1249), walked up it onto
+the ledge and on east, and down it to the landing; none fell to the hut.
+
+#### Kit windows: draw at the scale of the surface really drawn into
+
+[`5e3831ab`](https://github.com/DotairZee/zeetures/commit/5e3831abc4cda4bde5a611453875adc3583920e8)
+
+Moving between displays of different scale, macOS reports a window's new
+pixel density at once, but SDL resizes the Metal drawing surface only
+when it handles the change, so for a frame or two the kit was drawn at
+the new density into the old surface and showed at twice its size
+(owner's test on ZH_MAC, Retina laptop and 1x monitors). The scale now
+comes from the renderer's output size over the window's size; elsewhere
+the two agree. OPENC2E_WATCH_KIT_WINDOWS logs the frames where they differ.
+
+#### Kit windows: clip in the kit window's own scale
+
+[`13d5d34f`](https://github.com/DotairZee/zeetures/commit/13d5d34f574dc57253fb55cf607533940e8d5ef3)
+
+The draw code took the draw data's FramebufferScale (the game window's)
+whenever the renderer's scale was 1. On a Mac with the game on the Retina
+screen and a kit on a 1x monitor, that doubled every clip rectangle and
+the top of each panel in the kit was drawn black (owner's test on ZH_MAC).
+Both callers set the renderer's scale themselves, and SDL scales clip
+rectangles with it, so clip rectangles are now always in ImGui's units.
+
+#### Kit windows: on macOS, floating palettes instead of child windows
+
+[`81c75251`](https://github.com/DotairZee/zeetures/commit/81c75251c592cf98e94506ebf0d1bb7f41424f56)
+
+macOS shows a child window only on its parent's display when "Displays
+have separate Spaces" is on (the default), so a kit dragged onto another
+monitor vanished (owner's test on ZH_MAC). On macOS the kit windows now
+have no parent window; they float above the game, hide while another app
+is active, and may sit beside the game when it is full screen.
+
+#### Kit windows: keep kits in place when the display scale changes while playing
+
+[`838cdb8c`](https://github.com/DotairZee/zeetures/commit/838cdb8c4d029fec04d3bb3d34ec8330f4a5bb2d)
+
+Changing Windows display scaling (or moving the game window to a monitor
+with another scale) left every ImGui place in the old units: a kit
+outside the game window was taken for one on no monitor and pulled in,
+and a kit inside popped out. Places are now converted: kits in their own
+windows keep their desktop place and are resized for the new scale; kits
+in the game window keep their place in it, moved back inside where they
+have grown past its edge. Tested in a Windows 11 VM, 100% &lt;-&gt; 150%.
+
+#### Kit windows: kits keep the game's size at display scales above 100%
+
+[`3c4b4816`](https://github.com/DotairZee/zeetures/commit/3c4b481666b7902d2213c37ac316700fd93c47f1)
+
+With multi-viewports on, Dear ImGui works in desktop coordinates. On
+Windows and X11 those are pixels whatever the display scaling, so at 150%
+kits were laid out and drawn at 1x, smaller than the game's interface.
+
+The SDL3 backend now gives ImGui the desktop in pixels over the game
+window's display scale (its display scale over its pixel density: 1 on
+macOS, where windows are already in points), converting mouse positions,
+monitor bounds and window places and sizes, and each kit window draws at
+its pixel density times that scale.
+
+Tested in Xephyr with SDL_VIDEO_X11_SCALING_FACTOR=1.5: kits outside the
+game window match its interface, clicks land, drops land exactly, kits
+rejoin the game window; 100% unchanged. ctest 200/200; ASan clean.
+
+#### Kit windows: no first flicker; remembered places; lost windows come home
+
+[`901dc025`](https://github.com/DotairZee/zeetures/commit/901dc025e28b2219c325e05f5da7354009a8fb47)
+
+From the owner's third try (2026-11-24).
+
+- The first kit dragged out in a session still flickered on the owner's
+  monitors: SDL shows a window as it makes it, so a new window was on
+  screen, black, before its first frame (only reused windows, hidden,
+  waited). New windows are made hidden; they show after their first frame.
+- Preferences &gt; Display &gt; "Remember where kit windows were" (under "Kits
+  in their own windows", on unless unticked; kit-windows-remember): kits
+  left outside the game window open there again; unticked, or with the
+  switch off, they open in the game window, one below another from near
+  its top-left corner.
+- A kit window whose title bar is on no connected monitor (a two-monitor
+  place remembered at a one-monitor desk, or a monitor unplugged) comes
+  back into the game window. Not on a window's first frame, when a kit
+  sizing itself to its contents is 0 wide.
+- The places are saved as the game ends: the last save could be one made
+  in the middle of a drag (ImGui saves every few seconds).
+- The toolbar's kit buttons, the Hatchery's and the Agent Injector's open
+  a closed window and close an open one (a minimised one is restored).
+- OPENC2E_WATCH_KIT_WINDOWS prints where ImGui and SDL each place every
+  window whenever either changes.
+
+### 23 November 2026
+
+#### Kit windows: no black flash on the first crossing; drops land true
+
+[`986b717b`](https://github.com/DotairZee/zeetures/commit/986b717b22e52ffddea1d446ca1d9a8c8fbdc609)
+
+From the owner's second try (screencast, 2026-11-23): the first kit dragged
+to the other monitor in each session flickered; later ones did not.
+
+- A new window is shown only once its first frame is drawn (and drawn
+  again as it shows). It was shown as it was made, then stayed black while
+  its first frame was drawn: making its renderer and copying the font and
+  pictures took 50-60 ms the first time in a session, too short to see
+  later, when everything was kept.
+- The font's pixels are read back as the game starts (or as the font gains
+  letters), not as the first kit leaves.
+- A picture already kept is brought up to date from what
+  SDLBackend::updateTexture uploads, instead of being read back from the
+  GPU each time it changes: the Creature's View's picture changes many
+  times a second.
+- For half a second after the game asks for a window's place, the window
+  manager's reports of an earlier place are ignored: those late answers,
+  arriving after a drag had ended, put a dropped window back short of
+  where it was dropped. Five drops out and in: each lands where released.
+- OPENC2E_WATCH_KIT_WINDOWS also prints read-backs over 2 ms, renderers
+  made, and windows shown after their first frame.
+
+#### Kit windows: smooth crossings, no docking, the pointer over kits
+
+[`5cae7419`](https://github.com/DotairZee/zeetures/commit/5cae7419696b8e10ca8465e40ea41da396603cbb)
+
+From the owner's first try (screencast, 2026-11-23): kits dragged across
+the game window's edge paused, blinked and zoomed; docked kits lost their
+sizes; the pointer could vanish over a kit and clicks stop working.
+
+- No docking (tabs and tiling): kits keep their own sizes.
+- A kit's window is a utility window: no taskbar entry, and no opening
+  animation (GNOME zoomed each new window in as a kit crossed the edge).
+- Windows kept for reuse (imgui_impl_sdl3, openc2e): a window Dear ImGui
+  gives up is hidden and kept, four of each kind, with its renderer and its
+  copies of the pictures; a static picture's pixels are read back once and
+  shared by every window. Three crossings out and back in: no frame over
+  40 ms (the first window at start, 95 ms, once).
+- A window manager's late answers to Dear ImGui's own moves and resizes
+  are ignored while ImGui is moving or resizing that window: taking those
+  older places back fought the drag (it stuck, jumped back, or stopped
+  short of the pointer under mutter).
+- A new window is placed again once shown: mutter placed new windows
+  itself (kits opened on the other monitor).
+- A mouse button the system says is up is let go in Dear ImGui (a release
+  lost as a window went, which left clicks dead and the pointer captured).
+- The system pointer is decided every frame as well as at events, and
+  shows whenever the pointer is in a kit's window.
+- Developer aid: OPENC2E_WATCH_KIT_WINDOWS=1 prints frames over 40 ms spent
+  drawing the windows.
+
+#### Kits in their own windows (experimental)
+
+[`3b1c7328`](https://github.com/DotairZee/zeetures/commit/3b1c73282a15bca4fedf4a52b4a389ce3bdb3217)
+
+File &gt; Preferences &gt; Display &gt; "Kits in their own windows" (off by
+default; kit-windows in settings.txt): a kit, the Creature's View or the
+Preferences window dragged out of the game window becomes a desktop window
+of its own (another monitor, say) and comes back when dragged in; kits dock
+together as tabs. Dear ImGui's multi-viewports and docking.
+
+- SDLViewports: the renderer side of multi-viewports for SDL_Renderer,
+  which imgui_impl_sdlrenderer3 lacks. Each extra window gets its own
+  SDL_Renderer; the main renderer's textures it draws with (font atlas,
+  kit pictures, sprite frames, the Creature's View) are copied into it,
+  read back through the main renderer: render targets every frame they
+  are shown, static textures again after SDLBackend::updateTexture (a
+  version in the texture's properties), and dropped when the original is
+  destroyed (a cleanup callback on its properties). Vertices are placed
+  relative to each window (ImGui's coordinates are the desktop's).
+- SDLBackend: the switch is read before SDL_Init; under a Wayland session
+  it runs through XWayland, as Wayland lets no program place its windows
+  or read the pointer outside them (imgui_impl_sdl3 offers viewports only
+  on x11, Windows and macOS). Turned on or off between frames; off brings
+  every outside window back into the game window. Other windows' pointer
+  and window events are not the game's; closing the game window quits
+  while kits' windows are open.
+- The menus and toolbars, status bar, scroll bars and notices stay in the
+  game window (placed from its corner, no docking to them).
+
+#### externals: imgui 1.91.7 docking branch (kit-windows experiment)
+
+[`ab6c0a4c`](https://github.com/DotairZee/zeetures/commit/ab6c0a4c0fb3b03dee64cf65e10a8c7757ad8f2d)
+
+Dear ImGui's docking branch of the same version (v1.91.7-docking), for
+multi-viewports and docking. openc2e's three changes to the SDL3 backends
+are carried over: the IME rectangle, the mouse fallback and the display
+size in render coordinates (now only with multi-viewports off, where
+ImGui's coordinates are the game window's), and the SDL_Renderer backend's
+data struct in its header.
 
 ## Version 0.37.1
 
