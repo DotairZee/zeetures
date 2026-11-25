@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 667 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 669 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.36.4](#version-0364): 2 commits, 24 November 2026
 - [0.36.3](#version-0363): 2 commits, 24 November 2026
 - [0.36.2](#version-0362): 2 commits, 24 November 2026
 - [0.36.1](#version-0361): 2 commits, 24 November 2026
@@ -94,6 +95,26 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.36.4
+
+Damaged pose genes are read as the game reads them: a stray character becomes the pose the game would show.
+
+### 24 November 2026
+
+#### Version 0.36.4
+
+[`b02c3a2e`](https://github.com/DotairZee/zeetures/commit/b02c3a2e7a42a8d7d7df7798274f512c36fb3e8e)
+
+Pose characters outside the game's range are read as the game reads them.
+
+#### Pose characters outside 32-90 wrap as the game reads them
+
+[`ca0aa185`](https://github.com/DotairZee/zeetures/commit/ca0aa18562a03dc1efa5791a758568b439052ca6)
+
+A pose character outside 32-90 becomes (value mod 59) + 32; one inside
+stays as it is (it was shifted by 32 first, giving another character
+for those outside the range). Only mutated pose genes have such bytes.
 
 ## Version 0.36.3
 
