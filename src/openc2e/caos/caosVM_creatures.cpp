@@ -1494,10 +1494,24 @@ void c_MATE(caosVM* vm) {
 
 /**
  DRV! (integer)
- %status stub
+ %status maybe
  %variants c1 c2 cv c3
+
+ Returns the number of the target creature's strongest drive (0-15 in C1, 0-16 in C2), the lowest-numbered one when several are equal. In C1 and C2, an agent that is not a creature gives 0.
 */
 void v_DRV(caosVM* vm) {
+	if (engine.version < 3) {
+		valid_agent(vm->targ);
+		int strongest = 0;
+		if (oldCreature* c = getoldCreature(vm->targ.get())) {
+			unsigned int count = dynamic_cast<c2Creature*>(c) ? 17 : 16;
+			for (unsigned int i = 1; i < count; i++)
+				if (c->getDrive(i) > c->getDrive(strongest))
+					strongest = i;
+		}
+		vm->result.setInt(strongest);
+		return;
+	}
 	vm->getTargCreature();
 	vm->result.setInt(0); // TODO
 }
