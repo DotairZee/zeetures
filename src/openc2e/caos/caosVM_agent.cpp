@@ -2088,10 +2088,11 @@ CAOS_LVALUE_TARG_SIMPLE(THRT, vm->targ->thrt)
 
 /**
  SIZE (variable)
- %status stub
+ %status maybe
  %variants c2
+
+ The target's size: it passes a door only if the door value is at least this (see SETV DOOR).
 */
-// TODO: stub because this likely == perm
 CAOS_LVALUE_TARG_SIMPLE(SIZE, vm->targ->size)
 
 /**
@@ -2145,7 +2146,7 @@ void c_SLIM(caosVM*) {
 
 /**
  BHVR (command) click (integer) touch (integer)
- %status stub
+ %status maybe
  %variants c1 c2
 */
 void c_BHVR_c2(caosVM* vm) {

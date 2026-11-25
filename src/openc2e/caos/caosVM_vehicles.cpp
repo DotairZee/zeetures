@@ -280,7 +280,7 @@ void c_RPAS(caosVM* vm) {
 
 /**
  XVEC (variable)
- %status stub
+ %status maybe
  %variants c1 c2
 */
 CAOS_LVALUE_TARG(XVEC,
@@ -289,7 +289,7 @@ CAOS_LVALUE_TARG(XVEC,
 
 /**
  YVEC (variable)
- %status stub
+ %status maybe
  %variants c1 c2
 */
 CAOS_LVALUE_TARG(YVEC,
