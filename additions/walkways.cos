@@ -247,6 +247,12 @@ ssfc 250 2 0 0 256 82
 ssfc 62 3 0 82 116 119 149 120
 setv door 3 250 60 100
 setv door 3 62 60 100
+* and the doorway at the lip into room 24 open (owner, 2026-11-26: "is
+* there any kind of wall blocking creatures from going from east to west
+* down this bridge?"): it kept the game's 100 from when room 62 was open
+* air, under a creature's size (224), so creatures could not step between
+* the bridge and the ledge either way
+setv door 0 62 24 255
 * its picture (zbw5: the landing end at x 3512, the lip at 3884)
 enum 2 3 263 kill targ next
 inst new: simp zbw5 1 0 600 0 setv cls2 2 3 263 setv attr 0 mvto 3507 1132 slow
