@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 718 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 721 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.40.3](#version-0403): 3 commits, 26 November 2026
 - [0.40.2](#version-0402): 5 commits, 26 November 2026
 - [0.40.1](#version-0401): 3 commits, 25 November 2026
 - [0.40.0](#version-0400): 4 commits, 25 November 2026
@@ -102,6 +103,41 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.40.3
+
+Creatures stop gathering in crowds: they expect to feel crowded from walking up to, or staying in, a group of four or more, and no longer walk out of one crowd into the next; at the population limit a willing pair mates without an egg instead of not at all, and after any mating desire rests for about ten minutes, so would-be mates no longer cluster with their desire at its height. In copies of a full world they explored more, felt crowded and went hungry less.
+
+### 26 November 2026
+
+#### Version 0.40.3
+
+[`95b035b7`](https://github.com/DotairZee/zeetures/commit/95b035b7728b916920669f55c63255a7da62419b)
+
+#### At the population limit a kiss eases desire, without an egg
+
+[`a643ac96`](https://github.com/DotairZee/zeetures/commit/a643ac9674f86a67868059a86f59bab7758b2116)
+
+C2's kiss scripts mate a willing pair only while the world is under its
+limit on creatures, so at the limit desire never eased: most adults stayed
+near the top of their Sex drive and gathered in crowds of would-be mates.
+Now a willing pair mates at the limit too, but no egg comes of it. After
+any mating, with an egg or without, desire rests for both for about ten
+minutes, so the pair go their own ways. Explained in Help &gt; Breeding and
+eggs.
+
+#### Creatures keep out of crowds
+
+[`95679d89`](https://github.com/DotairZee/zeetures/commit/95679d890c045e6dc925e3fceadd0ad0f62a4c29)
+
+Joining a crowd only made a creature feel crowded after it got there, too
+late to learn that joining was the cause, so creatures kept walking up to
+one another until groups of five or more held a third of the colony. Now a
+creature expects to feel crowded from anything that would put it among four
+or more others: walking up to a creature in a crowd, using something in
+one, walking toward one, or staying put in one. One or two companions cost
+nothing, and real hunger or pain outweighs it. A creature walking out of a
+crowd no longer heads straight into the next one.
 
 ## Version 0.40.2
 
