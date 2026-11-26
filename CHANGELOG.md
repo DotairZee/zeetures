@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 741 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 743 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.44.0](#version-0440): 2 commits, 26 November 2026
 - [0.43.2](#version-0432): 3 commits, 26 November 2026
 - [0.43.1](#version-0431): 3 commits, 26 November 2026
 - [0.43.0](#version-0430): 4 commits, 26 November 2026
@@ -109,6 +110,65 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.44.0
+
+Each creature's brain now grows, holds up, and ages: it grows most while young, from conversation (talk with it, and let it answer), care, and sleep; a well-raised brain learns faster all its life. With age the signs show unless the brain kept busy (new words, places, friends) and the creature kept moving: slower walking, less sure choices, forgotten places, then words. Stress that soon passes makes the young hardier; stress that goes on does harm. See Help, How the brain grows.
+
+### 26 November 2026
+
+#### Version 0.44.0
+
+[`d4d2998a`](https://github.com/DotairZee/zeetures/commit/d4d2998a485bce6c4c4f0db2268c9f63f864e4c8)
+
+#### The brain grows, holds up, and ages
+
+[`adbfcc5f`](https://github.com/DotairZee/zeetures/commit/adbfcc5fd7dc00a9c256634d37d01cac21879b64)
+
+Each creature's brain now has a life of its own, drawn from research on
+how brains develop and age, put on a norn's clock (its whole childhood is
+about 70 minutes of play).
+
+- Growth: what the brain builds, most while young (plasticity falls from
+  baby to senile). It grows a little from living, and most from
+  conversation: spoken to, a creature that answers within 15 seconds (or
+  speaks and is answered) has a turn, worth three times talk it does not
+  answer; talk it only overhears builds nothing. Care counts as much as
+  talk for a baby, half for a child, little after: the hand's tickles, and
+  the grown-ups' tickles, kindnesses and gifts as they tend the young. A
+  steady few beat a long burst. What it builds is kept only by sleep, and
+  fades while it waits. Dazed with hunger, it builds nothing.
+- Reserve: new words, new places, and new acquaintances, most from child
+  to youth; long boredom or loneliness wears it down.
+- Damage: age wears the brain from youth on, slowly, then faster when old
+  and fastest when senile. Walking about slows it by up to 60%; chronic
+  stress in old age speeds it as much, loneliness a little. Without air for
+  more than 30 seconds, the brain is harmed for good. Frankenstein's
+  creatures do not age.
+- Resilience: set while young. Stress that soon passes makes a creature
+  hardier, and care helps; stress that goes on makes it more easily
+  frightened. Fear and pain then strike it less or more hard, for life.
+- Stress: fright, pain, slaps, being hurt, great hunger, and loneliness,
+  eased by time, sleep, comfort, and company. Chronic stress halves what a
+  young brain builds.
+
+What it does: a brain grown well learns faster (from experience and words),
+and a neglected one slower. When damage outruns reserve, the signs of age
+show: slower walking, less sure choices, places forgotten, and at the last
+words. The Science Kit's brain organ shows all of it. Help: How the brain
+grows. Research behind Zeetures: the studies it rests on.
+
+Tested in copies of Home: a baby the hand talked to with real words (350
+times in 17 minutes) grew from 99 to 142 in 20 minutes; the same baby
+untalked-to stayed at 96. A 30-minute copy with and without it: no change
+in energy, hunger, faints, or deaths. With every grown creature given full
+signs of age, places known fell from 124 to 103 in 30 minutes (127 to 131
+without) and words known from 13 to 11 (14 without). Saved and reloaded
+intact. Hand speech with no listed words now counts as talk for the brain.
+
+Switches: OPENC2E_NO_BRAIN_LIFE (only this; the brain's energy stays);
+OPENC2E_TEST_BRAIN="growth,reserve,damage,resilience" starts every
+creature with these; OPENC2E_WATCH_BRAIN logs it every 10 minutes.
 
 ## Version 0.43.2
 
