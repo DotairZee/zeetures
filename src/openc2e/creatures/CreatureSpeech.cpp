@@ -807,6 +807,7 @@ void answerHand(const std::string& text) {
 				s.noun = named;
 			}
 		}
+		int praise = 0; // "yes" or "no", the last said (a word it knows)
 		for (auto& [at, w] : said) {
 			if (!knowsWord(l.c, w))
 				continue;
@@ -814,6 +815,15 @@ void answerHand(const std::string& text) {
 				s.verb = w;
 			else if (w >= 16 && w < 16 + 40)
 				s.noun = w - 16; // the noun's category
+			else if (w == W_YES || w == W_NO)
+				praise = w == W_YES ? 1 : -1;
+		}
+		// "yes" praises it and "no" blames it, as a pat or slap does, less
+		// strongly (C2's manual: "Reward a creature", "Punish a creature")
+		if (praise != 0) {
+			l.c->hearPraise(praise > 0);
+			if (watching())
+				fmt::print("* HEARS \"{}\": {} {} {}\n", praise > 0 ? "yes" : "no", (int)l.a->family, (int)l.a->genus, l.a->getUNID());
 		}
 		s.named = l.named;
 		s.tick = world.tickcount;

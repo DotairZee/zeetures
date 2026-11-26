@@ -120,6 +120,10 @@ class oldCreature : public Creature {
 
 	void handleStimulus(unsigned int id);
 	void handleStimulus(const StimulusEvent& s);
+	// the hand said "yes" (good) or "no" to it: a pat or slap's chemicals at
+	// half strength, without the touch (CreatureSpeech answerHand)
+	void hearPraise(bool good);
+	float pendingPraise = 0; // for the mind's next tick (MindPerception::wordPraise)
 	CreatureMind* getMind() { return mind.get(); }
 	// reproductive loci, 0-255 (Breeder's Kit)
 	unsigned char getFertile() const { return fertile; }

@@ -1574,16 +1574,18 @@ class HomeostatMind : public CreatureMind {
 				endEpisode(p, d, D, "called");
 		}
 		// praise and blame for doing as it was told, or for not listening
-		if (p.handPat || p.handSlap) {
+		// (a "yes" or "no" it knows counts as a pat or slap, by half)
+		if (p.handPat || p.handSlap || p.wordPraise != 0) {
+			const float praise = p.handPat ? 1.0f : p.handSlap ? -1.0f : p.wordPraise;
 			if (!obeyed.empty() && p.tick < obeyedTick + prm.praiseTicks) {
 				for (size_t i : obeyed)
 					if (i < nudges.size())
-						nudges[i].approvalSum += p.handPat ? 1.0f : -1.0f;
+						nudges[i].approvalSum += praise;
 				obeyed.clear();
-			} else if (p.handSlap && p.heardVerb >= 0 && p.heardAge >= 0 && p.heardAge < prm.praiseTicks)
+			} else if (praise < 0 && p.heardVerb >= 0 && p.heardAge >= 0 && p.heardAge < prm.praiseTicks)
 				for (auto& n : nudges)
 					if (std::find(n.verbs.begin(), n.verbs.end(), p.heardVerb) != n.verbs.end())
-						n.approvalSum += 0.5f;
+						n.approvalSum += 0.5f * -praise;
 		}
 
 		// Is the current episode over?

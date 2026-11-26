@@ -817,6 +817,51 @@ void oldCreature::handleStimulus(unsigned int id) {
 	handleStimulus(s);
 }
 
+void oldCreature::hearPraise(bool good) {
+	if (!mind || !alive || !genome)
+		return;
+	// what this creature's genome gives for a pat (1) or a slap (3), as
+	// applyStimulusChemistry finds it, at half strength, and only the
+	// feeling of it: a word neither hurts nor soothes pain or injury (C2's
+	// slap is pain, fear and anger; its pain stands in for the punishment
+	// chemical here, so "no" is still blame the mind learns from)
+	const unsigned int id = good ? 1 : 3;
+	creatureStimulusGene* g = nullptr;
+	for (auto& gene : genome->genes)
+		if (auto* x = dynamic_cast<creatureStimulusGene*>(gene.get()))
+			if ((engine.version == 2 ? x->stim % 46 : x->stim) == id && isGeneExpressed(x) && (!g || x->header.switchontime >= g->header.switchontime))
+				g = x;
+	pendingPraise = good ? 0.5f : -0.5f;
+	if (!g)
+		return;
+	StimulusEvent s;
+	s.input = -1;
+	s.source = AgentRef((Agent*)world.hand());
+	s.command = good ? "yes" : "no";
+	static const int touchOnly[] = {18, 31, 35, 48}; // pain and injury, up and down
+	int hurt = 0, n = 0;
+	for (unsigned int i = 0; i < 4; i++) {
+		int chem = g->drives[i], amount = g->amounts[i];
+		if (chem == 0 || chem == 255 || amount <= 0)
+			continue;
+		if (std::find(std::begin(touchOnly), std::end(touchOnly), chem) != std::end(touchOnly)) {
+			hurt += chem == 18 || chem == 31 ? amount : 0;
+			continue;
+		}
+		s.chem[n] = chem;
+		s.amount[n++] = std::max(1, amount / 2);
+	}
+	const int blame = punishChem > 0 && punishChem < 255 ? punishChem : 53;
+	if (!good && n < 4 && hurt > 0 && std::find(s.chem.begin(), s.chem.end(), blame) == s.chem.end()) {
+		s.chem[n] = blame;
+		s.amount[n++] = std::max(1, hurt / 2);
+	}
+	handleStimulus(s);
+	static const bool watch = devenv("OPENC2E_WATCH_SPEECH") != nullptr;
+	if (watch)
+		fmt::print("* PRAISE \"{}\" unid {}: chemicals {} {}, {} {}, {} {}, {} {}\n", s.command, parentagent->getUNID(), s.chem[0], s.amount[0], s.chem[1], s.amount[1], s.chem[2], s.amount[2], s.chem[3], s.amount[3]);
+}
+
 void oldCreature::handleStimulus(const StimulusEvent& s) {
 	// Only active with a pluggable mind; the original brain path still
 	// ignores stimuli, as before.
@@ -1081,6 +1126,7 @@ MindPerception oldCreature::buildPerception() {
 		}
 
 	p.stimuli = pendingstimuli;
+	p.wordPraise = pendingPraise;
 	// the hand's pats and slaps (C2's stimuli 1 and 3, by the creatures' own
 	// scripts: "doif from eq pntr stm# writ targ 1"): it looks round at the hand
 	for (auto& s : pendingstimuli)
@@ -1797,6 +1843,7 @@ void oldCreature::tickMind() {
 	PROFILE_SCOPE("creature: tickMind after perception");
 	updateBrainCells(p);
 	pendingstimuli.clear();
+	pendingPraise = 0;
 	if (engine.version == 2 && !unprocessedinstincts.empty()) {
 		// developer aid: OPENC2E_DEBUG_INSTINCTS=1 prints how each instinct
 		// gene was read

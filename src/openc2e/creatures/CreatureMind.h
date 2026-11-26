@@ -236,6 +236,9 @@ struct MindPerception {
 	int calledCategory = -1, calledAge = -1;
 	// the hand has just patted or slapped it
 	bool handPat = false, handSlap = false;
+	// the hand has just said "yes" (+) or "no" (-) to it, a word it knows:
+	// praise or blame as a pat or slap, less strongly (0 none)
+	float wordPraise = 0;
 	// the chemicals this genome rewards and punishes learning with (those
 	// its decision lobe's first two chemical slots take: 52 and 53 in the
 	// game's genomes)
