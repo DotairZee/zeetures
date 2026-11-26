@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 706 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 707 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [Unreleased](#unreleased): 1 commits, 25 November 2026
 - [0.39.0](#version-0390): 8 commits, 25 November 2026
 - [0.38.0](#version-0380): 15 commits, 23 November 2026 to 25 November 2026
 - [0.37.1](#version-0371): 2 commits, 24 November 2026
@@ -99,6 +100,21 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Unreleased
+
+Changes since the last version.
+
+### 25 November 2026
+
+#### Status bar keeps one height whatever parts it shows
+
+[`0e0a7e66`](https://github.com/DotairZee/zeetures/commit/0e0a7e667b3a9c31d87a3cd935aee80245ca1e8f)
+
+The bar took the height of whatever it happened to show, so hiding the
+selected creature's health (or the notices, the kit chips or the
+pictures) made it grow or shrink by a few pixels. It now always reserves
+the height of its tallest possible part.
 
 ## Version 0.39.0
 
