@@ -583,7 +583,7 @@ bool strange() {
 		if (const char* e = devenv("OPENC2E_STRANGE_LIGHTNING"))
 			s_strange = atoi(e) ? 1 : 0;
 		else
-			s_strange = readPlayerSetting("strange-lightning") == "1" ? 1 : 0;
+			s_strange = readPlayerSetting("strange-lightning") == "0" ? 0 : 1;
 	}
 	return s_strange == 1;
 }

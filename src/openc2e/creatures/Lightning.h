@@ -15,7 +15,7 @@ class oldCreature;
 // to feel it (+200 Pain), but tested contact with a variable it never set;
 // a script patch (script-patches.txt) makes the jolt work. This watches each
 // new bolt segment for what it touches. With "Lightning has strange effects"
-// ticked (off unless ticked) a strike may also do something stranger (one of
+// ticked (on unless unticked) a strike may also do something stranger (one of
 // thirty-odd effects, minutes to days), now and then give a power (longer,
 // saved), and a creature struck just after dying may rise again as
 // Frankenstein's creature: immortal and infertile, until it finds a bride
