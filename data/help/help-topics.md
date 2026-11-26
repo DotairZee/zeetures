@@ -118,7 +118,7 @@ If you know the original game, these are the main differences.
 - **Germs.** The diseases the original manual described, and the game never had, are here.
 - **Eggs hatch wherever they lie**, not only in the incubator, as long as they are on dry land.
 - **New ways through the world**, and ways out of the sea. See [[Getting about, and new places]].
-- **Not here:** exporting a creature, for now.
+- **Exporting** saves a creature whole, mind and all, in Zeetures's own file (.zex), which the original game cannot read. See [[Add-ons]].
 
 # The window
 
@@ -1043,7 +1043,9 @@ Two packs are fetched the first time, from the Eem Foo archive: Boney Grendels (
 
 ### Creatures
 
-File > Import Creature brings in a creature exported from Creatures 2 (.exp): its genome, name, sex, and life stage, with its chemistry and mind made anew. The hand holds it: right-click to put it down. Exporting is not here yet.
+File > Export Current Creature saves the selected creature to a file (.zex) and takes it out of the world, as the original game did. Everything comes with it: its body and chemistry, its mind and what it has learned, its words, its friends and foes, its temperament, its life story, and its photos. Exports go to the Exported Creatures folder unless you choose another place.
+
+File > Import Creature brings a creature back in. One exported from Zeetures (.zex) comes back as it was, in the world it left or in another. One exported from Creatures 2 (.exp) brings its genome, name, sex, and life stage, with its chemistry and mind made anew. The hand holds it: right-click to put it down. The original game cannot open Zeetures's exports.
 
 ### What cannot go back
 

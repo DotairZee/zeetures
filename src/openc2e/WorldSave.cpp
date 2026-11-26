@@ -50,6 +50,10 @@
 #include "common/creaturesImage.h"
 #include "common/io/FileReader.h"
 #include "common/io/FileWriter.h"
+#include "common/io/SpanReader.h"
+#include "common/io/VectorWriter.h"
+#include "PathResolver.h"
+#include "PointerAgent.h"
 #include "creatures/CreatureAgent.h"
 #include "creatures/CreatureMind.h"
 #include "creatures/SkeletalCreature.h"
@@ -686,6 +690,101 @@ static void restoreInjected(std::vector<SavedInjected>& objects, std::map<int, A
 		ag->queueScript(7);
 }
 
+// One living creature's record, from "creature" to "end", as the world
+// save keeps it; its genome is written apart, as genomename. An exported
+// creature (ExportCreature) is the same record, so it carries all of it.
+static void writeCreatureRecord(std::ostream& out, Agent* a, oldCreature* c, const std::string& genomename) {
+	out << "creature\n";
+	out << "genome " << genomename << "\n";
+	out << "female " << (c->isFemale() ? 1 : 0) << "\n";
+	out << "variant " << c->getVariant() << "\n";
+	out << "selected " << (world.selectedcreature.lock().get() == a ? 1 : 0) << "\n";
+	out << "pos " << a->x << " " << a->y << "\n";
+	// where its feet were: a creature restored in another pose (it
+	// was saved lying down, asleep or fainted) stands there, not
+	// by its top (its feet went 29 px under a floor and it fell to
+	// the room below)
+	if (auto* sc = dynamic_cast<SkeletalCreature*>(a))
+		out << "foot " << sc->footY() << "\n";
+	out << "stage " << (int)c->getStage() << "\n";
+	out << "age " << c->getAge() << "\n";
+	out << "ticks " << c->getTicks() << "\n";
+	out << "ageing " << (c->isAgeing() ? 1 : 0) << "\n";
+	out << "asleep " << (c->isAsleep() ? 1 : 0) << "\n";
+	// a pregnancy: the baby's genome name (in the user Genetics folder)
+	if (a->babymoniker != 0)
+		out << "baby " << genomeNameFromInt(a->babymoniker) << "\n";
+	out << "temperament " << Temperaments::toLine(c->temperament) << "\n";
+	out << "temperament-born " << Temperaments::toLine(c->temperamentBorn) << "\n";
+	if (c->temperamentDrift.any())
+		out << "temperament-drift " << Temperaments::driftLine(c->temperamentDrift) << "\n";
+	out << "seasonal " << fmt::format("{:.3f}", c->seasonalZ) << "\n";
+	out << "lifespan-scale " << fmt::format("{:.3f}", c->lifespanScale) << "\n";
+	out << "mind-genes " << MindGeneSet::toLine(c->mindGenes) << "\n";
+	if (c->fertilityOverride >= 0)
+		out << "fertility " << c->fertilityOverride << "\n"; // the owner's setting (Breeder's Kit)
+	// what it feels about the creatures it has met (Relationships.h)
+	for (auto& [other, b] : c->bonds)
+		out << "bond " << Relationships::toLine(other, b) << "\n";
+	// words heard: word-list number:familiarity, for each one heard
+	{
+		std::string words;
+		for (size_t i = 0; i < c->vocab.size(); i++)
+			if (c->vocab[i])
+				words += fmt::format(" {}:{}", i, (int)c->vocab[i]);
+		if (!words.empty())
+			out << "words" << words << "\n";
+		// names of its own: category, familiarity, the word
+		for (auto& [word, for_] : c->ownNames)
+			for (auto& [category, v] : for_)
+				if (v > 0)
+					out << "ownname " << category << " " << v << " " << escapeLine(word) << "\n";
+		// the experimental language system's memory of each word
+		// (Language.h): word, stability, last heard, best, guess,
+		// sureness, first thing, things, uses, alone, heard since sleep
+		for (size_t i = 0; i < c->lang.words.size(); i++) {
+			const WordMemory& m = c->lang.words[i];
+			if (m.set && (m.lastHeard || m.best || m.uses || m.alone))
+				out << fmt::format("langword {} {:.2f} {} {} {} {} {} {} {} {} {}\n", i, m.stability, m.lastHeard, (int)m.best, (int)m.guess, (int)m.sure,
+					m.firstThing, (int)m.things, (int)m.uses, (int)m.alone, m.sinceSleep ? 1 : 0);
+		}
+		for (auto& [p, n] : c->lang.pairs)
+			out << "langpair " << p.first << " " << p.second << " " << n << "\n";
+		if (c->lang.lastFade || c->lang.wasAsleep)
+			out << "langstate " << c->lang.lastFade << " " << (c->lang.wasAsleep ? 1 : 0) << " " << c->lang.sleptAt << "\n";
+	}
+	{
+		std::string mon = world.history->findMoniker(c->getGenome());
+		monikerData& m = world.history->getMoniker(mon);
+		out << "moniker " << mon << "\n";
+		if (!m.mother.empty() || !m.father.empty())
+			out << "parents " << (m.mother.empty() ? "-" : m.mother) << " " << (m.father.empty() ? "-" : m.father) << (m.spliced ? " spliced" : "") << "\n";
+		if (!m.name.empty())
+			out << "name " << escapeLine(m.name) << "\n";
+		out << "registered " << (m.registered ? 1 : 0) << "\n";
+		out << "born " << m.borntick << " " << (m.bornknown ? 1 : 0) << "\n";
+		for (auto& ph : m.photos)
+			out << "photo " << escapeLine(ph) << "\n";
+		for (auto& e : m.story)
+			out << "story " << e.tick << " " << e.kind << " " << (e.other.empty() ? "-" : e.other) << " " << escapeLine(e.detail) << "\n";
+		if (!m.notes.empty())
+			out << "notes " << escapeLine(m.notes) << "\n";
+	}
+	out << "chemicals";
+	for (int i = 0; i < 256; i++)
+		out << " " << (int)c->getChemical(i);
+	out << "\norgans";
+	for (float f : c->getOrganState())
+		out << " " << f;
+	out << "\n";
+	if (CreatureMind* m = c->getMind()) {
+		out << "mind " << m->name() << "\n";
+		out << "mindstate\n"
+			<< m->saveState() << "endmindstate\n";
+	}
+	out << "end\n";
+}
+
 bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	if (worlddir.empty()) {
 		error = "No world folder is open.";
@@ -790,95 +889,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 				FileWriter w(tmp / "genomes" / genomename);
 				w << *c->getGenome();
 			}
-			out << "creature\n";
-			out << "genome " << genomename << "\n";
-			out << "female " << (c->isFemale() ? 1 : 0) << "\n";
-			out << "variant " << c->getVariant() << "\n";
-			out << "selected " << (world.selectedcreature.lock().get() == a.get() ? 1 : 0) << "\n";
-			out << "pos " << a->x << " " << a->y << "\n";
-			// where its feet were: a creature restored in another pose (it
-			// was saved lying down, asleep or fainted) stands there, not
-			// by its top (its feet went 29 px under a floor and it fell to
-			// the room below)
-			if (auto* sc = dynamic_cast<SkeletalCreature*>(a.get()))
-				out << "foot " << sc->footY() << "\n";
-			out << "stage " << (int)c->getStage() << "\n";
-			out << "age " << c->getAge() << "\n";
-			out << "ticks " << c->getTicks() << "\n";
-			out << "ageing " << (c->isAgeing() ? 1 : 0) << "\n";
-			out << "asleep " << (c->isAsleep() ? 1 : 0) << "\n";
-			// a pregnancy: the baby's genome name (in the user Genetics folder)
-			if (a->babymoniker != 0)
-				out << "baby " << genomeNameFromInt(a->babymoniker) << "\n";
-			out << "temperament " << Temperaments::toLine(c->temperament) << "\n";
-			out << "temperament-born " << Temperaments::toLine(c->temperamentBorn) << "\n";
-			if (c->temperamentDrift.any())
-				out << "temperament-drift " << Temperaments::driftLine(c->temperamentDrift) << "\n";
-			out << "seasonal " << fmt::format("{:.3f}", c->seasonalZ) << "\n";
-			out << "lifespan-scale " << fmt::format("{:.3f}", c->lifespanScale) << "\n";
-			out << "mind-genes " << MindGeneSet::toLine(c->mindGenes) << "\n";
-			if (c->fertilityOverride >= 0)
-				out << "fertility " << c->fertilityOverride << "\n"; // the owner's setting (Breeder's Kit)
-			// what it feels about the creatures it has met (Relationships.h)
-			for (auto& [other, b] : c->bonds)
-				out << "bond " << Relationships::toLine(other, b) << "\n";
-			// words heard: word-list number:familiarity, for each one heard
-			{
-				std::string words;
-				for (size_t i = 0; i < c->vocab.size(); i++)
-					if (c->vocab[i])
-						words += fmt::format(" {}:{}", i, (int)c->vocab[i]);
-				if (!words.empty())
-					out << "words" << words << "\n";
-				// names of its own: category, familiarity, the word
-				for (auto& [word, for_] : c->ownNames)
-					for (auto& [category, v] : for_)
-						if (v > 0)
-							out << "ownname " << category << " " << v << " " << escapeLine(word) << "\n";
-				// the experimental language system's memory of each word
-				// (Language.h): word, stability, last heard, best, guess,
-				// sureness, first thing, things, uses, alone, heard since sleep
-				for (size_t i = 0; i < c->lang.words.size(); i++) {
-					const WordMemory& m = c->lang.words[i];
-					if (m.set && (m.lastHeard || m.best || m.uses || m.alone))
-						out << fmt::format("langword {} {:.2f} {} {} {} {} {} {} {} {} {}\n", i, m.stability, m.lastHeard, (int)m.best, (int)m.guess, (int)m.sure,
-							m.firstThing, (int)m.things, (int)m.uses, (int)m.alone, m.sinceSleep ? 1 : 0);
-				}
-				for (auto& [p, n] : c->lang.pairs)
-					out << "langpair " << p.first << " " << p.second << " " << n << "\n";
-				if (c->lang.lastFade || c->lang.wasAsleep)
-					out << "langstate " << c->lang.lastFade << " " << (c->lang.wasAsleep ? 1 : 0) << " " << c->lang.sleptAt << "\n";
-			}
-			{
-				std::string mon = world.history->findMoniker(c->getGenome());
-				monikerData& m = world.history->getMoniker(mon);
-				out << "moniker " << mon << "\n";
-				if (!m.mother.empty() || !m.father.empty())
-					out << "parents " << (m.mother.empty() ? "-" : m.mother) << " " << (m.father.empty() ? "-" : m.father) << (m.spliced ? " spliced" : "") << "\n";
-				if (!m.name.empty())
-					out << "name " << escapeLine(m.name) << "\n";
-				out << "registered " << (m.registered ? 1 : 0) << "\n";
-				out << "born " << m.borntick << " " << (m.bornknown ? 1 : 0) << "\n";
-				for (auto& ph : m.photos)
-					out << "photo " << escapeLine(ph) << "\n";
-				for (auto& e : m.story)
-					out << "story " << e.tick << " " << e.kind << " " << (e.other.empty() ? "-" : e.other) << " " << escapeLine(e.detail) << "\n";
-				if (!m.notes.empty())
-					out << "notes " << escapeLine(m.notes) << "\n";
-			}
-			out << "chemicals";
-			for (int i = 0; i < 256; i++)
-				out << " " << (int)c->getChemical(i);
-			out << "\norgans";
-			for (float f : c->getOrganState())
-				out << " " << f;
-			out << "\n";
-			if (CreatureMind* m = c->getMind()) {
-				out << "mind " << m->name() << "\n";
-				out << "mindstate\n"
-					<< m->saveState() << "endmindstate\n";
-			}
-			out << "end\n";
+			writeCreatureRecord(out, a.get(), c, genomename);
 			ncreatures++;
 		} else if (isEgg(a.get()) || isKept(a.get())) {
 			SpritePart* sp = dynamic_cast<SpritePart*>(a->part(0));
@@ -1202,6 +1213,8 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 	return a;
 }
 
+static std::string adoptRecords(std::shared_ptr<genomeFile> genome, const SavedCreature& s);
+
 static void restoreCreature(const fs::path& savedir, const SavedCreature& s, bool revive_atp) {
 	auto genome = std::make_shared<genomeFile>();
 	{
@@ -1211,8 +1224,15 @@ static void restoreCreature(const fs::path& savedir, const SavedCreature& s, boo
 	Agent* a = buildCreature(genome, s, revive_atp);
 	if (!a)
 		return;
+	adoptRecords(genome, s);
+}
+
+// The owner's records of a creature just built from a saved record, under
+// its saved moniker when that is free (so parents, the log and the bonds of
+// others still find it); the moniker it has.
+static std::string adoptRecords(std::shared_ptr<genomeFile> genome, const SavedCreature& s) {
 	std::string mon = world.history->findMoniker(genome);
-	if (!s.moniker.empty() && world.history->renameMoniker(mon, s.moniker))
+	if (!s.moniker.empty() && mon != s.moniker && world.history->renameMoniker(mon, s.moniker))
 		mon = s.moniker; // the same moniker as before, so parents and the log still find it
 	monikerData& m = world.history->getMoniker(mon);
 	m.name = s.name;
@@ -1230,6 +1250,7 @@ static void restoreCreature(const fs::path& savedir, const SavedCreature& s, boo
 	} else {
 		m.bornknown = false; // saved before birth times were kept: counts from now
 	}
+	return mon;
 }
 
 static void restoreEgg(const SavedEgg& e) {
@@ -1350,6 +1371,131 @@ bool PutBackSetAsideSave(std::string& error) {
 	}
 	s_setAside.kept.clear();
 	return true;
+}
+
+// One line of a saved creature's record (the world save's, or an exported
+// creature's): key is its first word, l the rest; a mind's state is read on
+// from in, to its "endmindstate".
+static void readCreatureLine(SavedCreature* c, const std::string& key, std::istringstream& l, std::istream& in) {
+	std::string line;
+	auto dropCR = [](std::string& t) {
+		if (!t.empty() && t.back() == '\r')
+			t.pop_back();
+	};
+	if (key == "genome")
+		l >> c->genome;
+	else if (key == "female")
+		l >> c->female;
+	else if (key == "variant")
+		l >> c->variant;
+	else if (key == "selected")
+		l >> c->selected;
+	else if (key == "pos")
+		l >> c->x >> c->y;
+	else if (key == "foot")
+		l >> c->foot;
+	else if (key == "stage")
+		l >> c->stage;
+	else if (key == "age")
+		l >> c->age;
+	else if (key == "ticks")
+		l >> c->ticks;
+	else if (key == "ageing")
+		l >> c->ageing;
+	else if (key == "asleep")
+		l >> c->asleep;
+	else if (key == "baby")
+		l >> c->baby;
+	else if (key == "temperament")
+		std::getline(l, c->temperament);
+	else if (key == "temperament-born")
+		std::getline(l, c->temperamentBorn);
+	else if (key == "temperament-drift")
+		std::getline(l, c->temperamentDrift);
+	else if (key == "seasonal")
+		std::getline(l, c->seasonal);
+	else if (key == "lifespan-scale")
+		l >> c->lifespanScale;
+	else if (key == "mind-genes")
+		std::getline(l, c->mindGenes);
+	else if (key == "fertility")
+		l >> c->fertility;
+	else if (key == "bond") {
+		std::string rest;
+		std::getline(l, rest);
+		c->bonds.push_back(rest);
+	} else if (key == "langword" || key == "langpair" || key == "langstate") {
+		std::string rest;
+		std::getline(l, rest);
+		c->lang.push_back(key + rest);
+	} else if (key == "ownname") {
+		int category = 0, v = 0;
+		std::string word;
+		if (l >> category >> v >> word)
+			c->ownNames.push_back({unescapeLine(word), {category, v}});
+	} else if (key == "words") {
+		std::string pair;
+		while (l >> pair) {
+			size_t colon = pair.find(':');
+			if (colon != std::string::npos)
+				c->words.push_back({atoi(pair.substr(0, colon).c_str()), atoi(pair.substr(colon + 1).c_str())});
+		}
+	}
+	else if (key == "moniker")
+		l >> c->moniker;
+	else if (key == "parents") {
+		l >> c->mother >> c->father;
+		std::string how;
+		c->spliced = (l >> how) && how == "spliced";
+		if (c->mother == "-")
+			c->mother.clear();
+		if (c->father == "-")
+			c->father.clear();
+	} else if (key == "genus")
+		l >> c->genus >> c->gender;
+	else if (key == "died")
+		l >> c->diedtick >> c->diedstage;
+	else if (key == "name")
+		c->name = unescapeLine(restOfLine(l));
+	else if (key == "registered")
+		l >> c->registered;
+	else if (key == "born") {
+		l >> c->born >> c->bornknown;
+		c->hasborn = true;
+	} else if (key == "photo")
+		c->photos.push_back(unescapeLine(restOfLine(l)));
+	else if (key == "story") {
+		storyEntry e;
+		l >> e.tick >> e.kind >> e.other;
+		if (e.other == "-")
+			e.other.clear();
+		e.detail = unescapeLine(restOfLine(l));
+		c->story.push_back(e);
+	}
+	else if (key == "notes")
+		c->notes = unescapeLine(restOfLine(l));
+	else if (key == "epitaph")
+		c->epitaph = unescapeLine(restOfLine(l));
+	else if (key == "gravephoto")
+		c->gravephoto = unescapeLine(restOfLine(l));
+	else if (key == "chemicals") {
+		int v;
+		while (l >> v)
+			c->chemicals.push_back(v);
+	} else if (key == "organs") {
+		float v;
+		while (l >> v)
+			c->organs.push_back(v);
+	} else if (key == "mind")
+		l >> c->mind;
+	else if (key == "mindstate") {
+		while (std::getline(in, line)) {
+			dropCR(line);
+			if (line == "endmindstate")
+				break;
+			c->mindstate += line + "\n";
+		}
+	}
 }
 
 bool LoadWorldState(const fs::path& worlddir) {
@@ -1522,120 +1668,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 		} else if (io) {
 			readInjectedLine(*io, key, l, [&] { return unescapeLine(restOfLine(l)); });
 		} else if (c) {
-			if (key == "genome")
-				l >> c->genome;
-			else if (key == "female")
-				l >> c->female;
-			else if (key == "variant")
-				l >> c->variant;
-			else if (key == "selected")
-				l >> c->selected;
-			else if (key == "pos")
-				l >> c->x >> c->y;
-			else if (key == "foot")
-				l >> c->foot;
-			else if (key == "stage")
-				l >> c->stage;
-			else if (key == "age")
-				l >> c->age;
-			else if (key == "ticks")
-				l >> c->ticks;
-			else if (key == "ageing")
-				l >> c->ageing;
-			else if (key == "asleep")
-				l >> c->asleep;
-			else if (key == "baby")
-				l >> c->baby;
-			else if (key == "temperament")
-				std::getline(l, c->temperament);
-			else if (key == "temperament-born")
-				std::getline(l, c->temperamentBorn);
-			else if (key == "temperament-drift")
-				std::getline(l, c->temperamentDrift);
-			else if (key == "seasonal")
-				std::getline(l, c->seasonal);
-			else if (key == "lifespan-scale")
-				l >> c->lifespanScale;
-			else if (key == "mind-genes")
-				std::getline(l, c->mindGenes);
-			else if (key == "fertility")
-				l >> c->fertility;
-			else if (key == "bond") {
-				std::string rest;
-				std::getline(l, rest);
-				c->bonds.push_back(rest);
-			} else if (key == "langword" || key == "langpair" || key == "langstate") {
-				std::string rest;
-				std::getline(l, rest);
-				c->lang.push_back(key + rest);
-			} else if (key == "ownname") {
-				int category = 0, v = 0;
-				std::string word;
-				if (l >> category >> v >> word)
-					c->ownNames.push_back({unescapeLine(word), {category, v}});
-			} else if (key == "words") {
-				std::string pair;
-				while (l >> pair) {
-					size_t colon = pair.find(':');
-					if (colon != std::string::npos)
-						c->words.push_back({atoi(pair.substr(0, colon).c_str()), atoi(pair.substr(colon + 1).c_str())});
-				}
-			}
-			else if (key == "moniker")
-				l >> c->moniker;
-			else if (key == "parents") {
-				l >> c->mother >> c->father;
-				std::string how;
-				c->spliced = (l >> how) && how == "spliced";
-				if (c->mother == "-")
-					c->mother.clear();
-				if (c->father == "-")
-					c->father.clear();
-			} else if (key == "genus")
-				l >> c->genus >> c->gender;
-			else if (key == "died")
-				l >> c->diedtick >> c->diedstage;
-			else if (key == "name")
-				c->name = unescapeLine(restOfLine(l));
-			else if (key == "registered")
-				l >> c->registered;
-			else if (key == "born") {
-				l >> c->born >> c->bornknown;
-				c->hasborn = true;
-			} else if (key == "photo")
-				c->photos.push_back(unescapeLine(restOfLine(l)));
-			else if (key == "story") {
-				storyEntry e;
-				l >> e.tick >> e.kind >> e.other;
-				if (e.other == "-")
-					e.other.clear();
-				e.detail = unescapeLine(restOfLine(l));
-				c->story.push_back(e);
-			}
-			else if (key == "notes")
-				c->notes = unescapeLine(restOfLine(l));
-			else if (key == "epitaph")
-				c->epitaph = unescapeLine(restOfLine(l));
-			else if (key == "gravephoto")
-				c->gravephoto = unescapeLine(restOfLine(l));
-			else if (key == "chemicals") {
-				int v;
-				while (l >> v)
-					c->chemicals.push_back(v);
-			} else if (key == "organs") {
-				float v;
-				while (l >> v)
-					c->organs.push_back(v);
-			} else if (key == "mind")
-				l >> c->mind;
-			else if (key == "mindstate") {
-				while (std::getline(in, line)) {
-					dropCR(line);
-					if (line == "endmindstate")
-						break;
-					c->mindstate += line + "\n";
-				}
-			}
+			readCreatureLine(c, key, l, in);
 		} else if (e) {
 			if (key == "classifier")
 				l >> e->family >> e->genus >> e->species;
@@ -1941,3 +1974,233 @@ void TickLifeStageChanges() {
 
 } // namespace WorldSave
 
+// Exported creatures (owner, 2026-11-26: a player wanted to set her norns
+// aside and start afresh; "Zeetures can open C2 stuff, but there is no
+// expectation that C2 can open Zeetures stuff"). An export file holds the
+// creature's record exactly as the world save keeps it (writeCreatureRecord:
+// body, chemistry, organs, mind, words, bonds, temperament, life story),
+// with its genome, an unborn baby's genome and its photos packed in. It is
+// text: "zeetures-creature 1", then "genome-data", "baby-data NAME" and
+// "photo-file PATH" lines (base64), then the record, "creature" to "end".
+namespace WorldSave {
+
+static const char* B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+static std::string toBase64(const std::vector<uint8_t>& d) {
+	std::string out;
+	out.reserve((d.size() + 2) / 3 * 4);
+	for (size_t i = 0; i < d.size(); i += 3) {
+		uint32_t v = (uint32_t)d[i] << 16 | (i + 1 < d.size() ? (uint32_t)d[i + 1] << 8 : 0) | (i + 2 < d.size() ? d[i + 2] : 0);
+		out += B64[(v >> 18) & 63];
+		out += B64[(v >> 12) & 63];
+		out += i + 1 < d.size() ? B64[(v >> 6) & 63] : '=';
+		out += i + 2 < d.size() ? B64[v & 63] : '=';
+	}
+	return out;
+}
+
+static std::vector<uint8_t> fromBase64(const std::string& t) {
+	std::vector<uint8_t> out;
+	uint32_t v = 0;
+	int bits = 0;
+	for (char ch : t) {
+		const char* p = ch ? std::strchr(B64, ch) : nullptr;
+		if (!p)
+			continue; // ('=' and anything else)
+		v = (v << 6) | (uint32_t)(p - B64);
+		bits += 6;
+		if (bits >= 8) {
+			bits -= 8;
+			out.push_back((uint8_t)((v >> bits) & 255));
+		}
+	}
+	return out;
+}
+
+static std::vector<uint8_t> readBytes(const fs::path& p) {
+	std::ifstream in(p, std::ios::binary);
+	return std::vector<uint8_t>((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
+
+bool ExportCreature(std::shared_ptr<Agent> agent, const fs::path& file, std::string& error) {
+	oldCreature* c = agent ? oldCreatureOf(agent.get()) : nullptr;
+	if (!c || !c->isAlive() || agent->isDying()) {
+		error = "There is no living creature to export.";
+		return false;
+	}
+	std::ostringstream out;
+	out << "zeetures-creature 1\n";
+	{
+		VectorWriter w;
+		w << *c->getGenome();
+		out << "genome-data " << toBase64(w.vector()) << "\n";
+	}
+	// a baby she carries: its genome (in the user Genetics folder)
+	if (agent->babymoniker != 0) {
+		std::string baby = genomeNameFromInt(agent->babymoniker);
+		fs::path p = getUserDataDir() / "Genetics" / (baby + ".gen");
+		std::error_code ec;
+		if (!fs::exists(p, ec)) {
+			auto found = findGeneticsFiles(baby + ".gen");
+			if (!found.empty())
+				p = found[0];
+		}
+		if (fs::exists(p, ec))
+			out << "baby-data " << baby << " " << toBase64(readBytes(p)) << "\n";
+	}
+	std::string mon = world.history->findMoniker(c->getGenome());
+	monikerData& m = world.history->getMoniker(mon);
+	for (auto& ph : m.photos) {
+		std::error_code ec;
+		fs::path p = engine.currentworlddir / ph;
+		if (fs::exists(p, ec))
+			out << "photo-file " << toBase64(readBytes(p)) << " " << escapeLine(ph) << "\n";
+	}
+	writeCreatureRecord(out, agent.get(), c, "exported.gen");
+	// written whole to a new file, then put in place: a failed export never
+	// leaves half a creature
+	std::error_code ec;
+	fs::path tmp = file;
+	tmp += ".part";
+	{
+		std::ofstream f(tmp, std::ios::binary);
+		f << out.str();
+		f.close();
+		if (!f) {
+			fs::remove(tmp, ec);
+			error = fmt::format("Couldn't write {}.", file.string());
+			return false;
+		}
+	}
+	fs::rename(tmp, file, ec);
+	if (ec) {
+		fs::remove(tmp, ec);
+		error = fmt::format("Couldn't write {}: {}", file.string(), ec.message());
+		return false;
+	}
+	// it leaves this world (as in C2): its records stay, marked exported
+	if (world.selectedcreature.lock() == agent)
+		world.selectCreature(std::shared_ptr<Agent>());
+	m.wasExported();
+	agent->kill();
+	fmt::print("* Exported creature {} ({}) to {}\n", m.name.empty() ? mon : m.name, mon, file.string());
+	return true;
+}
+
+bool IsCreatureExport(const fs::path& file) {
+	std::ifstream in(file, std::ios::binary);
+	std::string first;
+	std::getline(in, first);
+	return first.rfind("zeetures-creature ", 0) == 0;
+}
+
+bool ImportCreatureExport(const fs::path& file, std::string& message) {
+	std::ifstream in(file, std::ios::binary);
+	std::string line;
+	if (!std::getline(in, line) || line.rfind("zeetures-creature ", 0) != 0) {
+		message = fmt::format("{} is not a Zeetures exported creature.", file.filename().string());
+		return false;
+	}
+	std::vector<uint8_t> genomeData;
+	std::string babyName;
+	std::vector<uint8_t> babyData;
+	std::vector<std::pair<std::string, std::vector<uint8_t>>> photoFiles;
+	SavedCreature s;
+	bool inRecord = false, ended = false;
+	while (std::getline(in, line)) {
+		if (!line.empty() && line.back() == '\r')
+			line.pop_back();
+		std::istringstream l(line);
+		std::string key;
+		l >> key;
+		if (!inRecord) {
+			if (key == "genome-data") {
+				std::string t;
+				l >> t;
+				genomeData = fromBase64(t);
+			} else if (key == "baby-data") {
+				std::string t;
+				l >> babyName >> t;
+				babyData = fromBase64(t);
+			} else if (key == "photo-file") {
+				std::string t;
+				l >> t;
+				photoFiles.push_back({unescapeLine(restOfLine(l)), fromBase64(t)});
+			} else if (key == "creature")
+				inRecord = true;
+		} else if (key == "end") {
+			ended = true;
+			break;
+		} else
+			readCreatureLine(&s, key, l, in);
+	}
+	if (genomeData.empty() || !ended) {
+		message = fmt::format("Couldn't import {}: the file is incomplete.", file.filename().string());
+		return false;
+	}
+	auto genome = std::make_shared<genomeFile>();
+	try {
+		SpanReader r(std::span<const uint8_t>(genomeData.data(), genomeData.size()));
+		r >> *genome;
+	} catch (std::exception& ex) {
+		message = fmt::format("Couldn't import {}: its genome can't be read ({})", file.filename().string(), ex.what());
+		return false;
+	}
+	// its photos, into this world's photos/ (new names if taken)
+	std::vector<std::string> photos;
+	for (auto& [path, data] : photoFiles) {
+		std::error_code ec;
+		fs::path dir = engine.currentworlddir / "photos";
+		fs::create_directories(dir, ec);
+		std::string stem = fs::path(path).stem().string(), ext = fs::path(path).extension().string();
+		std::string name = stem + ext;
+		for (int n = 1; fs::exists(dir / name, ec) && n < 1000; n++)
+			name = fmt::format("{}_{}{}", stem, n, ext);
+		std::ofstream f(dir / name, std::ios::binary);
+		f.write((const char*)data.data(), (std::streamsize)data.size());
+		if (f)
+			photos.push_back("photos/" + name);
+	}
+	s.photos = photos;
+	if (!s.gravephoto.empty())
+		s.gravephoto.clear();
+	// a baby she carries: its genome back in the user Genetics folder
+	if (!babyName.empty() && !babyData.empty()) {
+		std::error_code ec;
+		fs::path dir = getUserDataDir() / "Genetics";
+		fs::create_directories(dir, ec);
+		if (!fs::exists(dir / (babyName + ".gen"), ec) && findGeneticsFiles(babyName + ".gen").empty()) {
+			std::ofstream f(dir / (babyName + ".gen"), std::ios::binary);
+			f.write((const char*)babyData.data(), (std::streamsize)babyData.size());
+		}
+	} else
+		s.baby.clear();
+	s.selected = false;
+	// back in the world it left: the records it left behind give way to the
+	// file's (the same and newer), so it takes its moniker back
+	if (!s.moniker.empty())
+		if (auto it = world.history->all().find(s.moniker); it != world.history->all().end() && it->second.getStatus() == exported)
+			world.history->delMoniker(s.moniker);
+	Agent* a = nullptr;
+	try {
+		a = buildCreature(genome, s, false);
+	} catch (std::exception& ex) {
+		message = fmt::format("Couldn't import {}: {}", file.filename().string(), ex.what());
+		return false;
+	}
+	if (!a) {
+		message = fmt::format("Couldn't import {}.", file.filename().string());
+		return false;
+	}
+	std::string mon = adoptRecords(genome, s);
+	world.hand()->addCarried(AgentRef(a));
+	world.selectCreature(AgentRef(a).lock());
+	static const char* stages[] = {"baby", "child", "adolescent", "youth", "adult", "old", "senile"};
+	monikerData& m = world.history->getMoniker(mon);
+	message = fmt::format("{} came in from {}: a {} {} (the hand holds it; drop it somewhere).", m.name.empty() ? "A creature" : m.name,
+		file.filename().string(), s.female ? "female" : "male", stages[std::clamp(s.stage, 0, 6)]);
+	fmt::print("* Imported creature: {}\n", message);
+	return true;
+}
+
+} // namespace WorldSave

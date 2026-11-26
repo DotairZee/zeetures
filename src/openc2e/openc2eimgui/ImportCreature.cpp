@@ -29,6 +29,9 @@
 #include "creatures/SkeletalCreature.h"
 #include "fileformats/genomeFile.h"
 #include "historyManager.h"
+#include "PathResolver.h"
+#include "WorldSave.h"
+#include "creatures/CreatureAgent.h"
 #include "imageManager.h"
 
 #include <SDL3/SDL_dialog.h>
@@ -172,6 +175,41 @@ std::mutex s_mutex;
 std::vector<std::string> s_picked;
 std::string s_message;
 
+// File > Export Current Creature: the creature asked about, whether to ask,
+// and the file the save dialog chose (from its own thread)
+AgentRef s_exporting;
+bool s_askExport = false;
+std::vector<std::string> s_exportTo;
+
+void chosenExport(void*, const char* const* files, int) {
+	if (!files || !*files)
+		return;
+	std::lock_guard<std::mutex> lock(s_mutex);
+	s_exportTo.push_back(*files);
+}
+
+std::string creatureName(Agent* a) {
+	auto* ca = dynamic_cast<CreatureAgent*>(a);
+	if (!ca || !ca->getCreature())
+		return "this creature";
+	std::string mon = world.history->findMoniker(ca->getCreature()->getGenome());
+	const std::string& name = world.history->getMoniker(mon).name;
+	return name.empty() ? mon : name;
+}
+
+void exportTo(std::string path, std::string& message) {
+	if (fs::path(path).extension().empty())
+		path += ".zex";
+	auto a = s_exporting.lock();
+	std::string name = a ? creatureName(a.get()) : "";
+	std::string err;
+	if (WorldSave::ExportCreature(a, path, err))
+		message = fmt::format("{} was exported to {}. File > Import Creature brings it back, in this world or another.", name, path);
+	else
+		message = err;
+	s_exporting = AgentRef();
+}
+
 void chosen(void*, const char* const* files, int) {
 	if (!files)
 		return;
@@ -187,6 +225,9 @@ bool ImportExportedCreature(const fs::path& path, std::string& message) {
 		message = "Importing creatures works in Creatures 2 worlds.";
 		return false;
 	}
+	// one of Zeetures's own (.zex): the whole creature
+	if (WorldSave::IsCreatureExport(path))
+		return WorldSave::ImportCreatureExport(path, message);
 	Exported e;
 	std::string err;
 	if (!readExport(readAll(path), e, err)) {
@@ -240,9 +281,22 @@ bool ImportExportedCreature(const fs::path& path, std::string& message) {
 	return true;
 }
 
+void ExportCreatureMenuItem() {
+	auto sel = world.selectedcreature.lock();
+	auto* ca = sel ? dynamic_cast<CreatureAgent*>(sel.get()) : nullptr;
+	bool can = engine.version == 2 && ca && ca->getCreature() && ca->getCreature()->isAlive() && !sel->isDying();
+	if (ImGui::MenuItem("Export Current Creature...", nullptr, false, can)) {
+		s_exporting = AgentRef(sel);
+		s_askExport = true;
+	}
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+		ImGui::SetTooltip(can ? "Saves the selected creature to a file and takes it out of this world. File > Import Creature brings it back, here or in another world."
+							  : "Select a living creature first.");
+}
+
 void ImportCreatureMenuItem() {
 	if (ImGui::MenuItem("Import Creature...")) {
-		static const SDL_DialogFileFilter filters[] = {{"Exported creatures (exp)", "exp"}, {"All files", "*"}};
+		static const SDL_DialogFileFilter filters[] = {{"Exported creatures (zex, exp)", "zex;exp"}, {"All files", "*"}};
 		SDL_ShowOpenFileDialog(chosen, nullptr, nullptr, filters, 2, nullptr, false);
 	}
 }
@@ -255,6 +309,69 @@ void ImportCreatureTick() {
 		tested = true;
 		std::lock_guard<std::mutex> lock(s_mutex);
 		s_picked.push_back(t);
+	}
+	// developer aid: OPENC2E_TEST_EXPORT_CREATURE="path.zex" exports the
+	// selected creature (or the first living norn) once the world has run
+	// 50 ticks, without asking
+	static bool exportTested = false;
+	if (const char* t = devenv("OPENC2E_TEST_EXPORT_CREATURE"); t && !exportTested && world.hand() && world.tickcount > 50) {
+		exportTested = true;
+		std::shared_ptr<Agent> pick = world.selectedcreature.lock();
+		if (!pick)
+			for (auto& a : world.agents)
+				if (auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr; ca && a->genus == 1 && ca->getCreature() && ca->getCreature()->isAlive()) {
+					pick = a;
+					break;
+				}
+		s_exporting = AgentRef(pick);
+		std::string msg;
+		exportTo(t, msg);
+		fmt::print("* TEST EXPORT: {}\n", msg);
+	}
+	if (s_askExport) {
+		s_askExport = false;
+		ImGui::OpenPopup("Export Creature");
+	}
+	if (ImGui::BeginPopupModal("Export Creature", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		auto a = s_exporting.lock();
+		std::string name = a ? creatureName(a.get()) : "";
+		ImGui::TextUnformatted(fmt::format("Export {}?", name).c_str());
+		ImGui::TextUnformatted("It leaves this world and goes into a file. File > Import Creature brings it back,");
+		ImGui::TextUnformatted("here or in another Zeetures world, as it was: its body, mind, words and life story.");
+		if (ImGui::Button("Export...") && a) {
+			std::error_code ec;
+			fs::path dir = getUserDataDir() / "Exported Creatures";
+			fs::create_directories(dir, ec);
+			std::string safe;
+			for (char ch : name)
+				safe += (std::isalnum((unsigned char)ch) || ch == ' ' || ch == '-' || ch == '_') ? ch : '_';
+			static std::string where;
+			where = (dir / ((safe.empty() ? std::string("creature") : safe) + ".zex")).string();
+			static const SDL_DialogFileFilter filters[] = {{"Zeetures exported creatures (zex)", "zex"}};
+			SDL_ShowSaveFileDialog(chosenExport, nullptr, nullptr, filters, 1, where.c_str());
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel")) {
+			s_exporting = AgentRef();
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+	std::vector<std::string> exportTo_;
+	{
+		std::lock_guard<std::mutex> lock(s_mutex);
+		exportTo_.swap(s_exportTo);
+	}
+	for (auto& f : exportTo_) {
+		exportTo(f, s_message);
+		ImGui::OpenPopup("Exported");
+	}
+	if (ImGui::BeginPopupModal("Exported", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		ImGui::TextUnformatted(s_message.c_str());
+		if (ImGui::Button("OK"))
+			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
 	}
 	std::vector<std::string> picked;
 	{

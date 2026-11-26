@@ -135,6 +135,7 @@ class monikerData {
 	void wasBorn();
 	void hasDied();
 	void cameBack(); // brought back to life after dying (the Syringe): alive in the records again
+	void wasExported(); // left the world in an export file (File > Export Current Creature)
 	monikerstatus getStatus();
 };
 

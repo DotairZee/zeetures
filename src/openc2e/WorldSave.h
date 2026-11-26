@@ -44,4 +44,11 @@ void RequestLifeStage(std::shared_ptr<Agent> creature, int stage);
 void TickLifeStageChanges();
 bool SetCreatureLifeStage(std::shared_ptr<Agent>& creature, int stage, std::string& error); // creature is replaced when made younger
 
+// Exported creatures (Zeetures's own, .zex): the whole creature, as the world
+// save keeps it, in one file. Exporting takes it out of its world (as in C2;
+// its records stay, marked exported); importing hands it to the hand.
+bool ExportCreature(std::shared_ptr<Agent> creature, const std::filesystem::path& file, std::string& error);
+bool IsCreatureExport(const std::filesystem::path& file);
+bool ImportCreatureExport(const std::filesystem::path& file, std::string& message);
+
 } // namespace WorldSave

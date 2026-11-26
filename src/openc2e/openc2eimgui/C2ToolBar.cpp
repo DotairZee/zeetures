@@ -392,7 +392,7 @@ static bool s_set_aside_was_paused = false;
 		if (ImGui::MenuItem("Save World As...", nullptr, false, !engine.currentworlddir.empty()))
 			s_open_save_as = true;
 		ImGui::Separator();
-		ImGui::MenuItem("Export Current Creature...", nullptr, false, false);
+		ExportCreatureMenuItem();
 		ImportCreatureMenuItem();
 		ImGui::Separator();
 		if (ImGui::BeginMenu("Sound")) {

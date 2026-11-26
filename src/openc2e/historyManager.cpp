@@ -148,6 +148,11 @@ void monikerData::cameBack() {
 	diedstage = -1;
 }
 
+void monikerData::wasExported() {
+	status = exported;
+	owner = AgentRef();
+}
+
 void monikerData::hasDied() {
 	CreatureAgent* c = dynamic_cast<CreatureAgent*>(owner.get());
 	THROW_IFNOT(c);
