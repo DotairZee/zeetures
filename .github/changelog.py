@@ -386,6 +386,8 @@ VERSIONS = [
      "The brain is now an organ that needs feeding: it takes a little of a creature's energy, never so much that it starves one, and a creature short of food grows dazed (slower to learn, less sure, slow on its feet) until fed; lamp-lit places, the incubator's cave among them, keep their light at night instead of going dark under the night sky."),
     ("0.44.0", "d4d2998a",
      "Each creature's brain now grows, holds up, and ages: it grows most while young, from conversation (talk with it, and let it answer), care, and sleep; a well-raised brain learns faster all its life. With age the signs show unless the brain kept busy (new words, places, friends) and the creature kept moving: slower walking, less sure choices, forgotten places, then words. Stress that soon passes makes the young hardier; stress that goes on does harm. See Help, How the brain grows."),
+    ("0.44.1", "5b3d2f81",
+     "Lamp-lit places across Albia get the light their pictures show, and keep it at night: lamp caves, the lab, the garden domes, the glowing lava, and the cave over the walkway east of the incubator's lift, among 40 rooms."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

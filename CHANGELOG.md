@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 743 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 746 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.44.1](#version-0441): 3 commits, 26 November 2026
 - [0.44.0](#version-0440): 2 commits, 26 November 2026
 - [0.43.2](#version-0432): 3 commits, 26 November 2026
 - [0.43.1](#version-0431): 3 commits, 26 November 2026
@@ -110,6 +111,58 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.44.1
+
+Lamp-lit places across Albia get the light their pictures show, and keep it at night: lamp caves, the lab, the garden domes, the glowing lava, and the cave over the walkway east of the incubator's lift, among 40 rooms.
+
+### 26 November 2026
+
+#### Version 0.44.1
+
+[`5b3d2f81`](https://github.com/DotairZee/zeetures/commit/5b3d2f81f4f5a5f91b8c47330078718eff172a30)
+
+#### Lamp-lit places across the world get the light their pictures show
+
+[`7d033aee`](https://github.com/DotairZee/zeetures/commit/7d033aee991db52c4baea583a46c852d4cd0e0e9)
+
+A survey of the whole map's art against each room's light found rooms
+painted with lamps, lamplight or glowing lava set at light 0-71, and three
+lamp-lit rooms with a negative light source, which the night treats as no
+lamp. A new world addition (world-light.cos) sets 39 rooms:
+
+- Lamps: a cave with two big hanging lamps, a cave lamp, a spotlit pillar,
+  two rock faces washed in lamplight and the glow under the temple, the
+  lab of lamps and screens, a machine's lamps, two lanterns, the lamps in
+  the glass globes, five garden domes with strip lights (as their lit
+  neighbour), and the bulb-lit garden at the east end of the map (as the
+  same garden at the west end, where the map wraps). Each gets light
+  80-150 and a light source, so it keeps its light at night.
+- The volcano's lava rooms: light 150-200, kept at night.
+- Machines and the like: a lit window, a lit control panel, the lift
+  door's lamps, two lamp-lit pods and rooms, and a ledge of glowing orbs:
+  light 50-120.
+- The stone arches beside the incubator, a hearth's glow and a lit dome had
+  a light source of -106: now a lamp.
+
+Light also matters to creatures: darkness makes every species sleepy, and
+cave germs keep to dark rooms. The script runs after every other addition,
+as two of them reshape rooms (pool.cos, lift.cos); run before them, two
+settings went to the room as it was before. Checked: all 39 rooms have
+their new values after loading, and no other room changed.
+
+#### The lamp-lit cave east of the incubator's lift keeps its light at night
+
+[`e50fd6dd`](https://github.com/DotairZee/zeetures/commit/e50fd6dd1a267c546a5d9d1701852685fe5dc0a7)
+
+The cave over the walkway just east of the lift beside the incubator, with
+its hanging lamp (room 14), went night-blue like the open sea beside it. It
+now has a light source, as the incubator's own rooms do, so it keeps its
+warm light at night; its daytime light (177) is unchanged.
+
+Developer aid: OPENC2E_DUMP_SKY=file.pgm writes, once, how much of the
+day's and night's colour each 8 px cell of the map takes after lamp-lit
+rooms (greyscale, a pixel a cell), for finding places that darken.
 
 ## Version 0.44.0
 
