@@ -93,7 +93,7 @@ class Room {
 	int liteBase = -1, liteShown = -1;
 	float outdoors = -1.0f;
 	int floorvalue = 0, dropstatus = 0;
-	int windx, windy;
+	int windx = 0, windy = 0; // (rooms Zeetures adds start still, not with garbage)
 
 	std::string music;
 
