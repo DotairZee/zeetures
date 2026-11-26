@@ -23,6 +23,7 @@
  */
 
 #include "WorldSave.h"
+#include <chrono>
 #include "common/devenv.h"
 #include "creatures/Disease.h"
 #include "creatures/Exposure.h"
@@ -703,6 +704,9 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 		error = "This world's saved game could not be read or moved, so saving is off to protect it.";
 		return false;
 	}
+	// (how long it took goes in the log: a long save stops the game while
+	// it runs, and on Windows a stop of 5 s shows as "not responding")
+	const auto started = std::chrono::steady_clock::now();
 	fs::path tmp = worlddir / "save.new";
 	std::error_code ec;
 	fs::remove_all(tmp, ec);
@@ -942,6 +946,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 		return false;
 	}
 
+	const auto written = std::chrono::steady_clock::now();
 	fs::path dest = worlddir / "save";
 	fs::path old = worlddir / "save.old";
 	fs::remove_all(old, ec);
@@ -953,7 +958,8 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 		return false;
 	}
 	fs::remove_all(old, ec);
-	fmt::print("* Saved world: {} creatures, {} eggs, {} injected objects, {} other objects, {} records of the dead\n", ncreatures, neggs, ninjected, nworld, nrecords);
+	auto ms = [](auto a, auto b) { return (long)std::chrono::duration_cast<std::chrono::milliseconds>(b - a).count(); };
+	fmt::print("* Saved world: {} creatures, {} eggs, {} injected objects, {} other objects, {} records of the dead ({} ms: {} writing, {} swapping folders)\n", ncreatures, neggs, ninjected, nworld, nrecords, ms(started, std::chrono::steady_clock::now()), ms(started, written), ms(written, std::chrono::steady_clock::now()));
 	return true;
 }
 
