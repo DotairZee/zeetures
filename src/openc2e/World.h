@@ -158,7 +158,7 @@ class World {
 	// creature carries (the Owner's Kit camera)
 	// bare (with only_creature): that creature alone on the background, no
 	// objects either (birth portraits)
-	void drawWorld(class Camera* cam, RenderTarget* surface, bool skip_hand = false, Agent* only_creature = nullptr, bool bare = false, Agent* skip_agent = nullptr);
+	void drawWorld(class Camera* cam, RenderTarget* surface, bool skip_hand = false, Agent* only_creature = nullptr, bool bare = false, Agent* skip_agent = nullptr, Agent* skip_bubbles_of = nullptr);
 
 	int newUNID(Agent* whofor);
 	void setUNID(Agent* whofor, int unid);

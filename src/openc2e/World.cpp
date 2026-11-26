@@ -807,7 +807,7 @@ std::shared_ptr<Agent> World::lookupUNID(int unid) {
 	return unidmap[unid].lock();
 }
 
-void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent* only_creature, bool bare, Agent* skip_agent) {
+void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent* only_creature, bool bare, Agent* skip_agent, Agent* skip_bubbles_of) {
 	assert(surface);
 	surface->renderClear();
 
@@ -914,20 +914,21 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 			Agent* owner = p ? p->getParent() : nullptr;
 			if (owner && (owner == (Agent*)world.hand() || typeid(*owner) == typeid(Bubble))) {
 				SkyTint::draw(surface, m, destx, desty);
-				Thoughts::draw(surface, adjustx, adjusty, m->wraparound() ? (int)m->width() : 0, skip_agent);
+				Thoughts::draw(surface, adjustx, adjusty, m->wraparound() ? (int)m->width() : 0, skip_bubbles_of);
 				lit = true;
 			}
 		}
-		if (skip_hand || only_creature || skip_agent) {
+		if (skip_hand || only_creature || skip_agent || skip_bubbles_of) {
 			auto* p = dynamic_cast<CompoundPart*>(render);
 			Agent* owner = p ? p->getParent() : nullptr;
 			if (skip_hand && owner && owner == (Agent*)world.hand())
 				continue;
 			// (the Creature's View: the creature does not see itself, nor its
-			// own speech bubbles, which float on it; owner, 2026-11-17)
+			// own speech bubbles, which float on it; owner, 2026-11-17; each
+			// can be shown, in Preferences, 2026-11-25)
 			if (skip_agent && owner == skip_agent)
 				continue;
-			if (skip_agent && owner && dynamic_cast<Bubble*>(owner) && owner->floatingagent.get() == skip_agent)
+			if (skip_bubbles_of && owner && dynamic_cast<Bubble*>(owner) && owner->floatingagent.get() == skip_bubbles_of)
 				continue;
 			if (bare && only_creature && owner != only_creature)
 				continue;
@@ -956,7 +957,7 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 	if (!lit) {
 		SkyTint::draw(surface, m, destx, desty);
 		if (!only_creature) // (not in a photo)
-			Thoughts::draw(surface, adjustx, adjusty, m->wraparound() ? (int)m->width() : 0, skip_agent);
+			Thoughts::draw(surface, adjustx, adjusty, m->wraparound() ? (int)m->width() : 0, skip_bubbles_of);
 	}
 
 	// render port connection lines. TODO: these should be rendered as some kind

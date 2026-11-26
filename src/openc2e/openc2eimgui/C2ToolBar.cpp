@@ -1721,6 +1721,21 @@ static void DrawPreferences() {
 			if (ImGui::RadioButton("Always open", b == 2))
 				SetEyeViewBlinking(2);
 			ImGui::Spacing();
+			{
+				static const std::tuple<EyeViewShow, const char*, const char*> shows[] = {
+					{EYE_SHOW_SELF, "Show the creature itself", "The view is roughly what the creature sees, so it leaves the creature out unless this is ticked"},
+					{EYE_SHOW_BUBBLES, "Show its speech and thought bubbles", "The selected creature's own bubbles, in its view (as the Bubbles settings above allow)"},
+					{EYE_SHOW_NAME, "Its name in the window's title", "\"Creature's View: Alice\""},
+				};
+				for (auto& [what, label, tip] : shows) {
+					bool on = EyeViewShows(what);
+					if (ImGui::Checkbox(label, &on))
+						SetEyeViewShows(what, on);
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("%s", tip);
+				}
+			}
+			ImGui::Spacing();
 			ImGui::AlignTextToFramePadding();
 			ImGui::TextUnformatted("Size:");
 			if (ImGui::IsItemHovered())

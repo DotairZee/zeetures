@@ -25,6 +25,7 @@
 #include <cmath>
 #include <fmt/format.h>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <map>
 #include <memory>
 
@@ -69,6 +70,22 @@ int EyeViewBlinking() {
 void SetEyeViewBlinking(int mode) {
 	s_blinking = std::clamp(mode, 0, 2);
 	writePlayerSetting("eye-blink", s_blinking == 1 ? "sleep" : s_blinking == 2 ? "never" : "all");
+}
+
+// (a player, 2026-11-25: to see the creature, its bubbles and its name)
+static const char* const s_show_keys[] = {"eye-show-self", "eye-show-bubbles", "eye-show-name"};
+static int s_shows[3] = {-1, -1, -1};
+
+bool EyeViewShows(EyeViewShow what) {
+	int i = (int)what;
+	if (s_shows[i] < 0)
+		s_shows[i] = readPlayerSetting(s_show_keys[i]) == "1" ? 1 : 0;
+	return s_shows[i] == 1;
+}
+
+void SetEyeViewShows(EyeViewShow what, bool shown) {
+	s_shows[(int)what] = shown ? 1 : 0;
+	writePlayerSetting(s_show_keys[(int)what], shown ? "1" : "0");
 }
 
 void SetEyeViewWidth(int width) {
@@ -466,8 +483,9 @@ void DrawEyeView() {
 	}
 	s_camera->moveToGlobal((int)std::lround(s_cx) - VIEW_W / 2, (int)std::lround(s_cy) - VIEW_H / 2, jump);
 	// (without the creature itself: the view is, roughly, what it sees, and
-	// it does not see itself; owner, 2026-11-13)
-	world.drawWorld(s_camera.get(), s_target.get(), false, nullptr, false, c);
+	// it does not see itself; owner, 2026-11-13; unless Preferences show it,
+	// or its bubbles)
+	world.drawWorld(s_camera.get(), s_target.get(), false, nullptr, false, EyeViewShows(EYE_SHOW_SELF) ? nullptr : c, EyeViewShows(EYE_SHOW_BUBBLES) ? nullptr : c);
 
 	// any size, dragged by its corner, keeping the picture's shape (a
 	// player, 2026-11-23: "a click-n-draggable size changer"); remembered
@@ -488,7 +506,27 @@ void DrawEyeView() {
 		float w = std::clamp(d->DesiredSize.x - 16, 120.0f, 960.0f);
 		d->DesiredSize = ImVec2(w + 16, std::round(w * 3 / 4) + 62);
 	});
-	if (ImGui::Begin("Creature's View", &s_eye_view_open, ImGuiWindowFlags_NoScrollbar)) {
+	// the title can carry the creature's name, so the window is known by
+	// "###Creature's View"; where it was under its old name is kept
+	static bool moved_settings = false;
+	if (!moved_settings) {
+		moved_settings = true;
+		if (!ImGui::FindWindowSettingsByID(ImHashStr("###Creature's View")))
+			if (ImGuiWindowSettings* old = ImGui::FindWindowSettingsByID(ImHashStr("Creature's View"))) {
+				ImGuiWindowSettings was = *old;
+				ImGuiWindowSettings* now = ImGui::CreateNewWindowSettings("###Creature's View"); // (may move the old one)
+				now->Pos = was.Pos;
+				now->Size = was.Size;
+				now->ViewportPos = was.ViewportPos;
+				now->ViewportId = was.ViewportId;
+				now->DockId = was.DockId;
+				now->ClassId = was.ClassId;
+				now->DockOrder = was.DockOrder;
+				now->Collapsed = was.Collapsed;
+			}
+	}
+	std::string title = EyeViewShows(EYE_SHOW_NAME) ? fmt::format("Creature's View: {}###Creature's View", KitCreatureName(c)) : "Creature's View###Creature's View";
+	if (ImGui::Begin(title.c_str(), &s_eye_view_open, ImGuiWindowFlags_NoScrollbar)) {
 		void* tex = s_target->getNativeTexture();
 		float w = std::floor(std::max(120.0f, ImGui::GetContentRegionAvail().x)); // (whole pixels: the screen is one pixel)
 		ImVec2 size(w, std::round(w * 3 / 4));
