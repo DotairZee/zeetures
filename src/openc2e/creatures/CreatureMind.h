@@ -234,6 +234,8 @@ struct MindPerception {
 	// called to look at a thing (the hand that spoke or touched it, or what
 	// it named): its category, and mind ticks since
 	int calledCategory = -1, calledAge = -1;
+	// the call was the hand's "look": a stronger pull to look at it
+	bool calledToLook = false;
 	// the hand has just patted or slapped it
 	bool handPat = false, handSlap = false;
 	// the hand has just said "yes" (+) or "no" (-) to it, a word it knows:

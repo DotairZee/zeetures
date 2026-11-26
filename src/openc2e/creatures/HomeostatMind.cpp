@@ -292,6 +292,7 @@ struct Params {
 	// that instinct is judged by, as the nudges above: unpraised, obeying
 	// fades; slapped for not listening, it listens better next time.
 	float callPull = 0.25f;
+	float lookPull = 0.75f; // the hand's "look": the call pulls this much instead
 	int callTicks = 8; // mind ticks, about 3 s
 	float obey = 0.15f;
 	int heardTicks = 24; // about 10 s
@@ -2851,7 +2852,7 @@ class HomeostatMind : public CreatureMind {
 			// called: to look at what it was called to
 			if (decision == 0 && category >= 0 && category == p.calledCategory && p.calledAge >= 0 && p.calledAge < prm.callTicks)
 				// (told to do something it knows the word for: less)
-				c.score += prm.callPull * (p.heardVerb >= 0 && p.heardAge >= 0 && p.heardAge <= p.calledAge + 1 ? 0.35f : 1.0f) * (1.0f - 0.5f * p.calledAge / prm.callTicks) * (p.heardNamed ? 1.25f : 1.0f) * std::clamp(1.0f + 0.2f * z[3], 0.5f, 1.5f);
+				c.score += (p.calledToLook ? prm.lookPull : prm.callPull) * (p.heardVerb >= 0 && p.heardAge >= 0 && p.heardAge <= p.calledAge + 1 ? 0.35f : 1.0f) * (1.0f - 0.5f * p.calledAge / prm.callTicks) * (p.heardNamed ? 1.25f : 1.0f) * std::clamp(1.0f + 0.2f * z[3], 0.5f, 1.5f);
 			if (who && !who->who.empty()) {
 				c.score += prm.strangerBias * z[0] * (1.0f - who->familiarity); // boldness
 				if (decision == prm.hitDecision)

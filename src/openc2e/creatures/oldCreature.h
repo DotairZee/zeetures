@@ -178,9 +178,13 @@ class oldCreature : public Creature {
 	int calledCategory = -1;
 	unsigned int calledTick = 0;
 	void callTo(int category);
+	// the very thing the hand's "look" turned it to (of calledCategory; the
+	// call's time is calledTick), or none
+	AgentRef lookAt;
 	int replyWord = -1; // what it will say back (-1: something of its own)
 	// or the hand asked it a question it knows the word for: 1 "what" (it
-	// says what it is doing), 2 "why" (the need behind it); 0 none
+	// says what it is doing), 2 "why" (the need behind it); or 3, told to
+	// "look" (it names what it looks at); 0 none
 	int replyQuestion = 0;
 	unsigned int replyAt = 0; // and when (0: nothing)
 	// what it feels about each creature it has met, by moniker

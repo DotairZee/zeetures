@@ -833,10 +833,13 @@ void answerHand(const std::string& text) {
 		}
 		int praise = 0; // "yes" or "no", the last said (a word it knows)
 		int question = 0; // "what" or "why", the last asked
+		bool look = false;
 		for (auto& [at, w] : said) {
 			if (!knowsWord(l.c, w))
 				continue;
-			if (w == W_WHAT || w == W_WHY)
+			if (w == W_LOOK)
+				look = true;
+			else if (w == W_WHAT || w == W_WHY)
 				question = w == W_WHAT ? 1 : 2; // (a question: "why" is among C2's verbs, but no order)
 			else if (w <= 13)
 				s.verb = w;
@@ -855,10 +858,35 @@ void answerHand(const std::string& text) {
 		s.named = l.named;
 		s.tick = world.tickcount;
 		l.c->spoken = s;
-		l.c->callTo(s.noun >= 0 ? s.noun : 1); // the thing, or the hand
+		// told to "look": at the thing the hand holds or points at, else the
+		// one nearest the hand (of the kind named, if one is); it looks
+		// round at it and names it, as the manual has it, "an easy way of
+		// teaching your Norn the names of objects"
+		Agent* lookAt = nullptr;
+		if (look) {
+			if (shown && shown != hand && shown != l.a && (s.noun < 0 || shown->category == s.noun))
+				lookAt = shown;
+			else {
+				const float px = world.hand()->pointerX(), py = world.hand()->pointerY();
+				float least = 200.0f;
+				for (auto& a : world.agents) {
+					if (!a || a.get() == l.a || a.get() == hand || a->isDying() || a->category < 2 || a->category > 39 || a->invisible() || !a->part(0) ||
+						(a->carriedby && a->carriedby.get() != hand) || (s.noun >= 0 && a->category != s.noun))
+						continue;
+					float d = std::hypot(centreX(a.get()) - px, centreY(a.get()) - py);
+					if (d < least)
+						least = d, lookAt = a.get();
+				}
+			}
+		}
+		l.c->callTo(lookAt ? lookAt->category : s.noun >= 0 ? s.noun : 1); // the thing, or the hand
+		if (lookAt)
+			l.c->lookAt = AgentRef(lookAt);
+		if (look && watching())
+			fmt::print("* LOOK unid {}: at {}\n", l.a->getUNID(), lookAt ? fmt::format("{} {} {} (category {})", (int)lookAt->family, (int)lookAt->genus, lookAt->species, lookAt->category) : s.noun >= 0 ? fmt::format("category {}, none near the hand", s.noun) : std::string("the hand"));
 		// the nearest two (or those named) say it back
 		if (rank < 2 || l.named) {
-			l.c->replyQuestion = question;
+			l.c->replyQuestion = question ? question : lookAt ? 3 : 0;
 			l.c->replyWord = said.empty() ? -1 : said.back().second;
 			// (a name it is being taught, or one of its own, over the rest)
 			l.c->replyName = naming;
@@ -890,6 +918,8 @@ void tickReply(Agent* creature, oldCreature* c) {
 		Utterance u;
 		if (q == 1)
 			u = phraseFor("doing", creature, c);
+		else if (q == 3)
+			u = phraseFor(fmt::format("name:{}", c->calledCategory), creature, c); // (its noun)
 		else {
 			// the need its last choice was most for (the mind's view of
 			// that choice: what it expected each need to ease); a choice
@@ -917,7 +947,7 @@ void tickReply(Agent* creature, oldCreature* c) {
 			u = need < 0 ? phraseFor("babble", creature, c) : phraseFor(fmt::format("need:{}:{}", need, (int)c->getDrive(need)), creature, c);
 		}
 		if (watching())
-			fmt::print("* ASKED \"{}\": unid {} decision {}\n", q == 1 ? "what" : "why", creature->getUNID(), c->getDecisionId());
+			fmt::print("* ASKED \"{}\": unid {} decision {}\n", q == 1 ? "what" : q == 2 ? "why" : "look", creature->getUNID(), c->getDecisionId());
 		creatureSays(creature, stage, u);
 		return;
 	}

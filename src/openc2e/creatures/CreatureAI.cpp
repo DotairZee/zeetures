@@ -973,6 +973,7 @@ void oldCreature::applyStimulusChemistry(StimulusEvent& s) {
 void oldCreature::callTo(int category) {
 	calledCategory = category;
 	calledTick = std::max(1u, world.tickcount);
+	lookAt.clear();
 }
 
 void oldCreature::buildMindActions() {
@@ -1144,6 +1145,7 @@ MindPerception oldCreature::buildPerception() {
 	if (calledTick != 0 && world.tickcount >= calledTick && world.tickcount - calledTick < 100) {
 		p.calledCategory = calledCategory;
 		p.calledAge = (int)(world.tickcount - calledTick) / 4;
+		p.calledToLook = (bool)lookAt;
 	}
 	p.actions = &mindactions;
 	p.actionFinished = parentagent->vmStopped();
@@ -1837,6 +1839,15 @@ void oldCreature::tickMind() {
 		return;
 
 	chooseAgents();
+	// told to "look" at a thing: that one of its kind, while it is in sight
+	// and the call lasts (rather than the nearest of the kind)
+	if (lookAt) {
+		if (lookAt->isDying() || lookAt->category != calledCategory || world.tickcount < calledTick || world.tickcount - calledTick >= 100 || calledCategory < 0 ||
+			calledCategory >= (int)chosenagents.size() || !agentInSight(lookAt))
+			lookAt.clear();
+		else
+			chosenagents[calledCategory] = lookAt;
+	}
 	if (!mindborn)
 		buildMindActions();
 	MindPerception p = [&] { PROFILE_SCOPE("creature: perception"); return buildPerception(); }();
