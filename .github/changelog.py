@@ -362,6 +362,8 @@ VERSIONS = [
      "The airlock stays open to the sea, flooded and shut to land while the submarine comes to it, so creatures in the chamber no longer drain it in the submarine's way; it works as before once the submarine has docked."),
     ("0.38.0", "b2fc3a84",
      "Kits in their own windows (experimental; File > Preferences > Display): a kit, the Creature's View or Preferences dragged out of the game becomes a window of its own, on another monitor if you like, and comes back when dragged in; a bamboo bridge from the flying fox's landing up to the ledge before the stone arches."),
+    ("0.39.0", "3e2e6f14",
+     "Words from the C2 manual: typing \"yes\" or \"no\" praises or blames a creature that knows the word, \"what\" and \"why\" have it say what it is doing and the need behind it, and \"look\" turns it to the thing by the hand and has it name it; creatures say how strongly they need something, from \"very\" to \"extremely\"; the Creature's View can show the creature itself, its bubbles and (by default) its name in the window's title."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

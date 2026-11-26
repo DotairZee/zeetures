@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 698 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 706 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.39.0](#version-0390): 8 commits, 25 November 2026
 - [0.38.0](#version-0380): 15 commits, 23 November 2026 to 25 November 2026
 - [0.37.1](#version-0371): 2 commits, 24 November 2026
 - [0.37.0](#version-0370): 12 commits, 24 November 2026
@@ -98,6 +99,90 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.39.0
+
+Words from the C2 manual: typing "yes" or "no" praises or blames a creature that knows the word, "what" and "why" have it say what it is doing and the need behind it, and "look" turns it to the thing by the hand and has it name it; creatures say how strongly they need something, from "very" to "extremely"; the Creature's View can show the creature itself, its bubbles and (by default) its name in the window's title.
+
+### 25 November 2026
+
+#### Version 0.39.0
+
+[`3e2e6f14`](https://github.com/DotairZee/zeetures/commit/3e2e6f14c7c9e3ac1b65707a847c4418a9cbc891)
+
+#### Creatures say how strongly they need something
+
+[`7cd68701`](https://github.com/DotairZee/zeetures/commit/7cd6870123bcedaea1f927123ecc8cea391687d1)
+
+Past "very", a creature uses C2's other words for it as its need grows:
+really, seriously, intensely, extremely ("me extremely hungry!"), the
+strongest of them it knows. One that knows none says "very" as before.
+
+#### Typing "look" turns a creature to the thing by the hand
+
+[`0f960ad2`](https://github.com/DotairZee/zeetures/commit/0f960ad26c68370b62035a33878d719c81aa574f)
+
+A creature that knows the word looks round at what the hand holds or
+points at, else the thing nearest the hand ("look toy": the nearest toy),
+pulled to it more strongly than by an ordinary call, and the nearest two
+say its name ("look plant!"): an easy way to teach the names of things.
+With nothing of the kind near the hand, it looks for one as before.
+
+#### Asked "what" or "why", a creature tells you
+
+[`c95d89fd`](https://github.com/DotairZee/zeetures/commit/c95d89fd32f90b1fc4770a363256c784d272d425)
+
+A creature that knows the word answers in the words it knows, the rest
+in its own tongue:
+
+- "what": what it is doing and to what ("me push toy", "me look plant")
+- "why": the need its choice was most for ("me very hungry"), boredom when
+  it chose something only because it was new, else its strongest need
+
+"why" is among C2's verb words but is no longer taken as an order. The
+nearest two listeners answer, or those called by name.
+
+The director (a developer aid) gains "teachwords": every creature learns
+every word.
+
+#### Typing "yes" and "no" praises and blames a creature
+
+[`2d86dd6c`](https://github.com/DotairZee/zeetures/commit/2d86dd6c2d7fb8ff011b673b03612c232230a007)
+
+A creature that knows the word feels half of what its own genome gives
+for a pat ("yes") or a slap ("no"), without the touch: a word neither
+hurts nor soothes pain or injury. For "no" the slap's pain is replaced by
+the punishment chemical, so it is still blame the creature learns from.
+Either counts, by half, as praise or blame for doing as it was told.
+Addressed by name and earshot as other words are.
+
+#### Creature's View: the name in the title is on by default
+
+[`885e2434`](https://github.com/DotairZee/zeetures/commit/885e24343c34c57c99179b32dc17c0dd163ae67c)
+
+"Its name in the window's title" starts ticked; showing the creature
+itself and its bubbles still start unticked.
+
+#### Creature's View: the name alone when the whole title does not fit
+
+[`84c097aa`](https://github.com/DotairZee/zeetures/commit/84c097aa142cba6e16fbddc978e302fcb1103433)
+
+With "Its name in the window's title" ticked, a view too narrow for
+"Creature's View: Alice" is titled "Alice".
+
+#### Creature's View: show the creature, its bubbles and its name
+
+[`da846b24`](https://github.com/DotairZee/zeetures/commit/da846b24023f249b4c312a9ca95d5693ca8c1eee)
+
+Three new checkboxes in Preferences &gt; Creatures &gt; Creature's View, each off
+unless ticked:
+
+- Show the creature itself (the view leaves it out, as before, otherwise)
+- Show its speech and thought bubbles (as the Bubbles settings above allow)
+- Its name in the window's title ("Creature's View: Alice")
+
+The window now goes by "###Creature's View" so its title can change; where
+it was under the old name is carried over.
 
 ## Version 0.38.0
 
