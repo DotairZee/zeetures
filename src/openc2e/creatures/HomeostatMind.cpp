@@ -166,6 +166,12 @@ struct Params {
 	// crowdRelief of itself
 	float crowdLeaveAt = 0.5f, crowdRadius = 250.0f, crowdRelief = 0.5f;
 	int crowdCount = 4;
+	// Crowd sense: whatever would leave it among crowdCount or more others
+	// (walking up to a creature in a crowd, acting on a thing in one, walking
+	// toward one within crowdAhead px, or staying put in one) is expected to
+	// raise Crowded by up to crowdJoin, less the more a survival need presses.
+	// 0 turns it off.
+	float crowdJoin = 1.0f, crowdAhead = 600.0f;
 	// Temperament's signature behaviours (owner, 2026-11-11: traits must show),
 	// each per unit of the trait's z-score: the bold drawn to strangers and the
 	// shy put off (scaled by how strange), the shy backing away from strangers
@@ -1735,6 +1741,7 @@ class HomeostatMind : public CreatureMind {
 			candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](const Candidate& c) { return isFutile(p, c.category, c.decision); }),
 				candidates.end());
 		}
+		senseCrowds(p, d, D, candidates);
 		if (candidates.empty())
 			return out;
 		Candidate choice = pick(candidates, D);
@@ -2253,7 +2260,8 @@ class HomeostatMind : public CreatureMind {
 		std::map<std::string, float*> known = {{"hungerPatience", &prm.hungerPatience}, {"travelHalf", &prm.travelHalf},
 			{"floorChangeDistance", &prm.floorChangeDistance}, {"routeMaxCost", &prm.routeMaxCost}, {"seekDistanceCost", &prm.seekDistanceCost},
 			{"exploreWant", &prm.exploreWant}, {"noveltyMin", &prm.noveltyMin}, {"noveltyReturn", &prm.noveltyReturn},
-			{"crowdLeaveAt", &prm.crowdLeaveAt}, {"crowdRadius", &prm.crowdRadius}, {"crowdRelief", &prm.crowdRelief}};
+			{"crowdLeaveAt", &prm.crowdLeaveAt}, {"crowdRadius", &prm.crowdRadius}, {"crowdRelief", &prm.crowdRelief},
+			{"crowdJoin", &prm.crowdJoin}, {"crowdAhead", &prm.crowdAhead}};
 		std::stringstream ss(env);
 		std::string item;
 		while (std::getline(ss, item, ',')) {
@@ -2627,6 +2635,70 @@ class HomeostatMind : public CreatureMind {
 	}
 	float dxTo(const MindPerception& p, float x) const { return wrapD(x - p.x); }
 
+	// Crowd sense: the other creatures in sight within crowdRadius of (x, y),
+	// leaving out the one named (the creature acted on)
+	int othersAround(const MindPerception& p, float x, float y, const std::string& besides = "") const {
+		int n = 0;
+		for (auto& s : p.visible)
+			if (!s.who.empty() && s.who != besides && std::hypot(wrapD(s.x - x), s.y - y) < prm.crowdRadius)
+				n++;
+		return n;
+	}
+	// and those ahead on a walk west (10) or east (11), from `from` px on to
+	// crowdAhead, at about its height
+	int othersAhead(const MindPerception& p, int dir, float from = 0.0f) const {
+		int n = 0;
+		for (auto& s : p.visible) {
+			if (s.who.empty() || std::fabs(s.y - p.y) > 150.0f)
+				continue;
+			float ahead = dir == 10 ? -dxTo(p, s.x) : dxTo(p, s.x);
+			if (ahead > from && ahead < prm.crowdAhead)
+				n++;
+		}
+		return n;
+	}
+
+	// Crowds are crowding (owner, 2026-11-26: "I want creatures to be social,
+	// find each other to reduce loneliness and to mate--but also to
+	// explore"). Crowded rises only after a creature has joined a crowd, too
+	// late for joining to be learned as its cause, so they walked up to one
+	// another until 4 or more stood together in a third of all choices, and
+	// those who walked out walked into the next crowd. Whatever would leave it
+	// among crowdCount or more others is expected to raise Crowded; one or two
+	// companions cost nothing, and a pressing survival need (food among the
+	// crowd) outweighs it.
+	void senseCrowds(const MindPerception& p, const std::array<float, NUM_DRIVES>& d, float D, std::vector<Candidate>& cands) {
+		if (prm.crowdJoin <= 0.0f)
+			return;
+		float survival = std::max({d[PAIN], d[HUNGER], d[COLD], d[HOT], d[INJURY], d[SUFFOCATE], d[THIRST]});
+		float weight = 1.0f - std::clamp(survival, 0.0f, 1.0f);
+		if (weight <= 0.0f)
+			return;
+		int here = othersAround(p, p.x, p.y);
+		auto cost = [&](int n) {
+			if (n < prm.crowdCount)
+				return 0.0f;
+			Expectation e;
+			e.delta[CROWDED] = prm.crowdJoin * std::min(1.0f, (float)(n - prm.crowdCount + 1) / (float)prm.crowdCount);
+			return weight * predictedRelief(d, D, e); // (negative)
+		};
+		for (auto& c : cands) {
+			if (c.escape || c.boatCall || c.who == "out of the crowd" || c.who.rfind("away from ", 0) == 0 || c.who.rfind("shy of ", 0) == 0)
+				continue;
+			int dir = c.decision == 26 ? 10 : c.decision == 27 ? 11 : c.decision;
+			int n = here;
+			if (c.category < 0 && (dir == 10 || dir == 11))
+				n = othersAhead(p, dir);
+			else if (c.category >= 0)
+				for (auto& s : p.visible)
+					if (s.category == c.category && (c.target ? s.agent == c.target : s.who.empty())) {
+						n = othersAround(p, s.x, s.y, s.who);
+						break;
+					}
+			c.score += cost(n);
+		}
+	}
+
 	bool isBlocked(const MindPerception& p, int decision) const {
 		int dir = decision == 26 ? 10 : decision == 27 ? 11 : decision;
 		const Blocked& b = blocked[dir == 10 ? 0 : 1];
@@ -2962,7 +3034,11 @@ class HomeostatMind : public CreatureMind {
 				int first = west > east ? 11 : 10;
 				for (int dir : {first, 21 - first}) {
 					int ahead = dir == 11 ? east : west;
-					if (ahead > (west + east) / 2 || waterAhead(p, dir) || wallAhead(p, dir) || isBlocked(p, dir) || cliffAhead(p, dir))
+					// (nor toward another crowd further on: between the two
+					// crowds of rooms 27 and 28 they walked back and forth,
+					// three in four back within 600 ticks, 2026-11-26)
+					if (ahead > (west + east) / 2 || othersAhead(p, dir, prm.crowdRadius) >= prm.crowdCount || waterAhead(p, dir) || wallAhead(p, dir) ||
+						isBlocked(p, dir) || cliffAhead(p, dir))
 						continue;
 					Expectation away;
 					away.delta[CROWDED] = -prm.crowdRelief * d[CROWDED];
