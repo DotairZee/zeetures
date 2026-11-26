@@ -128,7 +128,7 @@ void setBabyWords(bool on);
 // after a player's memory of C1): heard a few times, a word is the start of
 // it run into its own tongue ("han-nah-do"); nearly learned, the word a
 // little off ("hanb"; R as W and S as Th, as C1's young said them); learned,
-// right. Off unless ticked; independent of the experimental language
+// right. On unless unticked (owner, 2026-11-26); independent of the experimental language
 // system. OPENC2E_WORD_ATTEMPTS=0/1 (developer aid).
 bool wordAttempts();
 void setWordAttempts(bool on);

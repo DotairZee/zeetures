@@ -283,7 +283,7 @@ Creatures are born knowing no words. Until they learn yours they speak Nornish, 
 
 ### First words and first tries
 
-Two choices in File > Preferences > Creatures, under Talking. Both are off unless you tick them, and both work with or without the experimental way of learning to talk.
+Two choices in File > Preferences > Creatures, under Talking. The first is off unless you tick it, the second on unless you untick it, and both work with or without the experimental way of learning to talk.
 
 - **Babies say their first words.** A baby that has learned the word for what it wants to say says just that word: "food!", "tired", "hand". The rest of the time it cries and babbles as before, and when it is hurt or upset it still cries more often than not. It also says a learned word back to you and to a teaching machine.
 - **Words come out a little wrong while being learned.** Heard a few times, a word comes out as its start run into the creature's own tongue ("han-nah-do"); nearly learned, as the word a little off, with W for R and Th for S as Creatures 1's young said them ("wetht" for rest), or one sound slipped ("hanb"); learned, right. Each creature keeps its own slip for a word. Without it, a word stays in the creature's own tongue until it is learned.

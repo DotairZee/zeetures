@@ -273,7 +273,7 @@ bool wordAttempts() {
 		if (const char* e = devenv("OPENC2E_WORD_ATTEMPTS"))
 			s_wordAttempts = atoi(e) ? 1 : 0;
 		else
-			s_wordAttempts = readSetting("word-attempts") == "1" ? 1 : 0;
+			s_wordAttempts = readSetting("word-attempts") == "0" ? 0 : 1;
 	}
 	return s_wordAttempts == 1;
 }
