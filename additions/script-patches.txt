@@ -267,3 +267,17 @@ replace doif var1 eq 1 mate else anim [036037036037] mesg wrt+ _it_ 200 0 0 0 en
 scrp 0 0 0 18
 find doif totl 4 1 0 lt eggl doif var1 eq 1 mate else anim [036037036037] mesg wrt+ _it_ 200 0 0 0 endi endi
 replace doif var1 eq 1 mate else anim [036037036037] mesg wrt+ _it_ 200 0 0 0 endi
+
+* The cave fungus (C2's own Fungi_Update.cob, 2 25 16; owner, 2026-11-26:
+* "gentler"). A bite only changed its picture and its timer made it whole
+* again two seconds later, and even a resting one fed whoever bit it, so it
+* was an endless meal (a crowd of 28 under the incubator lived on one). Now
+* only a whole fungus (pose 2) feeds, and a bite leaves it bitten for a
+* minute before it grows whole again: at most a meal a minute each. (Tried
+* too: each bite taking 5 from its room's organic nutrient; with the colony
+* spread out both kept hunger as low, this one lowest.)
+scrp 2 25 16 12
+find rndv ov00 1 4 mulv ov00 3 pose ov00 base ov00 snde chwp tick 20
+replace doif pose eq 2 rndv ov00 1 4 mulv ov00 3 pose ov00 base ov00 snde chwp tick 600
+find 79 20 37 150 scrp 2 25 16 9
+replace 79 20 37 150 endi scrp 2 25 16 9
