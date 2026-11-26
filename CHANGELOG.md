@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 710 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 712 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [Unreleased](#unreleased): 2 commits, 25 November 2026
 - [0.40.0](#version-0400): 4 commits, 25 November 2026
 - [0.39.0](#version-0390): 8 commits, 25 November 2026
 - [0.38.0](#version-0380): 15 commits, 23 November 2026 to 25 November 2026
@@ -100,6 +101,36 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Unreleased
+
+Changes since the last version.
+
+### 25 November 2026
+
+#### Rooms added by Zeetures start with no wind
+
+[`18258c49`](https://github.com/DotairZee/zeetures/commit/18258c49692219dea83f72890e04c06a1cd063aa)
+
+Their wind was left uninitialized until the first wind step (every 50
+ticks), so WNDX, WNDY and the Ecology Kit could read garbage at first.
+
+#### Crowded creatures walk out of a crowd
+
+[`d87f8b5f`](https://github.com/DotairZee/zeetures/commit/d87f8b5f719554aa66573d609a6ccd8a6f7e3001)
+
+A crowd of 28 creatures gathered under the incubator, 17 of them there
+for a whole run, with Crowded at 160-220. Walking away eases Crowded only
+once the others are out of sight, too late for the walk to be credited,
+so a crowded creature never learned to leave, and with food, water and
+company at hand nothing else moved it.
+
+Now a creature whose Crowded drive is at half or more, with four or more
+others within 250 px, can choose to walk off toward the side with fewer
+of them (not into a wall, water, a drop or a way found blocked), valued
+like any other choice by the relief it expects. In copies of Home the
+crowd spot fell from 24-28% of all choices made in the world to 5-8%,
+no creature stayed there all run, and hunger did not rise.
 
 ## Version 0.40.0
 
