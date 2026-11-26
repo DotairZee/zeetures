@@ -21,6 +21,7 @@
 #include "common/hangphase.h"
 #include "common/devenv.h"
 #include "World.h"
+#include "Lift.h"
 #include "SkyTint.h"
 
 #include "Bubble.h"
@@ -497,7 +498,12 @@ void World::tick() {
 							sprites += fmt::format(" part {} {} img {} z {} at +{},+{}", i, sp->getSprite()->getName(), sp->getFirstImg() + sp->getPose(), sp->zorder, sp->x, sp->y);
 					}
 				}
-				fmt::print("* AGENT {} {} {} plane {} at ({:.0f},{:.0f}) {}x{}{}\n", (int)a->family, (int)a->genus, a->species, a->zorder, a->x, a->y, a->getWidth(), a->getHeight(), sprites);
+				// and its size, and the floor line under it (if its room has one)
+				std::string line;
+				if (map)
+					if (auto r = map->roomAt(a->x + a->getWidth() / 2.0f, a->y + a->getHeight() - 1.0f); r && r->floorpoints.size())
+						line = fmt::format(" room {} line {:.0f} floorvalue {}", r->id, r->floorYatX(a->x + a->getWidth() / 2.0f), (int)r->floorvalue);
+				fmt::print("* AGENT {} {} {} plane {} at ({:.0f},{:.0f}) {}x{} size {}{}{}\n", (int)a->family, (int)a->genus, a->species, a->zorder, a->x, a->y, a->getWidth(), a->getHeight(), (int)a->size, line, sprites);
 			}
 		}
 	}
@@ -660,6 +666,82 @@ void World::tick() {
 						cx, bottom, r->id, floory);
 				break;
 			}
+		}
+	}
+
+	// C2: objects lying wholly under a floor line too solid for them (its
+	// floor value above 0 but below their size) are set back on it (owner's
+	// screenshot, 2026-11-26: a guitar, a vase, a launcher and a critter's
+	// leaving at the bottom of the garden rooms under the dome, 145 px down
+	// in the painted earth; their floor lines, value 10, let only seeds
+	// through). The lift onto a floor line as an object moves (Agent's
+	// physics) is for value 0 only, since a lift's shaft is used beneath its
+	// line; here, nothing in a lift's column is moved. Every 100 ticks,
+	// objects at rest only.
+	if (engine.version == 2 && map && tickcount % 100 == 61 && !devenv("OPENC2E_NO_UNDERLINE_RESCUE")) {
+		static const bool watchRescue = devenv("OPENC2E_WATCH_SUNK") != nullptr;
+		std::vector<std::pair<float, float>> liftColumns;
+		for (auto& a : agents)
+			if (a && dynamic_cast<Lift*>(a.get()))
+				liftColumns.emplace_back(a->x, a->x + a->getWidth());
+		for (auto& a : agents) {
+			if (!a || a->isDying() || a->carriedby || a->invehicle || a->family != 2 || !(a->attr & 64) || !a->sufferphysics() || a->velx != 0.0f || a->vely != 0.0f)
+				continue;
+			float cx = a->x + a->getWidth() / 2.0f, bottom = a->y + a->getHeight();
+			std::shared_ptr<Room> r = map->roomAt(cx, bottom - 1);
+			if (!r || r->type == 2 || r->floorpoints.empty() || r->floorvalue == 0 || a->size <= r->floorvalue)
+				continue;
+			float line = r->floorYatX(cx);
+			if (a->y < line + 1.0f || line <= r->y_left_ceiling)
+				continue;
+			bool inShaft = false;
+			for (auto& [l, rgt] : liftColumns)
+				if (cx >= l && cx <= rgt)
+					inShaft = true;
+			if (inShaft)
+				continue;
+			if (watchRescue)
+				fmt::print("* RESCUED {} {} {} from under room {}'s floor line at ({:.0f}, {:.0f}) onto it at {:.0f}\n", (int)a->family, (int)a->genus, a->species, r->id, cx, bottom, line);
+			a->moveTo(a->x, line - a->getHeight());
+		}
+	}
+
+	// developer aid: OPENC2E_WATCH_BURY prints each object (family 2, with
+	// collisions) at the moment it becomes buried: under a floor line it is
+	// too big to pass (floor value above 0), or in a room with every doorway
+	// shut; with where it was 5 ticks before
+	static const bool watchBury = devenv("OPENC2E_WATCH_BURY") != nullptr;
+	if (watchBury && map && tickcount % 5 == 0) {
+		struct Was {
+			bool buried = false;
+			float x = 0, y = 0;
+			int room = -2; // (-2: not seen yet; what is buried at load is not news)
+			bool carried = false;
+		};
+		static std::map<Agent*, Was> was;
+		for (auto& a : agents) {
+			if (!a || a->isDying() || a->family != 2 || !(a->attr & 64))
+				continue;
+			float cx = a->x + a->getWidth() / 2.0f, bottom = a->y + a->getHeight();
+			auto r = map->roomAt(cx, bottom - 1);
+			bool buried = false;
+			std::string why;
+			if (r && r->floorpoints.size() && r->floorvalue > 0 && a->size > r->floorvalue && bottom > r->floorYatX(cx) + 20.0f && !a->carriedby && !a->invehicle) {
+				buried = true;
+				why = fmt::format("under room {}'s floor line ({:.0f}, value {})", r->id, r->floorYatX(cx), (int)r->floorvalue);
+			} else if (r && r->allDoorsShut() && !a->carriedby && !a->invehicle) {
+				buried = true;
+				why = fmt::format("in room {}, every doorway shut", r->id);
+			}
+			Was& w = was[a.get()];
+			if (buried && !w.buried && w.room != -2)
+				fmt::print("* BURIED {} {} {} unid {} at {:.0f},{:.0f} {}; 5 ticks before at {:.0f},{:.0f} room {}{}; vel {:.1f},{:.1f} script {} outofroomsystem {}\n", (int)a->family, (int)a->genus,
+					a->species, a->getUNID(), cx, bottom, why, w.x, w.y, w.room, w.carried ? " (carried)" : "", (float)a->velx, (float)a->vely, a->getLastScript(), (int)a->outofroomsystem);
+			w.buried = buried;
+			w.x = cx;
+			w.y = bottom;
+			w.room = r ? (int)r->id : -1;
+			w.carried = a->carriedby || a->invehicle;
 		}
 	}
 

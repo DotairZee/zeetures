@@ -1,0 +1,14 @@
+* The pit under the cage lift's shaft beside the incubator (openc2e
+* Creatures 2 project; owner's screenshot, 2026-11-26: toys lying under the
+* floor there). Room 208 (x 5735-5900, y 1175-1300) is the game's own, drawn
+* as the shaft's pit below the floor; every doorway out of it is shut, so
+* what got in (a spinner, a saxophone, balls) stayed. Each load, objects
+* lying in it are set on the incubator room's floor (room 28, y 1200), 260
+* px west. Safe to repeat.
+enum 2 0 0
+  doif posl ge 5730 doif posr le 5905 doif post ge 1165 doif posb le 1305
+    setv var0 posl subv var0 260
+    setv var1 posb subv var1 post setv var2 1199 subv var2 var1
+    mvto var0 var2
+  endi endi endi endi
+next
