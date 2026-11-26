@@ -219,12 +219,26 @@ void DrawC2StatusBar() {
 		if (StatusBarPartShown(SB_NOTICES))
 			Openc2eImgui::DrawLifeNotices(ImGui::GetWindowContentRegionMax().x - left_end - s_last_health_width - ImGui::GetStyle().ItemSpacing.x * 2);
 
+		// The bar keeps one height whatever it shows: as tall as its tallest
+		// possible part (a chip or notice button, or one of the pictures),
+		// held by an empty item at the end.
+		float bar_h = ImGui::GetFrameHeight();
+		for (const Texture& t : s_healthicons_texs)
+			bar_h = std::max(bar_h, (float)t.height);
+		for (const Texture& t : s_hearticons_texs)
+			bar_h = std::max(bar_h, (float)t.height);
+		for (const Texture& t : s_season_icons_texs)
+			bar_h = std::max(bar_h, (float)t.height);
+		for (const Texture& t : s_timeofday_icons_texs)
+			bar_h = std::max(bar_h, (float)t.height);
+		for (const Texture& t : s_temperature_icons_texs)
+			bar_h = std::max(bar_h, (float)t.height);
+
 		const float health_x = ImGui::GetCursorPosX();
 		if (!StatusBarPartShown(SB_HEALTH)) {
-			// (nothing on the right: an empty line keeps the bar's height)
-			ImGui::Dummy(ImVec2(0, ImGui::GetFrameHeight()));
 			s_last_statusbar_rightside_width = ImGui::GetCursorPosX() - start_x;
 			s_last_health_width = 0;
+			ImGui::Dummy(ImVec2(0, bar_h));
 			s_last_c2statusbar_height = ImGui::GetWindowSize().y;
 			ImGui::End();
 			return;
@@ -278,6 +292,7 @@ void DrawC2StatusBar() {
 
 		s_last_statusbar_rightside_width = ImGui::GetCursorPosX() - start_x;
 		s_last_health_width = ImGui::GetCursorPosX() - health_x;
+		ImGui::Dummy(ImVec2(0, bar_h));
 
 		s_last_c2statusbar_height = ImGui::GetWindowSize().y;
 		ImGui::End();
