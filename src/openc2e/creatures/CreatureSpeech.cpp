@@ -544,8 +544,22 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 		if (a < 0 || a > 16)
 			return u;
 		std::vector<int> w = {W_ME};
-		if (b > 200)
-			w.push_back(W_VERY);
+		// how strongly, past 200 of 255: very, really, seriously, intensely,
+		// extremely (C2's words for it, after "very"), the strongest it
+		// knows up to that; knowing none, "very" in its own tongue
+		if (b > 200) {
+			static const int above[5] = {200, 212, 225, 235, 245};
+			int graded = 0;
+			while (graded < 4 && b > above[graded + 1])
+				graded++;
+			int q = W_VERY;
+			for (int i = graded; i >= 0; i--)
+				if (knowsWord(c, W_VERY + i)) {
+					q = W_VERY + i;
+					break;
+				}
+			w.push_back(q);
+		}
 		w.push_back(W_DRIVE0 + a);
 		ways.push_back({w, (int)w.size() - 1});
 		end = b > 200 ? "!" : "";
