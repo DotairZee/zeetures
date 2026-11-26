@@ -237,6 +237,27 @@ static const FoodInfo& foodInfo(Agent* a) {
 		std::transform(t.begin(), t.end(), t.begin(), [](unsigned char ch) { return std::tolower(ch); });
 		tok.push_back(t);
 	}
+	// A script installed from a COB keeps the whole file's text, every
+	// other script in it too (whose own stimuli, such as a fungus that
+	// feeds when pushed as well as when eaten, are not this one's): read
+	// only the eat script's part, from its last header (a script patch
+	// repeats it) to the next script or the end. (A plant smelled as good
+	// as its sibling's best bite, 1.00 for its own 0.47; 2026-11-26.)
+	// OPENC2E_OLD_FOOD_SMELL (developer aid) reads the whole text, as before.
+	static const bool oldSmell = devenv("OPENC2E_OLD_FOOD_SMELL") != nullptr;
+	if (!oldSmell) {
+		const std::string head[4] = {std::to_string(sc->fmly), std::to_string(sc->gnus), std::to_string(sc->spcs), std::to_string(sc->scrp)};
+		size_t from = std::string::npos;
+		for (size_t i = 0; i + 4 < tok.size(); i++)
+			if (tok[i] == "scrp" && tok[i + 1] == head[0] && tok[i + 2] == head[1] && tok[i + 3] == head[2] && tok[i + 4] == head[3])
+				from = i + 5;
+		if (from != std::string::npos) {
+			size_t to = from;
+			while (to < tok.size() && tok[to] != "scrp" && tok[to] != "iscr" && tok[to] != "rscr" && tok[to] != "endm")
+				to++;
+			tok = std::vector<std::string>(tok.begin() + from, tok.begin() + to);
+		}
+	}
 	auto number = [](const std::string& w, int& v) {
 		if (w.empty() || !(std::isdigit((unsigned char)w[0]) || w[0] == '-'))
 			return false;
