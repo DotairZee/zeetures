@@ -188,16 +188,31 @@ std::filesystem::path settingsFile() {
 	return getUserDataDir() / "settings.txt";
 }
 
+// The file is read once and kept (2026-11-26: some settings were asked for
+// every frame, which opened and read the file 60 times a second; on a
+// Windows Documents folder watched by an antivirus or synced by OneDrive a
+// single open can stall). writeSetting, the only writer, has it read again.
+static bool s_settingsLoaded = false;
+static std::filesystem::path s_settingsFor;
+static std::map<std::string, std::string> s_settings;
+
 std::string readSetting(const std::string& key) {
-	std::ifstream in(settingsFile());
-	std::string line;
-	while (std::getline(in, line)) {
-		std::istringstream l(line);
-		std::string k, v;
-		if (l >> k >> v && k == key)
-			return v;
+	std::filesystem::path file = settingsFile();
+	if (!s_settingsLoaded || file != s_settingsFor) {
+		s_settings.clear();
+		std::ifstream in(file);
+		std::string line;
+		while (std::getline(in, line)) {
+			std::istringstream l(line);
+			std::string k, v;
+			if (l >> k >> v)
+				s_settings.emplace(k, v); // (the first line for a key, as before)
+		}
+		s_settingsLoaded = true;
+		s_settingsFor = file;
 	}
-	return "";
+	auto it = s_settings.find(key);
+	return it == s_settings.end() ? "" : it->second;
 }
 
 void writeSetting(const std::string& key, const std::string& value) {
@@ -213,9 +228,12 @@ void writeSetting(const std::string& key, const std::string& value) {
 		}
 	}
 	lines.push_back(key + " " + value);
-	std::ofstream out(settingsFile(), std::ios::binary);
-	for (auto& l : lines)
-		out << l << "\n";
+	{
+		std::ofstream out(settingsFile(), std::ios::binary);
+		for (auto& l : lines)
+			out << l << "\n";
+	}
+	s_settingsLoaded = false;
 }
 
 int s_bubbles_shown = -1; // -1: not read yet
