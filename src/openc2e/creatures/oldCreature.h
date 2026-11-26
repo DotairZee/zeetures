@@ -179,6 +179,9 @@ class oldCreature : public Creature {
 	unsigned int calledTick = 0;
 	void callTo(int category);
 	int replyWord = -1; // what it will say back (-1: something of its own)
+	// or the hand asked it a question it knows the word for: 1 "what" (it
+	// says what it is doing), 2 "why" (the need behind it); 0 none
+	int replyQuestion = 0;
 	unsigned int replyAt = 0; // and when (0: nothing)
 	// what it feels about each creature it has met, by moniker
 	// (creatures/Relationships.h); saved with the world

@@ -49,7 +49,8 @@ namespace {
 
 // the game's word list numbers (C2) for the words our meanings use
 const int W_EAT = 12, W_HIT = 13, W_ME = 16, W_FOOD = 22, W_NORN = 52, W_DRIVE0 = 56, W_ANGRY = 67,
-		  W_FRIENDLY = 68, W_HURT = 69, W_PAIN = 56, W_YES = 73, W_NO = 74, W_LOOK = 75, W_VERY = 77;
+		  W_FRIENDLY = 68, W_HURT = 69, W_PAIN = 56, W_YES = 73, W_NO = 74, W_LOOK = 75, W_VERY = 77,
+		  W_WHY = 8, W_REST = 9, W_WHAT = 76, W_BORED = 66;
 
 bool watching() {
 	static const bool watch = devenv("OPENC2E_WATCH_SPEECH") != nullptr;
@@ -564,6 +565,29 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 			return u;
 		ways = {{{W_NORN + a - 1}, 0}, {{W_LOOK, W_NORN + a - 1}, 1}};
 		end = "!";
+	} else if (kind == "doing") {
+		// what it is doing, in words: "me push toy" (asked "what")
+		int decision = c->getDecisionId();
+		Agent* focus = c->getAttentionFocus().get();
+		if (focus == creature || (focus && focus->isDying()))
+			focus = nullptr;
+		if (decision == 7 && creature->carrying)
+			focus = creature->carrying.get(); // (dropping: what it holds)
+		int verb;
+		if (decision == 0 || decision == 8)
+			verb = focus ? W_LOOK : W_REST; // watching it, or idling
+		else if (decision >= 1 && decision <= 13)
+			verb = decision; // C2's verbs are its decisions' words
+		else if (decision == 25)
+			verb = W_REST;
+		else if (decision == 26 || decision == 27)
+			verb = decision - 16; // walking west or east
+		else
+			verb = W_LOOK;
+		std::vector<int> w = {W_ME, verb};
+		if (focus && focus->category >= 0 && focus->category < 40 && isWord(16 + focus->category))
+			w.push_back(16 + focus->category);
+		ways.push_back({w, 1});
 	} else if (kind == "name") {
 		// a thing's name (owner, 2026-11-20: the young learn words by hearing
 		// others name things): C2's noun for category a follows its 16 verbs
@@ -808,10 +832,13 @@ void answerHand(const std::string& text) {
 			}
 		}
 		int praise = 0; // "yes" or "no", the last said (a word it knows)
+		int question = 0; // "what" or "why", the last asked
 		for (auto& [at, w] : said) {
 			if (!knowsWord(l.c, w))
 				continue;
-			if (w <= 13)
+			if (w == W_WHAT || w == W_WHY)
+				question = w == W_WHAT ? 1 : 2; // (a question: "why" is among C2's verbs, but no order)
+			else if (w <= 13)
 				s.verb = w;
 			else if (w >= 16 && w < 16 + 40)
 				s.noun = w - 16; // the noun's category
@@ -831,6 +858,7 @@ void answerHand(const std::string& text) {
 		l.c->callTo(s.noun >= 0 ? s.noun : 1); // the thing, or the hand
 		// the nearest two (or those named) say it back
 		if (rank < 2 || l.named) {
+			l.c->replyQuestion = question;
 			l.c->replyWord = said.empty() ? -1 : said.back().second;
 			// (a name it is being taught, or one of its own, over the rest)
 			l.c->replyName = naming;
@@ -853,6 +881,46 @@ void tickReply(Agent* creature, oldCreature* c) {
 	if (!c->isAlive() || c->isAsleep() || c->isUnconscious())
 		return;
 	int stage = (int)c->getStage();
+	// asked what it is doing, or why: it says so (C2's manual: "You can
+	// find out what your Norn is thinking and why!")
+	if (c->replyQuestion != 0) {
+		int q = c->replyQuestion;
+		c->replyQuestion = 0;
+		c->replyName.clear();
+		Utterance u;
+		if (q == 1)
+			u = phraseFor("doing", creature, c);
+		else {
+			// the need its last choice was most for (the mind's view of
+			// that choice: what it expected each need to ease); a choice
+			// made for no need but the untried is boredom; failing a
+			// view, its strongest need
+			int need = -1;
+			MindView v;
+			if (CreatureMind* m = c->getMind(); m && m->view(v))
+				for (auto& o : v.options)
+					if (o.chosen) {
+						float most = 0.02f;
+						for (int i = 0; i < 17; i++)
+							if (o.ease[i] > most)
+								most = o.ease[i], need = i;
+						if (need < 0 && o.novelty > 0)
+							need = W_BORED - W_DRIVE0;
+						break;
+					}
+			if (need < 0) {
+				int most = 0;
+				for (int i = 0; i < 17; i++)
+					if ((int)c->getDrive(i) > most)
+						most = (int)c->getDrive(i), need = i;
+			}
+			u = need < 0 ? phraseFor("babble", creature, c) : phraseFor(fmt::format("need:{}:{}", need, (int)c->getDrive(need)), creature, c);
+		}
+		if (watching())
+			fmt::print("* ASKED \"{}\": unid {} decision {}\n", q == 1 ? "what" : "why", creature->getUNID(), c->getDecisionId());
+		creatureSays(creature, stage, u);
+		return;
+	}
 	if (!c->replyName.empty()) {
 		Utterance u;
 		u.spoken = c->replyName;

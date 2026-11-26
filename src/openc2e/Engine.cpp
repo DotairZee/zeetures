@@ -1227,6 +1227,7 @@ void Engine::update() {
 //   font F            the world's letters: original, 12, 10 or 8 (saved)
 //   type TEXT         the letters typed on the keyboard, then Return
 //   savewords NAME    the words in use saved as a custom list
+//   teachwords        every creature learns every word (to test speech)
 // For recording scripted shots with OPENC2E_RECORD.
 static void runDirector() {
 	static const char* file = devenv("OPENC2E_DIRECTOR");
@@ -1290,6 +1291,10 @@ static void runDirector() {
 				engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
 			else if (AgentRef a = creature(who))
 				engine.camera->trackAgent(a, 50, 50, flexible, none);
+		} else if (cmd == "teachwords") {
+			for (auto& a : world.agents)
+				if (auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr)
+					learnAllWords(dynamic_cast<oldCreature*>(ca->getCreature()));
 		} else if (cmd == "select") {
 			std::string who;
 			l >> who;
