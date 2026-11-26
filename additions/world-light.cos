@@ -1,0 +1,103 @@
+* Lamp-lit places lit (openc2e Creatures 2 project, our own script; owner,
+* 2026-11-26: "search the map for room sprites that indicate the presence of
+* light, and suggest what the corresponding light levels should be", then
+* "A and B"). Run by openc2e after the world loads (Additions folder); safe
+* to repeat. Named to run last: additions run in name order, and some
+* reshape rooms (pool.cos, lift.cos), so light set before them went to the
+* room as it was before.
+*
+* The world file's light (LITE) for many rooms does not match their art:
+* rooms painted with lamps, lamplight or glowing lava at light 0-71, and
+* three lamp-lit rooms with a negative light source (-106), which our
+* daylight treats as no lamp. Each room below gets the light its picture
+* shows. A light source (LSRC above 0) marks a lamp: the room keeps its
+* light at night (World::tickDaylight, SkyTint), as the incubator's do.
+* Light also matters to creatures: darkness makes every species sleepy,
+* and cave germs keep to dark rooms.
+*
+* For each room a helper object is made at a point inside it (checked to
+* be in that room alone), sets its light (LITE is the light of TARG's
+* room), and goes.
+
+inst
+* lamps painted, the room dark or dimmed at night
+* two hanging lamps (room 155: was 9, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 6971 1322 setv lite 150 setv lsrc 1 kill targ
+* cave lamp (room 200: was 0, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 1093 886 setv lite 120 setv lsrc 1 kill targ
+* spotlight on pillar (room 104: was 50, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 930 2281 setv lite 150 setv lsrc 1 kill targ
+* lamplight on rock (room 99: was 0, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 1560 2164 setv lite 150 setv lsrc 1 kill targ
+* lamplight on rock (room 103: was 0, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 1498 1995 setv lite 150 setv lsrc 1 kill targ
+* glow under temple (room 107: was 0, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 1254 1910 setv lite 120 setv lsrc 1 kill targ
+* lab: lamps, screens (room 32: was 37, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 4230 1372 setv lite 150 setv lsrc 1 kill targ
+* machine lamps (room 162: was 2, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 6165 2148 setv lite 100 setv lsrc 1 kill targ
+* wall lantern (room 214: was 0, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 6515 1988 setv lite 80 setv lsrc 1 kill targ
+* lantern (room 145: was 98, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 7525 799 setv lite 98 setv lsrc 1 kill targ
+* dome strip lights (room 85: was 0, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 1934 1730 setv lite 150 setv lsrc 1 kill targ
+* dome strip lights (room 88: was 0, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 1968 1908 setv lite 150 setv lsrc 1 kill targ
+* dome strip lights (room 76: was 0, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 2157 1535 setv lite 150 setv lsrc 1 kill targ
+* dome strip lights (room 81: was 10, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 2178 1712 setv lite 150 setv lsrc 1 kill targ
+* bright rock garden (room 70: was 0, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 2044 719 setv lite 150 setv lsrc 1 kill targ
+* bulbs (room 118: was 23, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 111 1269 setv lite 50 setv lsrc 50 kill targ
+* bulbs (room 184: was 1, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 8296 968 setv lite 50 setv lsrc 50 kill targ
+* bulbs (room 185: was 0, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 8191 1010 setv lite 50 setv lsrc 50 kill targ
+* bulbs (room 186: was 0, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 8191 805 setv lite 50 setv lsrc 50 kill targ
+* globe lamps (room 36: was 14, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 4426 1641 setv lite 80 setv lsrc 1 kill targ
+* globe lamps (room 37: was 5, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 4523 1641 setv lite 80 setv lsrc 1 kill targ
+* lava, machines, and lamp rooms that had a negative light source
+* lava (room 164: was 71, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 7109 2316 setv lite 200 setv lsrc 1 kill targ
+* lava (room 165: was 142, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 7512 2316 setv lite 200 setv lsrc 1 kill targ
+* lava (room 166: was 106, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 7888 2316 setv lite 200 setv lsrc 1 kill targ
+* lava (room 168: was 71, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 7109 2065 setv lite 200 setv lsrc 1 kill targ
+* lava (room 169: was 142, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 7512 2065 setv lite 200 setv lsrc 1 kill targ
+* lava (room 170: was 106, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 7888 2065 setv lite 200 setv lsrc 1 kill targ
+* lava glow (room 171: was 71, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 7109 1683 setv lite 150 setv lsrc 1 kill targ
+* lava glow (room 172: was 142, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 7512 1683 setv lite 150 setv lsrc 1 kill targ
+* lit window (room 176: was 71, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 8087 1387 setv lite 120 kill targ
+* lit panel (room 112: was 8, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 1282 1518 setv lite 60 kill targ
+* machine light (room 210: was 10, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 4621 1472 setv lite 50 kill targ
+* lift lights (room 255: was 20, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 4287 1641 setv lite 60 kill targ
+* pod lamps (room 115: was 20, light source 20)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 832 1656 setv lite 100 kill targ
+* lamps (room 116: was 20, light source 20)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 286 1690 setv lite 100 kill targ
+* glowing orbs (room 100: was 33, light source 0)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 1828 2289 setv lite 100 kill targ
+* arch lamps (room 27: was 150, light source -106)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 5173 1070 setv lite 150 setv lsrc 1 kill targ
+* hearth glow (room 28: was 150, light source -106)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 5594 1070 setv lite 150 setv lsrc 1 kill targ
+* dome lights (room 90: was 150, light source -106)
+new: simp blnk 1 0 0 0 setv attr 16 mvto 2256 1908 setv lite 150 setv lsrc 1 kill targ
+slow
