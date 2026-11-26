@@ -376,6 +376,8 @@ VERSIONS = [
      "Toys and other things lying buried in the ground under the dome's garden, or in the pit beside the incubator, are set back where creatures can reach them; the tree house's bamboo lift is drawn in front of the tube's glass at its walkway stop; creatures can step between the arch-ledge bridge and the ledge."),
     ("0.41.0", "ebd8932a",
      "File > Export Current Creature saves a creature whole (body, chemistry, mind, words, friends and foes, temperament, life story, photos) to a Zeetures export file and takes it out of the world; File > Import Creature brings it back as it was, here or in another world; the cave fungus is no longer an endless meal (only a whole one feeds, and a bite leaves it bitten for a minute); foods smell of their own eating script only."),
+    ("0.42.0", "bc91ce9c",
+     "Three new choices in Preferences > Creatures: babies say their first words (a baby that has learned the word for what it wants says it); words come out a little wrong while being learned (\"han-nah-do\", then \"wetht\" or \"hanb\", then right); and creatures' heads follow the hand, angling up and down, as in Creatures 2. The first two are off unless ticked."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

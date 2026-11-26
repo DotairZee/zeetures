@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 729 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 731 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.42.0](#version-0420): 2 commits, 26 November 2026
 - [0.41.0](#version-0410): 4 commits, 26 November 2026
 - [0.40.4](#version-0404): 4 commits, 26 November 2026
 - [0.40.3](#version-0403): 3 commits, 26 November 2026
@@ -105,6 +106,38 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.42.0
+
+Three new choices in Preferences > Creatures: babies say their first words (a baby that has learned the word for what it wants says it); words come out a little wrong while being learned ("han-nah-do", then "wetht" or "hanb", then right); and creatures' heads follow the hand, angling up and down, as in Creatures 2. The first two are off unless ticked.
+
+### 26 November 2026
+
+#### Version 0.42.0
+
+[`bc91ce9c`](https://github.com/DotairZee/zeetures/commit/bc91ce9ca97126de625c3113359267e39d8c4093)
+
+#### Babies' first words, words tried before they are learned, and heads that follow the hand
+
+[`b72394bf`](https://github.com/DotairZee/zeetures/commit/b72394bffa9ad33e37c010c7749d925810cd6ea4)
+
+Three new choices in Preferences &gt; Creatures.
+
+- Babies say their first words (off unless ticked): a baby that has
+  learned the word for what it wants to say says that one word ("food!",
+  "tired"), and says learned words back to you and to a teaching machine;
+  the rest of the time it cries and babbles as before.
+- Words come out a little wrong while being learned (off unless ticked):
+  a word heard a few times comes out as its start run into the creature's
+  own tongue ("han-nah-do"), then nearly right, with W for R and Th for S
+  as Creatures 1's young said them ("wetht") or one sound slipped
+  ("hanb"), then right once learned.
+- Creatures' heads follow the hand (on unless unticked): a creature with
+  the hand near and in front of it angles its head up or down to look at
+  it, as in Creatures 2.
+
+The first two work with or without the experimental way of learning to
+talk. Explained in Help &gt; Talking to creatures.
 
 ## Version 0.41.0
 
