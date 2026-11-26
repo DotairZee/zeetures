@@ -335,6 +335,23 @@ std::shared_ptr<creaturesImage> imageManager::muted(const std::shared_ptr<creatu
 	return img;
 }
 
+std::shared_ptr<creaturesImage> imageManager::tinged(const std::shared_ptr<creaturesImage>& oldimage, int r, int g, int b, float amount) {
+	struct Entry {
+		std::weak_ptr<creaturesImage> source, result;
+	};
+	static std::map<std::tuple<const creaturesImage*, int, int>, Entry> cache;
+	auto key = std::make_tuple(oldimage.get(), (r << 16) | (g << 8) | b, (int)std::lround(amount * 1000));
+	if (auto& e = cache[key]; e.source.lock() == oldimage)
+		if (auto hit = e.result.lock())
+			return hit;
+	auto img = std::make_shared<creaturesImage>(oldimage->getName());
+	img->images.resize(oldimage->images.size());
+	for (size_t i = 0; i < img->images.size(); ++i)
+		img->images[i] = ImageUtils::Tinge(oldimage->images[i], r, g, b, amount);
+	cache[key] = Entry{oldimage, img};
+	return img;
+}
+
 std::shared_ptr<creaturesImage> imageManager::tint(const std::shared_ptr<creaturesImage>& oldimage,
 	unsigned char r, unsigned char g, unsigned char b,
 	unsigned char rotation, unsigned char swap) {

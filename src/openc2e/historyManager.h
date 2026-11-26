@@ -78,7 +78,9 @@ struct storyEntry {
 		photo, // was photographed
 		died, // detail: "old age", or what it died of ("starvation", "drowning", "organ failure")
 		unconscious, // fell unconscious (out of energy)
-		cameRound // came round
+		cameRound, // came round
+		struck, // struck by lightning; detail: what it did, if anything (Lightning.h)
+		mortalAgain // Frankenstein's creature found its match in `other`: mortal again (Lightning.h)
 	};
 	unsigned int tick = 0; // world tick count
 	int kind = born;

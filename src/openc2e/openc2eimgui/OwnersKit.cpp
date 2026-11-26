@@ -19,6 +19,9 @@
 #include "creatures/oldCreature.h"
 #include "fileformats/ImageUtils.h"
 #include "historyManager.h"
+#include "creatures/Lightning.h"
+#include "imageManager.h"
+#include "creatures/SkeletalCreature.h"
 
 #include <algorithm>
 #include <cctype>
@@ -48,7 +51,7 @@ static const char* stageWord(int st) {
 static monikerData* recordOf(const std::string& mon);
 static std::string recordName(monikerData* m);
 static unsigned int photoTick(const std::string& file);
-static std::string takePhoto(Agent* a, monikerData& m);
+static std::string takePhoto(Agent* a, monikerData& m, bool lightning = false);
 
 // a seal for a registered birth: our own, drawn (red wax, a ribbon, a tick)
 static void drawSeal(ImDrawList* dl, ImVec2 c, float r) {
@@ -247,7 +250,7 @@ static unsigned int photoTick(const std::string& file) {
 	return t;
 }
 
-static std::string takePhoto(Agent* a, monikerData& m) {
+static std::string takePhoto(Agent* a, monikerData& m, bool lightning) {
 	if (engine.currentworlddir.empty())
 		return "This world has no folder to keep photos in.";
 	static std::unique_ptr<PhotoCamera> cam;
@@ -259,6 +262,27 @@ static std::string takePhoto(Agent* a, monikerData& m) {
 	float cx = a->x + a->getWidth() / 2.0f, cy = a->y + a->getHeight() / 2.0f;
 	cam->moveToGlobal((int)cx - PHOTO_W / 2, (int)cy - PHOTO_H / 2 - 10, jump);
 	world.drawWorld(cam.get(), target.get(), true, a); // no other creature in the picture
+	// risen as Frankenstein's creature: framed by the game's own lightning
+	// (its storm's bolt pictures, weat 19-21), two down each side (owner,
+	// 2026-11-26: "image D")
+	if (lightning)
+		if (auto weat = world.gallery->getImage("weat", true); !weat || weat->numframes() <= 21)
+			fmt::print("* Photo: no lightning picture (weat {})\n", weat ? (int)weat->numframes() : -1);
+		else {
+			struct Bolt {
+				unsigned int frame;
+				int x, y;
+				bool mirror;
+			};
+			const float k = PHOTO_W / 240.0f;
+			for (Bolt b : {Bolt{19, -14, -4, false}, Bolt{20, 190, -4, true}, Bolt{21, -10, 60, false}, Bolt{19, 186, 60, true}}) {
+				RenderOptions o;
+				o.scale = 0.8f * k;
+				o.smooth = true;
+				o.mirror = b.mirror;
+				target->renderCreaturesImage(*weat, b.frame, (int)(b.x * k), (int)(b.y * k), o);
+			}
+		}
 	fs::path dir = engine.currentworlddir / "photos";
 	std::error_code ec;
 	fs::create_directories(dir, ec);
@@ -1621,6 +1645,33 @@ static void TemperamentPage() {
 		}
 		ImGui::Dummy(ImVec2(2 * width + gap, 4 * (h + 4)));
 		KitNote("Its mind's own settings (teal) and how readily it learns about danger, food, water and company (violet). Passed on like its seasonal rhythm; what it learns is not passed on, but a line quick to learn what keeps it alive tends to last.");
+	}
+}
+
+// photos lightning asked for (Frankenstein's creature, newly risen)
+void TakeRequestedPhotos() {
+	if (std::shared_ptr<Agent> a = Lightning::takePhotoRequest()) {
+		// reaching for the storm that made it (owner, 2026-11-26: pose B):
+		// head tipped back, arms out, facing the way it faces
+		// and wide-eyed with surprise (owner, 2026-11-26; C2's face 4), its
+		// own face back after
+		auto* sc = dynamic_cast<SkeletalCreature*>(a.get());
+		unsigned int face = sc ? sc->getFacialExpression() : 0;
+		bool shut = sc ? sc->getEyesClosed() : false;
+		if (sc) {
+			sc->setPose(std::string(sc->facing() == 3 ? "3" : "2") + "31111111222211");
+			// (developer aid: OPENC2E_TEST_PHOTO_FACE=n another face, for choosing)
+			const char* tf = devenv("OPENC2E_TEST_PHOTO_FACE");
+			sc->setFacialExpression(tf ? (unsigned int)std::clamp(atoi(tf), 0, 5) : 4u);
+			sc->setEyesClosed(false);
+		}
+		monikerData* m = KitRecordsOf(a.get());
+		std::string said = m ? takePhoto(a.get(), *m, true) : std::string("no records");
+		if (sc) {
+			sc->setFacialExpression(face);
+			sc->setEyesClosed(shut);
+		}
+		fmt::print("* Photo of a creature risen by lightning: {}\n", said);
 	}
 }
 

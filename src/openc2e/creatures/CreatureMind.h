@@ -125,6 +125,8 @@ struct MindPerception {
 	bool asleep = false;
 	bool dozing = false; // the body's own falling asleep (the reflex, event 69) is running
 	bool dreaming = false;
+	bool electrophile = false; // struck by lightning, drawn to machines for a while (Lightning.h)
+	bool plantEater = false; // Frankenstein's creature: eats only plants (Lightning.h)
 	bool female = false;
 	int genus = -1; // 1 norn, 2 grendel, 3 ettin
 	// Sense of place (owner, 2026-11-13): the room the creature is in (by its

@@ -179,6 +179,10 @@ struct Params {
 	// hot-tempered hitting sooner (more when angry), the energetic pacing about
 	// and the placid settling when nothing presses.
 	float strangerBias = 0.02f, shyRetreat = 0.015f, socialFollow = 0.012f, temperHit = 0.03f, energyPace = 0.006f;
+	// struck by lightning, drawn to machines for a while (Lightning.h): pushing
+	// or pulling anything electric (buttons, dispensers, lifts, computers,
+	// media boxes, the incubator, teleporters, machines) pulls this much more
+	float electrophilePull = 0.12f;
 	int hitDecision = 13;
 	// temperament (reactivity): outcomes worse than expected are learned at
 	// this share of the rate, better ones at this share
@@ -2851,6 +2855,10 @@ class HomeostatMind : public CreatureMind {
 			// the game's cyanide berries was enough to collapse it)
 			if (decision == prm.eatDecision && edible < 0.0f)
 				return;
+			// Frankenstein's creature eats only plants: fruit, seeds, leaves,
+			// roots, flowers (Shelley: "my food is not that of man")
+			if (p.plantEater && decision == prm.eatDecision && !(category == 4 || category == 21 || category == 22 || category == 23 || category == 24 || category == 25))
+				return;
 			Expectation& kind = expectation(category, decision);
 			Expectation blend = kind;
 			int known = kind.count;
@@ -2931,6 +2939,9 @@ class HomeostatMind : public CreatureMind {
 			if (decision == 0 && category >= 0 && category == p.calledCategory && p.calledAge >= 0 && p.calledAge < prm.callTicks)
 				// (told to do something it knows the word for: less)
 				c.score += (p.calledToLook ? prm.lookPull : prm.callPull) * (p.heardVerb >= 0 && p.heardAge >= 0 && p.heardAge <= p.calledAge + 1 ? 0.35f : 1.0f) * (1.0f - 0.5f * p.calledAge / prm.callTicks) * (p.heardNamed ? 1.25f : 1.0f) * std::clamp(1.0f + 0.2f * z[3], 0.5f, 1.5f);
+			if (p.electrophile && (decision == 1 || decision == 2) &&
+				(category == 2 || category == 8 || category == 27 || category == 28 || category == 29 || category == 32 || category == 33 || category == 35))
+				c.score += prm.electrophilePull;
 			if (who && !who->who.empty()) {
 				c.score += prm.strangerBias * z[0] * (1.0f - who->familiarity); // boldness
 				if (decision == prm.hitDecision)

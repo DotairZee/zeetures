@@ -657,6 +657,14 @@ Each effect is stronger or weaker with the creature's own inherited rhythm and i
 
 Water rises, clouds form and drift with the wind, rain falls, and storms come and go with lightning. Storms raise the air pressure, and wind blows from high pressure toward low. Bees and butterflies feel it too.
 
+### Lightning
+
+A creature a bolt touches feels it: a jolt of pain that does no lasting harm. (The original game meant this, but a mistake in its storm script meant no bolt ever touched anyone.) Creatures remember where it hurt, as they do other painful places.
+
+Tick **Lightning has strange effects** (File > Preferences > World, under Weather) and a strike may, now and then, leave a creature changed: in its body, its mind, its voice, or the way the world around it behaves, for a few minutes or for days. More rarely it comes away with a gift. And a body struck just after death may not stay dead. What has happened shows on the [[Health Kit]], by name only, and in the creature's life story ([[Chronicles Kit]]); the rest is for you to find out.
+
+A struck egg's baby may hatch changed, and a struck plant may fruit.
+
 ## Light, warmth, air, and soil
 
 Albia is a map of rooms, joined by doorways, and each has its own conditions. They matter:

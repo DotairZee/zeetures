@@ -130,6 +130,7 @@ class Creature {
 
 	void born();
 	void die();
+	void dieOf(const std::string& why) { diedof = why; die(); } // (struck by lightning: Lightning.h)
 	void dieOfOldAge() { diedofoldage = true; die(); } // (a developer aid: OPENC2E_TEST_TOGETHER)
 
 	bool shouldProcessGene(gene*); // switches on at the current life stage

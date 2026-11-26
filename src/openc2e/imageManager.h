@@ -46,6 +46,8 @@ class imageManager {
 	std::shared_ptr<creaturesImage> scaled(const std::shared_ptr<creaturesImage>& image, float k);
 	// muted toward grey and lightened (ImageUtils::Mute), cached
 	std::shared_ptr<creaturesImage> muted(const std::shared_ptr<creaturesImage>& image, float grey, float lift);
+	// moved toward a colour, keeping lightness and see-through parts (ImageUtils::Tinge)
+	std::shared_ptr<creaturesImage> tinged(const std::shared_ptr<creaturesImage>& image, int r, int g, int b, float amount);
 	// a picture made of the given frames (openc2e: our own art drawn as a
 	// game picture, e.g. thought bubbles' symbols)
 	static std::shared_ptr<creaturesImage> fromFrames(const std::string& name, std::vector<Image> frames);

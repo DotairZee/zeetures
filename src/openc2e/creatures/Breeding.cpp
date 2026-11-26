@@ -19,6 +19,7 @@
 
 #include "Breeding.h"
 #include "CreatureSpeech.h"
+#include "Lightning.h"
 #include "common/devenv.h"
 #include "Exposure.h"
 #include "Temperament.h"
@@ -744,6 +745,11 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 		why = "she is set infertile";
 	else if (!fertileBySetting(dad))
 		why = "he is set infertile";
+	// Frankenstein's creatures (Lightning.h): two of them, a match, mortal
+	// and fertile again; one alone has no young
+	else if (!test && !Lightning::brideFound(world.history->findMoniker(mum->getGenome()), world.history->findMoniker(dad->getGenome())) &&
+			 (Lightning::infertile(world.history->findMoniker(mum->getGenome())) || Lightning::infertile(world.history->findMoniker(dad->getGenome()))))
+		why = "Frankenstein's creature has no young";
 	else if (kinBarred(a, b))
 		why = "close kin, and an unrelated partner is alive";
 	else if (!test && Relationships::mateFactor(a, b) <= 0.0f)
@@ -789,6 +795,15 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 
 	CrossReport rep;
 	std::shared_ptr<genomeFile> child = crossGenomes(*mum->getGenome(), *dad->getGenome(), mumMon, dadMon, &rep);
+	// a parent struck by lightning (Lightning.h) passes on strange changes
+	if (int owed = Lightning::takeGermline(mumMon) + Lightning::takeGermline(dadMon); owed > 0) {
+		int made = 0;
+		if (auto m = mutatedCopy(*child, owed, &made); m && made > 0) {
+			child = m;
+			rep.mutations += made;
+			fmt::print("* {} more mutation{} from lightning\n", made, made == 1 ? "" : "s");
+		}
+	}
 	std::string name = storeGenome(*child);
 	if (name.empty())
 		return false;

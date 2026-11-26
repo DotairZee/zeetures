@@ -28,6 +28,9 @@ Image Turn(const Image& image, int cx, int cy, float angle, int& radius);
 // sprites, owner 2026-11-13): grey is the share of the way to each pixel's
 // own grey, lift how far toward white. Transparent pixels stay so.
 Image Mute(const Image& image, float grey, float lift);
+// each opaque pixel moved `amount` (0-1) toward the colour r, g, b, kept as
+// light or dark as it was (a tinge); see-through stays so
+Image Tinge(const Image& image, int r, int g, int b, float amount);
 
 Color GetPixelColor(const Image& image, unsigned int x, unsigned int y);
 

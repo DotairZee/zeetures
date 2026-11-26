@@ -13,6 +13,7 @@
 #include "creatures/oldCreature.h"
 #include "historyManager.h"
 #include "creatures/Disease.h"
+#include "creatures/Lightning.h"
 #include "Agent.h"
 #include "World.h"
 #include "fileformats/c2cobfile.h"
@@ -277,6 +278,19 @@ static void DoctorPage() {
 
 void DrawHealthKit() {
 	KitCreatureHeader();
+	// what lightning has done to it, by name only, and nothing at all until
+	// it has (owner, 2026-11-26: "I want it to be a surprise"; Lightning.h)
+	if (Agent* a = KitCreatureAgent()) {
+		std::vector<std::string> names = Lightning::statusOf(a);
+		if (!names.empty()) {
+			std::string line;
+			for (auto& n : names)
+				line += (line.empty() ? "" : ", ") + n;
+			ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 214, 102, 255));
+			ImGui::TextWrapped("%s", line.c_str());
+			ImGui::PopStyleColor();
+		}
+	}
 	if (ImGui::BeginTabBar("pages")) {
 		if (KitTab("Fitness")) {
 			FitnessPage();

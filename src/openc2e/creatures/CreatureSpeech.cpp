@@ -17,6 +17,7 @@
  */
 
 #include "CreatureSpeech.h"
+#include "Lightning.h"
 #include "PixelText.h"
 #include "WordLists.h"
 #include "common/devenv.h"
@@ -459,8 +460,11 @@ void hearWord(oldCreature* c, int word, int amount, const Language::Hearing& h) 
 		amount = Language::heard(c->getAgent(), c, word, amount, h);
 	if (c->vocab.size() < engine.wordlist.size())
 		c->vocab.resize(engine.wordlist.size(), 0);
+	// struck by lightning, a parrot (Lightning.h): says back what it hears
+	if (Agent* self = c->getAgent(); self && h.speaker != self && Lightning::parrotNow(self))
+		creatureSays(self, (int)c->getStage(), wordUtterance(self, c, word));
 	bool knew = c->vocab[word] >= WORD_KNOWN;
-	int v = c->vocab[word] + (int)std::lround(amount * stageLearning((int)c->getStage()));
+	int v = c->vocab[word] + (int)std::lround(amount * stageLearning((int)c->getStage()) * Lightning::learnFactor(c));
 	c->vocab[word] = (unsigned char)std::min(v, 255);
 	if (!knew && c->vocab[word] >= WORD_KNOWN) {
 		int n = wordsKnown(c);
@@ -572,6 +576,7 @@ void hearSpeech(Agent* speaker, const std::string& text, int amount) {
 void hearWords(Agent* speaker, const std::vector<int>& heard, int amount, const std::string& text) {
 	if (!speaker || heard.empty() || engine.version >= 3)
 		return;
+	amount = (int)std::lround(amount * Lightning::teachFactor(speaker)); // (a polyglot teaches faster: Lightning.h)
 	float sx = centreX(speaker), sy = centreY(speaker);
 	// family heard twice as well (owner, 2026-11-20: learning from parents,
 	// "family most")
@@ -1318,6 +1323,29 @@ void creatureSays(Agent* creature, int stage, const Utterance& said) {
 	if (!creature || said.shown.empty() || engine.version >= 3)
 		return;
 	Utterance u = said;
+	// struck by lightning (Lightning.h): each word backwards ("dnah!")
+	if (Lightning::backwards(creature)) {
+		auto reverseWords = [](const std::string& t) {
+			std::string out, word;
+			auto flush = [&]() {
+				std::reverse(word.begin(), word.end());
+				out += word;
+				word.clear();
+			};
+			for (char ch : t) {
+				if (std::isalpha((unsigned char)ch) || ch == '-' || ch == '\'')
+					word += ch;
+				else {
+					flush();
+					out += ch;
+				}
+			}
+			flush();
+			return out;
+		};
+		u.shown = reverseWords(u.shown);
+		u.spoken = reverseWords(u.spoken);
+	}
 	oldCreature* self = creatureOf(creature);
 	if (Language::experimental() && self) {
 		// the old reach for a word now and then; saying words is practice
@@ -1367,7 +1395,7 @@ void creatureSays(Agent* creature, int stage, const Utterance& said) {
 	}
 	recordSpeech(creature, u.shown);
 	try {
-		creature->speak(u.spoken.empty() ? u.shown : u.spoken, voicePitch(stage), voicePace(stage));
+		creature->speak(u.spoken.empty() ? u.shown : u.spoken, voicePitch(stage) * Lightning::pitchFactor(creature), voicePace(stage));
 	} catch (std::exception&) {
 		// no voice for this creature: the bubble alone
 	}

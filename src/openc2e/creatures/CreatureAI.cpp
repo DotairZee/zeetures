@@ -22,6 +22,7 @@
 #include "creatures/Pheromones.h"
 #include "creatures/Breeding.h"
 #include "creatures/Disease.h"
+#include "creatures/Lightning.h"
 #include "caosValue.h"
 #include "CreatureAgent.h"
 #include "SkeletalCreature.h"
@@ -1007,6 +1008,8 @@ MindPerception oldCreature::buildPerception() {
 	p.asleep = asleep;
 	p.dozing = parentagent->getLastScript() == 69 && !parentagent->vmStopped();
 	p.dreaming = dreaming;
+	p.electrophile = Lightning::electrophile(parentagent);
+	p.plantEater = Lightning::plantEater(parentagent);
 	p.female = female;
 	p.genus = (int)genus;
 	unsigned int ndrives = (engine.version == 1) ? 16 : 17;
@@ -1134,6 +1137,8 @@ MindPerception oldCreature::buildPerception() {
 	for (auto& s : pendingstimuli)
 		if (engine.version == 2 && s.numbered && (s.id == 1 || s.id == 3)) {
 			(s.id == 1 ? p.handPat : p.handSlap) = true;
+			if (s.id == 3)
+				Lightning::slapped(parentagent); // (Frankenstein's creature, spurned)
 			callTo(1);
 			touchedTick = std::max(1u, world.tickcount);
 		}
@@ -1244,6 +1249,26 @@ MindPerception oldCreature::buildPerception() {
 					continue;
 				*side = std::max(*side, n->foodscent);
 			}
+			// a food-finder (a power from lightning: Lightning.h) smells the
+			// nearest food anywhere in sight of the map, whichever way it is
+			if (Lightning::foodFinder(parentagent)) {
+				Agent* best = nullptr;
+				float bestd = 1e9f;
+				for (auto& a : world.agents) {
+					if (!a || a->isDying() || a->family != 2 || a->carriedby || edibleNow(a.get()) <= 0.0f)
+						continue;
+					float d = std::hypot(a->x - parentagent->x, a->y - parentagent->y);
+					if (d < bestd && d > 40.0f)
+						bestd = d, best = a.get();
+				}
+				if (best) {
+					float dx = best->x - parentagent->x, dy = best->y - parentagent->y;
+					if (std::fabs(dy) > 150.0f)
+						*(dy < 0 ? &p.scentUp : &p.scentDown) = 1.0f;
+					else
+						*(dx < 0 ? &p.scentWest : &p.scentEast) = 1.0f;
+				}
+			}
 			// urges from smelled scents, with the same senses of direction
 			for (auto& u : Pheromones::urgesFor(parentagent, this)) {
 				MindPerception::ScentUrge su;
@@ -1270,6 +1295,21 @@ MindPerception oldCreature::buildPerception() {
 						continue;
 					*side = std::max(*side, level(*n));
 				}
+				p.scentUrges.push_back(su);
+			}
+			// Frankenstein's creature knows it is not alone: a pull toward the
+			// nearest of its kind, which loneliness follows (owner, 2026-11-26;
+			// Lightning.h)
+			if (float kx = 0, ky = 0; Lightning::kindredDirection(parentagent, kx, ky)) {
+				MindPerception::ScentUrge su;
+				su.scent = "kindred";
+				su.drive = 7; // Lonely
+				su.weight = 1.0f;
+				su.here = 0.2f;
+				if (std::fabs(ky) > 150.0f)
+					(ky < 0 ? su.up : su.down) = 1.0f;
+				else
+					(kx < 0 ? su.west : su.east) = 1.0f;
 				p.scentUrges.push_back(su);
 			}
 			// the own scents of the creatures the mind longs for

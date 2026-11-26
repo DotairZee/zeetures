@@ -177,6 +177,11 @@ void tick() {
 		it = (!alive.count(it->first) || it->second < 0.5f) ? s_dose.erase(it) : std::next(it);
 }
 
+void addUnbornMutations(const std::string& baby, int count) {
+	if (!baby.empty() && count > 0)
+		s_unborn[baby] += count * mutationDose;
+}
+
 float doseOf(const std::string& moniker) {
 	auto it = s_dose.find(moniker);
 	return it == s_dose.end() ? 0.0f : it->second;

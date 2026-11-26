@@ -86,6 +86,7 @@
 #include "Scriptorium.h"
 #include "WorldSave.h"
 #include "creatures/CreatureSpeech.h"
+#include "creatures/Lightning.h"
 #include "openc2eimgui/WorldChooser.h"
 #include "creatures/CreatureMind.h"
 #include "prayManager.h"
@@ -2696,6 +2697,7 @@ bool Engine::initialSetup() {
 	if (version < 3 && !currentworlddir.empty()) {
 		Disease::reset(); // (the save, if any, then fills it)
 		Exposure::reset();
+		Lightning::reset();
 		// (a save that breaks the loader part way is kept aside, not
 		// overwritten by the next autosave; the world goes on from what loaded)
 		try {

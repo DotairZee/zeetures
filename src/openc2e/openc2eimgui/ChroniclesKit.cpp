@@ -86,7 +86,15 @@ std::string sentence(const monikerData& self, const storyEntry& e) {
 		case storyEntry::died:
 			return e.detail.empty() ? "Died." : fmt::format("Died of {}.", e.detail);
 		case storyEntry::unconscious:
-			return "Fell unconscious (out of energy).";
+			return e.detail == "lightning" ? "Was struck by lightning and knocked out." : "Fell unconscious (out of energy).";
+		case storyEntry::struck:
+			if (e.detail.empty())
+				return "Was struck by lightning.";
+			if (!e.other.empty())
+				return fmt::format("Was struck by lightning, and {} {}.", e.detail, other);
+			return fmt::format("Was struck by lightning, and {}.", e.detail);
+		case storyEntry::mortalAgain:
+			return fmt::format("Found its match in {}, and was mortal again.", other);
 		case storyEntry::cameRound:
 			return e.detail == "revived" ? "Was brought back to life." : "Came round.";
 	}

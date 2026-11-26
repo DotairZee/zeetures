@@ -57,6 +57,8 @@ float fertilityFactor(const std::string& moniker);
 // at hatching (NEW: CREA): the genome with the mutations its dose before birth
 // gave it (written back to its genome file), or the same genome if none
 std::shared_ptr<genomeFile> atHatching(const std::string& genome, std::shared_ptr<genomeFile> g);
+// a dose before birth worth `count` more mutations (lightning: Lightning.h)
+void addUnbornMutations(const std::string& baby, int count);
 
 void save(std::ostream& out);
 bool readLine(const std::string& key, std::istringstream& line);

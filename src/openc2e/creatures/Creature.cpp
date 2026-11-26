@@ -21,6 +21,7 @@
 #include "common/devenv.h"
 #include "Creature.h"
 #include "Disease.h"
+#include "Lightning.h"
 #include "GenomeTraits.h"
 
 #include "Catalogue.h"
@@ -235,6 +236,10 @@ void Creature::addGene(gene* g) {
 }
 
 void Creature::ageCreature() {
+#ifndef _CREATURE_STANDALONE
+	if (stage >= senile && parentagent && Lightning::immortal(parentagent))
+		return; // (Frankenstein's creature: Lightning.h)
+#endif
 	if (stage >= senile) {
 		diedofoldage = true;
 		die();
@@ -1545,6 +1550,14 @@ void c2Creature::updateConsciousness() {
 #ifndef _CREATURE_STANDALONE
 	if (!alive || !parentagent)
 		return;
+	// Frankenstein's creature (Lightning.h) does not die: a failing organ
+	// is made a quarter whole again, as the Syringe's revival does
+	if (Lightning::immortal(parentagent))
+		for (auto& o : organs)
+			if (o->getInitialLifeforce() > 0.0f && o->getLongTermLifeforce() <= 0.5f) {
+				const float quarter = o->getInitialLifeforce() * 0.25f;
+				o->restoreLifeforce(quarter, quarter);
+			}
 	// death: an organ has failed
 	for (auto& o : organs)
 		if (o->getInitialLifeforce() > 0.0f && o->getLongTermLifeforce() <= 0.5f) {
@@ -1637,20 +1650,8 @@ c2Creature::Kickstart c2Creature::kickstartState() {
 #endif
 }
 
-c2Creature::Kickstart c2Creature::kickstart(int energy, int atp) {
-	Kickstart s = kickstartState();
-	if (s != stillDead && s != primed)
-		return s;
+void c2Creature::riseAgain() {
 #ifndef _CREATURE_STANDALONE
-	const int plenty = 200;
-	if (energy >= plenty)
-		kickstartPrimed = true;
-	if (!kickstartPrimed)
-		return stillDead;
-	if (atp < plenty)
-		return primed;
-	// back, out cold
-	kickstartPrimed = false;
 	alive = true;
 	minddied = false;
 	dead = 0;
@@ -1668,6 +1669,24 @@ c2Creature::Kickstart c2Creature::kickstart(int energy, int atp) {
 	}
 	parentagent->stopScript(); // (the death script, waiting to lift it away)
 	parentagent->queueScript(70); // lying, groaning
+#endif
+}
+
+c2Creature::Kickstart c2Creature::kickstart(int energy, int atp) {
+	Kickstart s = kickstartState();
+	if (s != stillDead && s != primed)
+		return s;
+#ifndef _CREATURE_STANDALONE
+	const int plenty = 200;
+	if (energy >= plenty)
+		kickstartPrimed = true;
+	if (!kickstartPrimed)
+		return stillDead;
+	if (atp < plenty)
+		return primed;
+	// back, out cold
+	kickstartPrimed = false;
+	riseAgain();
 	std::string mon = world.history->findMoniker(genome);
 	world.history->getMoniker(mon).cameBack();
 	// (its death stays in the life log; its notice on the status bar goes)
@@ -1683,6 +1702,10 @@ c2Creature::Kickstart c2Creature::kickstart(int energy, int atp) {
 }
 
 bool c2Creature::breathesWater() {
+#ifndef _CREATURE_STANDALONE
+	if (parentagent && Lightning::waterBreather(parentagent))
+		return true; // (a power from lightning: Lightning.h)
+#endif
 	if (waterbreather < 0) {
 		waterbreather = 0;
 		// C2's bodies get their oxygen (chemical 95) from air (96), which an

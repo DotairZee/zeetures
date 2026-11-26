@@ -74,6 +74,10 @@ void ateRotten(Agent* creature);
 
 // for the kits and the mind
 bool isIll(const std::string& moniker);
+// lightning (Lightning.h): every illness cured at once; or one caught (a
+// strain it can catch, chosen at random), false if none
+void cure(const std::string& moniker);
+bool catchSome(Agent* creature);
 std::vector<Illness> illnessesOf(const std::string& moniker);
 const Strain* strain(int id);
 const std::vector<Strain>& strains();

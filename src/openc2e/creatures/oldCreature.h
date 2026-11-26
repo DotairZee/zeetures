@@ -435,6 +435,9 @@ class c2Creature : public oldCreature {
 	// after a mixture's chemicals were put into a dead body: `energy` and
 	// `atp` how much Energy (98) and ATP (99) were in it
 	Kickstart kickstart(int energy, int atp);
+	// the body alone brought back, out cold, its failed organs a quarter
+	// whole (kickstart's revival without its records: lightning, Lightning.h)
+	void riseAgain();
 
   protected:
 

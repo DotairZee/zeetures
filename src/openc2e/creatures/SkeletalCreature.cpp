@@ -31,6 +31,7 @@
 #include "common/devenv.h"
 #include "SkeletalCreature.h"
 #include "creatures/CreatureSpeech.h"
+#include "creatures/Lightning.h"
 #include "PointerAgent.h"
 
 bool walkOffEndsInWater(const Room& r, bool east, int fit); // CreatureAI.cpp
@@ -585,6 +586,7 @@ void SkeletalCreature::skeletonInit() {
 		// pictures and every joint point together, so the parts still meet
 		float k = partGrowthOn() ? partGrowth(x, spe, foundfemale, foundvar, foundstage, creature->getStage())
 								 : stageScale(spe, foundfemale, foundvar, creature->getStage());
+		k *= Lightning::sizeFactor(this); // (grown or shrunk by lightning)
 		partk[i] = k;
 		if (std::fabs(k - 1.0f) > 0.01f) {
 			images[i] = world.gallery->scaled(images[i], k);
@@ -626,6 +628,16 @@ void SkeletalCreature::skeletonInit() {
 		}();
 		if (babyVivid > 0.0f && creature->getStage() == 0)
 			images[i] = world.gallery->muted(images[i], -babyVivid, 0.0f);
+		// struck by lightning (Lightning.h): scorched (sooty, browned) for a
+		// while, glowing (pale and shining) for a night, or Frankenstein's
+		// creature's grey-green pallor. (The gallery's colour tint fills C2
+		// pictures' see-through parts with black; muting and tingeing keep them.)
+		if (Lightning::Look look = Lightning::lookOf(this); look == Lightning::SCORCHED)
+			images[i] = world.gallery->muted(world.gallery->tinged(images[i], 120, 80, 45, 0.55f), 0.1f, -0.3f);
+		else if (look == Lightning::GLOWING)
+			images[i] = world.gallery->tinged(world.gallery->muted(images[i], 0.25f, 0.55f), 255, 245, 190, 0.35f);
+		else if (look == Lightning::PALLID)
+			images[i] = world.gallery->muted(world.gallery->tinged(images[i], 110, 160, 105, 0.7f), 0.15f, 0.0f);
 	}
 }
 
@@ -1902,7 +1914,7 @@ bool SkeletalCreature::walkSteps(float share) {
 	float energy = 1.0f;
 	if (auto* oc = dynamic_cast<oldCreature*>(creature))
 		energy = oc->temperament.factor(ENERGY, 0.12f);
-	const float pace = stagePace((int)creature->getStage()) * energy * share;
+	const float pace = stagePace((int)creature->getStage()) * energy * share * Lightning::paceFactor(this);
 	bool stepped = false;
 	paceCredit += pace;
 	while (paceCredit >= 1.0f) {

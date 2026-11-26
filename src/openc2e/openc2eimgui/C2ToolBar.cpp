@@ -10,6 +10,7 @@
 #include "HelpWindow.h"
 #include "Updater.h"
 #include "creatures/CreatureSpeech.h"
+#include "creatures/Lightning.h"
 #include "creatures/Language.h"
 #include "creatures/Thoughts.h"
 
@@ -704,6 +705,7 @@ static bool s_set_aside_was_paused = false;
 	// Save World As: a new world folder from the same starting world file,
 	// with the current state saved into it; the session continues there
 	ImportCreatureTick();
+	Openc2eImgui::TakeRequestedPhotos();
 	if (s_open_save_as) {
 		ImGui::OpenPopup("Save World As");
 		s_open_save_as = false;
@@ -1818,6 +1820,15 @@ static void DrawPreferences() {
 					SetDefaultWorld(atlaunch ? engine.currentworld : "");
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("Starts in this world, without asking which (also in the world chooser)");
+			}
+			// lightning (creatures/Lightning.h; owner, 2026-11-26)
+			ImGui::SeparatorText("Weather");
+			{
+				bool strange = Lightning::strange();
+				if (ImGui::Checkbox("Lightning has strange effects", &strange))
+					Lightning::setStrange(strange);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("A creature struck by lightning always feels the jolt. Ticked, a strike may now and then leave it changed,\nor give it a gift; and a body struck just after death may not stay dead. See Help > Time, seasons, and weather.");
 			}
 			ImGui::SeparatorText("Creatures in this world");
 			ImGui::Checkbox("All creatures fertile", &world.allFertile);

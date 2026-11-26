@@ -172,6 +172,8 @@ void DrawHealthKit();
 void DrawScienceKit();
 void DrawBreedersKit();
 void DrawOwnersKit();
+// photos lightning asked for (Lightning::takePhotoRequest), each frame
+void TakeRequestedPhotos();
 void DrawObservationKit();
 
 } // namespace Openc2eImgui

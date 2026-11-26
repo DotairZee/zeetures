@@ -18,6 +18,7 @@
  */
 
 #include "Bubble.h"
+#include "creatures/Lightning.h"
 #include "PixelText.h"
 
 #include "Additions.h"
@@ -368,6 +369,15 @@ std::string AnnouncementBubble::announcementText(int stringid, int index) {
 					add.replace(at, key.size(), value);
 			text += "||" + add;
 		}
+		// two of Frankenstein's creatures who died together (Lightning.h)
+		if (auto line42 = texts.find(42); line42 != texts.end())
+			for (auto& [names, when] : Lightning::couplesOnStone()) {
+				std::string add = line42->second;
+				for (auto [key, value] : {std::pair<std::string, std::string>{"{names}", names}, {"{date}", Openc2eImgui::KitDateText(when)}})
+					for (size_t at; (at = add.find(key)) != std::string::npos;)
+						add.replace(at, key.size(), value);
+				text += "||" + add;
+			}
 	}
 	return text;
 }

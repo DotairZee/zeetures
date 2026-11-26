@@ -281,3 +281,12 @@ find rndv ov00 1 4 mulv ov00 3 pose ov00 base ov00 snde chwp tick 20
 replace doif pose eq 2 rndv ov00 1 4 mulv ov00 3 pose ov00 base ov00 snde chwp tick 600
 find 79 20 37 150 scrp 2 25 16 9
 replace 79 20 37 150 endi scrp 2 25 16 9
+
+* Lightning strikes (owner, 2026-11-26). The storm cloud (2 14 2) throws a
+* bolt of five segments (2 14 4) and gives a creature touching one +200 Pain
+* (C2's own stimulus), but it tested the touch against VAR8, which it never
+* set, so no creature was ever struck, in C2 too. Now each segment is kept
+* in VAR8 as it is made. (What else a strike can do: Lightning.h.)
+scrp 2 14 2 9
+find setv cls2 2 14 4 setv attr 64 rndv var9
+replace setv cls2 2 14 4 setv attr 64 setv var8 targ rndv var9

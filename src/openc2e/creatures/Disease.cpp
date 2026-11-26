@@ -430,6 +430,32 @@ std::vector<Illness> illnessesOf(const std::string& moniker) {
 	return it == s_ill.end() ? std::vector<Illness>() : it->second;
 }
 
+void cure(const std::string& moniker) {
+	s_ill.erase(moniker);
+}
+
+bool catchSome(Agent* creature) {
+	auto* ca = creature ? dynamic_cast<CreatureAgent*>(creature) : nullptr;
+	auto* c = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+	if (!c || !world.history || s_strains.empty())
+		return false;
+	std::string mon = world.history->findMoniker(c->getGenome());
+	std::vector<const Strain*> can;
+	for (auto& s : s_strains)
+		if (canCatch(c, creature, mon, s))
+			can.push_back(&s);
+	if (can.empty())
+		return false;
+	const Strain& s = *can[rand_size_t(0, can.size() - 1)];
+	Body b;
+	b.moniker = mon;
+	b.c = c;
+	b.cx = creature->x + creature->getWidth() / 2.0f;
+	b.cy = creature->y + creature->getHeight() / 2.0f;
+	catchIt(b, s, "lightning");
+	return true;
+}
+
 const Strain* strain(int id) {
 	return findStrain(id);
 }

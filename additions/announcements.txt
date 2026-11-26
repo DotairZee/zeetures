@@ -17,3 +17,7 @@
 * {date}; lifeLogEntry::together).
 40 The four who grew old together||Sad news, though I don't think it's a bug. While checking the save I found that four norns died of old age at the same moment this evening. They all hatched within a few seconds of each other yesterday and were each about 9.5 hours of play old, which is the lifespan their genomes give norns. They grew old together and reached the end together.
 41 In this world too, {names} hatched together, grew old together and reached the end together. {date}.
+* 42: two of Frankenstein's creatures who found each other, became mortal, and
+* died in the same hour (owner, 2026-11-26: "inscription 2"; Lightning.h).
+* The engine adds it for each such pair, filling in {names} and {date}.
+42 {names}||They were not born, but awakened, and the world that shrank from them taught them only solitude. Yet each found in the other the companion that heaven had denied, and, content, they went together into the dark.||{date}
