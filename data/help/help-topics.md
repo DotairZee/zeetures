@@ -539,6 +539,31 @@ To make a creature older or younger, see the [[Owner's Kit]], Registration.
 
 Creatures die of old age, starvation, illness, poison, drowning, or an organ failing. The life log and the gravestone give the cause. A dead body lies for a while and then floats away. Its genes are kept, so it can still be a parent: see the [[Breeder's Kit]]'s Insemination page. See also the [[Graveyard Kit]].
 
+## How the brain grows
+
+Each creature's brain grows most while it is young, and what it grows lasts. A bright one learns words and what things do faster all its life; a neglected one learns more slowly, though it still learns.
+
+### What helps it grow
+
+- **Conversation.** Talk *with* a young creature: say something to it, close by or by its name, and give it time to answer, or answer when it speaks. A conversation counts three times as much as talk it does not answer, and talk it only overhears counts for nothing. Other creatures talking with it count too.
+- **Care.** Tickles, from you or from the grown-ups who tend the young, matter as much as talk to a baby, half as much to a child, and little after.
+- **Sleep.** What the brain builds is kept only by sleep. A young creature that goes too long without sleeping loses some of what it learned since its last.
+- **Food.** A hungry, dazed brain builds nothing.
+
+A little goes a long way: a few minutes of talk and tickles, often, beats a long burst. Babies and children gain the most; youths and adults far less.
+
+### Stress
+
+Fright, pain, slaps, great hunger and loneliness stress a creature, and stress fades with time, sleep, comfort and company. While it is young, a stress that soon passes makes it a little hardier, so fear and pain strike it less hard for life; stress that goes on and on makes it more easily frightened and halves what its brain builds. In old age, long stress wears the brain faster.
+
+### Growing old
+
+The brain wears with age, slowly in youth and adulthood, faster when old, fastest when senile. A creature that walks and runs about ages more slowly in its brain. One that has learned many words, seen many places and known many others holds off the signs of age longest. When they come, it walks more slowly, chooses less surely, forgets places it knew, and at the last forgets words.
+
+Being without air for more than half a minute harms the brain for good.
+
+The [[Science Kit]]'s brain organ shows all of this: rest the pointer on it.
+
 ## Food and hunger
 
 Food is chemistry. Starch, fat, and protein become glucose, the glucose becomes energy or is stored, and the stores run down. Hunger rises with an empty store, not an empty stomach, so some foods feed far better than others.
@@ -559,7 +584,7 @@ The brain is an organ too, and it needs feeding. It takes a little of the body's
 
 The body comes first. The brain is fed last, and only while there is energy to spare, so it never starves a creature by itself. When food runs short, the brain goes without, and the creature grows dazed: it learns more slowly, chooses less surely, and walks slowly. Babies and children are hit hardest, as a young brain is the hungriest. Fed again, it clears within a few minutes, faster asleep.
 
-The [[Science Kit]]'s Physical page shows the brain organ with the others, and how clear it is.
+The [[Science Kit]]'s Physical page shows the brain organ with the others, and how clear it is. How the brain grows and ages is in [[How the brain grows]].
 
 ## Sleep and rest
 

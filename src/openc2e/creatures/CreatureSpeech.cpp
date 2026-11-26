@@ -465,8 +465,10 @@ void hearWord(oldCreature* c, int word, int amount, const Language::Hearing& h) 
 	if (Agent* self = c->getAgent(); self && h.speaker != self && Lightning::parrotNow(self))
 		creatureSays(self, (int)c->getStage(), wordUtterance(self, c, word));
 	bool knew = c->vocab[word] >= WORD_KNOWN;
-	int v = c->vocab[word] + (int)std::lround(amount * stageLearning((int)c->getStage()) * Lightning::learnFactor(c) * (1.0f - 0.9f * BrainOrgan::daze(c)));
+	int v = c->vocab[word] + (int)std::lround(amount * stageLearning((int)c->getStage()) * Lightning::learnFactor(c) * (1.0f - 0.9f * BrainOrgan::daze(c)) * BrainOrgan::learning(c));
 	c->vocab[word] = (unsigned char)std::min(v, 255);
+	if (!knew && c->vocab[word] >= WORD_KNOWN)
+		BrainOrgan::learnedWord(c); // (a new word: its brain's Reserve)
 	if (!knew && c->vocab[word] >= WORD_KNOWN) {
 		int n = wordsKnown(c);
 		std::string mon = world.history->findMoniker(c->getGenome());
@@ -575,7 +577,8 @@ void hearSpeech(Agent* speaker, const std::string& text, int amount) {
 }
 
 void hearWords(Agent* speaker, const std::vector<int>& heard, int amount, const std::string& text) {
-	if (!speaker || heard.empty() || engine.version >= 3)
+	// (with no words it knows of, still heard as talk: its brain, BrainOrgan.h)
+	if (!speaker || engine.version >= 3)
 		return;
 	amount = (int)std::lround(amount * Lightning::teachFactor(speaker)); // (a polyglot teaches faster: Lightning.h)
 	float sx = centreX(speaker), sy = centreY(speaker);
@@ -586,14 +589,12 @@ void hearWords(Agent* speaker, const std::vector<int>& heard, int amount, const 
 	static const bool noWatching = devenv("OPENC2E_NO_WATCHING") != nullptr; // (to compare)
 	// (experimental: what the speaker shows or looks at, and at whom)
 	Agent* about = nullptr;
-	Agent* speakerFocus = nullptr;
+	Agent* speakerFocus = sc ? sc->getAttentionFocus().get() : nullptr;
 	if (Language::experimental()) {
 		if (speaker == (Agent*)world.hand())
 			about = handShows();
-		else if (sc) {
-			speakerFocus = sc->getAttentionFocus().get();
+		else if (sc)
 			about = speakerFocus && !speakerFocus->isDying() ? speakerFocus : nullptr;
-		}
 	}
 	for (auto& a : world.agents) {
 		if (!a || a.get() == speaker || a->isDying())
@@ -602,6 +603,20 @@ void hearWords(Agent* speaker, const std::vector<int>& heard, int amount, const 
 		if (!c || !inEarshot(a.get(), sx, sy))
 			continue;
 		int got = amount;
+		// said to it (the hand: naming it, or close by; a creature: looking
+		// at it), for its brain: a conversation's turns (BrainOrgan.h)
+		bool directed;
+		if (speaker == (Agent*)world.hand()) {
+			std::string mon = world.history->findMoniker(c->getGenome());
+			std::string name = mon.empty() || !world.history->hasMoniker(mon) ? std::string() : lower(trim(world.history->getMoniker(mon).name));
+			const bool named = name.size() >= 2 && text.find(" " + name + " ") != std::string::npos;
+			const bool close = std::hypot(centreX(a.get()) - world.hand()->pointerX(), centreY(a.get()) - world.hand()->pointerY()) < 200;
+			directed = named || close;
+		} else
+			directed = speakerFocus == a.get();
+		BrainOrgan::spokenTo(c, speaker, directed);
+		if (heard.empty())
+			continue;
 		const bool kin = !noWatching && !from.empty() && closeKin(from, world.history->findMoniker(c->getGenome()));
 		if (Language::experimental()) {
 			// who it was said to, and about what (Language::weightFor)
@@ -612,15 +627,11 @@ void hearWords(Agent* speaker, const std::vector<int>& heard, int amount, const 
 				h.source = Language::FROM_HAND;
 				h.about = about;
 				// spoken to: named, or the hand close by
-				std::string mon = world.history->findMoniker(c->getGenome());
-				std::string name = mon.empty() || !world.history->hasMoniker(mon) ? std::string() : lower(trim(world.history->getMoniker(mon).name));
-				const bool named = name.size() >= 2 && text.find(" " + name + " ") != std::string::npos;
-				const bool close = std::hypot(centreX(a.get()) - world.hand()->pointerX(), centreY(a.get()) - world.hand()->pointerY()) < 200;
-				h.directed = named || close;
+				h.directed = directed;
 			} else {
 				h.source = Language::FROM_CREATURE;
 				h.about = about;
-				h.directed = speakerFocus == a.get();
+				h.directed = directed;
 			}
 			for (int w : heard)
 				hearWord(c, w, got, h);
@@ -1323,6 +1334,8 @@ void tickReply(Agent* creature, oldCreature* c) {
 void creatureSays(Agent* creature, int stage, const Utterance& said) {
 	if (!creature || said.shown.empty() || engine.version >= 3)
 		return;
+	if (oldCreature* sc = creatureOf(creature))
+		BrainOrgan::spoke(sc); // (an answer makes a turn: BrainOrgan.h)
 	Utterance u = said;
 	// struck by lightning (Lightning.h): each word backwards ("dnah!")
 	if (Lightning::backwards(creature)) {

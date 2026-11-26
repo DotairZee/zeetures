@@ -20,6 +20,7 @@
 #ifndef __OLDCREATURE_H
 #define __OLDCREATURE_H
 
+#include "BrainOrgan.h"
 #include "Creature.h"
 #include "CreatureMind.h"
 #include "LanguageMemory.h"
@@ -242,6 +243,7 @@ class oldCreature : public Creature {
 	bool brainTurn = false;
 	float brainDaze = 0.0f;
 	bool brainLoaded = false;
+	BrainOrgan::Life brainLife; // its growth, reserve, damage ... (BrainOrgan.h)
 	// how many creatures it is bonded to are within radius (affinity at
 	// least minAffinity), up to most; worked out every 20 ticks (company
 	// warms in the cold, Creature.cpp)

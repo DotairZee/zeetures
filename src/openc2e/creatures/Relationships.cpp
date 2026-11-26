@@ -17,6 +17,7 @@
  */
 
 #include "Relationships.h"
+#include "BrainOrgan.h"
 #include "common/devenv.h"
 
 #include "Agent.h"
@@ -187,6 +188,13 @@ void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 
 	}
 	if (help <= 0 && harm <= 0)
 		return;
+	// for its brain (BrainOrgan.h): a kindness (a tickle, a kiss) is care,
+	// and food or a toy brought half as much; being hurt or punished, a
+	// stress
+	if (help > 0)
+		BrainOrgan::touched(c, gift ? 0.5f : 1.0f);
+	if (harm > 0)
+		BrainOrgan::harmed(c, harm);
 	Bond& b = c->bonds[them];
 	unsigned int now = world.worldtickcount;
 	// temperament: sociable creatures warm faster, hot-tempered ones sour

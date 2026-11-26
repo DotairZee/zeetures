@@ -104,11 +104,22 @@ static void PhysicalPage() {
 			ImGui::TextDisabled("-");
 			ImGui::TableNextColumn();
 			ImGui::TextDisabled("-");
-			if (hov || ImGui::IsItemHovered())
+			if (hov || ImGui::IsItemHovered()) {
+				std::string life;
+				if (!BrainOrgan::lifeOff() && c->brainLife.set) {
+					const auto& L = c->brainLife;
+					life = fmt::format("\n\nGrowth {:.0f} (more to keep in sleep: {:.1f})   Reserve {:.0f}   Damage {:.0f}\n"
+									   "Resilience {:.0f}   Stress {:.0f}%   Exercise {:.0f}%\n"
+									   "Learns at {:.0f}% of a newborn's rate for its age; signs of age {:.0f}%",
+						L.growth, L.pending, L.reserve, L.damage, L.resilience, L.stress * 100, std::min(100.0f, L.trophin / 25.0f),
+						BrainOrgan::learning(c) * 100, BrainOrgan::symptoms(c) * 100);
+				}
 				ImGui::SetTooltip("The brain. It runs half as often as the other organs, and costs a quarter less asleep.\n"
 								  "It is paid last, and only while ATP is 60 or more, so it never empties the store.\n"
 								  "Short of energy or glucose, a creature grows dazed: it learns more slowly, chooses\n"
-								  "less surely, and walks slowly. The young are hit hardest. Once fed, it clears in minutes.");
+								  "less surely, and walks slowly. The young are hit hardest. Once fed, it clears in minutes.%s",
+					life.c_str());
+			}
 		}
 		ImGui::EndTable();
 	}

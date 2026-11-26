@@ -995,7 +995,27 @@ class HomeostatMind : public CreatureMind {
 	}
 
 	float daze = 0.0f; // 0 clear .. 1 dazed (this tick's perception)
-	float dazedLearning() const { return 1.0f - 0.9f * daze; }
+	float brainLearn = 1.0f, brainSymptoms = 0.0f; // its brain's Capacity and Symptoms (BrainOrgan.h)
+	float dazedLearning() const { return (1.0f - 0.9f * daze) * brainLearn; }
+	int placesKnown() const override { return (int)rooms.size(); }
+	// its brain's age showing (BrainOrgan.h): now and then a place is
+	// forgotten, a room it has known or a place it ate (places go before
+	// words)
+	void forgetWithAge() {
+		if (brainSymptoms < 0.15f || std::uniform_real_distribution<float>(0, 1)(rng) >= brainSymptoms * 0.01f)
+			return;
+		if (!foodPlaces.empty() && std::uniform_real_distribution<float>(0, 1)(rng) < 0.3f) {
+			foodPlaces.erase(foodPlaces.begin() + std::uniform_int_distribution<size_t>(0, foodPlaces.size() - 1)(rng));
+			foodTrip = -1; // indices moved
+			return;
+		}
+		if (rooms.size() < 2)
+			return;
+		auto it = rooms.begin();
+		std::advance(it, std::uniform_int_distribution<size_t>(0, rooms.size() - 1)(rng));
+		if (it->first != roomNow)
+			rooms.erase(it);
+	}
 
 	MindOutput tick(const MindPerception& p) override {
 		if (!paramsOverridden) {
@@ -1006,6 +1026,9 @@ class HomeostatMind : public CreatureMind {
 		// a brain short of energy (BrainOrgan.h): learns more slowly and
 		// chooses less surely
 		daze = std::clamp(p.brainDaze, 0.0f, 1.0f);
+		brainLearn = p.brainLearning;
+		brainSymptoms = std::clamp(p.brainSymptoms, 0.0f, 1.0f);
+		forgetWithAge();
 		if (p.brainSettings && *p.brainSettings != brainSettings) {
 			brainSettings = *p.brainSettings;
 			temperamentApplied = false;
@@ -1158,6 +1181,9 @@ class HomeostatMind : public CreatureMind {
 			pendingPassOver = AgentRef();
 		}
 		std::array<float, NUM_DRIVES> d = normalize(p.drives);
+		// how hard fear and pain strike it (BrainOrgan.h: Resilience)
+		d[FEAR] = std::min(1.0f, d[FEAR] * p.brainFearScale);
+		d[PAIN] = std::min(1.0f, d[PAIN] * p.brainFearScale);
 		bodyHunger = d[HUNGER]; // (as the body has them, before the season and anticipation)
 		bodySleepy = d[SLEEPY];
 		// Autumn appetite (owner, 2026-11-16: "should they eat more in autumn
@@ -5445,7 +5471,7 @@ class HomeostatMind : public CreatureMind {
 		std::sort(cands.begin(), cands.end(), [](const Candidate& a, const Candidate& b) { return a.score > b.score; });
 		if (cands.size() > prm.choiceSetSize)
 			cands.resize(prm.choiceSetSize);
-		float tau = prm.temperature / (1.0f + prm.arousalFocus * D) * (1.0f + 3.0f * daze); // (dazed: less sure)
+		float tau = prm.temperature / (1.0f + prm.arousalFocus * D) * (1.0f + 3.0f * daze + 1.5f * brainSymptoms); // (dazed, or its brain's age showing: less sure)
 		std::vector<double> w;
 		for (auto& c : cands)
 			w.push_back(std::exp((c.score - cands[0].score) / tau));

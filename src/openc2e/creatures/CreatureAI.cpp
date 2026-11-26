@@ -1012,6 +1012,9 @@ MindPerception oldCreature::buildPerception() {
 	p.electrophile = Lightning::electrophile(parentagent);
 	p.plantEater = Lightning::plantEater(parentagent);
 	p.brainDaze = BrainOrgan::daze(this);
+	p.brainLearning = BrainOrgan::learning(this);
+	p.brainSymptoms = BrainOrgan::symptoms(this);
+	p.brainFearScale = BrainOrgan::fearScale(this);
 	p.female = female;
 	p.genus = (int)genus;
 	unsigned int ndrives = (engine.version == 1) ? 16 : 17;
@@ -1139,6 +1142,11 @@ MindPerception oldCreature::buildPerception() {
 	for (auto& s : pendingstimuli)
 		if (engine.version == 2 && s.numbered && (s.id == 1 || s.id == 3)) {
 			(s.id == 1 ? p.handPat : p.handSlap) = true;
+			// (care, or a blow: BrainOrgan.h)
+			if (s.id == 1)
+				BrainOrgan::touched(this, 1.0f);
+			else
+				BrainOrgan::slapped(this);
 			if (s.id == 3)
 				Lightning::slapped(parentagent); // (Frankenstein's creature, spurned)
 			callTo(1);

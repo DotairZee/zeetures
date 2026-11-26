@@ -1915,7 +1915,7 @@ bool SkeletalCreature::walkSteps(float share) {
 	float energy = 1.0f;
 	if (auto* oc = dynamic_cast<oldCreature*>(creature))
 		energy = oc->temperament.factor(ENERGY, 0.12f);
-	const float pace = stagePace((int)creature->getStage()) * energy * share * Lightning::paceFactor(this) * (1.0f - 0.4f * BrainOrgan::daze(creature)); // (dazed: slow)
+	const float pace = stagePace((int)creature->getStage()) * energy * share * Lightning::paceFactor(this) * (1.0f - 0.4f * BrainOrgan::daze(creature)) * (1.0f - 0.25f * BrainOrgan::symptoms(creature)); // (dazed, or its brain's age showing: slow)
 	bool stepped = false;
 	paceCredit += pace;
 	while (paceCredit >= 1.0f) {
@@ -1924,6 +1924,7 @@ bool SkeletalCreature::walkSteps(float share) {
 		nextStepIn = pace > 0.01f ? std::max(1.0f, std::ceil((1.0f - paceCredit) / pace)) * 2.0f * share : 2.0f;
 		gaitTick();
 		stepTiredness();
+		BrainOrgan::stepped(creature); // (exercise: BrainOrgan.h)
 		stepped = true;
 	}
 	nextStepIn = 0;

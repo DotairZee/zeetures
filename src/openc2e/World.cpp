@@ -22,6 +22,7 @@
 #include "common/devenv.h"
 #include "World.h"
 #include "Lift.h"
+#include "creatures/BrainOrgan.h"
 #include "creatures/Lightning.h"
 #include "SkyTint.h"
 
@@ -455,6 +456,7 @@ void World::tick() {
 		}
 		Exposure::tick();
 		Lightning::tick();
+		BrainOrgan::tick();
 		tickBreathBubbles();
 		{
 			PROFILE_SCOPE("world: relationships");

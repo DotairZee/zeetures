@@ -128,6 +128,9 @@ struct MindPerception {
 	bool electrophile = false; // struck by lightning, drawn to machines for a while (Lightning.h)
 	bool plantEater = false; // Frankenstein's creature: eats only plants (Lightning.h)
 	float brainDaze = 0; // 0 clear .. 1 dazed: the brain short of energy (BrainOrgan.h)
+	float brainLearning = 1; // how fast its brain learns (BrainOrgan.h: Capacity)
+	float brainSymptoms = 0; // 0 .. 1: its brain's age showing (BrainOrgan.h)
+	float brainFearScale = 1; // how hard fear and pain strike it (BrainOrgan.h: Resilience)
 	bool female = false;
 	int genus = -1; // 1 norn, 2 grendel, 3 ettin
 	// Sense of place (owner, 2026-11-13): the room the creature is in (by its
@@ -402,6 +405,8 @@ class CreatureMind {
 	// how content it is now, 0-1 (the Mind Kit's measure), or -1 if this
 	// mind has none; cheap enough to ask every tick (the music follows it)
 	virtual float contentment() const { return -1; }
+	// how many places it knows (BrainOrgan: new ones add to its Reserve), or -1
+	virtual int placesKnown() const { return -1; }
 	// World saving: the mind's learned state as text, and restoring it.
 	virtual std::string saveState() const { return {}; }
 	virtual void loadState(const std::string&) {}
