@@ -382,6 +382,8 @@ VERSIONS = [
      "Lightning strikes creatures: a jolt of pain, as Creatures 2 meant but never managed; with Lightning has strange effects ticked (Preferences > World), a strike may now and then change a creature, give it a gift, or more, for you to discover; the bamboo lift east of the big hut is drawn in front of the tube's glass; every world has a fruit-bearing kelp clump on the sea floor."),
     ("0.43.1", "2c9f888c",
      "Two choices now on from the start, unless you untick them: words come out a little wrong while being learned (Preferences > Creatures), and lightning has strange effects (Preferences > World)."),
+    ("0.43.2", "9ce48cb0",
+     "The brain is now an organ that needs feeding: it takes a little of a creature's energy, never so much that it starves one, and a creature short of food grows dazed (slower to learn, less sure, slow on its feet) until fed; lamp-lit places, the incubator's cave among them, keep their light at night instead of going dark under the night sky."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 738 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 741 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.43.2](#version-0432): 3 commits, 26 November 2026
 - [0.43.1](#version-0431): 3 commits, 26 November 2026
 - [0.43.0](#version-0430): 4 commits, 26 November 2026
 - [0.42.0](#version-0420): 2 commits, 26 November 2026
@@ -108,6 +109,63 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.43.2
+
+The brain is now an organ that needs feeding: it takes a little of a creature's energy, never so much that it starves one, and a creature short of food grows dazed (slower to learn, less sure, slow on its feet) until fed; lamp-lit places, the incubator's cave among them, keep their light at night instead of going dark under the night sky.
+
+### 26 November 2026
+
+#### Version 0.43.2
+
+[`9ce48cb0`](https://github.com/DotairZee/zeetures/commit/9ce48cb036ddc454ab929ca549370cc331f44364)
+
+#### The brain is an organ that needs feeding
+
+[`ed21e0dc`](https://github.com/DotairZee/zeetures/commit/ed21e0dca7102e633c2f131509b3be3d602ae651)
+
+Creatures 2's genomes have a brain organ, and the original game charged it
+22 ATP each time it ran, half as often as the other organs: about a third of
+a creature's energy, more than an adult human's brain takes. Zeetures never
+made it. It now does, at a cost of 5 (about 9% of a creature's energy, a
+primate's share, as the research on brain metabolism suggests; about 11%
+more spending than before).
+
+- The cost is the same whatever the mind is doing, and a quarter less
+  asleep.
+- It is paid last, after every other organ, and only while ATP is at 60 or
+  more, so the brain is never what empties a creature's store.
+- Short of energy or glucose, a creature grows dazed: it learns more slowly
+  (from experience and words), chooses less surely, and walks slowly.
+  Babies are hit three times as hard as adults, children twice. Fed again,
+  it clears in about three or four minutes, faster asleep. The daze is
+  saved with the world.
+- Science Kit, Physical: the brain organ is listed with the others; its
+  health column shows how clear the brain is.
+- Help: Food and hunger, The brain. Research behind Zeetures: The brain
+  organ.
+
+Tested in matched copies of Home, 30 minutes each, two with the brain and
+two without: no starvation in any; hunger and Energy reserves the same
+within run-to-run differences; the few creatures that make energy slowly
+never fell under ATP 80. The only collapses (two, both drowning) came with
+ATP healthy until their oxygen ran out. Save, reload, and a creature
+starving for real behaved the same with and without the brain.
+
+Switch OPENC2E_NO_BRAIN_ORGAN; OPENC2E_WATCH_BRAIN logs creatures growing
+dazed and clearing; OPENC2E_TEST_BRAIN_DAZE=N starts every creature dazed;
+OPENC2E_COUNT_ENERGY counts the brain's share; the fuel watch shows the
+daze.
+
+#### Lamp-lit places keep their light at night
+
+[`7ec8e9b0`](https://github.com/DotairZee/zeetures/commit/7ec8e9b02368763f67a9249f0b280d63a4671115)
+
+The night's dark blue was laid over everything under open sky, whatever
+lit it, so the incubator's cave, given its own light in 0.31, still went
+dark at night. Rooms with a light of their own (the incubator's cave and
+the world's lamp-lit rooms) now keep nearly all their colour at night,
+blending softly into the dark around them.
 
 ## Version 0.43.1
 
