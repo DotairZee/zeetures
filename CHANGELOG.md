@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 712 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 713 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 2 commits, 25 November 2026
+- [0.40.1](#version-0401): 3 commits, 25 November 2026
 - [0.40.0](#version-0400): 4 commits, 25 November 2026
 - [0.39.0](#version-0390): 8 commits, 25 November 2026
 - [0.38.0](#version-0380): 15 commits, 23 November 2026 to 25 November 2026
@@ -102,11 +102,15 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.40.1
 
-Changes since the last version.
+Crowded creatures walk out of a crowd toward the emptier side, so the crowd that gathered under the incubator, fed by the endless cave fungus, thins out; rooms Zeetures adds start with no wind instead of garbage values.
 
 ### 25 November 2026
+
+#### Version 0.40.1
+
+[`631c3cad`](https://github.com/DotairZee/zeetures/commit/631c3cada53ce616382fd27de46618e0d0630898)
 
 #### Rooms added by Zeetures start with no wind
 
