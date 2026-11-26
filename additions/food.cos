@@ -715,6 +715,21 @@ reps 20
   endi
 repe
 
+* And one kelp clump there in every world, from the start (owner,
+* 2026-11-26: "why is the seaweed fruit-bearing plant not in there? please
+* make sure that defaults to all new worlds"): before, kelp grew only where
+* a bush happened to seed on the sea floor. Planted full-grown, in the sea
+* look (OV02 5, zfbk), if none stands at its place.
+setv var0 0
+enum 2 4 141
+  doif posl eq 6592
+    doif post eq 1004 addv var0 1 endi
+  endi
+next
+doif var0 eq 0
+  inst new: simp zfbk 12 0 -10 0 setv cls2 2 4 141 setv attr 0 setv rnge 150 mvto 6592 1004 setv ov00 2 setv ov01 150 setv ov02 5 setv ov03 2 setv ov04 -10 setv ov99 7461 setv var8 sean addv var8 8 pose var8 tick 250 slow
+endi
+
 * The world's three clams (2 19 3) on the open sea floor west of the
 * planter (x 6618-6746) make room for the kelp: each load (the world file
 * puts them back) they are set a little to the west, in the same
