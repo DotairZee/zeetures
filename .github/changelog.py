@@ -364,6 +364,8 @@ VERSIONS = [
      "Kits in their own windows (experimental; File > Preferences > Display): a kit, the Creature's View or Preferences dragged out of the game becomes a window of its own, on another monitor if you like, and comes back when dragged in; a bamboo bridge from the flying fox's landing up to the ledge before the stone arches."),
     ("0.39.0", "3e2e6f14",
      "Words from the C2 manual: typing \"yes\" or \"no\" praises or blames a creature that knows the word, \"what\" and \"why\" have it say what it is doing and the need behind it, and \"look\" turns it to the thing by the hand and has it name it; creatures say how strongly they need something, from \"very\" to \"extremely\"; the Creature's View can show the creature itself, its bubbles and (by default) its name in the window's title."),
+    ("0.40.0", "a100cfb6",
+     "Learning to talk as children do (experimental, Preferences > Creatures > Language): words mean what was in view when heard, phrases grow with the words known, speech aimed at a creature teaches most, words fade unless heard again after a pause or slept on, creatures make up names for things and the colony settles on one, and the young stretch words, babble and run words together; explained in Help > Learning to talk (experimental); the status bar keeps one height whatever parts it shows."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

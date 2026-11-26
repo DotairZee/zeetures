@@ -1,12 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 707 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 710 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
-- [Unreleased](#unreleased): 1 commits, 25 November 2026
+- [0.40.0](#version-0400): 4 commits, 25 November 2026
 - [0.39.0](#version-0390): 8 commits, 25 November 2026
 - [0.38.0](#version-0380): 15 commits, 23 November 2026 to 25 November 2026
 - [0.37.1](#version-0371): 2 commits, 24 November 2026
@@ -101,11 +101,70 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
 
-## Unreleased
+## Version 0.40.0
 
-Changes since the last version.
+Learning to talk as children do (experimental, Preferences > Creatures > Language): words mean what was in view when heard, phrases grow with the words known, speech aimed at a creature teaches most, words fade unless heard again after a pause or slept on, creatures make up names for things and the colony settles on one, and the young stretch words, babble and run words together; explained in Help > Learning to talk (experimental); the status bar keeps one height whatever parts it shows.
 
 ### 25 November 2026
+
+#### Version 0.40.0
+
+[`a100cfb6`](https://github.com/DotairZee/zeetures/commit/a100cfb60fad9410d773d67ebd42387797e9801e)
+
+#### Preferences, Mind Kit and Help for the experimental language system
+
+[`8f129b7b`](https://github.com/DotairZee/zeetures/commit/8f129b7bb083b873f74b4d3df0d50561e22cf88b)
+
+- Preferences &gt; Creatures: "Language (experimental)": "Creatures learn to
+  talk as children do" and, under it, "Words can be forgotten", with a note
+  that it is experimental and that what creatures know is kept either way.
+- Mind Kit &gt; Words: with the system on, how long its phrases can be, words
+  mixed up or unsure, words known by sound only, words kept for life, words
+  forgotten but quick to come back, and the colony's own names for things
+  (how many use each and where most of them are).
+- Help: a new topic, "Learning to talk (experimental)", explaining every
+  rule; Preferences and Mind Kit topics point to it.
+
+#### Experimental language system: learning to talk as children do
+
+[`21f9302e`](https://github.com/DotairZee/zeetures/commit/21f9302e0b1e483d137f8430775672541c106867)
+
+Off unless chosen (Preferences &gt; Creatures &gt; Language); off, creatures
+learn words exactly as before. On:
+
+- Words mean what was in view when heard: babies take a name for what they
+  look at, older creatures follow what the speaker shows. One guessed meaning
+  per word, confirmed or changed by later hearings; naming what a creature
+  already looks at teaches most; heard about nothing in view, a word teaches
+  its sound only. An unsure creature says "toy?". A new word for a thing it
+  has a word for is often taken for something else. Teaching machines show
+  the thing, so are never mistaken. Verbs and feelings teach most when heard
+  while doing or feeling them.
+- Phrases grow with words known (1, 2, 3, 4 words at 12, 25, 40), with age as
+  a ceiling; the strength words come last; a verb joins other words after
+  being heard or said three times. Words are understood at half strength,
+  before they can be said. Understanding none of what the hand said, the
+  nearest answer "?".
+- Speech aimed at a creature teaches more than overheard talk; babies learn
+  little from machines and much from the hand and family; adolescents learn
+  from peers over family; the old teach a little more and sometimes pause
+  for a word ("...um...").
+- Words fade when not heard (optional, on by default); hearings after a pause
+  and sleep of a minute or more settle them; settled words are kept for life;
+  a forgotten word is relearned two and a half times as fast. Repeats in a row
+  teach about a third. Words known when the system is turned on are kept.
+- With no word for a thing, adolescents and older try out a name they have
+  heard, or make one up from their own voice's sounds; when a listener
+  already uses a name, both drop their others (the naming game); the young
+  let rival names fade faster.
+- The young stretch a word to a like kind of thing; a word heard for one
+  thing only means that thing. Babies babble doubled sounds, more when spoken
+  to; children run words heard together into one ("eatfood").
+
+Each creature's word memory is saved with it (langword, langpair and
+langstate lines; older saves load unchanged). Sources in CITATIONS.md.
+Developer aids: OPENC2E_LANGUAGE=1 or 0, and OPENC2E_WATCH_SPEECH prints
+HEARS, COINS, STRETCHES, FORGETS and SLEPT ON lines.
 
 #### Status bar keeps one height whatever parts it shows
 
