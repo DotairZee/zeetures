@@ -425,6 +425,26 @@ void makeFilter(Sky& sky, const std::array<float, 3>& c) {
 			o[i * 4 + ch] = (uint8_t)std::lround(std::clamp(1.0f - sh * (1.0f - c[ch]), 0.0f, 1.0f) * 255);
 		o[i * 4 + 3] = 255;
 	}
+	// developer aid: OPENC2E_DUMP_SKY=file.pgm writes, once, how much of the
+	// day's and night's colour each 8 px cell takes (0 none, 255 all), after
+	// lamp-lit rooms (a greyscale PGM, one pixel a cell)
+	if (static const char* dump = devenv("OPENC2E_DUMP_SKY"); dump && !sky.share.empty()) {
+		static bool dumped = false;
+		if (!dumped) {
+			dumped = true;
+			if (FILE* f = fopen(dump, "wb")) {
+				fprintf(f, "P5\n%d %d\n255\n", sky.mw, sky.mh);
+				for (size_t i = 0; i < sky.share.size(); i++) {
+					float sh = sky.share[i];
+					if (i < sky.lit.size() && sh > litShare)
+						sh -= (sh - litShare) * sky.lit[i];
+					fputc((int)std::lround(std::clamp(sh, 0.0f, 1.0f) * 255), f);
+				}
+				fclose(f);
+				fmt::print("* Sky share map ({}x{} cells of {} px) written to {}\n", sky.mw, sky.mh, CELL, dump);
+			}
+		}
+	}
 	sky.filter.images = {out};
 	sky.filter.textures.clear();
 	sky.filter.textures.resize(1);

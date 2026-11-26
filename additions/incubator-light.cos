@@ -31,5 +31,9 @@ mvto 4494 850 setv lite 150 setv lsrc 1
 mvto 4494 915 setv lite 150 setv lsrc 1
 mvto 4329 800 setv lite 150 setv lsrc 1
 mvto 4500 720 setv lite 150 setv lsrc 1
+* the cave east of the lift beside the incubator, over the walkway, with
+* its hanging lamp (14; owner, 2026-11-26: "this area should also be lit"):
+* its light stays (177), and it keeps it at night
+mvto 6095 790 setv lsrc 1
 kill targ
 slow
