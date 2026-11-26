@@ -48,6 +48,14 @@ const int HEAR_CREATURE = 24; // a word another creature said
 
 bool knowsWord(oldCreature* c, int word);
 void hearWord(oldCreature* c, int word, int amount);
+// and under the experimental language system (Language.h): who said it,
+// about what, and to whom, which change what it teaches
+namespace Language {
+struct Hearing;
+}
+void hearWord(oldCreature* c, int word, int amount, const Language::Hearing& h);
+// what the hand is showing: what it holds, or the thing it points at
+Agent* handShows();
 void learnAllWords(oldCreature* c); // Stone of Knowledge (SYS: CMND 32777), VOCB
 int wordsKnown(oldCreature* c);
 
@@ -63,7 +71,7 @@ void hearOwnName(oldCreature* c, const std::string& word, int category, int amou
 // hear each word of the game's word list in the text (the hand's typing),
 // or the given words (another creature's speech).
 void hearSpeech(Agent* speaker, const std::string& text, int amount);
-void hearWords(Agent* speaker, const std::vector<int>& words, int amount);
+void hearWords(Agent* speaker, const std::vector<int>& words, int amount, const std::string& text = "");
 
 // The syllables a creature's voice speaks for a word, as shown in a bubble
 // ("doh-rah-doh"); empty if it has no voice.

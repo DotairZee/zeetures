@@ -38,6 +38,7 @@
 #include "common/Random.h"
 #include "oldBrain.h"
 #include "CreatureSpeech.h"
+#include "Language.h"
 #include "creatures/Thoughts.h"
 #include "oldCreature.h"
 #include "Temperament.h"
@@ -1903,6 +1904,7 @@ void oldCreature::tickMind() {
 	}
 
 	tickReply(parentagent, this);
+	Language::tick(parentagent, this); // (the experimental language system: fading, sleep)
 	if (!out.say.empty())
 		creatureSays(parentagent, (int)stage, phraseFor(out.say, parentagent, this));
 	if (!out.thought.empty())

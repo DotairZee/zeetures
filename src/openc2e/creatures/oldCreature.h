@@ -22,6 +22,7 @@
 
 #include "Creature.h"
 #include "CreatureMind.h"
+#include "LanguageMemory.h"
 #include "Relationships.h"
 #include "Temperament.h"
 #include "MindGenes.h"
@@ -157,6 +158,9 @@ class oldCreature : public Creature {
 	// (engine.wordlist), how familiar it is, 0-255 (known at WORD_KNOWN); see
 	// CreatureSpeech.h. Empty until the first word is heard.
 	std::vector<unsigned char> vocab;
+	// and, under the experimental language system (Language.h), what else it
+	// remembers of each word: how settled, its guessed meaning, when heard
+	LanguageMemory lang;
 	// Names of its own for kinds of thing, outside the game's word list
 	// ("mummy" for the hand): for each word, how familiar it is as the name
 	// of each category (0-255, known at WORD_KNOWN); learned from the hand

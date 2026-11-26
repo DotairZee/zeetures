@@ -831,6 +831,19 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 					for (auto& [category, v] : for_)
 						if (v > 0)
 							out << "ownname " << category << " " << v << " " << escapeLine(word) << "\n";
+				// the experimental language system's memory of each word
+				// (Language.h): word, stability, last heard, best, guess,
+				// sureness, first thing, things, uses, alone, heard since sleep
+				for (size_t i = 0; i < c->lang.words.size(); i++) {
+					const WordMemory& m = c->lang.words[i];
+					if (m.set && (m.lastHeard || m.best || m.uses || m.alone))
+						out << fmt::format("langword {} {:.2f} {} {} {} {} {} {} {} {} {}\n", i, m.stability, m.lastHeard, (int)m.best, (int)m.guess, (int)m.sure,
+							m.firstThing, (int)m.things, (int)m.uses, (int)m.alone, m.sinceSleep ? 1 : 0);
+				}
+				for (auto& [p, n] : c->lang.pairs)
+					out << "langpair " << p.first << " " << p.second << " " << n << "\n";
+				if (c->lang.lastFade || c->lang.wasAsleep)
+					out << "langstate " << c->lang.lastFade << " " << (c->lang.wasAsleep ? 1 : 0) << " " << c->lang.sleptAt << "\n";
 			}
 			{
 				std::string mon = world.history->findMoniker(c->getGenome());
@@ -951,6 +964,7 @@ struct SavedCreature {
 	std::string baby; // the genome name of the baby she carries, if pregnant
 	std::vector<std::pair<int, int>> words; // word-list number, familiarity
 	std::vector<std::pair<std::string, std::pair<int, int>>> ownNames; // word, category, familiarity
+	std::vector<std::string> lang; // the experimental language system's lines (langword, langpair, langstate)
 	std::vector<std::string> bonds; // bond lines (Relationships::fromLine)
 	std::string temperament; // Temperaments::toLine; empty: keep the one drawn at hatching
 	std::string temperamentBorn, temperamentDrift; // (saves before 2026-11-17 have neither: born is the temperament)
@@ -1111,6 +1125,42 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 	for (auto& [word, n] : s.ownNames)
 		if (!word.empty() && n.first >= 1 && n.first <= 35)
 			c->ownNames[word][n.first] = std::clamp(n.second, 0, 255);
+	for (auto& line : s.lang) {
+		std::istringstream in(line);
+		std::string key;
+		in >> key;
+		if (key == "langword") {
+			int w = -1, best = 0, guess = -1, sure = 0, things = 0, uses = 0, alone = 0, since = 0;
+			float stability = 0;
+			unsigned int last = 0, first = 0;
+			if (!(in >> w >> stability >> last >> best >> guess >> sure >> first >> things >> uses >> alone >> since) || w < 0 || w > 1000)
+				continue;
+			if (c->lang.words.size() <= (size_t)w)
+				c->lang.words.resize((size_t)w + 1);
+			WordMemory& m = c->lang.words[w];
+			m.set = true;
+			m.stability = std::clamp(stability, 0.0f, 10.0f);
+			m.lastHeard = last;
+			m.best = (unsigned char)std::clamp(best, 0, 255);
+			m.guess = (signed char)std::clamp(guess, -1, 39);
+			m.sure = (unsigned char)std::clamp(sure, 0, 255);
+			m.firstThing = first;
+			m.things = (unsigned char)std::clamp(things, 0, 3);
+			m.uses = (unsigned char)std::clamp(uses, 0, 255);
+			m.alone = (unsigned char)std::clamp(alone, 0, 255);
+			m.sinceSleep = since != 0;
+		} else if (key == "langpair") {
+			int a = -1, b = -1, n = 0;
+			if (in >> a >> b >> n && a >= 0 && b >= 0 && a < 1000 && b < 1000 && n > 0)
+				c->lang.pairs[{a, b}] = n;
+		} else if (key == "langstate") {
+			int asleep = 0;
+			in >> c->lang.lastFade >> asleep;
+			c->lang.wasAsleep = asleep != 0;
+			if (!(in >> c->lang.sleptAt))
+				c->lang.sleptAt = 0;
+		}
+	}
 	for (auto& w : s.words) {
 		if (w.first < 0 || w.first > 1000)
 			continue;
@@ -1508,6 +1558,10 @@ bool LoadWorldState(const fs::path& worlddir) {
 				std::string rest;
 				std::getline(l, rest);
 				c->bonds.push_back(rest);
+			} else if (key == "langword" || key == "langpair" || key == "langstate") {
+				std::string rest;
+				std::getline(l, rest);
+				c->lang.push_back(key + rest);
 			} else if (key == "ownname") {
 				int category = 0, v = 0;
 				std::string word;

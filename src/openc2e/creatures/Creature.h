@@ -122,6 +122,7 @@ class Creature {
 		return chosenagents[cat];
 	}
 	AgentRef getAttentionFocus() { return attention; }
+	Agent* getAgent() { return parentagent; }
 	int getAttentionId() { return attn; }
 	int getDecisionId() { return decn; }
 
