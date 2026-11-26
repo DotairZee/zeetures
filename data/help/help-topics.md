@@ -201,7 +201,7 @@ The eye is its own: a norn's round pupil, a grendel's slit, an ettin's coarse si
 File > Preferences gathers the settings in one window, in six sections. Each takes effect at once and is remembered.
 
 - **Display:** the letters in the world (see [[Words and languages]]), the creature frame rate, smooth scrolling, scroll bars, tooltips for objects, full screen, and the toolbars and their text labels.
-- **Creatures:** speech and thought bubbles, and the Creature's View: its eye's lids (blinking; no blinking, only drooping and closing with sleep; or always open) and its size.
+- **Creatures:** speech and thought bubbles; the Creature's View: its eye's lids (blinking; no blinking, only drooping and closing with sleep; or always open), whether it shows the creature itself, its own bubbles, and its name in the title, and its size; and the experimental way of learning to talk (see [[Learning to talk (experimental)]]).
 - **Words:** the words creatures learn and the teaching computers show. See [[Words and languages]].
 - **World:** how often the world saves itself; opening this world at launch; in this world, whether all creatures are fertile and the limit on their number; Zeetures's recommended breed packs; and your Creatures 2 folder.
 - **Status Bar:** whether it shows at all, which of its parts show, and which happenings show there as notices.
@@ -331,6 +331,76 @@ If you are showing nothing and have not touched it lately, a creature takes the 
 - A word comes to mean one thing, and a thing to have one name. Teach a different name, and the old one fades.
 - A creature keeps 40 names of its own at most, and drops the least familiar.
 - The [[Mind Kit]]'s Words page lists them, with those half learned.
+
+## Learning to talk (experimental)
+
+Tick **Creatures learn to talk as children do** in File > Preferences > Creatures, under Language (experimental), and creatures learn words more as children and groups of people really do. It is experimental: it may change from version to version, and creatures may learn more slowly at first. Untick it, and they learn as described in [[Talking to creatures]]; what they know is kept either way.
+
+It draws on research into how children learn to talk and how groups come to share words; the sources are in Help > About, under Research behind Zeetures.
+
+### Words mean what was there
+
+A creature takes a name of a thing to mean the kind of thing in view when it hears it.
+
+- **Babies** take it for whatever they are looking at.
+- **From childhood** they follow what the speaker shows: what your hand holds or points at, or what another creature is looking at. With nothing shown, a word you say may be taken for your hand.
+- **Naming what it is already looking at teaches most:** about two and a half times as much as an ordinary hearing. Showing it something teaches half again as much.
+- **Heard with nothing in view,** a word teaches its sound but not its sense, and only a third as much. A creature may come to know a word's sound without knowing what it means.
+- **A guess can be wrong.** Say "toy" while pointing at a plant, and it takes "toy" for a plant. Hearing the word again with the right thing makes it unsure, and then it changes its mind.
+- **Unsure, it says so:** "toy?". The [[Mind Kit]]'s Words page lists what it has mixed up and what it is unsure of.
+- **A new word for a thing it already has a word for** is often taken to be for something else. The more words it knows, the more often.
+- **Verbs and feelings** teach most when heard while doing or feeling them: "eat" while eating, "hungry" while hungry.
+- **Teaching machines** show the thing, so their nouns are never mistaken.
+
+### Talk grows with the words it knows
+
+How long its phrases are depends on how many words it knows, and its age sets the most:
+
+- **Fewer than 12 words known:** one word at a time.
+- **12 or more:** two ("want food", "push toy").
+- **25 or more:** three.
+- **40 or more:** four.
+
+Age sets the most: babies only babble, children say at most two words, adolescents and the senile three, and youths and adults four. The strength words (very, really, seriously, intensely, extremely) come last: from 30 words known, and not in babies or children. "Me" is the first word dropped when a phrase is too long.
+
+- **Each verb is learned on its own.** A verb joins other words only once the creature has heard or said it three times. Until then it says just the one word that matters.
+- **It understands before it can speak.** A word half learned is understood when you say it, though the creature cannot say it yet.
+- **Puzzled, it shows it.** If it understood none of what you said, the nearest answer "?". That is not "no": it did not understand, rather than not wanting to.
+
+### Who teaches whom
+
+- **Speech meant for a creature teaches more than overheard talk.** Your words teach most when you name the creature or your hand is close by; talk between others teaches half as much. Another creature teaches best when it is looking at the one listening.
+- **Babies learn little from teaching machines** (about a third as much) and much from your hand and their family. Machines teach adolescents and older creatures a quarter more than before.
+- **Family teach most,** twice as well as others, and babies two and a half times. **Adolescents** are the exception: they learn more from creatures near their own age than from their family.
+- **The old** keep their words, and their speech teaches a little more, but they sometimes pause for a word ("...um... toy").
+
+### Remembering and forgetting
+
+With **Words can be forgotten** ticked (it is, unless you untick it):
+
+- A word not heard for two minutes or more begins to fade. Heard only once, a word just known is forgotten in about a quarter of an hour.
+- **Saying a word again straight away teaches little more** (about a third). Hearing it again after a pause settles it, and a pause of ten minutes or more settles it twice as much.
+- **Sleep settles** every word heard since it last slept, if it sleeps for a minute or more. Short dozes do not count.
+- **Saying a word itself** is good practice too.
+- **A settled word is kept for life.** The Mind Kit lists them as "Kept for life".
+- **A forgotten word comes back quickly:** each hearing teaches it two and a half times as much as a new word.
+
+Untick it, and nothing fades; what was settled stays settled either way.
+
+### A colony's own words
+
+- **Words of their own.** An adolescent or older creature with no word for a thing may make one up in its own tongue, from its voice's sounds, such as "boba" for a dispenser. Others who hear it can learn it, like a name you teach (see [[Names of your own]]).
+- **They settle on one.** When a creature hears a name it already uses, both drop their other names for that thing. So a crowd that talks together soon calls a thing by one name.
+- **Places apart drift into dialects:** creatures that seldom meet keep different words for the same thing, until a lift or teleporter mixes them.
+- **The young keep to the commonest word.** Babies, children, and adolescents let rival names fade twice as fast as the grown do.
+- The Mind Kit's Words page lists **the colony's own names for things,** with how many creatures use each and where most of them are.
+
+### Mistakes and growing up
+
+- **The young stretch words.** A child or adolescent with no word for a thing sometimes calls it by the word for a thing like it: "fruit" for food, "bug" for a critter.
+- **A word heard for one thing only means just that thing,** until it is heard for another of the kind: "toy" may mean that ball and no other.
+- **Babies babble.** They make doubled sounds ("ba-ba") and, once they have heard plenty, two different ones. A baby seldom spoken to is quieter.
+- **Children run together words they hear together,** saying "eatfood" as one word, when they have heard the two together three times or more, and more than twice as often as either on its own. Hearing each on its own puts that right.
 
 ## Thoughts, faces, and signs
 
@@ -863,6 +933,7 @@ How content it has been over time, with the strongest need at each moment as a c
 
 - **Words it knows.**
 - **Words it is learning,** with how far along.
+- With the experimental way of learning to talk on (see [[Learning to talk (experimental)]]): how long its phrases can be, words it has mixed up or is unsure of, words it knows the sound of but not the meaning, words kept for life, words forgotten but quick to come back, and the colony's own names for things.
 - **Names of its own,** which you or others taught it. See [[Names of your own]].
 
 ## Observation Kit

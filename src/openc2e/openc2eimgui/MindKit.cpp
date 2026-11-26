@@ -22,11 +22,14 @@
 #include "common/creaturesImage.h"
 #include "creatures/CreatureMind.h"
 #include "creatures/CreatureSpeech.h"
+#include "creatures/CreatureAgent.h"
+#include "creatures/Language.h"
 #include "creatures/oldCreature.h"
 #include "fileformats/ImageUtils.h"
 #include "historyManager.h"
 
 #include <algorithm>
+#include <functional>
 #include <cmath>
 #include <fmt/format.h>
 #include <imgui.h>
@@ -830,6 +833,95 @@ void MoodPage(const MindView& v) {
 	ImGui::Dummy(ImVec2(axisW + W, H + 46));
 }
 
+// the experimental language system (creatures/Language.h): what it takes
+// words to mean, how settled they are, and the colony's own words
+void LanguagePart(oldCreature* c, const std::function<std::string(size_t)>& word) {
+	ImGui::Spacing();
+	ImGui::SeparatorText("Learning to talk (experimental)");
+	std::string mixed, unsure, settled, fading, sound;
+	int nSettled = 0;
+	for (size_t i = 0; i < c->vocab.size() && i < engine.wordlist.size(); i++) {
+		if (word(i).empty() || c->vocab[i] == 0)
+			continue;
+		WordMemory& m = Language::memoryOf(c, (int)i);
+		bool known = c->vocab[i] >= WORD_KNOWN;
+		if (known && i > 16 && i < 56) {
+			if (m.guess < 0)
+				sound += (sound.empty() ? "" : ", ") + word(i);
+			else if (m.guess != (int)i - 16)
+				mixed += fmt::format("{}\"{}\" (takes it for {})", mixed.empty() ? "" : ", ", word(i), word(16 + m.guess));
+			else if (m.sure < 120)
+				unsure += (unsure.empty() ? "" : ", ") + word(i);
+		}
+		if (known && Language::settled(m.stability))
+			nSettled++, settled += (settled.empty() ? "" : ", ") + word(i);
+		else if (!known && m.best >= WORD_KNOWN)
+			fading += (fading.empty() ? "" : ", ") + word(i);
+	}
+	ImGui::Text("Phrases of up to %d word%s", Language::phraseLimit((int)c->getStage(), wordsKnown(c)), Language::phraseLimit((int)c->getStage(), wordsKnown(c)) == 1 ? "" : "s");
+	if (!mixed.empty()) {
+		ImGui::TextUnformatted("Mixed up");
+		ImGui::TextDisabled("%s", mixed.c_str());
+	}
+	if (!unsure.empty()) {
+		ImGui::TextUnformatted("Not sure yet (it says them with a \"?\")");
+		ImGui::TextDisabled("%s", unsure.c_str());
+	}
+	if (!sound.empty()) {
+		ImGui::TextUnformatted("Knows the sound, not what it means");
+		ImGui::TextDisabled("%s", sound.c_str());
+	}
+	ImGui::Text("Kept for life (%d)", nSettled);
+	ImGui::TextDisabled("%s", settled.empty() ? "None yet: words settle when heard again after a while, and over sleep." : nSettled == wordsKnown(c) ? "Every word it knows." : settled.c_str());
+	if (!fading.empty()) {
+		ImGui::TextUnformatted("Forgotten, but quick to come back");
+		ImGui::TextDisabled("%s", fading.c_str());
+	}
+
+	// the colony's own names for things, and where each is said most
+	// (counted at most once a second)
+	struct Name {
+		std::string word, thing, where;
+		int users = 0;
+	};
+	static std::vector<Name> names;
+	static unsigned int counted = 0;
+	if (counted == 0 || world.tickcount < counted || world.tickcount - counted >= 10) {
+		counted = std::max(1u, world.tickcount);
+		std::map<std::pair<std::string, int>, std::map<std::string, int>> uses; // (word, kind) -> place -> creatures
+		for (auto& a : world.agents) {
+			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
+			auto* oc = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+			if (!oc || !oc->isAlive())
+				continue;
+			std::string where = KitWhere(a.get());
+			for (auto& [w, for_] : oc->ownNames)
+				if (int kind = ownNameMeans(oc, w); kind >= 0)
+					uses[std::make_pair(std::string(w), kind)][where]++;
+		}
+		names.clear();
+		for (auto& [key, places] : uses) {
+			Name n;
+			n.word = key.first;
+			n.thing = (size_t)(16 + key.second) < engine.wordlist.size() ? word(16 + key.second) : "something";
+			int most = 0;
+			for (auto& [place, k] : places) {
+				n.users += k;
+				if (k > most)
+					most = k, n.where = place;
+			}
+			names.push_back(n);
+		}
+		std::sort(names.begin(), names.end(), [](const Name& a, const Name& b) { return a.users > b.users; });
+	}
+	ImGui::Spacing();
+	ImGui::TextUnformatted("The colony's own names for things");
+	if (names.empty())
+		ImGui::TextDisabled("None yet. Creatures with no word for a thing may make one up, and the others take it up.");
+	for (size_t i = 0; i < names.size() && i < 16; i++)
+		ImGui::BulletText("%s", fmt::format("\"{}\" for {}: {} creature{}, most {}", names[i].word, names[i].thing, names[i].users, names[i].users == 1 ? "" : "s", names[i].where).c_str());
+}
+
 // the words it knows, those it is learning, and its own names for things
 // (CreatureSpeech.h; owner, 2026-11-22: "build the made-up names part, too")
 void WordsPage(oldCreature* c) {
@@ -875,6 +967,8 @@ void WordsPage(oldCreature* c) {
 		}
 	if (!any)
 		ImGui::TextDisabled("None yet. Tickle it and type a name for your hand, or point the hand at a thing (or hold it) and type a name for that.");
+	if (Language::experimental())
+		LanguagePart(c, word);
 	ImGui::PopTextWrapPos();
 }
 

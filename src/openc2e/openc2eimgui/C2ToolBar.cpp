@@ -10,6 +10,7 @@
 #include "HelpWindow.h"
 #include "Updater.h"
 #include "creatures/CreatureSpeech.h"
+#include "creatures/Language.h"
 #include "creatures/Thoughts.h"
 
 #include <SDL3/SDL_keyboard.h>
@@ -1744,6 +1745,28 @@ static void DrawPreferences() {
 				ImGui::SameLine();
 				if (ImGui::Button(n))
 					SetEyeViewWidth(w);
+			}
+			// the experimental language system (creatures/Language.h; owner,
+			// 2026-11-25: an option, clearly experimental; off, as before)
+			ImGui::SeparatorText("Language (experimental)");
+			{
+				bool on = Language::experimental();
+				if (ImGui::Checkbox("Creatures learn to talk as children do", &on))
+					Language::setExperimental(on);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Experimental. Words mean what was in view when they were heard, talk grows with the words known,\ncreatures make up words of their own and settle on them, and the young make charming mistakes.\nUntick for the usual way of learning. See Help > Learning to talk (experimental).");
+				ImGui::BeginDisabled(!on);
+				ImGui::Indent();
+				bool fade = Language::fading();
+				if (ImGui::Checkbox("Words can be forgotten", &fade))
+					Language::setFading(fade);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Words not heard for a while fade, unless heard again after a pause or slept on;\na settled word is kept for life, and a forgotten one comes back quickly.");
+				ImGui::Unindent();
+				ImGui::EndDisabled();
+				ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 420);
+				ImGui::TextDisabled("Experimental: it may change, and creatures may learn more slowly at first. Unticked, creatures learn as before; what they know is kept either way.");
+				ImGui::PopTextWrapPos();
 			}
 			ImGui::EndTabItem();
 		}
