@@ -161,6 +161,11 @@ struct Params {
 	float learningRate = 0.3f; // delta rule
 	float individualPrior = 3.0f; // dealings with an individual before its own record counts half
 	float retreatFear = 0.3f; // a creature feared this much, close by, is backed away from
+	// Crowded this much (0-1), with this many others within crowdRadius px:
+	// it walks off toward the emptier side, expecting Crowded to fall by
+	// crowdRelief of itself
+	float crowdLeaveAt = 0.5f, crowdRadius = 250.0f, crowdRelief = 0.5f;
+	int crowdCount = 4;
 	// Temperament's signature behaviours (owner, 2026-11-11: traits must show),
 	// each per unit of the trait's z-score: the bold drawn to strangers and the
 	// shy put off (scaled by how strange), the shy backing away from strangers
@@ -2247,7 +2252,8 @@ class HomeostatMind : public CreatureMind {
 			return;
 		std::map<std::string, float*> known = {{"hungerPatience", &prm.hungerPatience}, {"travelHalf", &prm.travelHalf},
 			{"floorChangeDistance", &prm.floorChangeDistance}, {"routeMaxCost", &prm.routeMaxCost}, {"seekDistanceCost", &prm.seekDistanceCost},
-			{"exploreWant", &prm.exploreWant}, {"noveltyMin", &prm.noveltyMin}, {"noveltyReturn", &prm.noveltyReturn}};
+			{"exploreWant", &prm.exploreWant}, {"noveltyMin", &prm.noveltyMin}, {"noveltyReturn", &prm.noveltyReturn},
+			{"crowdLeaveAt", &prm.crowdLeaveAt}, {"crowdRadius", &prm.crowdRadius}, {"crowdRelief", &prm.crowdRelief}};
 		std::stringstream ss(env);
 		std::string item;
 		while (std::getline(ss, item, ',')) {
@@ -2941,6 +2947,33 @@ class HomeostatMind : public CreatureMind {
 			c.chain = true;
 			c.who = "away from " + s.who;
 			out.push_back(c);
+		}
+		// Crowded: get out of the crowd, toward the side with fewer others.
+		// Walking off eases Crowded only once the others are out of sight,
+		// too late for the walk to be credited with it, so without this a
+		// crowded creature never learns to leave (owner, 2026-11-26: a crowd
+		// of 28 under the incubator, 17 of them there for a whole run).
+		if (d[CROWDED] >= prm.crowdLeaveAt) {
+			int west = 0, east = 0;
+			for (auto& s : p.visible)
+				if (!s.who.empty() && s.distance < prm.crowdRadius)
+					(dxTo(p, s.x) < 0 ? west : east)++;
+			if (west + east >= prm.crowdCount) {
+				int first = west > east ? 11 : 10;
+				for (int dir : {first, 21 - first}) {
+					int ahead = dir == 11 ? east : west;
+					if (ahead > (west + east) / 2 || waterAhead(p, dir) || wallAhead(p, dir) || isBlocked(p, dir) || cliffAhead(p, dir))
+						continue;
+					Expectation away;
+					away.delta[CROWDED] = -prm.crowdRelief * d[CROWDED];
+					Candidate c{-1, dir, 0, predictedRelief(d, D, away), 0, 0};
+					c.score = c.want;
+					c.chain = true;
+					c.who = "out of the crowd";
+					out.push_back(c);
+					break;
+				}
+			}
 		}
 		addSeekCandidates(p, d, D, out);
 		inEpisodeJustEnded = false;
