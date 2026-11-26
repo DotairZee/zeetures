@@ -368,6 +368,8 @@ VERSIONS = [
      "Learning to talk as children do (experimental, Preferences > Creatures > Language): words mean what was in view when heard, phrases grow with the words known, speech aimed at a creature teaches most, words fade unless heard again after a pause or slept on, creatures make up names for things and the colony settles on one, and the young stretch words, babble and run words together; explained in Help > Learning to talk (experimental); the status bar keeps one height whatever parts it shows."),
     ("0.40.1", "631c3cad",
      "Crowded creatures walk out of a crowd toward the emptier side, so the crowd that gathered under the incubator, fed by the endless cave fungus, thins out; rooms Zeetures adds start with no wind instead of garbage values."),
+    ("0.40.2", "b49c71ec",
+     "For freezes on Windows: when the game stops responding for 8 seconds its log now says what it was doing and where (as on Linux), and the last session's log is kept as zeetures-log-previous.txt so it survives closing the game; settings are no longer read from disk every frame; a walk through the rooms that could loop for ever now gives up; the log says how long each save took."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

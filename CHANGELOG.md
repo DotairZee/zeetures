@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 713 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 718 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.40.2](#version-0402): 5 commits, 26 November 2026
 - [0.40.1](#version-0401): 3 commits, 25 November 2026
 - [0.40.0](#version-0400): 4 commits, 25 November 2026
 - [0.39.0](#version-0390): 8 commits, 25 November 2026
@@ -101,6 +102,64 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.40.2
+
+For freezes on Windows: when the game stops responding for 8 seconds its log now says what it was doing and where (as on Linux), and the last session's log is kept as zeetures-log-previous.txt so it survives closing the game; settings are no longer read from disk every frame; a walk through the rooms that could loop for ever now gives up; the log says how long each save took.
+
+### 26 November 2026
+
+#### Version 0.40.2
+
+[`b49c71ec`](https://github.com/DotairZee/zeetures/commit/b49c71ec503392941c9ad44ec1bb9fab118563d0)
+
+#### A line through the rooms can no longer loop for ever
+
+[`42049887`](https://github.com/DotairZee/zeetures/commit/420498876181389e1433f99b79894e78dc542e39)
+
+Map::collideLineWithRoomSystem walked from room to room until the line
+ended or hit a wall, trusting a check that is left out of release builds
+to stop two rooms handing it back and forth. It runs many times a tick
+(sight and movement), so such a pair would freeze the game for good. It
+now gives up after 10,000 crossings and refuses the move.
+
+#### Settings are read from the file once, not every frame
+
+[`04ac1090`](https://github.com/DotairZee/zeetures/commit/04ac1090113ee619aa1faa1dfa2ec21d6660e158)
+
+Some settings were asked for every frame, so settings.txt was opened and
+read about 60 times a second. That is quick on most disks, but in a
+Documents folder watched by an antivirus or synced by OneDrive a single
+open can stall the game. The file is now read once and again after each
+change the game makes to it.
+
+#### The log says how long each save took
+
+[`d886b650`](https://github.com/DotairZee/zeetures/commit/d886b65024cec2aa710f85e4577dc63710372f96)
+
+A save stops the game while it runs (the autosave every 5 minutes too),
+and on Windows a stop of 5 s shows as "not responding". "Saved world" now
+ends with the time taken, split into writing and swapping the folders in.
+Home, 81 creatures and a 16 MB save, takes about 200 ms here.
+
+#### Hang reports on Windows, and what the game was doing
+
+[`84dce8c2`](https://github.com/DotairZee/zeetures/commit/84dce8c25960466a4bbb52562ad38692159fb20c)
+
+A Windows player's game froze now and then, "white", with Windows offering
+to wait or close it, and nothing in the log. Linux already printed the main
+thread's stack after 8 s without a frame; Windows had nothing.
+
+- Windows now has the same hang watch: a watcher thread pauses the main
+  thread just long enough to copy its registers, lets it go on, and prints
+  its stack to the log, flushed at once, again every 20 s while it stays
+  stuck, and says when frames come again.
+- Both systems' hang reports, and the Windows crash report, now say what
+  the main loop was doing: ticking the world (and which object or creature,
+  by classifier and UNID, and which script), the autosave, or drawing.
+- On Windows the last session's log is kept as zeetures-log-previous.txt
+  when the game starts, so a freeze's log survives closing the game and
+  starting it again. README and Help say so.
 
 ## Version 0.40.1
 
