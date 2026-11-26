@@ -372,6 +372,8 @@ VERSIONS = [
      "For freezes on Windows: when the game stops responding for 8 seconds its log now says what it was doing and where (as on Linux), and the last session's log is kept as zeetures-log-previous.txt so it survives closing the game; settings are no longer read from disk every frame; a walk through the rooms that could loop for ever now gives up; the log says how long each save took."),
     ("0.40.3", "95b035b7",
      "Creatures stop gathering in crowds: they expect to feel crowded from walking up to, or staying in, a group of four or more, and no longer walk out of one crowd into the next; at the population limit a willing pair mates without an egg instead of not at all, and after any mating desire rests for about ten minutes, so would-be mates no longer cluster with their desire at its height. In copies of a full world they explored more, felt crowded and went hungry less."),
+    ("0.40.4", "8c77ac47",
+     "Toys and other things lying buried in the ground under the dome's garden, or in the pit beside the incubator, are set back where creatures can reach them; the tree house's bamboo lift is drawn in front of the tube's glass at its walkway stop; creatures can step between the arch-ledge bridge and the ledge."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

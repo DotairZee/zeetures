@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 721 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 725 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.40.4](#version-0404): 4 commits, 26 November 2026
 - [0.40.3](#version-0403): 3 commits, 26 November 2026
 - [0.40.2](#version-0402): 5 commits, 26 November 2026
 - [0.40.1](#version-0401): 3 commits, 25 November 2026
@@ -103,6 +104,46 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.40.4
+
+Toys and other things lying buried in the ground under the dome's garden, or in the pit beside the incubator, are set back where creatures can reach them; the tree house's bamboo lift is drawn in front of the tube's glass at its walkway stop; creatures can step between the arch-ledge bridge and the ledge.
+
+### 26 November 2026
+
+#### Version 0.40.4
+
+[`8c77ac47`](https://github.com/DotairZee/zeetures/commit/8c77ac476cda8d6f2be7a662a9439fedf0151ba7)
+
+#### Creatures can step between the arch-ledge bridge and the ledge
+
+[`c846734b`](https://github.com/DotairZee/zeetures/commit/c846734b5b31be68ab0261dd3c8e199f3244f2ad)
+
+The doorway where the bamboo bridge from the flying fox's landing meets the
+rock ledge before the stone arches was still the old wall, so creatures
+could hardly cross between the bridge and the ledge in either direction.
+It is open now.
+
+#### The tree lift's cage is drawn in front of the tube's glass
+
+[`57dd7400`](https://github.com/DotairZee/zeetures/commit/57dd7400b0ae1dad75fa13b735ba908b0cfb5dcc)
+
+At its walkway stop, the top of the bamboo lift by the tree house was
+hidden behind the glass of the tube walk. The cage is now drawn in front
+of the glass; creatures riding in it are still drawn inside it.
+
+#### Objects buried under the ground are set back on it
+
+[`bbce1922`](https://github.com/DotairZee/zeetures/commit/bbce1922789c3dcbdde2c95e9ed527c1464bb821)
+
+Toys and other things could end up lying in the painted earth at the bottom
+of the garden rooms under the dome, below the ground they should rest on,
+and in the pit under the cage lift's shaft beside the incubator, where no
+creature could reach them. Every few seconds, an object lying wholly under
+ground it is too big to pass through is set back on top of it (except in a
+lift's shaft, where things ride below the ground on purpose). Things in the
+pit beside the incubator are put on the incubator room's floor when a world
+opens.
 
 ## Version 0.40.3
 
