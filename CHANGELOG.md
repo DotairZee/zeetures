@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 725 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 729 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.41.0](#version-0410): 4 commits, 26 November 2026
 - [0.40.4](#version-0404): 4 commits, 26 November 2026
 - [0.40.3](#version-0403): 3 commits, 26 November 2026
 - [0.40.2](#version-0402): 5 commits, 26 November 2026
@@ -104,6 +105,49 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.41.0
+
+File > Export Current Creature saves a creature whole (body, chemistry, mind, words, friends and foes, temperament, life story, photos) to a Zeetures export file and takes it out of the world; File > Import Creature brings it back as it was, here or in another world; the cave fungus is no longer an endless meal (only a whole one feeds, and a bite leaves it bitten for a minute); foods smell of their own eating script only.
+
+### 26 November 2026
+
+#### Version 0.41.0
+
+[`ebd8932a`](https://github.com/DotairZee/zeetures/commit/ebd8932a5f39e2358774aa06b3d73faafd912325)
+
+#### Creatures can be exported, whole
+
+[`edcc45e5`](https://github.com/DotairZee/zeetures/commit/edcc45e5c898a2f2735482b379340b8aa1dc3899)
+
+File &gt; Export Current Creature now works. It saves the selected creature to
+a Zeetures export file (.zex) and takes it out of the world, as the
+original game did. Everything comes with it: its body and chemistry, its
+mind and what it has learned, its words, its friends and foes, its
+temperament, its life story, and its photos, and a baby she is carrying.
+File &gt; Import Creature brings it back as it was, in the world it left or
+in another. Creatures 2's own exports (.exp) still import as before; the
+original game cannot open Zeetures's exports. Explained in Help.
+
+#### The cave fungus is no longer an endless meal
+
+[`b112fd85`](https://github.com/DotairZee/zeetures/commit/b112fd852509639cccb8f1fe850715a6bdc20623)
+
+C2's cave fungus fed whoever bit it, whole or resting, and grew whole again
+two seconds after every bite, so a crowd could live on a single one. Now
+only a whole fungus feeds, and a bite leaves it bitten for a minute before
+it grows back. In copies of a world, creatures went hungry no more often
+than before, a little less.
+
+#### Foods smell of their own eating script only
+
+[`7ad43f15`](https://github.com/DotairZee/zeetures/commit/7ad43f15b216c5bb3db41547035ed673802b90ae)
+
+How nourishing a thing smells was read from the whole text its object
+brought in, every other script in it too, so some things smelled better
+than they are (a plant as good as its sibling's best bite) and a fungus
+smelled of food whatever state it was in. Now only the eating script
+counts.
 
 ## Version 0.40.4
 

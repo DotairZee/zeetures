@@ -374,6 +374,8 @@ VERSIONS = [
      "Creatures stop gathering in crowds: they expect to feel crowded from walking up to, or staying in, a group of four or more, and no longer walk out of one crowd into the next; at the population limit a willing pair mates without an egg instead of not at all, and after any mating desire rests for about ten minutes, so would-be mates no longer cluster with their desire at its height. In copies of a full world they explored more, felt crowded and went hungry less."),
     ("0.40.4", "8c77ac47",
      "Toys and other things lying buried in the ground under the dome's garden, or in the pit beside the incubator, are set back where creatures can reach them; the tree house's bamboo lift is drawn in front of the tube's glass at its walkway stop; creatures can step between the arch-ledge bridge and the ledge."),
+    ("0.41.0", "ebd8932a",
+     "File > Export Current Creature saves a creature whole (body, chemistry, mind, words, friends and foes, temperament, life story, photos) to a Zeetures export file and takes it out of the world; File > Import Creature brings it back as it was, here or in another world; the cave fungus is no longer an endless meal (only a whole one feeds, and a bite leaves it bitten for a minute); foods smell of their own eating script only."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
