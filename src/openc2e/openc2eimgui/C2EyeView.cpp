@@ -525,7 +525,17 @@ void DrawEyeView() {
 				now->Collapsed = was.Collapsed;
 			}
 	}
-	std::string title = EyeViewShows(EYE_SHOW_NAME) ? fmt::format("Creature's View: {}###Creature's View", KitCreatureName(c)) : "Creature's View###Creature's View";
+	// the name, if asked for: when "Creature's View: " and the name do not
+	// both fit in the title bar, the name alone (owner, 2026-11-25)
+	std::string title = "Creature's View###Creature's View";
+	if (EyeViewShows(EYE_SHOW_NAME)) {
+		std::string name = KitCreatureName(c);
+		std::string full = fmt::format("Creature's View: {}", name);
+		const ImGuiStyle& st = ImGui::GetStyle();
+		ImGuiWindow* was = ImGui::FindWindowByName("###Creature's View");
+		float room = (was ? was->Size.x : savedW + padW) - 2 * (ImGui::GetFontSize() + st.FramePadding.x) - 2 * st.FramePadding.x - st.ItemInnerSpacing.x;
+		title = (ImGui::CalcTextSize(full.c_str()).x <= room ? full : name) + "###Creature's View";
+	}
 	if (ImGui::Begin(title.c_str(), &s_eye_view_open, ImGuiWindowFlags_NoScrollbar)) {
 		void* tex = s_target->getNativeTexture();
 		float w = std::floor(std::max(120.0f, ImGui::GetContentRegionAvail().x)); // (whole pixels: the screen is one pixel)
