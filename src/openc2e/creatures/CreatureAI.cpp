@@ -22,6 +22,7 @@
 #include "creatures/Pheromones.h"
 #include "creatures/Breeding.h"
 #include "creatures/Disease.h"
+#include "creatures/BrainOrgan.h"
 #include "creatures/Lightning.h"
 #include "caosValue.h"
 #include "CreatureAgent.h"
@@ -1010,6 +1011,7 @@ MindPerception oldCreature::buildPerception() {
 	p.dreaming = dreaming;
 	p.electrophile = Lightning::electrophile(parentagent);
 	p.plantEater = Lightning::plantEater(parentagent);
+	p.brainDaze = BrainOrgan::daze(this);
 	p.female = female;
 	p.genus = (int)genus;
 	unsigned int ndrives = (engine.version == 1) ? 16 : 17;

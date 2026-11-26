@@ -127,6 +127,7 @@ struct MindPerception {
 	bool dreaming = false;
 	bool electrophile = false; // struck by lightning, drawn to machines for a while (Lightning.h)
 	bool plantEater = false; // Frankenstein's creature: eats only plants (Lightning.h)
+	float brainDaze = 0; // 0 clear .. 1 dazed: the brain short of energy (BrainOrgan.h)
 	bool female = false;
 	int genus = -1; // 1 norn, 2 grendel, 3 ettin
 	// Sense of place (owner, 2026-11-13): the room the creature is in (by its

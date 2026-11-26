@@ -5,6 +5,7 @@
 
 #include "C2KitsInternal.h"
 #include "common/devenv.h"
+#include "creatures/BrainOrgan.h"
 #include "creatures/BreedSlots.h"
 #include "PathResolver.h"
 #include "World.h"
@@ -35,7 +36,8 @@ static void PhysicalPage() {
 		return;
 	c2Creature* c = KitCreature();
 	auto& organs = c->getOrgans();
-	ImGui::Text("%d organs. Hover a row for more.", (int)organs.size());
+	const bool brainOrgan = !BrainOrgan::off();
+	ImGui::Text("%d organs. Hover a row for more.", (int)organs.size() + (brainOrgan ? 1 : 0));
 	ImGui::SameLine();
 	ImGui::TextDisabled("(names from the species' gene notes)");
 	if (ImGui::BeginTable("organs", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(660, 300))) {
@@ -79,6 +81,34 @@ static void PhysicalPage() {
 				ImGui::SetTooltip("%sLife force now %.0f%%, long-term %.0f%%\nRepair rate %d, damage rate %d, injury to apply %d\nATP damage coefficient %d",
 					(note && !note->comment.empty()) ? (note->comment + "\n\n").c_str() : "",
 					st * 100, lt * 100, o->getRepairRate(), o->getDamageRate(), o->getInjuryToApply(), o->getATPDamageCoefficient());
+		}
+		// the brain organ (BrainOrgan.h): its health column shows how clear
+		// the brain is
+		if (brainOrgan) {
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::Text("Brain organ");
+			bool hov = ImGui::IsItemHovered();
+			ImGui::TableNextColumn();
+			float clear = 1.0f - BrainOrgan::daze(c);
+			ImVec4 col = clear > 0.75f ? ImVec4(0.3f, 0.8f, 0.3f, 1) : clear > 0.4f ? ImVec4(0.9f, 0.7f, 0.2f, 1) : ImVec4(0.9f, 0.3f, 0.2f, 1);
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, col);
+			ImGui::ProgressBar(clear, ImVec2(124, 0), clear > 0.995f ? "clear" : fmt::format("dazed {:.0f}%", (1.0f - clear) * 100).c_str());
+			ImGui::PopStyleColor();
+			hov |= ImGui::IsItemHovered();
+			ImGui::TableNextColumn();
+			ImGui::Text("%d", BrainOrgan::clockRate);
+			ImGui::TableNextColumn();
+			ImGui::Text("%d", BrainOrgan::energyCost);
+			ImGui::TableNextColumn();
+			ImGui::TextDisabled("-");
+			ImGui::TableNextColumn();
+			ImGui::TextDisabled("-");
+			if (hov || ImGui::IsItemHovered())
+				ImGui::SetTooltip("The brain. It runs half as often as the other organs, and costs a quarter less asleep.\n"
+								  "It is paid last, and only while ATP is 60 or more, so it never empties the store.\n"
+								  "Short of energy or glucose, a creature grows dazed: it learns more slowly, chooses\n"
+								  "less surely, and walks slowly. The young are hit hardest. Once fed, it clears in minutes.");
 		}
 		ImGui::EndTable();
 	}

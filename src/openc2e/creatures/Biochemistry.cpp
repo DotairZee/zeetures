@@ -32,6 +32,7 @@
 #include "caosValue.h"
 #include "World.h"
 #include "Temperament.h"
+#include "BrainOrgan.h"
 
 #include <algorithm>
 #include <cassert>
@@ -182,6 +183,17 @@ void c2Creature::tickBiochemistry() {
 		}
 		oi++;
 	}
+	// the brain organ, paid last (BrainOrgan.h)
+	if (counting)
+		for (size_t k = 0; k < countChems.size(); k++)
+			before[k] = chemicals[countChems[k]];
+	BrainOrgan::step(*this);
+	if (counting) {
+		auto& t = flowByOrgan[-2];
+		t.resize(countChems.size());
+		for (size_t k = 0; k < countChems.size(); k++)
+			t[k] += chemicals[countChems[k]] - before[k];
+	}
 	if (counting) {
 		for (size_t k = 0; k < countChems.size(); k++)
 			before[k] = chemicals[countChems[k]];
@@ -200,7 +212,7 @@ void c2Creature::tickBiochemistry() {
 					any = any || v[k];
 				}
 				if (any)
-					out += fmt::format(" {}:{}", o < 0 ? std::string("decay") : fmt::format("#{}", o), cells);
+					out += fmt::format(" {}:{}", o == -2 ? std::string("brain") : o < 0 ? std::string("decay") : fmt::format("#{}", o), cells);
 			}
 			fmt::print("* ENERGY COUNT {} steps:{}\n", countedSteps, out);
 		}

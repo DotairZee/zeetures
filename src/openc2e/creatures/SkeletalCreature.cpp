@@ -31,6 +31,7 @@
 #include "common/devenv.h"
 #include "SkeletalCreature.h"
 #include "creatures/CreatureSpeech.h"
+#include "creatures/BrainOrgan.h"
 #include "creatures/Lightning.h"
 #include "PointerAgent.h"
 
@@ -1914,7 +1915,7 @@ bool SkeletalCreature::walkSteps(float share) {
 	float energy = 1.0f;
 	if (auto* oc = dynamic_cast<oldCreature*>(creature))
 		energy = oc->temperament.factor(ENERGY, 0.12f);
-	const float pace = stagePace((int)creature->getStage()) * energy * share * Lightning::paceFactor(this);
+	const float pace = stagePace((int)creature->getStage()) * energy * share * Lightning::paceFactor(this) * (1.0f - 0.4f * BrainOrgan::daze(creature)); // (dazed: slow)
 	bool stepped = false;
 	paceCredit += pace;
 	while (paceCredit >= 1.0f) {

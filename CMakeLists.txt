@@ -355,6 +355,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/creatures/Language.cpp
 	src/openc2e/creatures/Pheromones.cpp
 	src/openc2e/creatures/Disease.cpp
+	src/openc2e/creatures/BrainOrgan.cpp
 	src/openc2e/creatures/Exposure.cpp
 	src/openc2e/creatures/Lightning.cpp
 	src/openc2e/creatures/Thoughts.cpp

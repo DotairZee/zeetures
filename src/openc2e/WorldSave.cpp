@@ -26,6 +26,7 @@
 #include <chrono>
 #include "common/devenv.h"
 #include "creatures/Disease.h"
+#include "creatures/BrainOrgan.h"
 #include "creatures/Exposure.h"
 #include "creatures/Lightning.h"
 #include "creatures/Relationships.h"
@@ -859,6 +860,7 @@ bool SaveWorldState(const fs::path& worlddir, std::string& error) {
 	// radiation doses (Exposure.h): creatures', and babies' before birth
 	Exposure::save(out);
 	Lightning::save(out); // (extra mutations owed to children)
+	BrainOrgan::save(out); // (how dazed each creature is)
 	// the life log (Owner's Kit): kind, tick, genus, female, stage, age, age
 	// known, old age, moniker, then the name
 	auto entry = [&](const char* key, const lifeLogEntry& e) {
@@ -1619,6 +1621,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 			Exposure::readLine(key, l);
 		} else if (key.rfind("lightning-", 0) == 0) {
 			Lightning::readLine(key, l);
+		} else if (key.rfind("brain-", 0) == 0) {
+			BrainOrgan::readLine(key, l);
 		} else if (key == "nutrients") {
 			SavedNutrients n;
 			if (l >> n.room >> n.ontr >> n.intr >> n.ontrBase >> n.intrBase)

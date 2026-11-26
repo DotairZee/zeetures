@@ -870,10 +870,10 @@ void c2Creature::tick() {
 	// creatures apart in C2: UNID is not readable there)
 	static const int watchFuel = devenv("OPENC2E_WATCH_FUEL") ? atoi(devenv("OPENC2E_WATCH_FUEL")) : 0;
 	if (watchFuel > 0 && world.tickcount % watchFuel == 0 && world.history)
-		fmt::print("* FUEL {} t{} hunger {} glucose {} glycogen {} starch {} fat {} adipose {} energy {} ATP {} ADP {} pyruvate {} lactate {} oxygen {} CO2 {} air {} PGK {} breath held {}{}\n",
+		fmt::print("* FUEL {} t{} hunger {} glucose {} glycogen {} starch {} fat {} adipose {} energy {} ATP {} ADP {} pyruvate {} lactate {} oxygen {} CO2 {} air {} PGK {} breath held {} daze {:.0f}{}\n",
 			world.history->findMoniker(genome), world.tickcount, (int)chemicals[3], (int)chemicals[70], (int)chemicals[72],
 			(int)chemicals[73], (int)chemicals[74], (int)chemicals[75], (int)chemicals[98], (int)chemicals[99], (int)chemicals[100],
-			(int)chemicals[69], (int)chemicals[68], (int)chemicals[95], (int)chemicals[90], (int)chemicals[96], (int)chemicals[179], breathHeld, unconscious ? " (unconscious)" : "");
+			(int)chemicals[69], (int)chemicals[68], (int)chemicals[95], (int)chemicals[90], (int)chemicals[96], (int)chemicals[179], breathHeld, brainDaze, unconscious ? " (unconscious)" : "");
 
 	// C1/C2: the world's egg-laying script takes the baby's genome name from
 	// BABY and sets it to 0 as the egg is laid; that ends the pregnancy

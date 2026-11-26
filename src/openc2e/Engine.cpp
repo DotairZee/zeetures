@@ -36,6 +36,7 @@
 #include "Blackboard.h"
 #include "creatures/Pheromones.h"
 #include "creatures/Disease.h"
+#include "creatures/BrainOrgan.h"
 #include "creatures/Exposure.h"
 #include "historyManager.h"
 #include "creatures/Breeding.h"
@@ -2698,6 +2699,7 @@ bool Engine::initialSetup() {
 		Disease::reset(); // (the save, if any, then fills it)
 		Exposure::reset();
 		Lightning::reset();
+		BrainOrgan::reset();
 		// (a save that breaks the loader part way is kept aside, not
 		// overwritten by the next autosave; the world goes on from what loaded)
 		try {

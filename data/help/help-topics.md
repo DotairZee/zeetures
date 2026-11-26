@@ -553,6 +553,14 @@ Creatures remember where they ate, follow the smell of food through doorways, ea
 
 The [[Ecology Kit]]'s Census shows where food is short.
 
+### The brain
+
+The brain is an organ too, and it needs feeding. It takes a little of the body's energy all the time, about as much as a monkey's brain does: a creature that thinks costs a little more to keep than one that does not. It takes the same whether the creature is puzzling something out or idling, and a little less asleep.
+
+The body comes first. The brain is fed last, and only while there is energy to spare, so it never starves a creature by itself. When food runs short, the brain goes without, and the creature grows dazed: it learns more slowly, chooses less surely, and walks slowly. Babies and children are hit hardest, as a young brain is the hungriest. Fed again, it clears within a few minutes, faster asleep.
+
+The [[Science Kit]]'s Physical page shows the brain organ with the others, and how clear it is.
+
 ## Sleep and rest
 
 Sleepiness grows in the dark and with time, and only sleep cures it. Tiredness comes from effort, and rest cures it. A creature will not stay asleep while it is too hungry, or in water.
@@ -895,7 +903,7 @@ The body in full detail.
 
 ### Physical
 
-Every organ, named from the species' gene notes where they have them, with its health, clock speed, energy, and number of reactions, receptors, and emitters. Rest the pointer on one for its life force and repair.
+Every organ, named from the species' gene notes where they have them, with its health, clock speed, energy, and number of reactions, receptors, and emitters. Rest the pointer on one for its life force and repair. The brain organ comes last; its health shows how clear the brain is (see [[Food and hunger]], The brain).
 
 ### dDNA
 

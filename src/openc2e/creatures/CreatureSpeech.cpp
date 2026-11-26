@@ -17,6 +17,7 @@
  */
 
 #include "CreatureSpeech.h"
+#include "BrainOrgan.h"
 #include "Lightning.h"
 #include "PixelText.h"
 #include "WordLists.h"
@@ -464,7 +465,7 @@ void hearWord(oldCreature* c, int word, int amount, const Language::Hearing& h) 
 	if (Agent* self = c->getAgent(); self && h.speaker != self && Lightning::parrotNow(self))
 		creatureSays(self, (int)c->getStage(), wordUtterance(self, c, word));
 	bool knew = c->vocab[word] >= WORD_KNOWN;
-	int v = c->vocab[word] + (int)std::lround(amount * stageLearning((int)c->getStage()) * Lightning::learnFactor(c));
+	int v = c->vocab[word] + (int)std::lround(amount * stageLearning((int)c->getStage()) * Lightning::learnFactor(c) * (1.0f - 0.9f * BrainOrgan::daze(c)));
 	c->vocab[word] = (unsigned char)std::min(v, 255);
 	if (!knew && c->vocab[word] >= WORD_KNOWN) {
 		int n = wordsKnown(c);

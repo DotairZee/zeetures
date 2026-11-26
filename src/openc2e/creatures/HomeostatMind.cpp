@@ -994,12 +994,18 @@ class HomeostatMind : public CreatureMind {
 				prm.curiosity, prm.commitment, prm.worseLearning, prm.betterLearning);
 	}
 
+	float daze = 0.0f; // 0 clear .. 1 dazed (this tick's perception)
+	float dazedLearning() const { return 1.0f - 0.9f * daze; }
+
 	MindOutput tick(const MindPerception& p) override {
 		if (!paramsOverridden) {
 			paramsOverridden = true;
 			overrideParams();
 		}
 		wrapW = p.wrapWidth;
+		// a brain short of energy (BrainOrgan.h): learns more slowly and
+		// chooses less surely
+		daze = std::clamp(p.brainDaze, 0.0f, 1.0f);
 		if (p.brainSettings && *p.brainSettings != brainSettings) {
 			brainSettings = *p.brainSettings;
 			temperamentApplied = false;
@@ -3928,7 +3934,7 @@ class HomeostatMind : public CreatureMind {
 					Expectation& e = expectation(dm.category, dm.decision);
 					for (int i = 0; i < NUM_DRIVES; i++)
 						if (dm.felt[i])
-							e.delta[i] += w * prm.learningRate * prm.driveLearning[i] * (dm.delta[i] > e.delta[i] ? prm.worseLearning : prm.betterLearning) *
+							e.delta[i] += w * prm.learningRate * dazedLearning() * prm.driveLearning[i] * (dm.delta[i] > e.delta[i] ? prm.worseLearning : prm.betterLearning) *
 										  (dm.delta[i] - e.delta[i]);
 					break;
 				}
@@ -5439,7 +5445,7 @@ class HomeostatMind : public CreatureMind {
 		std::sort(cands.begin(), cands.end(), [](const Candidate& a, const Candidate& b) { return a.score > b.score; });
 		if (cands.size() > prm.choiceSetSize)
 			cands.resize(prm.choiceSetSize);
-		float tau = prm.temperature / (1.0f + prm.arousalFocus * D);
+		float tau = prm.temperature / (1.0f + prm.arousalFocus * D) * (1.0f + 3.0f * daze); // (dazed: less sure)
 		std::vector<double> w;
 		for (auto& c : cands)
 			w.push_back(std::exp((c.score - cands[0].score) / tau));
@@ -5624,7 +5630,7 @@ class HomeostatMind : public CreatureMind {
 			Expectation& e = expectation(current.category, current.decision);
 			// an innate prior counts as remembered experience: learning is slow
 			// while it outweighs real experience and speeds up as that grows
-			float rate = prm.learningRate * (e.count + 1.0f) / (e.count + 1.0f + e.prior);
+			float rate = prm.learningRate * dazedLearning() * (e.count + 1.0f) / (e.count + 1.0f + e.prior);
 			// how wrong it was this time, before learning from it
 			auto errorOf = [&](const Expectation& x) {
 				float err = 0.0f;
@@ -5666,7 +5672,7 @@ class HomeostatMind : public CreatureMind {
 			if (!current.who.empty() && current.target) {
 				Expectation& own = individuals[current.who][current.decision];
 				own.noteError(errorOf(own));
-				float r = prm.learningRate * 1.5f; // a single individual: learned a little faster than a kind
+				float r = prm.learningRate * dazedLearning() * 1.5f; // a single individual: learned a little faster than a kind
 				for (int i = 0; i < NUM_DRIVES; i++) {
 					float target = feltAny[i] ? std::clamp(startDrives[i] + felt[i], 0.0f, 1.0f) - startDrives[i] : effect[i];
 					float share = feltAny[i] ? 1.0f : prm.unfeltLearningShare;

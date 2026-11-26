@@ -235,6 +235,13 @@ class oldCreature : public Creature {
 	float seasonalZ = SeasonalRhythm::roll();
 	// winter thrift: a share of biochemistry steps skipped (Biochemistry.cpp)
 	float thriftCarry = 0.0f;
+	// the brain organ (BrainOrgan.h): ATP owed toward its next whole unit,
+	// whether it runs this step (every other one), and how dazed it is
+	// (0-255); `brainLoaded` once its saved daze has been looked up
+	float brainCarry = 0.0f;
+	bool brainTurn = false;
+	float brainDaze = 0.0f;
+	bool brainLoaded = false;
 	// how many creatures it is bonded to are within radius (affinity at
 	// least minAffinity), up to most; worked out every 20 ticks (company
 	// warms in the cold, Creature.cpp)
