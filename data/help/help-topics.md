@@ -565,6 +565,8 @@ Two creatures of one kind and opposite sexes may mate from adolescence on. They 
 - **radiation:** the more either has lately been in, the less;
 - **you:** "All creatures fertile" (File > Preferences > World), the Infertile box in the Breeder's Kit, and the limit on the number of creatures.
 
+When the world is at its limit, a willing pair still mates, but no egg comes of it. Either way, a mating leaves both content: their desire rests for about ten minutes, and they go their own ways.
+
 ### The child
 
 The child's genome is made from both parents', switching from one to the other along its length, with a few small mutations. Its temperament, mind genes, and seasonal rhythm take after both too. She carries it, then lays an egg.

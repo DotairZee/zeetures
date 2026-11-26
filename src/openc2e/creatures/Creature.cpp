@@ -826,6 +826,9 @@ void c2Creature::tick() {
 		PROFILE_SCOPE("creature: biochemistry");
 		tickBiochemistry();
 	}
+	// after mating, desire rests a while (Breeding.cpp matedNow)
+	if (satedUntil > world.tickcount && chemicals[13] > 32)
+		chemicals[13] = 32;
 	{
 		PROFILE_SCOPE("creature: consciousness");
 		updateConsciousness();

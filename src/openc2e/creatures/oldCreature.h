@@ -202,6 +202,10 @@ class oldCreature : public Creature {
 	// the owner's fertility setting for it (Breeder's Kit, owner 2026-11-14):
 	// -1 the world's (Hatchery), 0 fertile, 1 infertile; saved
 	int fertilityOverride = -1;
+	// after mating (with or without an egg), desire rests: its Sex drive
+	// (chemical 13) is held at or under 32 until this world tick (Breeding.cpp
+	// matedNow; not saved, a short spell)
+	unsigned int satedUntil = 0;
 	// its own pace of ageing (owner, 2026-11-20): the Life chemical (76)
 	// decays as if its half-life were this many times the genome's, so its
 	// lifespan is about this many times its genome's. Drawn at hatching,

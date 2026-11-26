@@ -254,3 +254,16 @@ replace stim shou 10 255 0 0 44 30 0 0
 scrp 2 14 3 6
 find doif wall eq 3 subv temp 5 kill ownr endi
 replace doif wall eq 3 subv temp 5 endi kill ownr
+
+* A kiss at the population limit (owner, 2026-11-26). C2's kiss scripts
+* (activate 1 and 2 on a creature) mate a willing grown pair only while the
+* norns number fewer than EGGL, so at the limit nothing came of a kiss and
+* desire never eased: crowds of would-be mates. Now they always mate (norns
+* by MATE, other kinds by their message 200); at the limit the engine makes
+* no egg but eases both their Sex drives (Breeding.cpp tryConceive).
+scrp 0 0 0 17
+find doif totl 4 1 0 lt eggl doif var1 eq 1 mate else anim [036037036037] mesg wrt+ _it_ 200 0 0 0 endi endi
+replace doif var1 eq 1 mate else anim [036037036037] mesg wrt+ _it_ 200 0 0 0 endi
+scrp 0 0 0 18
+find doif totl 4 1 0 lt eggl doif var1 eq 1 mate else anim [036037036037] mesg wrt+ _it_ 200 0 0 0 endi endi
+replace doif var1 eq 1 mate else anim [036037036037] mesg wrt+ _it_ 200 0 0 0 endi

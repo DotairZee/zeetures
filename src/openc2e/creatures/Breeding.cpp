@@ -18,6 +18,7 @@
  */
 
 #include "Breeding.h"
+#include "CreatureSpeech.h"
 #include "common/devenv.h"
 #include "Exposure.h"
 #include "Temperament.h"
@@ -694,6 +695,32 @@ bool inseminate(CreatureAgent* mumAgent, const InseminationDonor& donor, std::st
 	return true;
 }
 
+// The world at its population limit, as the game's own scripts see it (the
+// norns at EGGL, which counts every creature: caosVM_variables.cpp)
+static bool atPopulationLimit() {
+	int limit = populationLimit();
+	if (limit <= 0)
+		return false;
+	int creatures = 0;
+	for (auto& a : world.agents)
+		if (a && a->family == 4 && !a->isDying())
+			creatures++;
+	return creatures >= limit;
+}
+
+// After a mating, with an egg or (at the population limit) without, desire
+// rests for both (owner, 2026-11-26: creatures should find each other to
+// mate, and explore): company raises the Sex drive again within about half
+// a minute, and a pair kissing at the limit was back at 200 in 70 mind
+// ticks, so desire alone held crowds together. Held under 32 for
+// OPENC2E_SATED_TICKS (developer aid) or 6000 world ticks, about ten minutes.
+static void matedNow(oldCreature* c) {
+	static const unsigned int ticks = devenv("OPENC2E_SATED_TICKS") ? (unsigned int)atoi(devenv("OPENC2E_SATED_TICKS")) : 6000u;
+	c->satedUntil = world.tickcount + ticks;
+	if (c->getChemical(13) > 32)
+		c->subChemical(13, (unsigned char)(c->getChemical(13) - 32));
+}
+
 bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	if (!a || !b || engine.version != 2 || a == b)
 		return false;
@@ -721,6 +748,13 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 		why = "close kin, and an unrelated partner is alive";
 	else if (!test && Relationships::mateFactor(a, b) <= 0.0f)
 		why = "they dislike or fear each other";
+	// At the population limit a willing pair's kiss is still a mating, but
+	// no egg comes of it: it eases both their Sex drives (owner, 2026-11-26).
+	// C2's kiss script never mated at the limit, so desire, which company
+	// raises, stayed near its top in 68 of 80 creatures, and they gathered
+	// in crowds of would-be mates kissing to no end.
+	else if (!test && atPopulationLimit())
+		why = "the world is at its population limit";
 	else if (!test && mum->getFertile() == 0)
 		why = "she is not fertile";
 	else if (!test && dad->getFertile() == 0)
@@ -743,6 +777,13 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	if (why) {
 		fmt::print("* MATE {} and {}: no conception ({}; her fertile {} receptive {} stage {}, his fertile {} stage {})\n", mumMon, dadMon, why,
 			(int)mum->getFertile(), (int)mum->getReceptive(), (int)mum->getStage(), (int)dad->getFertile(), (int)dad->getStage());
+		if (std::string(why) == "the world is at its population limit") {
+			int herSex = mum->getChemical(13), hisSex = dad->getChemical(13); // (C2: drive d is chemical d + 1)
+			matedNow(mum);
+			matedNow(dad);
+			fmt::print("* MATE {} and {}: a kiss without an egg, Sex eased (hers {} to {}, his {} to {})\n", mumMon, dadMon, herSex,
+				(int)mum->getChemical(13), hisSex, (int)dad->getChemical(13));
+		}
 		return false;
 	}
 
@@ -761,6 +802,8 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	MindGeneSet::store(name, MindGeneSet::child(mum->mindGenes, dad->mindGenes));
 	mumBody->babymoniker = genomeNameToInt(name);
 	mum->setPregnant(255);
+	matedNow(mum);
+	matedNow(dad);
 	Relationships::conceived(mumAgent, dadAgent);
 	world.history->tell(mumMon, storyEntry::pregnant, dadMon);
 	world.history->tell(dadMon, storyEntry::fathered, mumMon);
