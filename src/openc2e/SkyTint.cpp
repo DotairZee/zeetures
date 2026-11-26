@@ -4,6 +4,8 @@
 #include "Engine.h"
 #include "MetaRoom.h"
 #include "World.h"
+#include "Map.h"
+#include "Room.h"
 #include "common/backend/Backend.h"
 #include <cstdio>
 #include <cstdlib>
@@ -40,6 +42,14 @@ struct Sky {
 	std::vector<float> share; // per cell: how much of the light applies (0.5-1)
 	creaturesImage filter; // the colour to multiply by, per cell
 	float shown[3] = {-1, -1, -1}; // the colour the filter was made for
+	// Lamp-lit rooms keep their light (owner, 2026-11-26: "still dark in the
+	// incubator area at night, even though we set it to be lighter"): per
+	// cell, how much of a lit room (a light source, LSRC above 0) it is in,
+	// feathered; the filter there takes only litShare of the colour. Kept
+	// apart from `share`, which also says how much of a room is outdoors
+	// (World::tickDaylight). Remade when the set of lit rooms changes.
+	std::vector<float> lit;
+	long litKey = -1;
 };
 std::map<std::string, Sky> s_skies;
 const int CELL = 8;
@@ -340,6 +350,65 @@ void build(Sky& sky, creaturesImage& bkgd, bool wraps) {
 	fmt::print("* Light: {} px of sky in {}, outdoors map {}x{} ({} ms)\n", count, bkgd.getName(), sky.mw, sky.mh, ms);
 }
 
+const float litShare = 0.2f;
+
+// which cells are in lamp-lit rooms (see Sky::lit); false if unchanged
+bool updateLit(Sky& sky, MetaRoom* m) {
+	static const bool off = devenv("OPENC2E_NO_LAMP_LIGHT") != nullptr; // developer aid: as before
+	if (!world.map || !m || off)
+		return false;
+	long key = 0;
+	std::vector<Room*> lamps;
+	for (auto& r : world.map->getRooms())
+		if (r && r->lsrc > 0 && r->x_left >= m->x() && r->x_right <= m->x() + (int)m->width() && r->y_left_ceiling >= m->y() &&
+			std::max(r->y_left_floor, r->y_right_floor) <= m->y() + (int)m->height()) {
+			lamps.push_back(r.get());
+			key = key * 31 + (long)r->id * 7 + r->lsrc;
+		}
+	key = key * 31 + (long)lamps.size();
+	if (key == sky.litKey && sky.lit.size() == sky.share.size())
+		return false;
+	sky.litKey = key;
+	std::vector<float> lit(sky.share.size(), 0.0f);
+	for (Room* r : lamps) {
+		int x0 = std::max(0, ((int)r->x_left - (int)m->x()) / CELL), x1 = std::min(sky.mw - 1, ((int)r->x_right - (int)m->x()) / CELL);
+		for (int cx = x0; cx <= x1; cx++) {
+			float wx = m->x() + cx * CELL + CELL / 2.0f;
+			float t = std::clamp((wx - r->x_left) / std::max(1.0f, (float)r->x_right - r->x_left), 0.0f, 1.0f);
+			float top = r->y_left_ceiling + (r->y_right_ceiling - (float)r->y_left_ceiling) * t;
+			float bot = r->y_left_floor + (r->y_right_floor - (float)r->y_left_floor) * t;
+			int y0 = std::max(0, (int)((top - m->y()) / CELL)), y1 = std::min(sky.mh - 1, (int)((bot - m->y()) / CELL));
+			for (int cy = y0; cy <= y1; cy++)
+				lit[size_t(cy) * sky.mw + cx] = 1.0f;
+		}
+	}
+	// feathered (two box blurs of 4 cells each way: about 30 px)
+	auto blur = [&](bool across) {
+		std::vector<float> out(lit.size(), 0.0f);
+		const int R = 4;
+		for (int cy = 0; cy < sky.mh; cy++)
+			for (int cx = 0; cx < sky.mw; cx++) {
+				float sum = 0;
+				int n = 0;
+				for (int k = -R; k <= R; k++) {
+					int x = across ? cx + k : cx, y = across ? cy : cy + k;
+					if (x < 0 || y < 0 || x >= sky.mw || y >= sky.mh)
+						continue;
+					sum += lit[size_t(y) * sky.mw + x];
+					n++;
+				}
+				out[size_t(cy) * sky.mw + cx] = n ? sum / n : 0.0f;
+			}
+		lit.swap(out);
+	};
+	for (int pass = 0; pass < 2; pass++) {
+		blur(true);
+		blur(false);
+	}
+	sky.lit.swap(lit);
+	return true;
+}
+
 // the filter for a colour: per cell, 1 - share x (1 - colour)
 void makeFilter(Sky& sky, const std::array<float, 3>& c) {
 	Image out;
@@ -350,6 +419,8 @@ void makeFilter(Sky& sky, const std::array<float, 3>& c) {
 	uint8_t* o = out.data.data();
 	for (size_t i = 0; i < sky.share.size(); i++) {
 		float sh = sky.share[i];
+		if (i < sky.lit.size() && sh > litShare)
+			sh -= (sh - litShare) * sky.lit[i]; // (a lamp-lit room keeps its light)
 		for (int ch = 0; ch < 3; ch++)
 			o[i * 4 + ch] = (uint8_t)std::lround(std::clamp(1.0f - sh * (1.0f - c[ch]), 0.0f, 1.0f) * 255);
 		o[i * 4 + 3] = 255;
@@ -432,6 +503,8 @@ void draw(RenderTarget* surface, MetaRoom* m, int destx, int desty) {
 	for (int ch = 0; ch < 3; ch++)
 		if (std::fabs(c[ch] - sky.shown[ch]) > 0.5f / 255)
 			changed = true;
+	if (updateLit(sky, m))
+		changed = true;
 	if (changed)
 		makeFilter(sky, c);
 
