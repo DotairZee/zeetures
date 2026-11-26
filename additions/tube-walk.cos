@@ -133,4 +133,10 @@ inst new: simp ztdp 1 0 -30 0 setv cls2 2 3 258 setv attr 0 mvto 4995 1610 slow
 *    the lamps and callers (5000) and the scenery in front (9000).
 inst new: simp ztwf 1 0 1800 0 setv cls2 2 3 259 setv attr 0 mvto 4720 1409 slow
 inst new: simp ztwr 1 0 1850 0 setv cls2 2 3 260 setv attr 0 mvto 5865 1404 slow
+*    The bamboo cage lift east of the big hut (3 2 2 at x 5705) stands in
+*    front of the tube: plane 1810, over the glass, or the cage's top was
+*    hidden behind it at the walkway stop (owner, 2026-11-26; its riders
+*    are drawn just over its own plane, inside the cage). (treelift.cos does
+*    the same for the lift at x 5116.)
+enum 3 2 2 doif posl gt 5690 and posl lt 5720 plne 1810 endi next
 inst new: simp ztwg 1 0 9000 0 setv cls2 2 3 261 setv attr 0 mvto 5995 1478 slow
