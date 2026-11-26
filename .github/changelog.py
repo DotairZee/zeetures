@@ -378,6 +378,8 @@ VERSIONS = [
      "File > Export Current Creature saves a creature whole (body, chemistry, mind, words, friends and foes, temperament, life story, photos) to a Zeetures export file and takes it out of the world; File > Import Creature brings it back as it was, here or in another world; the cave fungus is no longer an endless meal (only a whole one feeds, and a bite leaves it bitten for a minute); foods smell of their own eating script only."),
     ("0.42.0", "bc91ce9c",
      "Three new choices in Preferences > Creatures: babies say their first words (a baby that has learned the word for what it wants says it); words come out a little wrong while being learned (\"han-nah-do\", then \"wetht\" or \"hanb\", then right); and creatures' heads follow the hand, angling up and down, as in Creatures 2. The first two are off unless ticked."),
+    ("0.43.0", "44aac64a",
+     "Lightning strikes creatures: a jolt of pain, as Creatures 2 meant but never managed; with Lightning has strange effects ticked (Preferences > World), a strike may now and then change a creature, give it a gift, or more, for you to discover; the bamboo lift east of the big hut is drawn in front of the tube's glass; every world has a fruit-bearing kelp clump on the sea floor."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

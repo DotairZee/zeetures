@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 731 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 735 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.43.0](#version-0430): 4 commits, 26 November 2026
 - [0.42.0](#version-0420): 2 commits, 26 November 2026
 - [0.41.0](#version-0410): 4 commits, 26 November 2026
 - [0.40.4](#version-0404): 4 commits, 26 November 2026
@@ -106,6 +107,52 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.43.0
+
+Lightning strikes creatures: a jolt of pain, as Creatures 2 meant but never managed; with Lightning has strange effects ticked (Preferences > World), a strike may now and then change a creature, give it a gift, or more, for you to discover; the bamboo lift east of the big hut is drawn in front of the tube's glass; every world has a fruit-bearing kelp clump on the sea floor.
+
+### 26 November 2026
+
+#### Version 0.43.0
+
+[`44aac64a`](https://github.com/DotairZee/zeetures/commit/44aac64afdb288b073410f86929f45c5cc4cf397)
+
+#### Every world has a kelp clump on the sea floor
+
+[`df69f6d9`](https://github.com/DotairZee/zeetures/commit/df69f6d96e91ab5aa6160c1af346fbf6f9c8544e)
+
+The sea's fruit-bearing kelp grew only where a fruit bush happened to seed
+on the sea floor, so most worlds never had one. Now every world has one
+from the start, full-grown, on the open sea floor west of the submarine's
+dock.
+
+#### Lightning strikes creatures, and may do strange things to them
+
+[`719c586f`](https://github.com/DotairZee/zeetures/commit/719c586fdab97d8c9ea36254e41bf837be9a465c)
+
+Creatures 2's storm clouds were meant to give a creature touched by a bolt
+a jolt of pain, but a mistake in their script meant no bolt ever touched
+anyone. Now it does: a jolt that does no lasting harm, and a place
+creatures remember as painful.
+
+With the new "Lightning has strange effects" (Preferences &gt; World, under
+Weather; off unless ticked), a strike may now and then leave a creature
+changed, in body, mind, voice or the world around it, for minutes or days,
+or more rarely give it a gift. A body struck just after death may not stay
+dead. A struck egg's baby may hatch changed, and a struck plant may fruit.
+What has happened shows on the Health Kit by name, and in the creature's
+life story; the rest is left to be found. Explained, without spoilers, in
+Help &gt; Time, seasons, and weather.
+
+#### The other bamboo lift is drawn in front of the tube's glass too
+
+[`db54ddc5`](https://github.com/DotairZee/zeetures/commit/db54ddc58f97d10c6a7f38f02b65c3c19647fc78)
+
+0.40.4 brought the bamboo lift by the tree house in front of the tube walk's
+glass, but the lift whose cage was hidden is the one east of the big hut.
+Its cage is now drawn in front of the glass as well; riders are still drawn
+inside it.
 
 ## Version 0.42.0
 
