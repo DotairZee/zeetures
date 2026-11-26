@@ -103,7 +103,7 @@ The check asks GitHub, where Zeetures is published, and sends nothing about you 
 - **The game runs slowly.** Large populations are the main cause: lower the limit in File > Preferences > World. At more than 1x, the Speed box's tooltip says when the world cannot keep up.
 - **An add-on does not look right.** Its pictures may be missing: import the whole package, not only its COB. See [[Breeds, objects, and genomes]].
 - **The wrong game folder.** File > Preferences > World > Creatures 2 folder chooses another, used from the next start.
-- **Reporting a bug.** Help > Zeetures on GitHub opens the project's page. Say which version you have (Help > About Zeetures) and what you did. On Windows, the file zeetures-log.txt in Documents\My Games holds the program's messages from its last run.
+- **Reporting a bug.** Help > Zeetures on GitHub opens the project's page. Say which version you have (Help > About Zeetures) and what you did. On Windows, the file zeetures-log.txt in Documents\My Games holds the program's messages from its last run, and zeetures-log-previous.txt the run before; if the game froze and you closed it, send zeetures-log-previous.txt from after you start it again (or zeetures-log.txt if you have not).
 
 ## What differs from Creatures 2
 
@@ -1066,4 +1066,4 @@ In it:
 
 Zeetures moves genomes that nothing uses any more to the Trash when a world opens.
 
-One folder up, game-folder.txt holds the place of your Creatures 2, and on Windows zeetures-log.txt the messages of the last run.
+One folder up, game-folder.txt holds the place of your Creatures 2, and on Windows zeetures-log.txt the messages of the last run (zeetures-log-previous.txt, the run before).

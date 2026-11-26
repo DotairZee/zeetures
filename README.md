@@ -39,7 +39,7 @@ Your worlds, saves and settings are kept in the user folder, never in the game's
 * **Windows:** `Documents\My Games\Creatures 2`
 * **macOS:** `~/Documents/openc2e Data/Creatures 2`
 
-One level up from those (for example `~/.openc2e`) is `game-folder.txt`, the Creatures 2 folder Zeetures remembered, and on Windows `zeetures-log.txt`, the program's messages from its last run, useful with a bug report.
+One level up from those (for example `~/.openc2e`) is `game-folder.txt`, the Creatures 2 folder Zeetures remembered, and on Windows `zeetures-log.txt`, the program's messages from this run or the last, with `zeetures-log-previous.txt` the run before it (after the game froze and was closed, that one holds what happened), useful with a bug report.
 
 ### On a Mac
 

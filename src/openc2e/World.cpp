@@ -18,6 +18,7 @@
  */
 
 #include "Profile.h"
+#include "common/hangphase.h"
 #include "common/devenv.h"
 #include "World.h"
 #include "SkyTint.h"
@@ -284,12 +285,14 @@ void World::tick() {
 			continue;
 		}
 		i++;
+		hangphase::setAgent(a->family, a->genus, a->species, a->knownUNID());
 		if (Profile::enabled()) {
 			PROFILE_SCOPE(a->family == 4 ? "agents: creatures (all)" : a->family == 3 ? "agents: vehicles" : "agents: objects");
 			a->tick();
 		} else
 			a->tick();
 	}
+	hangphase::clearAgent();
 
 	// Process the script queue.
 	PROFILE_SCOPE("world: script queue and the rest");
@@ -304,9 +307,11 @@ void World::tick() {
 					continue;
 				}
 			}
+			hangphase::setAgent(agent->family, agent->genus, agent->species, agent->knownUNID(), (int)i.scriptno);
 			agent->fireScript(i.scriptno, i.from, i.p[0], i.p[1]);
 		}
 	}
+	hangphase::clearAgent();
 	scriptqueue.clear();
 	scriptqueue = newqueue;
 

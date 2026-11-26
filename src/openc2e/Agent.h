@@ -326,6 +326,7 @@ class Agent : public std::enable_shared_from_this<Agent> {
 	int getLastScript() const { return lastScript; }
 
 	int getUNID() const;
+	int knownUNID() const { return unid; } // (-1 if none given yet; never gives one: hang reports)
 	std::string identify() const;
 
 	void setAttributes(unsigned int a) { attr = a; }

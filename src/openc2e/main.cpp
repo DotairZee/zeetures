@@ -145,6 +145,12 @@ static void connectOutput() {
 	try {
 		std::filesystem::path log = storageBaseDirectory() / "zeetures-log.txt";
 		std::error_code ec;
+		// the last session's log is kept beside it (zeetures-log-previous.txt):
+		// after a freeze and a forced close, starting again used to wipe the
+		// one log that could say what happened (2026-11-26)
+		std::filesystem::path previous = storageBaseDirectory() / "zeetures-log-previous.txt";
+		std::filesystem::remove(previous, ec);
+		std::filesystem::rename(log, previous, ec);
 		std::filesystem::remove(log, ec);
 		// (buffered: written to disk once a second by tendLog, not a disk
 		// write for every line as before)
@@ -226,11 +232,14 @@ int main(int argc, char* argv[]) {
 	get_backend()->run([] {
 		hang_watch_beat(); // (see install_backtrace_printer: hang reports)
 		tendLog();
+		hangphase::set("engine tick");
 		engine.tick();
 		if (engine.done) {
 			return false;
 		}
+		hangphase::set("drawing");
 		engine.drawWorld();
+		hangphase::set("between frames");
 		return true;
 	});
 

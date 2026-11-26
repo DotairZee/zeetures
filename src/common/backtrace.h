@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common/hangphase.h"
+
 #ifdef _WIN32
 
 #define WIN32_LEAN_AND_MEAN 1
@@ -11,16 +13,19 @@
 #include <string.h>
 #pragma comment(lib, "dbghelp.lib")
 
-LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
+// Prints the stack of a thread from a copy of its context (StackWalk64
+// changes the record it is given): the crashing thread's own, or the main
+// thread's when it hangs (see the hang watch below).
+static void print_stack_walk(HANDLE thread, CONTEXT context_record) {
 	HANDLE process = GetCurrentProcess();
-	SymInitialize(process, NULL, TRUE);
-	DWORD sym_options = SymGetOptions();
-	sym_options |= SYMOPT_LOAD_LINES | SYMOPT_UNDNAME;
-	SymSetOptions(sym_options);
-
-	// StackWalk64() may modify context record passed to it, so we will
-	// use a copy.
-	CONTEXT context_record = *pExceptionInfo->ContextRecord;
+	static bool symbols = false;
+	if (!symbols) {
+		symbols = true;
+		SymInitialize(process, NULL, TRUE);
+		DWORD sym_options = SymGetOptions();
+		sym_options |= SYMOPT_LOAD_LINES | SYMOPT_UNDNAME;
+		SymSetOptions(sym_options);
+	}
 	// Initialize stack walking.
 	STACKFRAME64 stack_frame;
 	memset(&stack_frame, 0, sizeof(stack_frame));
@@ -39,8 +44,6 @@ LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
 	stack_frame.AddrFrame.Mode = AddrModeFlat;
 	stack_frame.AddrStack.Mode = AddrModeFlat;
 
-
-	fprintf(stderr, "Exception occurred: 0x%lx\n", pExceptionInfo->ExceptionRecord->ExceptionCode);
 	// fprintf(stderr, "Exception occurred: %i\n", pExceptionInfo->ExceptionRecord->NumberParameters);
 	// for (int j = 0; j < pExceptionInfo->ExceptionRecord->NumberParameters; ++j) {
 	// 	fprintf(stderr, "0x%I64x ", pExceptionInfo->ExceptionRecord->ExceptionInformation[j]);
@@ -56,9 +59,9 @@ LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
 	fprintf(stderr, "Stack trace (most recent call first):\n");
 
 	int i = 1;
-	while (StackWalk64(machine_type,
+	while (i <= 64 && StackWalk64(machine_type,
 		GetCurrentProcess(),
-		GetCurrentThread(),
+		thread,
 		&stack_frame,
 		&context_record,
 		NULL,
@@ -129,8 +132,86 @@ LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
 		}
 		fprintf(stderr, "\n");
 	}
+}
 
+LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
+	fprintf(stderr, "Exception occurred: 0x%lx\n", pExceptionInfo->ExceptionRecord->ExceptionCode);
+	char phase[256];
+	hangphase::describe(phase, sizeof(phase));
+	fprintf(stderr, "%s", phase + 8); // ("the main loop was in: ...", without "* HANG: ")
+	print_stack_walk(GetCurrentThread(), *pExceptionInfo->ContextRecord);
+	fflush(stderr);
 	return EXCEPTION_CONTINUE_SEARCH;
+}
+
+// Hang reports on Windows (2026-11-26: a player's game froze "white", the
+// system offering to wait or close it, with nothing in the log). As on
+// Linux, the main loop beats once a frame; a watcher thread, when no beat
+// has come for 8 s, notes what the loop was doing (common/hangphase.h),
+// pauses the main thread just long enough to copy its registers, lets it
+// go on, and prints its stack from the copy. Again every 20 s while it
+// stays stuck. The log is flushed at once, so it survives a forced close.
+// (Nothing is printed while the thread is paused: it may hold a lock the
+// printing needs.)
+#include <atomic>
+#include <chrono>
+#include <thread>
+
+static std::atomic<unsigned long> s_hang_beats{0};
+
+inline void hang_watch_beat() {
+	s_hang_beats.fetch_add(1, std::memory_order_relaxed);
+}
+
+static void start_hang_watch() {
+	HANDLE main_thread = nullptr;
+	if (!DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &main_thread,
+			THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION, FALSE, 0))
+		return;
+	std::thread([main_thread] {
+		unsigned long last = 0;
+		auto since = std::chrono::steady_clock::now();
+		auto reported = since;
+		bool stuck = false;
+		while (true) {
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+			unsigned long now_beats = s_hang_beats.load(std::memory_order_relaxed);
+			auto now = std::chrono::steady_clock::now();
+			if (now_beats != last || now_beats == 0) { // moving, or not started yet
+				if (stuck) {
+					fprintf(stderr, "* HANG: over; frames again after %.0f s\n", std::chrono::duration<double>(now - since).count());
+					fflush(stderr);
+				}
+				last = now_beats;
+				since = now;
+				stuck = false;
+				continue;
+			}
+			double idle = std::chrono::duration<double>(now - since).count();
+			if ((!stuck && idle >= 8) || (stuck && std::chrono::duration<double>(now - reported).count() >= 20)) {
+				stuck = true;
+				reported = now;
+				char phase[256];
+				hangphase::describe(phase, sizeof(phase));
+				CONTEXT context;
+				memset(&context, 0, sizeof(context));
+				context.ContextFlags = CONTEXT_FULL;
+				bool got = false;
+				if (SuspendThread(main_thread) != (DWORD)-1) {
+					got = GetThreadContext(main_thread, &context) != 0;
+					ResumeThread(main_thread);
+				}
+				fprintf(stderr, "* HANG: no frame for %.0f s\n%s", idle, phase);
+				if (got) {
+					fprintf(stderr, "* HANG: the main thread's stack:\n");
+					print_stack_walk(main_thread, context);
+					fprintf(stderr, "* HANG: end of stack\n");
+				}
+				fflush(stderr);
+				fflush(stdout);
+			}
+		}
+	}).detach();
 }
 
 #else // _WIN32
@@ -175,6 +256,9 @@ static std::atomic<unsigned long> s_hang_beats{0};
 static pthread_t s_main_thread;
 
 static void hangsignalhandler(int) {
+	char phase[256];
+	hangphase::describe(phase, sizeof(phase));
+	fprintf(stderr, "%s", phase);
 	fprintf(stderr, "* HANG: the main loop has not finished a frame for a while; its stack:\n");
 	print_frames(false);
 	fprintf(stderr, "* HANG: end of stack\n");
@@ -277,13 +361,11 @@ static void print_frames(bool demangle) {
 
 #endif
 
-#ifdef _WIN32
-inline void hang_watch_beat() {}
-#endif
 
 void install_backtrace_printer() {
 #ifdef _WIN32
 	SetUnhandledExceptionFilter(TopLevelExceptionHandler);
+	start_hang_watch();
 #else
 	// Run the handler on its own stack, so a stack overflow (runaway recursion)
 	// still prints a backtrace instead of the process vanishing silently.

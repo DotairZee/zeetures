@@ -18,6 +18,7 @@
  */
 
 #include "Profile.h"
+#include "common/hangphase.h"
 #include "common/devenv.h"
 #include "creatures/SkeletalCreature.h"
 #include <chrono>
@@ -609,7 +610,9 @@ void Engine::update() {
 	// creatures (for performance work)
 	static const int tickrate = devenv("OPENC2E_TICKRATE") ? std::max(1, atoi(devenv("OPENC2E_TICKRATE"))) : 0;
 	auto t0 = std::chrono::steady_clock::now();
+	hangphase::set("world tick");
 	world.tick();
+	hangphase::set("engine update after the world tick");
 	// the pace reached, measured over about two seconds of real time, for
 	// the toolbar's speed control (a busy world may not keep up)
 	{
@@ -658,7 +661,10 @@ void Engine::update() {
 		if (minutes > 0 && tickdata - s_last_autosave >= (unsigned int)minutes * 60000u) {
 			s_last_autosave = tickdata;
 			std::string err;
-			if (WorldSave::SaveWorldState(currentworlddir, err))
+			hangphase::set("autosave");
+			bool saved = WorldSave::SaveWorldState(currentworlddir, err);
+			hangphase::set("engine update after the world tick");
+			if (saved)
 				fmt::print("* Autosaved world '{}' (every {} min)\n", currentworld, minutes);
 			else
 				fmt::print(stderr, "Autosave failed: {}\n", err);
