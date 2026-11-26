@@ -201,7 +201,7 @@ The eye is its own: a norn's round pupil, a grendel's slit, an ettin's coarse si
 File > Preferences gathers the settings in one window, in six sections. Each takes effect at once and is remembered.
 
 - **Display:** the letters in the world (see [[Words and languages]]), the creature frame rate, smooth scrolling, scroll bars, tooltips for objects, full screen, and the toolbars and their text labels.
-- **Creatures:** speech and thought bubbles; the Creature's View: its eye's lids (blinking; no blinking, only drooping and closing with sleep; or always open), whether it shows the creature itself, its own bubbles, and its name in the title, and its size; and the experimental way of learning to talk (see [[Learning to talk (experimental)]]).
+- **Creatures:** speech and thought bubbles; the Creature's View: its eye's lids (blinking; no blinking, only drooping and closing with sleep; or always open), whether it shows the creature itself, its own bubbles, and its name in the title, and its size; whether heads follow the hand, babies say their first words, and words come out a little wrong while being learned (see [[Talking to creatures]]); and the experimental way of learning to talk (see [[Learning to talk (experimental)]]).
 - **Words:** the words creatures learn and the teaching computers show. See [[Words and languages]].
 - **World:** how often the world saves itself; opening this world at launch; in this world, whether all creatures are fertile and the limit on their number; Zeetures's recommended breed packs; and your Creatures 2 folder.
 - **Status Bar:** whether it shows at all, which of its parts show, and which happenings show there as notices.
@@ -272,13 +272,21 @@ Type while a creature is near and press Return. Every creature that is awake wit
 ### What they do
 
 - **They look.** Spoken to or touched, a creature stops what it is doing, turns, and looks at the hand for a few seconds.
-- **They answer.** The nearest two, or whomever you named, say your last word back: in their own tongue until they have learned it, and as the word itself once they have. Babies always answer in their own tongue. Where you said nothing they could know, they babble.
+- **They watch the hand.** With **Creatures' heads follow the hand** ticked (File > Preferences > Creatures; it is, unless you untick it), a creature with the hand near and in front of it angles its head up or down to look at it, as in Creatures 2. Not while the hand is invisible.
+- **They answer.** The nearest two, or whomever you named, say your last word back: in their own tongue until they have learned it, and as the word itself once they have. Babies answer in their own tongue, unless they say their first words (below). Where you said nothing they could know, they babble.
 - **They understand names.** Say a creature's name, and only that creature is meant. Every creature has a name; change it in the [[Owner's Kit]].
 - **They look at what you name.** Say the name of a kind of thing they know the word for ("food", "toy", "lift"), and they look at the nearest.
 
 ### Their own tongue
 
 Creatures are born knowing no words. Until they learn yours they speak Nornish, or the grendel or ettin dialect, in sounds that always mean the same. Learned words and their own tongue mix in one sentence, so you can hear a creature's language grow.
+
+### First words and first tries
+
+Two choices in File > Preferences > Creatures, under Talking. Both are off unless you tick them, and both work with or without the experimental way of learning to talk.
+
+- **Babies say their first words.** A baby that has learned the word for what it wants to say says just that word: "food!", "tired", "hand". The rest of the time it cries and babbles as before, and when it is hurt or upset it still cries more often than not. It also says a learned word back to you and to a teaching machine.
+- **Words come out a little wrong while being learned.** Heard a few times, a word comes out as its start run into the creature's own tongue ("han-nah-do"); nearly learned, as the word a little off, with W for R and Th for S as Creatures 1's young said them ("wetht" for rest), or one sound slipped ("hanb"); learned, right. Each creature keeps its own slip for a word. Without it, a word stays in the creature's own tongue until it is learned.
 
 ### How words are learned
 

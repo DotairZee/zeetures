@@ -30,6 +30,8 @@
 #include "Profile.h"
 #include "common/devenv.h"
 #include "SkeletalCreature.h"
+#include "creatures/CreatureSpeech.h"
+#include "PointerAgent.h"
 
 bool walkOffEndsInWater(const Room& r, bool east, int fit); // CreatureAI.cpp
 
@@ -1530,7 +1532,10 @@ void SkeletalCreature::setPose(std::string s) {
 		}
 	}
 
+	poseHead = pose[1];
+	headOnHand = false;
 	recalculateSkeleton();
+	lookAtHand();
 }
 
 void SkeletalCreature::setPoseGene(unsigned int poseno) {
@@ -1616,6 +1621,8 @@ void SkeletalCreature::tick() {
 		else if (posedirection == 1)
 			direction = 3; // west
 	}
+
+	lookAtHand();
 
 	// TODO: every 2 ticks = correct? what about the engine var?
 	ticks++;
@@ -2139,4 +2146,64 @@ std::string SkeletalCreature::describeParts() {
 		if (images[i])
 			s += fmt::format(" {}:{}f{}k{:.2f}", i, images[i]->getName(), pose[i], partk[i]);
 	return s;
+}
+
+static int s_headFollowsHand = -1; // -1: not read yet
+
+bool headFollowsHand() {
+	if (s_headFollowsHand < 0) {
+		if (const char* e = devenv("OPENC2E_HEAD_FOLLOWS_HAND"))
+			s_headFollowsHand = atoi(e) ? 1 : 0;
+		else
+			s_headFollowsHand = readPlayerSetting("head-follows-hand") == "0" ? 0 : 1;
+	}
+	return s_headFollowsHand == 1;
+}
+
+void setHeadFollowsHand(bool on) {
+	s_headFollowsHand = on ? 1 : 0;
+	writePlayerSetting("head-follows-hand", on ? "1" : "0");
+}
+
+// C2's creatures watch the hand: the head angles up or down toward it (a
+// player, relayed 2026-11-26: "their head follows it, angling up and
+// down"). While the hand shows (not in Invisible mode), within 350 px
+// across and 250 up or down of the head, and on the side it faces, an awake
+// creature's head takes the angle toward it (as a pose's "look at it" part
+// does: down, level, up, well up); not while it goes to something (its
+// head is on that). When the hand goes, the pose's own angle comes back.
+void SkeletalCreature::lookAtHand() {
+	auto restore = [&]() {
+		if (headOnHand) {
+			headOnHand = false;
+			if (pose[1] != poseHead) {
+				pose[1] = poseHead;
+				recalculateSkeleton();
+			}
+		}
+	};
+	PointerAgent* hand = world.hand();
+	if (engine.version != 2 || !headFollowsHand() || !hand || world.handInvisible || eyesclosed || !creature || !creature->isAlive() || approaching ||
+		posedirection > 1 || poseHead >= 8) {
+		restore();
+		return;
+	}
+	float headx = x + attachmentX(1, 0), heady = y + attachmentY(1, 0);
+	float dx = hand->x - headx, dy = hand->y - heady;
+	bool inFront = posedirection == 0 ? dx > -20.0f : dx < 20.0f;
+	if (!inFront || std::fabs(dx) > 350.0f || std::fabs(dy) > 250.0f) {
+		restore();
+		return;
+	}
+	int angle = dy > 30.0f ? 0 : dy < -70.0f ? 3 : dy < -30.0f ? 2 : 1;
+	unsigned int head = (unsigned int)angle + posedirection * 4;
+	// developer aid: OPENC2E_WATCH_HEAD prints each turn of a head to the hand
+	static const bool watchHead = devenv("OPENC2E_WATCH_HEAD") != nullptr;
+	if (watchHead && (!headOnHand || pose[1] != head))
+		fmt::print("* HEAD unid {} t{} to the hand: angle {} (hand {:.0f},{:.0f} from the head), was pose {}\n", getUNID(), world.tickcount, angle, dx, dy, pose[1]);
+	headOnHand = true;
+	if (pose[1] != head) {
+		pose[1] = head;
+		recalculateSkeleton();
+	}
 }

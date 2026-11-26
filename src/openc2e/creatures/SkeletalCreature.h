@@ -258,6 +258,12 @@ class SkeletalCreature : public Agent, public CreatureAgent {
 	// viewer, 2 right, 3 left), from its current pose
 	unsigned int facing() const { static const unsigned int dirn[4] = {2, 3, 1, 0}; return posedirection < 4 ? dirn[posedirection] : 2; }
 	float footX();
+	// C2: its head follows the hand (headFollowsHand): angled up or down
+	// toward it each tick while the hand is near and in front, back to the
+	// pose's own angle when it goes
+	void lookAtHand();
+	unsigned int poseHead = 0; // the head's pose as the pose itself set it
+	bool headOnHand = false; // the head turned to the hand now
 	// the foot's height (the foot on the ground), in world terms
 	float footY() { return y + attachmentY(downfoot_left ? 11 : 12, 1); }
 
@@ -294,3 +300,8 @@ bool StageGrowthForEveryBreed();
 int BreedOneSetLooksAge(int species, int breed);
 
 /* vim: set noet: */
+
+// Heads follow the hand (owner, 2026-11-26; as in C2): on unless unticked
+// (Preferences > Creatures). OPENC2E_HEAD_FOLLOWS_HAND=0/1 (developer aid).
+bool headFollowsHand();
+void setHeadFollowsHand(bool on);

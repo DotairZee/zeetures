@@ -117,6 +117,24 @@ void setSpeechBubblesShown(bool shown);
 // The player's settings file (settings.txt in the user data folder, "key
 // value" lines), for any setting.
 std::string readPlayerSetting(const std::string& key);
+// Babies say their first words (owner, 2026-11-26): a baby that knows the
+// word for what it wants to say says that one word, instead of only crying
+// and babbling. Off unless the player ticks it (Preferences > Creatures);
+// independent of the experimental language system. OPENC2E_BABY_WORDS=0/1
+// (developer aid) whatever the setting.
+bool babyWords();
+void setBabyWords(bool on);
+// Words come out a little wrong while being learned (owner, 2026-11-26,
+// after a player's memory of C1): heard a few times, a word is the start of
+// it run into its own tongue ("han-nah-do"); nearly learned, the word a
+// little off ("hanb"; R as W and S as Th, as C1's young said them); learned,
+// right. Off unless ticked; independent of the experimental language
+// system. OPENC2E_WORD_ATTEMPTS=0/1 (developer aid).
+bool wordAttempts();
+void setWordAttempts(bool on);
+// how a creature says word w that it does not know yet (its own tongue, or
+// a try at it, by how well it knows it)
+std::string attemptWord(Agent* creature, oldCreature* c, int w);
 void writePlayerSetting(const std::string& key, const std::string& value);
 
 // Autosave: minutes between automatic saves of the open world (0: only on

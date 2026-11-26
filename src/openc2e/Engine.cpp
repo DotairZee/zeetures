@@ -764,6 +764,36 @@ void Engine::update() {
 		if (times < repeat && words && world.tickcount >= nextAt) {
 			times++;
 			nextAt = world.tickcount + 30;
+			// (OPENC2E_TEST_TYPE_TO=young: to the youngest living norn, the
+			// one knowing fewest words among those; chosen at the first
+			// typing, and its words not known yet listed)
+			static bool youngPicked = false;
+			if (const char* to = devenv("OPENC2E_TEST_TYPE_TO"); to && std::string(to) == "young" && !youngPicked) {
+				youngPicked = true;
+				std::shared_ptr<Agent> best;
+				int bestStage = 99, bestKnown = 1 << 30;
+				for (auto& a : world.agents) {
+					auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
+					auto* oc = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+					if (!oc || a->genus != 1 || !oc->isAlive())
+						continue;
+					int stage = (int)oc->getStage(), known = wordsKnown(oc);
+					if (stage < bestStage || (stage == bestStage && known < bestKnown)) {
+						best = a;
+						bestStage = stage;
+						bestKnown = known;
+					}
+				}
+				if (best) {
+					world.selectedcreature = best;
+					std::string unknown;
+					auto* oc = dynamic_cast<oldCreature*>(dynamic_cast<CreatureAgent*>(best.get())->getCreature());
+					for (size_t w = 0; w < wordlist.size(); w++)
+						if (!knowsWord(oc, (int)w))
+							unknown += " " + wordlist[w];
+					fmt::print("* TEST TYPE TO young: unid {} stage {} knows {} words; not yet:{}\n", best->getUNID(), bestStage, bestKnown, unknown);
+				}
+			}
 			Agent* c = world.selectedcreature.get();
 			if (!c)
 				for (auto& a : world.agents)

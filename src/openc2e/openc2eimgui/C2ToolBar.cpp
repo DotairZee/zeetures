@@ -1746,6 +1746,29 @@ static void DrawPreferences() {
 				if (ImGui::Button(n))
 					SetEyeViewWidth(w);
 			}
+			// heads follow the hand (SkeletalCreature.h; owner, 2026-11-26)
+			{
+				bool on = headFollowsHand();
+				if (ImGui::Checkbox("Creatures' heads follow the hand", &on))
+					setHeadFollowsHand(on);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("A creature with the hand near and in front of it looks at it, its head angled up or down, as in Creatures 2.");
+			}
+			// babies' first words (CreatureSpeech.h babyWords; owner,
+			// 2026-11-26: on and off, apart from the experimental language)
+			ImGui::SeparatorText("Talking");
+			{
+				bool on = babyWords();
+				if (ImGui::Checkbox("Babies say their first words", &on))
+					setBabyWords(on);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("A baby that has learned the word for what it wants to say says that one word (\"food!\");\nother times it cries and babbles, as babies do. Untick for babies who only cry and babble.");
+				bool tries = wordAttempts();
+				if (ImGui::Checkbox("Words come out a little wrong while being learned", &tries))
+					setWordAttempts(tries);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("A word heard a few times comes out as its start run into the creature's own sounds (\"han-nah-do\"),\nthen nearly right (\"hanb\", with W for R and Th for S, as in Creatures 1), then right once learned.\nUntick for words that stay in its own sounds until learned.");
+			}
 			// the experimental language system (creatures/Language.h; owner,
 			// 2026-11-25: an option, clearly experimental; off, as before)
 			ImGui::SeparatorText("Language (experimental)");

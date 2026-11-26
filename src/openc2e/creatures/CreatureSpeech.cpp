@@ -151,14 +151,14 @@ std::string showWord(Agent* creature, oldCreature* c, int w) {
 			return n.own;
 		if (n.word >= 0)
 			return trim(engine.wordlist[n.word]) + (n.unsure ? "?" : "");
-		return nativeWord(creature, word);
+		return attemptWord(creature, c, w);
 	}
 	if (w >= 16 && w < 56)
 		if (std::string own = ownNameFor(c, w - 16); !own.empty())
 			return own;
 	if (knowsWord(c, w))
 		return word;
-	return nativeWord(creature, word);
+	return attemptWord(creature, c, w);
 }
 
 // meaning "kind:a:b" split
@@ -246,6 +246,117 @@ std::string readPlayerSetting(const std::string& key) {
 
 void writePlayerSetting(const std::string& key, const std::string& value) {
 	writeSetting(key, value);
+}
+
+static int s_babyWords = -1; // -1: not read yet
+
+bool babyWords() {
+	if (s_babyWords < 0) {
+		if (const char* e = devenv("OPENC2E_BABY_WORDS"))
+			s_babyWords = atoi(e) ? 1 : 0;
+		else
+			s_babyWords = readSetting("baby-words") == "1" ? 1 : 0;
+	}
+	return s_babyWords == 1;
+}
+
+void setBabyWords(bool on) {
+	s_babyWords = on ? 1 : 0;
+	writeSetting("baby-words", on ? "1" : "0");
+}
+
+static int s_wordAttempts = -1;
+
+bool wordAttempts() {
+	if (s_wordAttempts < 0) {
+		if (const char* e = devenv("OPENC2E_WORD_ATTEMPTS"))
+			s_wordAttempts = atoi(e) ? 1 : 0;
+		else
+			s_wordAttempts = readSetting("word-attempts") == "1" ? 1 : 0;
+	}
+	return s_wordAttempts == 1;
+}
+
+void setWordAttempts(bool on) {
+	s_wordAttempts = on ? 1 : 0;
+	writeSetting("word-attempts", on ? "1" : "0");
+}
+
+// How well it knows a word, for its tries at it: past ATTEMPT_START (about
+// a third of the way to knowing it) the word's own start runs into its
+// tongue; past ATTEMPT_CLOSE, the word a little off.
+static const int ATTEMPT_START = 48, ATTEMPT_CLOSE = 88;
+
+static bool isVowel(char ch) {
+	return ch == 'a' || ch == 'e' || ch == 'i' || ch == 'o' || ch == 'u' || ch == 'y';
+}
+
+// the same slip each time for one creature and one word
+static uint32_t slipHash(oldCreature* c, const std::string& word) {
+	uint32_t h = 2166136261u;
+	std::string key = (c && world.history ? world.history->findMoniker(c->getGenome()) : std::string()) + "|" + word;
+	for (char ch : key)
+		h = (h ^ (uint8_t)ch) * 16777619u;
+	return h;
+}
+
+std::string attemptWord(Agent* creature, oldCreature* c, int w) {
+	std::string word = isWord(w) ? trim(engine.wordlist[w]) : std::string();
+	int v = c && w >= 0 && (size_t)w < c->vocab.size() ? c->vocab[w] : 0;
+	if (word.empty() || !wordAttempts() || v < ATTEMPT_START)
+		return nativeWord(creature, word);
+	std::string low = lower(word);
+	if (v < ATTEMPT_CLOSE) {
+		// its start (to the end of its first vowels, and the next sound if
+		// more follows), then the rest in its own tongue: "han-nah-do"
+		size_t i = 0;
+		while (i < low.size() && !isVowel(low[i]))
+			i++;
+		while (i < low.size() && isVowel(low[i]))
+			i++;
+		if (i + 1 < low.size())
+			i++;
+		std::string start = low.substr(0, std::max<size_t>(1, i));
+		std::string native = nativeWord(creature, word);
+		std::vector<std::string> syl;
+		for (size_t a = 0, b; a <= native.size(); a = b + 1) {
+			b = native.find('-', a);
+			if (b == std::string::npos)
+				b = native.size();
+			if (b > a)
+				syl.push_back(native.substr(a, b - a));
+		}
+		std::string out = start;
+		for (size_t k = syl.size() > 1 ? 1 : 0; k < syl.size() && k < 3; k++)
+			out += "-" + syl[k];
+		return out;
+	}
+	// nearly: R as W, S as Th (not "sh")
+	std::string out;
+	for (size_t i = 0; i < low.size(); i++) {
+		char ch = low[i];
+		if (ch == 'r')
+			out += 'w';
+		else if (ch == 's' && !(i + 1 < low.size() && low[i + 1] == 'h'))
+			out += "th";
+		else
+			out += ch;
+	}
+	if (out != low)
+		return out;
+	// or one sound slipped, the last one it can: "hanb"
+	static const std::map<char, char> slip = {{'d', 'b'}, {'t', 'p'}, {'k', 't'}, {'g', 'd'}, {'n', 'm'}, {'m', 'n'}, {'p', 't'}, {'b', 'd'},
+		{'l', 'w'}, {'f', 'p'}, {'v', 'b'}, {'z', 'd'}, {'x', 'k'}, {'c', 't'}, {'h', 'w'}, {'j', 'd'}, {'w', 'b'}};
+	std::vector<size_t> where;
+	for (size_t i = 0; i < out.size(); i++)
+		if (slip.count(out[i]))
+			where.push_back(i);
+	if (where.empty())
+		return out + out.substr(out.size() - 1); // (all vowels: drawn out)
+	// mostly the last sound, sometimes the first
+	size_t at = (slipHash(c, low) % 3 == 0) ? where.front() : where.back();
+	out[at] = slip.at(out[at]);
+	return out;
 }
 
 static int s_population_limit = -1; // -1: not read yet
@@ -542,10 +653,10 @@ void hearMachineWord(Agent* machine, int word, bool aloud) {
 			// has learned it, then the word itself (as C2's creatures repeat
 			// what the machine shows)
 			int stage = (int)c->getStage();
-			if (stage >= 1) {
+			if (stage >= 1 || (babyWords() && knowsWord(c, word))) {
 				Utterance u;
 				u.spoken = trim(engine.wordlist[word]);
-				u.shown = knowsWord(c, word) ? u.spoken : nativeWord(a.get(), u.spoken);
+				u.shown = knowsWord(c, word) ? u.spoken : attemptWord(a.get(), c, word);
 				if (knowsWord(c, word))
 					u.learned.push_back(word);
 				creatureSays(a.get(), stage, u);
@@ -604,7 +715,7 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 						u.learned.push_back(n.word);
 					} else {
 						spoken = trim(engine.wordlist[w]);
-						shown = nativeWord(creature, spoken);
+						shown = attemptWord(creature, c, w);
 					}
 				} else if (int partner; knowsWord(c, w) && !Language::runTogether(c, w, partner).empty() && i + 1 < words.size() && words[i + 1] == partner) {
 					shown = spoken = Language::runTogether(c, w, partner);
@@ -616,7 +727,7 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 					u.learned.push_back(w);
 				} else {
 					spoken = trim(engine.wordlist[w]);
-					shown = nativeWord(creature, spoken);
+					shown = attemptWord(creature, c, w);
 				}
 				if (shown.empty())
 					continue;
@@ -646,34 +757,42 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 			u.shown += trail.empty() ? end : trail;
 	};
 
-	// babies: cries, and the sounds of their own tongue, no words
-	if (stage <= 0) {
+	// babies: cries, and the sounds of their own tongue
+	auto babySounds = [&]() {
+		Utterance b;
 		if (kind == "ow") {
-			u.shown = u.spoken = rand_float(0, 1) < 0.5f ? "waah!" : "eee!";
-			return u;
+			b.shown = b.spoken = rand_float(0, 1) < 0.5f ? "waah!" : "eee!";
+			return b;
 		}
 		if (kind == "yum" || kind == "love") {
-			u.shown = u.spoken = "mmm";
-			return u;
+			b.shown = b.spoken = "mmm";
+			return b;
 		}
 		if (kind == "grr") {
-			u.shown = u.spoken = "nnngh!";
-			return u;
+			b.shown = b.spoken = "nnngh!";
+			return b;
 		}
 		// (experimental: babble, doubled syllables, more when spoken to)
 		if (Language::experimental()) {
-			u.shown = u.spoken = Language::babble(creature, c);
-			return u;
+			b.shown = b.spoken = Language::babble(creature, c);
+			return b;
 		}
 		// one short word of its tongue, not yet meaning anything
 		static const int shortwords[] = {W_ME, W_EAT, W_HIT, W_YES, W_NO, 6, 5, 8, 21, 29, 34, 57, 60};
 		int w = shortwords[rand_size_t(0, sizeof(shortwords) / sizeof(int) - 1)];
 		if (isWord(w)) {
-			u.spoken = trim(engine.wordlist[w]);
-			u.shown = nativeWord(creature, u.spoken);
+			b.spoken = trim(engine.wordlist[w]);
+			b.shown = nativeWord(creature, b.spoken);
 		}
-		return u;
-	}
+		return b;
+	};
+	// With first words (babyWords), a baby that knows the word for what it
+	// means says that one word (Fenson et al. 1994: first words come about
+	// the first birthday, one at a time); not knowing it, or half the time
+	// when hurt, pleased or cross, it cries and babbles as before.
+	const bool firstWords = stage <= 0 && babyWords();
+	if (stage <= 0 && (!firstWords || ((kind == "ow" || kind == "yum" || kind == "love" || kind == "grr") && rand_float(0, 1) < 0.5f)))
+		return babySounds();
 
 	std::vector<Wording> ways;
 	std::string end;
@@ -767,6 +886,8 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 			say({known[rand_size_t(0, known.size() - 1)]}, "?");
 			return u;
 		}
+		if (firstWords)
+			return babySounds();
 		// chatter: words it has not learned, in its own tongue. Picked from
 		// the words it doesn't know; before, it drew at random until it had
 		// enough unknown ones, which never ended for a creature that knows
@@ -803,6 +924,15 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 		}
 	}
 	const Wording& way = ways[best];
+	// a baby: the one word, if it knows it
+	if (firstWords) {
+		// (or its try at it, nearly known: "han-nah-do")
+		const int key = way.words[way.key];
+		if (!knowsWord(c, key) && !(wordAttempts() && key >= 0 && (size_t)key < c->vocab.size() && c->vocab[key] >= ATTEMPT_START))
+			return babySounds();
+		say({way.words[way.key]}, end);
+		return u;
+	}
 	if (Language::experimental()) {
 		// as long as its words allow (Language::phraseLimit): the strength
 		// words go first, then "me", then the rest but the key word; a verb
@@ -1161,7 +1291,7 @@ void tickReply(Agent* creature, oldCreature* c) {
 		Utterance u;
 		u.spoken = c->replyName;
 		int category = ownNameMeans(c, c->replyName);
-		bool knows = stage > 0 && category >= 0;
+		bool knows = (stage > 0 || babyWords()) && category >= 0;
 		u.shown = knows ? u.spoken : nativeWord(creature, u.spoken);
 		if (knows)
 			u.own.push_back({c->replyName, category});
@@ -1173,12 +1303,12 @@ void tickReply(Agent* creature, oldCreature* c) {
 		creatureSays(creature, stage, phraseFor("babble", creature, c));
 		return;
 	}
-	// in its own tongue until it has learned the word (a baby always: it has
-	// no words yet)
+	// in its own tongue until it has learned the word (a baby always, unless
+	// it says its first words: babyWords)
 	Utterance u;
 	u.spoken = trim(engine.wordlist[c->replyWord]);
-	bool knows = stage > 0 && knowsWord(c, c->replyWord);
-	u.shown = knows ? u.spoken : nativeWord(creature, u.spoken);
+	bool knows = (stage > 0 || babyWords()) && knowsWord(c, c->replyWord);
+	u.shown = knows ? u.spoken : stage > 0 || babyWords() ? attemptWord(creature, c, c->replyWord) : nativeWord(creature, u.spoken);
 	if (knows)
 		u.learned.push_back(c->replyWord);
 	creatureSays(creature, stage, u);
