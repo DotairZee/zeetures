@@ -234,7 +234,13 @@ bool Map::collideLineWithRoomSystem(Point src, Point dest, std::shared_ptr<Room>
 
 	where = src;
 
-	while (true) {
+	// (bounded: should two rooms keep handing the line back and forth without
+	// it moving, this looped for ever and the game froze; the check that
+	// caught it is left out of release builds. A line crosses far fewer
+	// rooms than this; past it the move is refused, as on failure.)
+	for (int crossings = 0;; crossings++) {
+		if (crossings >= 10000)
+			return false;
 		if (!collideLineWithRoomBoundaries(where, dest, room, newRoom, where, wall, walldir, perm))
 			return false; // failure
 		if (!newRoom)
