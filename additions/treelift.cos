@@ -49,10 +49,13 @@ next
 *    the background (owner, 2026-11-10): the glass tube's (scenery 1 0 0 at
 *    4735/1410, plane 200, its mesh drawn over the cage) and the crane's
 *    (5042/1467, plane 9000: the crane arm, its lamp and the double pulley).
-*    The lift (plane 0) goes to plane 300, in front of the tube; the crane
-*    to 250, behind the lift and still in front of the tube. Creatures stay
-*    in front of both (1500). PLNE is openc2e's in C2.
-enum 3 2 2 doif posl gt 5100 and posl lt 5140 plne 300 endi next
+*    The lift (plane 0) goes to plane 1810, in front of the tube's glass
+*    too (tube-walk.cos's ztwf, plane 1800, came later and hid the cage's
+*    top at the walkway stop; owner, 2026-11-26); its riders are drawn just
+*    over its own plane, inside the cage, and creatures walking by pass
+*    behind it. The crane to 250, still in front of the tube's back. PLNE
+*    is openc2e's in C2.
+enum 3 2 2 doif posl gt 5100 and posl lt 5140 plne 1810 endi next
 enum 1 0 0 doif posl eq 5042 doif post eq 1467 plne 250 endi endi next
 *
 * 5. The lift 10 px to the left (owner, 2026-11-10: off-centre over the two
