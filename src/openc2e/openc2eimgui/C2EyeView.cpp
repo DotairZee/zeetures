@@ -78,8 +78,12 @@ static int s_shows[3] = {-1, -1, -1};
 
 bool EyeViewShows(EyeViewShow what) {
 	int i = (int)what;
-	if (s_shows[i] < 0)
-		s_shows[i] = readPlayerSetting(s_show_keys[i]) == "1" ? 1 : 0;
+	if (s_shows[i] < 0) {
+		// (the name on unless turned off, the others off unless ticked;
+		// owner, 2026-11-25)
+		std::string v = readPlayerSetting(s_show_keys[i]);
+		s_shows[i] = v == "1" || (v.empty() && what == EYE_SHOW_NAME) ? 1 : 0;
+	}
 	return s_shows[i] == 1;
 }
 

@@ -17,9 +17,9 @@ void SetEyeViewOpen(bool open);
 // droops and shuts in sleep; 2 always open
 int EyeViewBlinking();
 void SetEyeViewBlinking(int mode);
-// what else the view shows (Preferences; each off unless ticked): the
-// creature itself, its own speech and thought bubbles, and its name in the
-// window's title
+// what else the view shows (Preferences): the creature itself and its own
+// speech and thought bubbles (off unless ticked), and its name in the
+// window's title (on unless unticked)
 enum EyeViewShow { EYE_SHOW_SELF, EYE_SHOW_BUBBLES, EYE_SHOW_NAME };
 bool EyeViewShows(EyeViewShow what);
 void SetEyeViewShows(EyeViewShow what, bool shown);
