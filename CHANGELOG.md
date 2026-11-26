@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 735 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 738 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.43.1](#version-0431): 3 commits, 26 November 2026
 - [0.43.0](#version-0430): 4 commits, 26 November 2026
 - [0.42.0](#version-0420): 2 commits, 26 November 2026
 - [0.41.0](#version-0410): 4 commits, 26 November 2026
@@ -107,6 +108,32 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.43.1
+
+Two choices now on from the start, unless you untick them: words come out a little wrong while being learned (Preferences > Creatures), and lightning has strange effects (Preferences > World).
+
+### 26 November 2026
+
+#### Version 0.43.1
+
+[`2c9f888c`](https://github.com/DotairZee/zeetures/commit/2c9f888c5cc9a34b81020fb779ca6ae88f57576e)
+
+#### Lightning has strange effects, from the start
+
+[`554aa0a2`](https://github.com/DotairZee/zeetures/commit/554aa0a2998152899c7deeee810dc8b348450a41)
+
+"Lightning has strange effects" (Preferences &gt; World, under Weather) is
+now on unless you untick it.
+
+#### Words come out a little wrong while being learned, from the start
+
+[`464bf3f9`](https://github.com/DotairZee/zeetures/commit/464bf3f9ac14f4f229a5889d5b281459cc89c9c0)
+
+The choice in Preferences &gt; Creatures, under Talking, is now on unless you
+untick it: half-learned words come out as tries ("han-nah-do", then
+"hanb", then "hand") rather than staying in the creature's own tongue
+until learned. Babies saying their first words stays off unless ticked.
 
 ## Version 0.43.0
 

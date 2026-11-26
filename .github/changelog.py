@@ -380,6 +380,8 @@ VERSIONS = [
      "Three new choices in Preferences > Creatures: babies say their first words (a baby that has learned the word for what it wants says it); words come out a little wrong while being learned (\"han-nah-do\", then \"wetht\" or \"hanb\", then right); and creatures' heads follow the hand, angling up and down, as in Creatures 2. The first two are off unless ticked."),
     ("0.43.0", "44aac64a",
      "Lightning strikes creatures: a jolt of pain, as Creatures 2 meant but never managed; with Lightning has strange effects ticked (Preferences > World), a strike may now and then change a creature, give it a gift, or more, for you to discover; the bamboo lift east of the big hut is drawn in front of the tube's glass; every world has a fruit-bearing kelp clump on the sea floor."),
+    ("0.43.1", "2c9f888c",
+     "Two choices now on from the start, unless you untick them: words come out a little wrong while being learned (Preferences > Creatures), and lightning has strange effects (Preferences > World)."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
