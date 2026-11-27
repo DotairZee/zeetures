@@ -49,7 +49,21 @@ struct Urge {
 	int drive = -1;
 	float weight = 1.0f;
 	bool tend = false; // the source is tended (tickled, brought food or a toy)
+	// "bring CATEGORY[,CATEGORY]": things of these kinds are picked up and
+	// carried up the scent, and put down where it is at least dropAt
+	std::vector<int> bring;
+	float dropAt = 0.5f;
 };
+
+// scent laid at a place each step (Kinds.h: an ettin's hoard spot)
+struct PlaceEmission {
+	std::string scent;
+	float x = 0, y = 0, strength = 1;
+};
+void setPlaceEmissions(const std::vector<PlaceEmission>& e);
+
+// a named scent where the creature or object is (0-1; 0 if no such scent)
+float levelAt(const std::string& scent, Agent* a);
 
 // Reads pheromones.txt (at each world load). Without the file there are no
 // scents and nothing here does anything.

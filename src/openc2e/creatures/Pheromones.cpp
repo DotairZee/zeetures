@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fmt/core.h>
+#include "creatures/Kinds.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -64,7 +65,7 @@ struct Channel {
 // a condition on the creature: a chemical above or below a level, carrying
 // something, dead, asleep or awake
 struct Condition {
-	enum Kind { ChemAbove, ChemBelow, Carrying, Dead, Asleep, Awake, HereAbove, HereBelow, Ill } kind = ChemAbove;
+	enum Kind { ChemAbove, ChemBelow, Carrying, Dead, Asleep, Awake, HereAbove, HereBelow, Ill, Day, Night, Wary, Empty } kind = ChemAbove;
 	int chem = 0, level = 0;
 	float strength = 0; // HereAbove/HereBelow: the rule's scent where the creature is, 0-1 (dose bands)
 };
@@ -74,6 +75,7 @@ struct Who {
 	bool object = false; // an object by classifier (only for emit)
 	int family = 0, genus = 0, species = 0; // object classifier (0 = any)
 	int creatureGenus = 0; // 0 any, 1 norn, 2 grendel, 3 ettin
+	int breed = 0; // grendels: 0 either, 1 Boney ("grendel.boney"), 2 bulbous ("grendel.bulbous"; Kinds.h)
 	int sex = -1; // -1 either, 0 male, 1 female
 	int stageFrom = 0, stageTo = 6;
 };
@@ -88,6 +90,8 @@ struct Rule {
 	std::vector<int> felt; // Mark: the felt chemicals that set it off
 	unsigned int ticks = 0; // Mark: how long the mark lasts
 	bool tend = false; // Follow: the scent's source is to be tended ("... follow for lonely 1 tend")
+	std::vector<int> bring; // Follow: "bring CATEGORY[,CATEGORY]" (Urge::bring)
+	float dropAt = 0.5f; // ... "drop D"
 	std::vector<Condition> when;
 };
 
@@ -112,6 +116,7 @@ struct Signature {
 
 std::vector<Channel> channels;
 std::vector<Rule> rules;
+std::vector<PlaceEmission> placeEmissions;
 std::vector<MarkOn> marks;
 bool loaded = false;
 // which channels each agent (by UNID) gave off in the last step
@@ -168,6 +173,19 @@ bool parseWho(const std::string& tok, Who& w) {
 		else
 			return false;
 	}
+	size_t dot = s.find('.');
+	if (dot != std::string::npos) {
+		std::string breed = s.substr(dot + 1);
+		s = s.substr(0, dot);
+		if (s != "grendel")
+			return false;
+		if (breed == "boney")
+			w.breed = 1;
+		else if (breed == "bulbous")
+			w.breed = 2;
+		else
+			return false;
+	}
 	if (s == "any" || s == "creature")
 		w.creatureGenus = 0;
 	else if (s == "norn")
@@ -193,6 +211,14 @@ bool parseCondition(const std::string& t, Condition& c) {
 		c.kind = Condition::Ill;
 	else if (t == "awake")
 		c.kind = Condition::Awake;
+	else if (t == "day") // the world's time of day (dawn to dusk) or night
+		c.kind = Condition::Day;
+	else if (t == "night")
+		c.kind = Condition::Night;
+	else if (t == "wary") // has learned to link grendels with falling ill (Kinds.h)
+		c.kind = Condition::Wary;
+	else if (t == "empty") // carrying nothing
+		c.kind = Condition::Empty;
 	else if (t.rfind("here>", 0) == 0 || t.rfind("here<", 0) == 0) {
 		// dose bands (owner's idea, 2026-11-15): one scent, different
 		// responses at different strengths, e.g. drawn to it when faint,
@@ -251,6 +277,8 @@ bool matches(const Who& w, Agent* a, oldCreature* c) {
 		return false;
 	if (w.creatureGenus && a->genus != w.creatureGenus)
 		return false;
+	if (w.breed && Kinds::isBoney(c) != (w.breed == 1))
+		return false;
 	if (w.sex >= 0 && (c->isFemale() ? 1 : 0) != w.sex)
 		return false;
 	int stage = (int)c->getStage();
@@ -296,6 +324,22 @@ bool holds(const std::vector<Condition>& when, Agent* a, oldCreature* c, float h
 				break;
 			case Condition::Awake:
 				if (!c || c->isAsleep())
+					return false;
+				break;
+			case Condition::Day:
+				if (world.timeofday >= 4)
+					return false;
+				break;
+			case Condition::Night:
+				if (world.timeofday < 4)
+					return false;
+				break;
+			case Condition::Wary:
+				if (!c || !Kinds::wary(c))
+					return false;
+				break;
+			case Condition::Empty:
+				if (a->carrying)
 					return false;
 				break;
 		}
@@ -398,7 +442,7 @@ bool parseRule(int ln, const std::string& t, Rule& r) {
 			return false;
 		std::string what;
 		if (!next(what)) {
-			complain(ln, t, "smell needs chem, follow or avoid");
+			complain(ln, t, "smell needs chem, follow, avoid or bring");
 			return false;
 		}
 		if (what == "chem") {
@@ -410,9 +454,11 @@ bool parseRule(int ln, const std::string& t, Rule& r) {
 			}
 			r.chem = atoi(ch.c_str());
 			r.strength = (float)atof(am.c_str());
-		} else if (what == "follow" || what == "avoid") {
-			r.kind = what == "follow" ? Rule::Follow : Rule::Avoid;
+		} else if (what == "follow" || what == "avoid" || what == "bring") {
+			r.kind = what == "avoid" ? Rule::Avoid : Rule::Follow;
 			r.strength = 1.0f;
+			if (what == "bring")
+				i--; // (read below as "bring CATEGORY[,CATEGORY]")
 			if (i < tok.size() && tok[i] == "for") {
 				i++;
 				std::string d;
@@ -421,8 +467,35 @@ bool parseRule(int ln, const std::string& t, Rule& r) {
 					return false;
 				}
 			}
-			if (i < tok.size() && tok[i] != "when" && tok[i] != "tend")
+			if (i < tok.size() && tok[i] != "when" && tok[i] != "tend" && tok[i] != "bring")
 				r.strength = (float)atof(tok[i++].c_str());
+			// "bring CATEGORY[,CATEGORY]" and "drop D": things of those kinds
+			// are carried up the scent and put down where it is at least D
+			// (owner, 2026-11-26: grendels' eggs to their lair, ettins' hoards,
+			// eggs to the incubator, food to the hungry; Kinds.h)
+			if (i < tok.size() && tok[i] == "bring") {
+				if (r.kind != Rule::Follow) {
+					complain(ln, t, "only a follow can bring");
+					return false;
+				}
+				i++;
+				std::string cats;
+				if (!next(cats)) {
+					complain(ln, t, "bring needs categories");
+					return false;
+				}
+				std::stringstream cs(cats);
+				std::string n;
+				while (std::getline(cs, n, ','))
+					if (!n.empty())
+						r.bring.push_back(atoi(n.c_str()));
+				if (i < tok.size() && tok[i] != "when" && tok[i] != "drop")
+					r.strength = (float)atof(tok[i++].c_str());
+				if (i + 1 < tok.size() && tok[i] == "drop") {
+					r.dropAt = (float)atof(tok[i + 1].c_str());
+					i += 2;
+				}
+			}
 			// "tend": on reaching the scent's source (a baby, a child, the
 			// senile), tickle it and bring it food or a toy (owner,
 			// 2026-11-15; the mind's tend and bring)
@@ -708,6 +781,13 @@ void tick() {
 			if (r.kind == Rule::Emit && matches(r.who, a.get(), c) && holds(r.when, a.get(), c))
 				lay(a.get(), r.channel, r.strength);
 	}
+	// laid at places (Kinds.h: ettins' hoard spots)
+	for (auto& pe : placeEmissions) {
+		int ch = channelIndex(pe.scent);
+		std::shared_ptr<Room> room = ch >= 0 ? world.map->roomAt(pe.x, pe.y) : nullptr;
+		if (room && room->scentnext.size() >= n)
+			room->scentnext[ch] += pe.strength * DEPOSIT;
+	}
 	// laid by marked agents, fading over the mark's time
 	marks.erase(std::remove_if(marks.begin(), marks.end(),
 					[](const MarkOn& m) { return !m.agent || m.agent->isDying() || world.tickcount >= m.until; }),
@@ -796,9 +876,23 @@ std::vector<Urge> urgesFor(Agent* creature, oldCreature* c) {
 		if (here > 0 && hit != habit.end() && (size_t)r.channel < hit->second.size())
 			u.weight *= felt(here, hit->second[r.channel]) / here;
 		u.tend = r.tend;
+		u.bring = r.bring;
+		u.dropAt = r.dropAt;
 		out.push_back(u);
 	}
 	return out;
+}
+
+void setPlaceEmissions(const std::vector<PlaceEmission>& e) {
+	placeEmissions = e;
+}
+
+float levelAt(const std::string& scent, Agent* a) {
+	if (!loaded)
+		load();
+	int ch = channelIndex(scent);
+	std::shared_ptr<Room> room = ch >= 0 && a ? roomOf(a) : nullptr;
+	return room && (size_t)ch < room->scent.size() ? room->scent[(size_t)ch] : 0.0f;
 }
 
 float signatureIn(const Room& room, const std::string& moniker) {

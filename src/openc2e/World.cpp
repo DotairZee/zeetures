@@ -24,6 +24,7 @@
 #include "Lift.h"
 #include "creatures/BrainOrgan.h"
 #include "creatures/Lightning.h"
+#include "creatures/Kinds.h"
 #include "SkyTint.h"
 
 #include "Bubble.h"
@@ -480,6 +481,7 @@ void World::tick() {
 		Exposure::tick();
 		Lightning::tick();
 		BrainOrgan::tick();
+		Kinds::tick(); // (grendels' and ettins' roles)
 		tickBreathBubbles();
 		{
 			PROFILE_SCOPE("world: relationships");

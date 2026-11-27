@@ -17,6 +17,7 @@
  */
 
 #include "Relationships.h"
+#include "creatures/Kinds.h"
 #include "BrainOrgan.h"
 #include "common/devenv.h"
 
@@ -205,6 +206,9 @@ void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 
 	// making up after a fight counts double for a while
 	if (x > 0 && b.lastHarm && now - b.lastHarm < 600)
 		x *= 2.0f;
+	// a Boney grendel is won over more easily (Kinds.h)
+	if (x > 0 && Kinds::isBoney(c))
+		x *= 1.5f;
 	bool wasFeared = b.fear > 0.5f;
 	move(b, x);
 	b.fear = std::clamp(b.fear + fear, 0.0f, 1.0f);

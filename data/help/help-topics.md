@@ -672,10 +672,14 @@ Radiation comes from the volcano's chamber and from high in the sky, and spreads
 ## Norns, grendels, and ettins
 
 - **Norns** are the sociable ones, and the ones most breeds are of.
-- **Grendels** hatch from a pile of eggs in a chamber of their own, where the next begins to hatch when none is left alive. They carry germs without falling ill. They have the same kind of mind as norns, with their own genomes: they learn, talk in a dialect of their own, and care for their young.
-- **Ettins** have a mind of the same kind too, and a dialect of their own. When none is alive, the egg machine by the volcano lays one of their eggs.
+- **Grendels** hatch from a pile of eggs in a chamber of their own, their lair, where the next begins to hatch when none is left alive. They carry germs without falling ill. They have the same kind of mind as norns, with their own genomes: they learn, and talk in a dialect of their own. There are two kinds:
+  - **Bulbous grendels** (the game's own) never tire. They lie up at the lair by day and prowl by night, angry at norns and a bully to ettins, and they take any eggs they find back to the lair. One won over by a norn's long kindness stops hitting it, and may stand up for it.
+  - **Boney grendels** (Boney Grendels by Creature Labs) are about by day and go home to the lair at night, in a pack. Scavengers, they go for the weak, the young, the ill and the dead, and run from a crowd of norns. Thieves, they snatch food and run home with it. They learn quickly and are won over more easily, and mothers stay near the eggs.
+- **Ettins** have a mind of the same kind too, and a dialect of their own. When none is alive, the egg machine by the volcano lays one of their eggs. They gather gadgets and toys and leave them in a hoard somewhere quiet; they carry eggs left lying about to the incubator, and food to where creatures are hungry; they are drawn to machines and switch them on; they seek norns when lonely and leave a crowd.
 
-Each kind breeds with its own. The world's own grendel eggs hatch either sex, and either standard or Bony grendels (Boney Grendels by Creature Labs); ettin eggs hatch either sex too. In the [[Hatchery]] all three have their shelves.
+Each kind gives off a scent of its own, which the others come to know. A norn that falls ill soon after being near a grendel learns to keep away from grendels' scent, and the young learn it the same way.
+
+Each kind breeds with its own. Grendels and ettins are fertile, and long for a mate, only while an adult of the other sex of their kind lives somewhere in the world; without one they have no young. The world's own grendel eggs hatch either sex, bulbous or Boney; ettin eggs hatch either sex too. In the [[Hatchery]] all three have their shelves. The [[Health Kit]] names a grendel's or ettin's kind: rest the pointer on it for what that means for this one, and whether it is fertile now.
 
 # The world
 

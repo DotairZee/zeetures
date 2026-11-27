@@ -188,6 +188,10 @@ struct MindPerception {
 		int drive = -1;
 		float weight = 1.0f;
 		bool tend = false; // its source (a baby, a child, the senile) is tickled and brought food or a toy
+		// things of these categories are carried up the scent and put down
+		// where it is at least dropAt (pheromones.txt "bring"; Kinds.h)
+		std::vector<int> bring;
+		float dropAt = 0.5f;
 		float here = 0, west = 0, east = 0, up = 0, down = 0;
 	};
 	std::vector<ScentUrge> scentUrges;

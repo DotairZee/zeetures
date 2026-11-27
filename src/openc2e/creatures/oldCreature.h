@@ -432,6 +432,12 @@ class c2Creature : public oldCreature {
 	unsigned int noEnergyTicks = 0, recoveringTicks = 0; // (updateConsciousness)
 	bool kickstartPrimed = false; // (kickstart)
 	void updateConsciousness();
+	// Kinds.h: fertility, longing and carrying for kinds whose genes switch
+	// reproduction off; bulbous grendels' night (each biochemistry step)
+	void kindsStep();
+	int kindsGestation = 0; // steps carrying (not saved: a reload starts it again)
+	unsigned int kindsSteps = 0;
+	float kindsDesire = 0; // longing for a mate (not saved: it builds again)
 
   public:
 	unsigned char sense(int i) const { return i >= 0 && i < 14 ? senses[i] : 0; } // (developer aids)

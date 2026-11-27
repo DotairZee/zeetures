@@ -14,6 +14,8 @@
 #include "historyManager.h"
 #include "creatures/Disease.h"
 #include "creatures/Lightning.h"
+#include "creatures/CreatureAgent.h"
+#include "creatures/Kinds.h"
 #include "Agent.h"
 #include "World.h"
 #include "fileformats/c2cobfile.h"
@@ -309,6 +311,28 @@ void DrawHealthKit() {
 				}
 			}
 			ImGui::PopStyleColor();
+		}
+	}
+	// what its kind is and means (Kinds.h; owner, 2026-11-26): grendels and
+	// ettins by name, the details on the pointer; and a norn that has learned
+	// to be wary of grendels
+	if (Agent* a = KitCreatureAgent()) {
+		CreatureAgent* ca = dynamic_cast<CreatureAgent*>(a);
+		oldCreature* oc = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+		std::vector<std::string> traits = Kinds::traits(oc);
+		std::string name = Kinds::kindName(oc);
+		if (name.empty() && !traits.empty())
+			name = "Wary of grendels";
+		if (!name.empty()) {
+			ImGui::TextDisabled("%s", name.c_str());
+			if (ImGui::IsItemHovered() && !traits.empty()) {
+				ImGui::BeginTooltip();
+				ImGui::PushTextWrapPos(ImGui::GetFontSize() * 24.0f);
+				for (auto& t : traits)
+					ImGui::BulletText("%s", t.c_str());
+				ImGui::PopTextWrapPos();
+				ImGui::EndTooltip();
+			}
 		}
 	}
 	if (ImGui::BeginTabBar("pages")) {

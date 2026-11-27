@@ -29,6 +29,7 @@
 #include "creatures/BrainOrgan.h"
 #include "creatures/Exposure.h"
 #include "creatures/Lightning.h"
+#include "creatures/Kinds.h"
 #include "creatures/Relationships.h"
 #include "creatures/Breeding.h"
 
@@ -886,6 +887,7 @@ static bool SaveWorldStateUnguarded(const fs::path& worlddir, std::string& error
 	Exposure::save(out);
 	Lightning::save(out); // (extra mutations owed to children)
 	BrainOrgan::save(out); // (how dazed each creature is)
+	Kinds::save(out); // (wariness of grendels, ettins' hoards)
 	// the life log (Owner's Kit): kind, tick, genus, female, stage, age, age
 	// known, old age, moniker, then the name
 	auto entry = [&](const char* key, const lifeLogEntry& e) {
@@ -1659,6 +1661,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 			Lightning::readLine(key, l);
 		} else if (key.rfind("brain-", 0) == 0) {
 			BrainOrgan::readLine(key, l);
+		} else if (key.rfind("kinds-", 0) == 0) {
+			Kinds::readLine(key, l);
 		} else if (key == "nutrients") {
 			SavedNutrients n;
 			if (l >> n.room >> n.ontr >> n.intr >> n.ontrBase >> n.intrBase)

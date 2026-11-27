@@ -17,6 +17,7 @@
  */
 
 #include "Disease.h"
+#include "creatures/Kinds.h"
 #include "common/devenv.h"
 
 #include "Agent.h"
@@ -168,6 +169,7 @@ void catchIt(const Body& b, const Strain& s, const char* how) {
 	if (watching())
 		fmt::print("* DISEASE {} caught {} ({}) at {:.0f},{:.0f}\n", b.moniker, s.name(), how, b.cx, b.cy);
 	announce(lifeLogEntry::fellIll, b.moniker, b.c, s);
+	Kinds::noteCaught(b.c); // (near a grendel lately: it learns to be wary)
 }
 
 void addGerms(int room, int strain, float amount) {

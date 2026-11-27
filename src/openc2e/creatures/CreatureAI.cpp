@@ -1312,6 +1312,8 @@ MindPerception oldCreature::buildPerception() {
 				su.drive = u.drive;
 				su.weight = u.weight;
 				su.tend = u.tend;
+				su.bring = u.bring;
+				su.dropAt = u.dropAt;
 				auto level = [&](const Room& r) { return (size_t)u.channel < r.scent.size() ? r.scent[u.channel] : 0.0f; };
 				su.here = level(*here);
 				for (auto& [n, door] : here->getDoors()) {

@@ -183,6 +183,8 @@ struct Params {
 	// or pulling anything electric (buttons, dispensers, lifts, computers,
 	// media boxes, the incubator, teleporters, machines) pulls this much more
 	float electrophilePull = 0.12f;
+	float ettinMachinePull = 0.08f; // ettins and machines (Kinds.h)
+	float wonOverAffinity = 0.4f; // a grendel this fond of a norn does not hit it
 	int hitDecision = 13;
 	// temperament (reactivity): outcomes worse than expected are learned at
 	// this share of the rate, better ones at this share
@@ -1908,6 +1910,12 @@ class HomeostatMind : public CreatureMind {
 		if (choice.target)
 			out.attentionAgent = choice.target;
 		out.decision = choice.decision;
+		// developer aid: OPENC2E_WATCH_KINDS prints each choice made for a
+		// "bring" urge (Kinds.h)
+		static const bool watchKinds = devenv("OPENC2E_WATCH_KINDS") != nullptr;
+		if (watchKinds && choice.urge.rfind("bring:", 0) == 0)
+			fmt::print("* KINDS creature {} t{}: {} ({} on category {}) at {:.0f},{:.0f}, carrying {}\n", p.creatureId, p.tick, choice.urge, actionName(choice.decision),
+				choice.category, p.x, p.y, p.carryingCategory);
 		return out;
 	}
 
@@ -2905,6 +2913,10 @@ class HomeostatMind : public CreatureMind {
 			// roots, flowers (Shelley: "my food is not that of man")
 			if (p.plantEater && decision == prm.eatDecision && !(category == 4 || category == 21 || category == 22 || category == 23 || category == 24 || category == 25))
 				return;
+			// a grendel won over by a norn's kindness does not hit it (Kinds.h;
+			// owner, 2026-11-26); it still defends its friends (addDefend)
+			if (p.genus == 1 && decision == prm.hitDecision && who && who->genus == 0 && who->affinity >= prm.wonOverAffinity)
+				return;
 			Expectation& kind = expectation(category, decision);
 			Expectation blend = kind;
 			int known = kind.count;
@@ -2988,6 +3000,11 @@ class HomeostatMind : public CreatureMind {
 			if (p.electrophile && (decision == 1 || decision == 2) &&
 				(category == 2 || category == 8 || category == 27 || category == 28 || category == 29 || category == 32 || category == 33 || category == 35))
 				c.score += prm.electrophilePull;
+			// ettins keep the world's machines going (Kinds.h): drawn to push
+			// and pull them, the more for boredom
+			if (p.genus == 2 && !p.electrophile && (decision == 1 || decision == 2) &&
+				(category == 2 || category == 8 || category == 27 || category == 28 || category == 29 || category == 32 || category == 33 || category == 35))
+				c.score += prm.ettinMachinePull * (0.5f + d[BORED]);
 			if (who && !who->who.empty()) {
 				c.score += prm.strangerBias * z[0] * (1.0f - who->familiarity); // boldness
 				if (decision == prm.hitDecision)
@@ -5187,6 +5204,42 @@ class HomeostatMind : public CreatureMind {
 					u.scent, u.avoid ? "avoid" : "follow", want, u.here, u.west, u.east, u.up, u.down);
 			if (want < prm.seekMinWant)
 				continue;
+			// bring (Kinds.h): carrying a thing of these kinds, it is taken up
+			// the scent and put down where the scent is strong enough; empty
+			// handed, with the scent to follow, the nearest such thing is
+			// picked up (not where the scent is already strong: it is home)
+			if (!u.bring.empty() && !u.avoid) {
+				auto isOne = [&](int category) { return std::find(u.bring.begin(), u.bring.end(), category) != u.bring.end(); };
+				if (p.carryingCategory >= 0 && isOne(p.carryingCategory)) {
+					if (u.here >= u.dropAt) {
+						Candidate c{-1, 7, 0, want, 0, want}; // put it down here
+						c.chain = true;
+						c.urge = "bring:" + u.scent + ":drop";
+						out.push_back(c);
+						continue;
+					}
+					// (else carried along the trail, below)
+				} else {
+					if (p.carryingCategory >= 0 || u.here >= u.dropAt)
+						continue;
+					float trail = std::max({u.west, u.east, u.up, u.down});
+					if (trail <= u.here * prm.scentStronger + 0.01f)
+						continue; // no trail to carry it along
+					const SeenAgent* item = nullptr;
+					for (auto& s : p.visible)
+						if (isOne(s.category) && s.carryable && s.reachable && s.distance < prm.bringSearch && p.tick >= bringFailUntil[s.category] &&
+							(!item || s.distance < item->distance))
+							item = &s;
+					if (!item)
+						continue;
+					Candidate c{item->category, 6, item->distance, want, 0, 0}; // pick it up
+					c.score = want - prm.distanceCost * item->distance;
+					c.chain = true;
+					c.urge = "bring:" + u.scent;
+					out.push_back(c);
+					continue;
+				}
+			}
 			std::string label = (u.avoid ? "avoid:" : "follow:") + u.scent;
 			if (u.tend && !u.avoid && addTend(p, want, canWest, canEast, out))
 				continue; // one to tend is in sight: go to it rather than up the scent

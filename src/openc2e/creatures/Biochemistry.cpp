@@ -28,6 +28,7 @@
 #include "oldBrain.h"
 #include "oldCreature.h"
 #include "Disease.h"
+#include "creatures/Kinds.h"
 #include "historyManager.h"
 #include "Agent.h"
 #include "Engine.h"
@@ -122,6 +123,69 @@ void c1Creature::tickBiochemistry() {
 	oldCreature::tickBiochemistry();
 }
 
+// Kinds.h. C2's grendel and ettin genes switch their reproductive organ
+// and Sex drive off; here they are fertile, and long for a mate (Sex Drive,
+// chemical 13, rising), only while an adolescent-to-old of the other sex of
+// their kind lives; once with young (MATE), after GESTATION_STEPS the egg
+// is laid through the world's own egg-laying script (involuntary action 1,
+// script 65), as a norn's genes would set it off. Bulbous grendels never
+// sleep at night (Sleepiness, chemical 7, held at 40 in the dark) and grow
+// drowsy by day.
+void c2Creature::kindsStep() {
+	if (Kinds::off() || !parentagent || !alive)
+		return;
+	kindsSteps++;
+	if (Kinds::watching() && kindsSteps % 1500 == 0 && parentagent->genus >= 2)
+		fmt::print("* KINDS {} genus {} {} stage {}: fertile {} receptive {} sex chem {} desire {:.0f} drive {} pregnant {} gestation {} mate alive {} sterile genes {}\n",
+			world.history ? world.history->findMoniker(genome) : std::string(), (int)parentagent->genus, female ? "female" : "male", (int)stage, (int)fertile,
+			(int)receptive, (int)chemicals[13], kindsDesire, (int)drives[12], (int)pregnant, kindsGestation, Kinds::mateAlive(parentagent->genus, !female), Kinds::sterileGenes(this));
+	if (Kinds::sterileGenes(this)) {
+		int st = (int)stage;
+		bool canMate = st >= 2 && st <= 5 && Kinds::mateAlive(parentagent->genus, !female);
+		if (canMate) {
+			fertile = 200;
+			receptive = female ? 150 : 0;
+		} else {
+			fertile = 0;
+			receptive = 0;
+		}
+		if (pregnant && female) {
+			if (++kindsGestation >= Kinds::GESTATION_STEPS)
+				involaction[1] = 255; // lay the egg
+		} else
+			kindsGestation = 0;
+	}
+	// longing for a mate, for every grendel and ettin while one of the other
+	// sex lives (their genes make little or none of Sex Drive, chemical 13,
+	// and what they make fades at once): its own level, rising by about one
+	// a second to 220, eased after mating as a norn's is (matedNow,
+	// satedUntil), and gone with no mate; it is the Sex drive, and shows as
+	// the chemical
+	if (parentagent->genus == 2 || parentagent->genus == 3) {
+		int st = (int)stage;
+		bool canMate = st >= 2 && st <= 5 && Kinds::mateAlive(parentagent->genus, !female) && !pregnant;
+		if (!canMate)
+			kindsDesire = 0;
+		else if (satedUntil > world.tickcount)
+			kindsDesire = std::min(kindsDesire, 32.0f);
+		else
+			kindsDesire = std::min(220.0f, kindsDesire + 0.2f);
+		// (kinds whose genes have no Sex drive receptor: this is all of it;
+		// Boney grendels' own genes can only add to it)
+		if (Kinds::sterileGenes(this) || kindsDesire > drives[12])
+			drives[12] = (unsigned char)kindsDesire;
+		if (kindsDesire > chemicals[13])
+			chemicals[13] = (unsigned char)kindsDesire;
+	}
+	if (Kinds::isBulbous(this)) {
+		if (world.timeofday >= 4) {
+			if (chemicals[7] > 40)
+				chemicals[7] = 40;
+		} else if (kindsSteps % 3 == 0 && chemicals[7] < 140)
+			chemicals[7]++;
+	}
+}
+
 void c2Creature::tickBiochemistry() {
 	// TODO: untested
 
@@ -190,6 +254,7 @@ void c2Creature::tickBiochemistry() {
 		for (size_t k = 0; k < countChems.size(); k++)
 			before[k] = chemicals[countChems[k]];
 	BrainOrgan::step(*this);
+	kindsStep();
 	if (counting) {
 		auto& t = flowByOrgan[-2];
 		t.resize(countChems.size());

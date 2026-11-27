@@ -358,6 +358,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/creatures/BrainOrgan.cpp
 	src/openc2e/creatures/Exposure.cpp
 	src/openc2e/creatures/Lightning.cpp
+	src/openc2e/creatures/Kinds.cpp
 	src/openc2e/creatures/Thoughts.cpp
 	src/openc2e/creatures/Relationships.cpp
 	src/openc2e/creatures/Temperament.cpp

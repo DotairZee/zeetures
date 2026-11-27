@@ -39,17 +39,25 @@
 #       one of its own kind who needs care (a baby, a child, the senile, the ill) in
 #       sight, the creature goes to it, tickles it, and brings it food or a
 #       toy (picks one up nearby, carries it over, drops it beside them).
+#   WHO smell SCENT bring CATEGORY[,CATEGORY] [WEIGHT] [drop D] [when CONDITIONS]
+#       carries things of those categories (C2's: 5 egg, 6 food, 9 gadget,
+#       13 toy, 25 fruit ...) up the scent: picks up the nearest it can reach
+#       where the scent is fainter than D (default 0.5) and a trail leads
+#       on, and puts it down where the scent is at least D.
 #   WHO mark harm|help|felt:N,N SCENT STRENGTH TICKS [when CONDITIONS]
 #       when something harms (pain, injury, punishment) or helps (reward, a
 #       drive eased) this creature, that thing is marked: it gives off the
 #       scent wherever it goes, fading over TICKS (10 ticks a second).
 #
-#   WHO: any, norn, grendel or ettin; then :female or :male; then @ and a
+#   WHO: any, norn, grendel (grendel.boney or grendel.bulbous for one kind)
+#        or ettin; then :female or :male; then @ and a
 #        life stage or range: baby child adolescent youth adult old senile
 #        (or 0-6). Examples: norn, norn:female, any@baby, grendel:male@youth-old
 #   CONDITIONS: ill (has an illness), CHEM>N, CHEM<N (body chemicals; a drive's own chemical is
 #        its drive number plus one: 1 Pain ... 3 Hunger ... 8 Loneliness,
-#        10 Fear, 13 Sex Drive), carrying, dead, asleep, awake; joined with
+#        10 Fear, 13 Sex Drive), carrying, empty (carrying nothing), dead,
+#        asleep, awake, day, night, wary (fell ill soon after being near a
+#        grendel); joined with
 #        "and". For smell rules also here>X and here<X: the scent's strength
 #        where the creature is (0-1), for "dose bands": one scent, different
 #        responses at different strengths.
@@ -131,6 +139,77 @@ ettin emit ettin-care 1 when 140>50
 norn@adolescent-old smell norn-care follow 1 tend
 grendel@adolescent-old smell grendel-care follow 1 tend
 ettin@adolescent-old smell ettin-care follow 1 tend
+
+# ---- Grendels and ettins (on; owner, 2026-11-26: "let's do it!") ---------------
+# Each kind gives off a scent of its own, and the others answer to it (our own
+# design, from what their genes already hold; Kinds.h in the engine). Their
+# homes give off scents too: the grendels' lair (the egg pile's keeper,
+# 2 1 52), the ettins' den (the egg machine by the volcano, 2 1 25) and the
+# incubator (3 7 1); and each ettin's hoard, a quiet spot it found
+# ("ettin-hoard", laid by the engine). "bring" carries things up a scent and
+# puts them down where it is at least "drop".
+# New words for these rules: grendel.boney / grendel.bulbous (Boney grendels
+# have working reproductive genes; C2's own, bulbous, do not); conditions day,
+# night, empty (carrying nothing) and wary (a creature that fell ill soon
+# after being near a grendel, and has learned to link the two).
+
+scent norn-kind fade 0.03
+scent grendel-kind fade 0.03
+scent boney-kind fade 0.03
+scent ettin-kind fade 0.03
+scent grendel-lair spread 0.16 fade 0.01
+scent ettin-den spread 0.16 fade 0.01
+scent incubator spread 0.16 fade 0.01
+scent ettin-hoard spread 0.14 fade 0.015
+scent hungry fade 0.04
+scent egg spread 0.1 fade 0.03
+scent carrion fade 0.02
+
+norn emit norn-kind 1
+grendel emit grendel-kind 1
+grendel.boney emit boney-kind 1
+ettin emit ettin-kind 1
+object 2 1 52 emit grendel-lair 3
+object 2 1 25 emit ettin-den 3
+object 3 7 1 emit incubator 3
+object 2 5 0 emit egg 0.5
+any emit hungry 1 when 3>150
+any emit carrion 1 when dead
+
+# (chemicals: 3 Hunger, 9 Crowded.)
+# Norns that have fallen ill after being near a grendel keep away from them;
+# the young learn it the same way. Ettins keep away from grendels.
+norn smell grendel-kind avoid for fear 2 when wary
+ettin smell grendel-kind avoid for fear 1.5
+
+# Bulbous grendels: lie up at the lair by day, prowl by night after norns
+# (their genes: boredom draws them to norns, anger makes them hit) and bully
+# ettins; eggs they find go to the lair.
+grendel.bulbous smell grendel-lair follow 1.5 when day and awake and empty
+grendel.bulbous smell norn-kind follow for bored 1.5 when night
+grendel.bulbous smell ettin-kind follow for anger 1 when night
+grendel.bulbous smell grendel-lair bring 5 1.5 drop 0.5
+
+# Boney grendels: about by day, home to the lair at night, in a pack; they go
+# for the weak (the care scent of babies, the ill and the senile) and run
+# from crowds of norns; thieves, they snatch food and run home with it;
+# mothers stay near the eggs.
+grendel.boney smell grendel-lair follow 1.5 when night and awake
+grendel.boney smell boney-kind follow for lonely 2
+grendel.boney smell norn-care follow for hunger 1.5 when day
+grendel.boney smell carrion follow for hunger 1.5
+grendel.boney smell norn-kind avoid for fear 1 when here>0.5
+grendel.boney smell grendel-lair bring 6,25 1 drop 0.5 when day
+grendel.boney:female@youth-old smell egg follow 1 when awake
+
+# Ettins: hoard gadgets and toys in quiet spots, carry eggs left lying about
+# to the incubator, carry food to where creatures are hungry (when not
+# crowded), seek norns when lonely and leave them when crowded.
+ettin smell ettin-hoard bring 9,13 1 drop 0.5
+ettin smell incubator bring 5 1.5 drop 0.6
+ettin smell hungry bring 6,25 1 drop 0.4 when 9<100
+ettin smell norn-kind follow for lonely 1
+ettin smell norn-kind avoid for crowded 1.5 when 9>80
 
 # ---- Examples, off (remove the "# " to try one) --------------------------------
 #
