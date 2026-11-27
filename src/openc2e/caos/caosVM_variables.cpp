@@ -29,6 +29,9 @@
 #include "common/Random.h"
 #include "common/throw_ifnot.h"
 #include "creatures/CreatureAgent.h"
+#include "creatures/Breeding.h"
+#include "fileformats/genomeFile.h"
+#include "historyManager.h"
 
 #include <algorithm> // swap, transform
 #include <cctype> // toupper/tolower
@@ -1023,6 +1026,35 @@ static int nornsAllowedUnderLimit() {
 	return std::max(0, limit - others);
 }
 
+// Grendels and ettins come before norns (owner, 2026-11-27: "given priority
+// over the next egg being hatched naturally if the population limit has been
+// reached"): an egg of theirs asking for the limit is told there is none, so
+// it hatches even with the world full, and the norn eggs, which still see
+// the limit, wait until there is room. Their eggs: the grendels' egg pile
+// (2 5 4) and the egg machine's (2 5 3), and a norn-style egg (2 5 2) whose
+// genome (OV00, a moniker) is a grendel's or an ettin's (laid by one).
+// (Frankenstein's creature rises whatever the limit: Lightning.h.)
+static bool grendelOrEttinEgg(Agent* egg) {
+	if (!egg || egg->family != 2 || egg->genus != 5)
+		return false;
+	if (egg->species == 3 || egg->species == 4)
+		return true;
+	if (egg->species != 2 || !egg->var[0].hasInt() || egg->var[0].getInt() == 0)
+		return false;
+	std::string name = genomeNameFromInt(egg->var[0].getInt());
+	std::shared_ptr<genomeFile> g;
+	if (world.history->hasMoniker(name))
+		g = world.history->getMoniker(name).genome.lock();
+	if (!g)
+		g = world.loadGenome(name);
+	if (!g)
+		return false;
+	for (auto& gn : g->genes)
+		if (auto* genus = dynamic_cast<creatureGenusGene*>(gn.get()))
+			return genus->genus == 1 || genus->genus == 2;
+	return false;
+}
+
 /**
  EGGL (integer)
  %status stub
@@ -1036,6 +1068,10 @@ void v_EGGL(caosVM* vm) {
 	// player sets one in the Hatchery (owner, 2026-11-13). C2 read this from
 	// its options (16 by default); its egg and kiss scripts compare the
 	// number of norns with it.
+	if (grendelOrEttinEgg(vm->owner.get())) {
+		vm->result.setInt(noPopulationCap);
+		return;
+	}
 	vm->result.setInt(nornsAllowedUnderLimit());
 }
 

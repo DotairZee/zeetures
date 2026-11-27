@@ -68,8 +68,8 @@ std::string genomeNameFromInt(int value);
 // she conceived.
 bool tryConceive(CreatureAgent* a, CreatureAgent* b);
 // a C1 grendel's lone egg (Kinds.h): she conceives on her own, her genome
-// crossed with itself (the usual mutations); false if she can't now
-// (pregnant already, or the world at its population limit)
+// crossed with itself (the usual mutations); false if she is pregnant
+// already (grendels come first at the population limit: EGGL)
 bool layLoneEgg(CreatureAgent* mum);
 
 // Insemination (Breeder's Kit, owner 2026-11-20): she conceives from a

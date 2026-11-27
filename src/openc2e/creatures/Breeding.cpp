@@ -727,7 +727,8 @@ bool layLoneEgg(CreatureAgent* a) {
 	Agent* body = dynamic_cast<Agent*>(a);
 	if (!mum || !body || engine.version != 2 || !mum->isFemale() || !mum->getGenome())
 		return false;
-	if (body->babymoniker != 0 || mum->getPregnant() != 0 || atPopulationLimit())
+	// (whatever the population: grendels come first, as at the egg, EGGL)
+	if (body->babymoniker != 0 || mum->getPregnant() != 0)
 		return false;
 	std::string mon = world.history->findMoniker(mum->getGenome());
 	CrossReport rep;
@@ -784,7 +785,9 @@ bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	// C2's kiss script never mated at the limit, so desire, which company
 	// raises, stayed near its top in 68 of 80 creatures, and they gathered
 	// in crowds of would-be mates kissing to no end.
-	else if (!test && atPopulationLimit())
+	// (not grendels and ettins: they come before norns at the limit, owner,
+	// 2026-11-27; their eggs hatch whatever it, EGGL)
+	else if (!test && atPopulationLimit() && mumBody->genus != 2 && mumBody->genus != 3)
 		why = "the world is at its population limit";
 	else if (!test && mum->getFertile() == 0)
 		why = "she is not fertile";

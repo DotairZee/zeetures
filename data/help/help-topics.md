@@ -612,7 +612,7 @@ Two creatures of one kind and opposite sexes may mate from adolescence on. They 
 - **radiation:** the more either has lately been in, the less;
 - **you:** "All creatures fertile" (File > Preferences > World), the Infertile box in the Breeder's Kit, and the limit on the number of creatures.
 
-When the world is at its limit, a willing pair still mates, but no egg comes of it. Either way, a mating leaves both content: their desire rests for about ten minutes, and they go their own ways.
+When the world is at its limit, a willing pair of norns still mates, but no egg comes of it. Grendels and ettins come first: their eggs hatch even at the limit, and the norns' eggs wait for room. Either way, a mating leaves both content: their desire rests for about ten minutes, and they go their own ways.
 
 ### The child
 
@@ -624,7 +624,7 @@ The child's genome is made from both parents', switching from one to the other a
 - A notice on the status bar follows it: click to see it.
 - "Find eggs in world" in the [[Hatchery]] goes from one to the next.
 - Radiation around an egg, or around its mother, adds mutations, which the child can pass on.
-- At the limit on creatures, eggs wait.
+- At the limit on creatures, norns' eggs wait; grendels' and ettins' come first.
 
 ### Helping
 
