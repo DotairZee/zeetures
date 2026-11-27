@@ -1241,6 +1241,16 @@ void Engine::update() {
 		if (!laid)
 			fmt::print("* TEST LAY: no pregnant creature\n");
 	}
+	// What the hand or a creature holds is set at its grip again each tick,
+	// after the scripts: an object's own script can turn it to another
+	// picture with its grip elsewhere (the toy gun turns to face the way it
+	// is carried), and it was set by the new picture's grip only when its
+	// carrier next moved; until then it hung up to 70 px off (owner's
+	// screencast, 2026-11-27)
+	if (engine.version == 2)
+		for (auto& a : world.agents)
+			if (a && a->carrying && (a.get() == world.hand() || dynamic_cast<CreatureAgent*>(a.get())))
+				a->reattachCarried();
 	if (devenv("OPENC2E_DUMP_AGENT_EVERY_TICK")) {
 		fmt::print("* Tick {}\n", world.tickcount);
 		dumpAgents();

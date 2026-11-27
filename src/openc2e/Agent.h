@@ -95,6 +95,12 @@ class Agent : public std::enable_shared_from_this<Agent> {
 	virtual void adjustCarried(float xoffset, float yoffset);
 
   public:
+	// what it carries set at its grip again (after a script changed the
+	// carried object's picture; Engine::tick)
+	void reattachCarried() {
+		if (carrying && !dying)
+			adjustCarried(0, 0);
+	}
 	int emitca_index;
 	float emitca_amount;
 	std::map<unsigned int, std::shared_ptr<genomeFile> > genome_slots;

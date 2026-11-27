@@ -2088,7 +2088,7 @@ std::pair<int, int> Agent::getCarryPoint() {
 
 	SpritePart* s;
 	if ((s = dynamic_cast<SpritePart*>(part(0))))
-		ourpose = s->getBase() + s->getPose();
+		ourpose = s->getCurrentSprite() - s->getFirstImg(); // (the picture shown, as getCarriedPoint)
 
 	std::pair<int, int> pos(0, 0);
 
@@ -2142,8 +2142,13 @@ std::pair<int, int> Agent::getCarriedPoint() {
 	unsigned int theirpose = 0;
 
 	SpritePart* s;
+	// the picture shown (its number from the first one given to NEW:, as
+	// PUHL counts): a script's BASE takes effect at the next POSE or
+	// animation step, so BASE + POSE can name a picture not yet shown, and
+	// the object was set for the new picture's grip a tick before it showed
+	// (the toy gun jumped for a frame each time it turned; 2026-11-27)
 	if ((s = dynamic_cast<SpritePart*>(part(0))))
-		theirpose = s->getBase() + s->getPose();
+		theirpose = s->getCurrentSprite() - s->getFirstImg();
 
 	std::pair<int, int> pos(0, 0);
 
@@ -2211,7 +2216,7 @@ void Agent::adjustCarried(float unusedxoffset, float unusedyoffset) {
 	// painted bottom is never below its carrier's feet.
 	SpritePart* cs = dynamic_cast<SpritePart*>(carrying->part(0));
 	bool byCreature = engine.version == 2 && cs && dynamic_cast<CreatureAgent*>(this);
-	if (byCreature && !(carrying->family == 2 && carrying->genus == 5) && !carrying->carried_points.count(cs->getBase() + cs->getPose()))
+	if (byCreature && !(carrying->family == 2 && carrying->genus == 5) && !carrying->carried_points.count(cs->getCurrentSprite() - cs->getFirstImg()))
 		carriedpoint = paintedTopMiddle(cs);
 	xoffset -= carriedpoint.first;
 	yoffset -= carriedpoint.second;
