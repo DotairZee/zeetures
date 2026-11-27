@@ -1,0 +1,14 @@
+* Ants' nests back on the ground (openc2e Creatures 2 project, our own
+* script; owner's screencast, 2026-11-27). Run by openc2e after the world
+* loads (Additions folder).
+* any world: it changes objects by kind, not Eden's map, so it runs on every
+* world (other Additions run only on worlds started from Eden.sfc).
+*
+* The nest's timer used to make it hop, and the hops carried it up into the
+* sky (script-patches.txt now leaves the hop out). A nest above the ground
+* rooms' ceilings (y 340) is let fall, and comes to rest on the ground below.
+enum 2 16 1
+  doif post lt 340
+    setv grav 1
+  endi
+next

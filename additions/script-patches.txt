@@ -290,3 +290,15 @@ replace 79 20 37 150 endi scrp 2 25 16 9
 scrp 2 14 2 9
 find setv cls2 2 14 4 setv attr 64 rndv var9
 replace setv cls2 2 14 4 setv attr 64 setv var8 targ rndv var9
+
+* The ants' nest (2 16 1) stays still (owner's screencast, 2026-11-27: a
+* nest under the dome's balcony bouncing up and down). Its timer kicks it
+* upward (VELY -12) every two ticks without setting it falling; a resting
+* object in Creatures 2 does not move for that. Under Zeetures' falling rules
+* (move first, then gravity) each kick was a 12-15 px hop, and on open ground
+* the hops climbed: a nest set on the floor at 1320,520 reached the top of
+* the map within a minute, and a new world's nest was found at y 0. The kick
+* is left out. Nests already stranded in the sky are let fall (ant-nest.cos).
+scrp 2 16 1 9
+find stop endi setv vely -12 addv ov04 1
+replace stop endi addv ov04 1
