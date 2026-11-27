@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 778 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 780 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.45.2](#version-0452): 2 commits, 27 November 2026
 - [0.45.1](#version-0451): 2 commits, 27 November 2026
 - [0.45.0](#version-0450): 25 commits, 26 November 2026 to 27 November 2026
 - [0.44.2](#version-0442): 5 commits, 26 November 2026
@@ -114,6 +115,31 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.45.2
+
+The C1 grendels have a name: grouchy grendels.
+
+### 27 November 2026
+
+#### Version 0.45.2
+
+[`e6f437f6`](https://github.com/DotairZee/zeetures/commit/e6f437f660d288f0eddd15349015ef295bb5e675)
+
+C1 grendels are named grouchy grendels.
+
+#### C1 grendels are named grouchy grendels
+
+[`4a1c9187`](https://github.com/DotairZee/zeetures/commit/4a1c91872340e7ca8d592a1578b102b9d8e91a1a)
+
+Owner: "I want grouchy grendel!" The kind's player-visible name
+(Kinds::C1_KIND_NAME: Health Kit, Help, the breed's name in the
+Breeder's Kit) is now "Grouchy grendel"; in the code they stay C1
+grendels. A pack installed under the old name "C1 grendel" (0.45.0 and
+0.45.1) is still found: its genome is remade and its breed renamed. The
+scent rules use grendel.grouchy (grendel.c1 still works) and the
+grouchy-kind scent. Tested: an old-name install renamed with its genome
+rebuilt, and a fresh install under the new name.
 
 ## Version 0.45.1
 
