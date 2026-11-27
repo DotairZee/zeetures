@@ -752,6 +752,18 @@ void Engine::update() {
 			fmt::print("* TEST CLICK at {},{}: selected genus {} (before: genus {})\n", cx, cy, world.selectedcreature ? (int)world.selectedcreature->genus : -1, before);
 		}
 	}
+	// developer aid: OPENC2E_TEST_HAND_SAYS="N,text": at tick N the hand says
+	// the text as it is (UTF-8 intact: TEST_TYPE types it a byte at a time,
+	// which mangles letters outside plain English)
+	if (static const char* k = devenv("OPENC2E_TEST_HAND_SAYS"); k && version == 2) {
+		static bool said = false;
+		const char* text = strchr(k, ',');
+		if (!said && text && world.tickcount >= (unsigned int)atoi(k)) {
+			said = true;
+			fmt::print("* TEST HAND SAYS at {:.0f},{:.0f}: {}\n", world.hand()->x, world.hand()->y, text + 1);
+			handSays(text + 1);
+		}
+	}
 	// developer aid: OPENC2E_TEST_TYPE="N,words": at tick N the hand goes beside
 	// the selected creature (or the first creature) and the words are typed
 	// through the engine's own key handlers, then Enter: the hand's speech

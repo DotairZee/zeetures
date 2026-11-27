@@ -90,15 +90,63 @@ size_t findWord(const std::string& spaced, const std::string& word) {
 
 std::string trim(const std::string& s);
 
-// where a slot of the list is said in such a line: its word now, or the
-// game's English one (understood whatever the world's words: WordLists)
-size_t findSlot(const std::string& spaced, size_t w) {
-	std::string word = lower(trim(engine.wordlist[w]));
-	size_t at = word.empty() ? std::string::npos : findWord(spaced, word);
+// the list's words said in such a line, each where it is first said, in the
+// order said. A word found only inside a longer one also said is not
+// counted (Vietnamese "buồn ngủ", sleepy, held "buồn", sad, so saying
+// sleepy also said sad; the same for any language whose words share a first
+// syllable): the longest match wins. A word said again on its own still
+// counts.
+std::vector<std::pair<size_t, int>> wordsSaid(const std::string& spaced) {
+	struct Hit {
+		size_t at, len;
+		int w;
+	};
+	std::vector<Hit> hits; // every place each word is found
 	auto& en = WordLists::english();
-	if (at == std::string::npos && w < en.size() && !en[w].empty() && lower(en[w]) != word)
-		at = findWord(spaced, lower(en[w]));
-	return at;
+	for (size_t w = 0; w < engine.wordlist.size(); w++) {
+		std::vector<std::string> forms;
+		std::string word = lower(trim(engine.wordlist[w]));
+		if (!word.empty())
+			forms.push_back(word);
+		if (w < en.size() && !en[w].empty() && lower(en[w]) != word)
+			forms.push_back(lower(en[w]));
+		for (auto& f : forms) {
+			size_t from = 0;
+			while (true) {
+				size_t at = findWord(spaced.substr(from), f);
+				if (at == std::string::npos)
+					break;
+				at += from;
+				// (a whole word is found with the spaces round it: its own
+				// span is inside those)
+				bool spacedForm = spaced.compare(at, 1, " ") == 0;
+				size_t start = spacedForm ? at + 1 : at;
+				hits.push_back({start, f.size(), (int)w});
+				from = start + 1;
+			}
+		}
+	}
+	std::vector<std::pair<size_t, int>> said;
+	std::vector<bool> seen(engine.wordlist.size(), false);
+	std::vector<std::pair<size_t, int>> firsts;
+	for (auto& h : hits) {
+		bool inside = false;
+		for (auto& o : hits)
+			if (o.w != h.w && o.len > h.len && o.at <= h.at && h.at + h.len <= o.at + o.len) {
+				inside = true;
+				break;
+			}
+		if (inside)
+			continue;
+		firsts.push_back({h.at, h.w});
+	}
+	std::sort(firsts.begin(), firsts.end());
+	for (auto& [at, w] : firsts)
+		if (!seen[(size_t)w]) {
+			seen[(size_t)w] = true;
+			said.push_back({at, w});
+		}
+	return said;
 }
 
 std::string trim(const std::string& s) {
@@ -567,12 +615,16 @@ void hearSpeech(Agent* speaker, const std::string& text, int amount) {
 		return;
 	// the words in the text: lower case, punctuation as spaces, each padded
 	std::string t = spacedText(text);
-	std::vector<int> heard;
-	for (size_t w = 0; w < engine.wordlist.size(); w++)
-		if (findSlot(t, w) != std::string::npos)
-			heard.push_back((int)w);
 	// (in the order said: the experimental system's young run neighbours together)
-	std::sort(heard.begin(), heard.end(), [&](int a, int b) { return findSlot(t, a) < findSlot(t, b); });
+	std::vector<int> heard;
+	for (auto& [at, w] : wordsSaid(t))
+		heard.push_back(w);
+	if (watching()) {
+		std::string list;
+		for (int w : heard)
+			list += (list.empty() ? "" : ", ") + trim(engine.wordlist[(size_t)w]);
+		fmt::print("* SAID \"{}\": words {}\n", trim(text), list.empty() ? "none" : list);
+	}
 	hearWords(speaker, heard, amount, t);
 }
 
@@ -1061,11 +1113,7 @@ void answerHand(const std::string& text) {
 		return;
 	std::string t = spacedText(text);
 	// the list's words in it, in the order said
-	std::vector<std::pair<size_t, int>> said;
-	for (size_t w = 0; w < engine.wordlist.size(); w++)
-		if (size_t at = findSlot(t, w); at != std::string::npos)
-			said.push_back({at, (int)w});
-	std::sort(said.begin(), said.end());
+	std::vector<std::pair<size_t, int>> said = wordsSaid(t);
 	// the words of it, and a name it may be teaching: the one word of at
 	// least two letters that is no word of the list, no creature's name and
 	// no everyday filler
