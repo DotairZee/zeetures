@@ -1,0 +1,26 @@
+* The toy gun held by its grip (openc2e Creatures 2 project, our own
+* script; owner's screencast, 2026-11-27: the gun jumped about in the hand
+* and was held well away from its handle). Run by openc2e after the world
+* loads (Additions folder).
+* any world: it changes objects by kind, not Eden's map, so it runs on every
+* world (other Additions run only on worlds started from Eden.sfc).
+*
+* The toy gun (2 13 14, pgun: 26 pictures of 92 x 52; 0-12 facing left,
+* 5-12 firing; 13-25 facing right, 18-25 firing) came with its pickup points
+* one picture out: none for picture 0, and picture 13, the first facing
+* right, held at the left-facing gun's handle. As its idle animation cycles,
+* the point it is held by jumped from one end of the gun to the other. Every
+* picture is now held by the middle of the grip, which is drawn in the same
+* place in all of them, firing or not: x 75-87, y 41-50 facing left, and
+* the mirror image, x 4-16, facing right.
+enum 2 13 14
+  setv var0 0
+  reps 13
+    setv puhl var0 81 45
+    addv var0 1
+  repe
+  reps 13
+    setv puhl var0 10 45
+    addv var0 1
+  repe
+next

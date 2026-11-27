@@ -2183,7 +2183,11 @@ void Agent::adjustCarried(float unusedxoffset, float unusedyoffset) {
 			// frame 6: fingertips at x 2-18, thumb at 28-35, the gap under
 			// the palm at x 23, y 18-25), not from the hand picture's left
 			// edge, at the fingertips (owner, 2026-11-14)
-			if (carrying->family == 2 && carrying->genus == 5) {
+			// The toy gun (2 13 14) is held there too, by its grip (its
+			// pickup points, toy-gun.cos): from the picture's edge, facing
+			// right, it ran back under the palm (owner, 2026-11-27)
+			if ((carrying->family == 2 && carrying->genus == 5) ||
+				(carrying->family == 2 && carrying->genus == 13 && carrying->species == 14)) {
 				xoffset += 23;
 				yoffset += 2;
 			}
