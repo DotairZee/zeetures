@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 776 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 778 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.45.1](#version-0451): 2 commits, 27 November 2026
 - [0.45.0](#version-0450): 25 commits, 26 November 2026 to 27 November 2026
 - [0.44.2](#version-0442): 5 commits, 26 November 2026
 - [0.44.1](#version-0441): 3 commits, 26 November 2026
@@ -113,6 +114,33 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.45.1
+
+Grendels and ettins now shrink a little in old age, as norns do: senile ones are about seven-eighths of their grown size.
+
+### 27 November 2026
+
+#### Version 0.45.1
+
+[`13dfed06`](https://github.com/DotairZee/zeetures/commit/13dfed066cd46bd54a88720a1e3366f02567a095)
+
+Grendels and ettins shrink a little when senile, as norns do.
+
+#### Grendels and ettins shrink a little when senile, as norns do
+
+[`504f7925`](https://github.com/DotairZee/zeetures/commit/504f7925a7e0c026193fe76bdf06706841b55c36)
+
+Owner: grendels and ettins should change size in old age "like norns".
+C2 draws them at three ages at most (baby, child, youth), so they kept
+their youth's size to the end. A grendel or ettin shown old or senile
+from younger pictures now takes on the shrinking of C2's own norn (breed
+h), part by part: its old pictures are its youth's size, its senile ones
+about 87% (thighs 74%). Norns are unchanged: their growth already
+follows breed h, old age included, and breeds with old pictures of their
+own keep them. Line-ups of all stages: senile C1 grendel 69 to 58 px
+tall, bulbous 88 to 74, Boney 98 to 85, worker ettin 76 to 67; Brown
+Mouse and Hebe norns as before.
 
 ## Version 0.45.0
 

@@ -391,6 +391,8 @@ VERSIONS = [
     ("0.44.2", "aef1bccc",
      "Fixes: a save that fails part way is reported instead of ending the game; creatures no longer get stuck past the world's west edge; speech too long for the widest bubble is shortened instead of not shown; in Vietnamese (and any language whose words share a first syllable), saying a longer word is no longer also heard as the shorter one, so \"buồn ngủ\" (sleepy) is not also \"buồn\" (sad)."),    ("0.45.0", "29a18a90",
      "Grendels and ettins each have a role: bulbous grendels prowl by night and take eggs to their lair, Boney grendels roam in packs, scavenge and steal food, and ettins hoard gadgets, carry eggs to the incubator and food to the hungry; norns that fall ill near a grendel learn to keep away. Grendels and ettins breed while a mate of their kind lives, Preferences sets how many the game hatches, and they now come before norns' eggs at the population limit. C1 grendels arrive: RudeDog's C1-in-C2 Grendel, fetched as a third breed pack (its female's body data mended), on a genome made from your own game's grendel: gluttons and thieves, deaf to the hand, fearless loners that keep ettins' company, clean of germs, and mostly barren, now and then laying a lone egg. Things fall, bounce and sink as in Creatures 2; illness can harm organs (an option); worlds played in Creatures 2 open with their creatures, words and families; a census of hatchings, eggs and deaths; children talk themselves through what they do; things are no longer carried below the feet."),
+    ("0.45.1", "13dfed06",
+     "Grendels and ettins now shrink a little in old age, as norns do: senile ones are about seven-eighths of their grown size."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
