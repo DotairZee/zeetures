@@ -753,6 +753,12 @@ void CensusPage() {
 		KitNote("Creature eggs: %d to hatch (the Hatchery's list), %d grendel and ettin egg%s the world made itself, %d empty shell%s.",
 			ownEggs, worldEggs, worldEggs == 1 ? "" : "s", shells, shells == 1 ? "" : "s");
 	}
+	// the world's running totals (historyManager::Census)
+	if (world.history) {
+		auto& c = world.history->censusNow();
+		KitNote("Since this world began: %ld hatched, %ld egg%s laid, %ld death%s, %ld imported, %ld exported; %d alive now.", c.hatched, c.eggs,
+			c.eggs == 1 ? "" : "s", c.deaths, c.deaths == 1 ? "" : "s", c.imported, c.exported, (int)KitLivingCreatures().size());
+	}
 	ImGui::Spacing();
 
 	// everything else, by the game's own kinds of thing

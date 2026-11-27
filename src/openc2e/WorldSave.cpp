@@ -859,6 +859,10 @@ static bool SaveWorldStateUnguarded(const fs::path& worlddir, std::string& error
 	for (auto& [genus, n] : world.history->namecount)
 		out << "names " << genus << " " << n << "\n";
 	out << "names-given " << (world.history->namesgiven ? 1 : 0) << "\n";
+	{
+		auto& c = world.history->censusNow();
+		out << fmt::format("census {} {} {} {} {}\n", c.hatched, c.eggs, c.deaths, c.imported, c.exported);
+	}
 	// the Ecology Kit's pinned rooms
 	for (auto& [room, color] : world.history->ecologypins)
 		out << "ecology-pin " << room << " " << color << "\n";
@@ -1636,6 +1640,10 @@ bool LoadWorldState(const fs::path& worlddir) {
 				namecount[genus] = n;
 		} else if (key == "names-given") {
 			l >> namesgiven;
+		} else if (key == "census") {
+			auto& c = world.history->census;
+			if (l >> c.hatched >> c.eggs >> c.deaths >> c.imported >> c.exported)
+				c.known = true;
 		} else if (key.rfind("disease-", 0) == 0) {
 			Disease::readLine(key, l);
 		} else if (key.rfind("exposure-", 0) == 0) {
@@ -2111,6 +2119,7 @@ bool ExportCreature(std::shared_ptr<Agent> agent, const fs::path& file, std::str
 	if (world.selectedcreature.lock() == agent)
 		world.selectCreature(std::shared_ptr<Agent>());
 	m.wasExported();
+	world.history->censusNow().exported++;
 	agent->kill();
 	fmt::print("* Exported creature {} ({}) to {}\n", m.name.empty() ? mon : m.name, mon, file.string());
 	return true;
@@ -2228,6 +2237,7 @@ bool ImportCreatureExport(const fs::path& file, std::string& message) {
 	monikerData& m = world.history->getMoniker(mon);
 	message = fmt::format("{} came in from {}: a {} {} (the hand holds it; drop it somewhere).", m.name.empty() ? "A creature" : m.name,
 		file.filename().string(), s.female ? "female" : "male", stages[std::clamp(s.stage, 0, 6)]);
+	world.history->censusNow().imported++;
 	fmt::print("* Imported creature: {}\n", message);
 	return true;
 }

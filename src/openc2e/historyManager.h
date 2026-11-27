@@ -217,6 +217,18 @@ class historyManager {
 	// default names ("Norn 0005"): how many of each genus this world has had
 	std::map<int, unsigned int> namecount;
 	bool namesgiven = false; // the creatures there were at load have their numbers
+	// the world's running totals (owner, 2026-11-26: the census the world
+	// file keeps): creatures hatched, eggs laid, deaths, creatures imported
+	// and exported. Fed by the world's scripts (DDE: LIVE at hatching, NEGG
+	// when an egg is laid, DIED at a death) and by File > Import and Export;
+	// alive now is counted when asked. Saved with the world ("census"); a
+	// world saved before it starts from its life log (hatched = births,
+	// eggs = eggs laid, deaths; exports from the records; imports unknown, 0).
+	struct Census {
+		long hatched = 0, eggs = 0, deaths = 0, imported = 0, exported = 0;
+		bool known = false;
+	} census;
+	Census& censusNow(); // (filled from the life log the first time)
 	// the Ecology Kit's pinned rooms (room number, pin color 1-7), kept with the world
 	std::vector<std::pair<unsigned int, int>> ecologypins;
 	std::string nextDefaultName(int genus);

@@ -615,29 +615,41 @@ void c_RMEV(caosVM* vm) {
 
 /**
  DDE: NEGG (command)
- %status stub
+ %status maybe
  %variants c1 c2
+
+ Counts an egg laid (the world's egg-laying scripts) in the world's census (C2: historyManager::Census; shown in the
+ Ecology Kit).
 */
 void c_DDE_NEGG(caosVM*) {
-	// TODO
+	if (world.history)
+		world.history->censusNow().eggs++;
 }
 
 /**
  DDE: DIED (command)
- %status stub
+ %status maybe
  %variants c1 c2
+
+ Counts a death (the creatures' dying scripts) in the world's census (C2: historyManager::Census; shown in the
+ Ecology Kit).
 */
 void c_DDE_DIED(caosVM*) {
-	// TODO
+	if (world.history)
+		world.history->censusNow().deaths++;
 }
 
 /**
  DDE: LIVE (command)
- %status stub
+ %status maybe
  %variants c1 c2
+
+ Counts a creature hatched (the eggs' hatching scripts) in the world's census (C2: historyManager::Census; shown in the
+ Ecology Kit).
 */
 void c_DDE_LIVE(caosVM*) {
-	// TODO
+	if (world.history)
+		world.history->censusNow().hatched++;
 }
 
 

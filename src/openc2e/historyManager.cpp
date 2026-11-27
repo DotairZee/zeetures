@@ -436,3 +436,21 @@ monikerData& historyManager::addRecord(const std::string& mon, unsigned char gen
 	m.initRecord(mon, genus, gender);
 	return m;
 }
+
+historyManager::Census& historyManager::censusNow() {
+	if (!census.known) {
+		census.known = true;
+		for (auto& e : lifelog) {
+			if (e.kind == lifeLogEntry::birth)
+				census.hatched++;
+			else if (e.kind == lifeLogEntry::eggLaid)
+				census.eggs++;
+			else if (e.kind == lifeLogEntry::death)
+				census.deaths++;
+		}
+		for (auto& [mon, m] : monikers)
+			if (m.status == exported)
+				census.exported++;
+	}
+	return census;
+}
