@@ -405,6 +405,8 @@ VERSIONS = [
      "A Frankenstein's creature is likelier to rise while one of the other sex lives. The World Picker grows downward to show its questions, and sits below Save World As in the File menu. Creatures are drawn 15 times a second unless you choose otherwise (File, Preferences, Display)."),
     ("0.47.2", "9981b60f",
      "Ants' nests stay on the ground: they no longer bounce in place or hop away into the sky, and a nest already stranded up there falls back down when the world opens. Every breed's babies and young are drawn with the proportions of Creatures 2's own norns against their grown-up pictures, so the Kai Norns' babies get their big heads."),
+    ("0.47.3", "89efec51",
+     "Zooming in or out while following a creature keeps following it, centred at the new zoom."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

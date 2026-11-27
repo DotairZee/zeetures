@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 798 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 800 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.47.3](#version-0473): 2 commits, 27 November 2026
 - [0.47.2](#version-0472): 3 commits, 27 November 2026
 - [0.47.1](#version-0471): 4 commits, 27 November 2026
 - [0.47.0](#version-0470): 7 commits, 27 November 2026
@@ -120,6 +121,29 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.47.3
+
+Zooming in or out while following a creature keeps following it, centred at the new zoom.
+
+### 27 November 2026
+
+#### Version 0.47.3
+
+[`89efec51`](https://github.com/DotairZee/zeetures/commit/89efec510911b3a32b6506f38c59f27bc9288ed1)
+
+Zooming no longer stops following a creature.
+
+#### Zooming no longer stops following a creature
+
+[`a90f3937`](https://github.com/DotairZee/zeetures/commit/a90f39373ff347e6d04acf3bb3ebab70519e5838)
+
+Changing the zoom (toolbar, menu, mouse wheel) cleared the camera's
+followed creature. Now a followed creature stays followed: the view
+centres on it at the new zoom and the hand keeps its place in the
+window. Without one, zoom keeps the point under the pointer as before.
+Tested with the director: following a creature through zoom 2, 0.75 and
+back to 1, it stayed centred and followed.
 
 ## Version 0.47.2
 
