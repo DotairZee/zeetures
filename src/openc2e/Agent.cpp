@@ -1483,7 +1483,10 @@ void Agent::physicsTickC2() {
 			vely = -(round(vely) - (rest * round(vely)) / 100);
 		else
 			velx = -(round(velx) - (rest * round(velx)) / 100);
-		queueScript(6, 0);
+		// the side it hit as the script's first parameter (_P1_: 0 left,
+		// 1 right, 2 top, 3 floor; the same as WALL), for add-ons that
+		// read it; the world's own scripts don't
+		queueScript(6, 0, (int)lastcollidedirection);
 	}
 	if ((int)deltapt.x == 0 && (int)deltapt.y == 0) {
 		if (!moved_last_tick) {
