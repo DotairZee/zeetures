@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 782 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 784 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.46.1](#version-0461): 2 commits, 27 November 2026
 - [0.46.0](#version-0460): 2 commits, 27 November 2026
 - [0.45.2](#version-0452): 2 commits, 27 November 2026
 - [0.45.1](#version-0451): 2 commits, 27 November 2026
@@ -116,6 +117,33 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.46.1
+
+Help has a topic of its own for the grendel and ettin personalities: what each kind does, how they breed, and what changes when they are switched off.
+
+### 27 November 2026
+
+#### Version 0.46.1
+
+[`cafd4863`](https://github.com/DotairZee/zeetures/commit/cafd48635e1d57a5883f4cf446bcb34ea62fc040)
+
+Help: a topic for the grendel and ettin personalities.
+
+#### Help: a topic for the grendel and ettin personalities
+
+[`3f1cd1f7`](https://github.com/DotairZee/zeetures/commit/3f1cd1f79e28de36b213f3932d431a6edc025deb)
+
+Owner: make sure the new grendel and ettin personalities are in the
+Help topics. They were folded into "Norns, grendels, and ettins"; now
+that topic says what each kind is and where it comes from, and a new
+topic, "Grendel and ettin personalities", has each kind's ways (bulbous,
+Boney, grouchy, ettins), the scents and wariness, breeding and lone
+eggs, the Health Kit, and what changes with the checkbox off. Germs,
+Scents (and the pheromones.txt "personalities" section and grendel.\*
+words), the Health Kit's kind line and Preferences link to it, as does
+the checkbox's tooltip. Checked in a test run: the topic opens from its
+link and reads in full.
 
 ## Version 0.46.0
 
