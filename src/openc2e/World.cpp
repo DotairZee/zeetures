@@ -83,6 +83,13 @@ struct scriptevent {
 	caosValue p[2];
 };
 
+struct DelayedMessage {
+	unsigned int due; // the world tick it is sent
+	AgentRef agent, from;
+	unsigned short scriptno;
+	caosValue p0, p1;
+};
+
 World world;
 
 World::World() {
@@ -218,6 +225,10 @@ void World::freeVM(caosVM* v) {
 	vmpool.push_back(v);
 }
 
+void World::queueDelayedMessage(unsigned int ticks, AgentRef agent, AgentRef from, unsigned short scriptno, caosValue p0, caosValue p1) {
+	delayedmessages.push_back({tickcount + ticks, agent, from, scriptno, p0, p1});
+}
+
 void World::queueScript(unsigned short event, AgentRef agent, AgentRef from, caosValue p0, caosValue p1) {
 	scriptevent e;
 
@@ -296,6 +307,18 @@ void World::tick() {
 			a->tick();
 	}
 	hangphase::clearAgent();
+
+	// MESG WRT+ messages that are due join the queue now (to an object that
+	// is gone: nowhere, as MESG WRIT)
+	for (auto it = delayedmessages.begin(); it != delayedmessages.end();) {
+		if ((int)(tickcount - it->due) < 0) {
+			++it;
+			continue;
+		}
+		if (Agent* a = it->agent.get(); a && !a->isDying())
+			a->queueScript(it->scriptno, it->from.get(), it->p0, it->p1);
+		it = delayedmessages.erase(it);
+	}
 
 	// Process the script queue.
 	PROFILE_SCOPE("world: script queue and the rest");

@@ -1108,23 +1108,29 @@ void c_MESG_WRIT(caosVM* vm) {
 
  Sends a message of type message_id to the given agent, much like MESG WRIT, but with the 
  addition of parameters.  The message will be sent after waiting the number of ticks set 
- in delay (except doesn't, right now.  Delay must be set to zero for now.)
+ in delay. (C2: a delay above 0 holds the message that many ticks;
+ a message held for an object that has gone goes nowhere. Not saved with
+ the world.)
 */
 void c_MESG_WRT(caosVM* vm) {
 	VM_VERIFY_SIZE(5)
-	VM_PARAM_INTEGER_UNUSED(delay)
-	VM_PARAM_VALUE(param_2)
-	VM_PARAM_VALUE(param_1)
+	VM_PARAM_INTEGER(delay)
+	VM_PARAM_VALUE(value2)
+	VM_PARAM_VALUE(value1)
 	VM_PARAM_INTEGER(message_id)
 	VM_PARAM_AGENT(agent)
 	if (!agent && engine.version < 3) // C1/C2: to an object that is gone, nowhere (as MESG WRIT)
 		return;
 	valid_agent(agent);
 
-	// I'm not sure how to handle the 'delay'; is it a background delay, or do we actually block for delay ticks?
-	// TODO: fuzzie can't work out how on earth delays work in c2e, someone fixit
-
-	agent->queueScript(calculateScriptId(message_id), vm->owner.get(), param_1, param_2);
+	// C2: the delay (ticks) holds the message back, the script sending it
+	// carrying on (add-ons pace themselves with it: Borg Doozer, the
+	// Inseminator, BunchaStuff; it was sent at once). TODO: c2e
+	if (delay > 0 && engine.version == 2) {
+		world.queueDelayedMessage((unsigned int)delay, AgentRef(agent), vm->owner, calculateScriptId(message_id), value1, value2);
+		return;
+	}
+	agent->queueScript(calculateScriptId(message_id), vm->owner.get(), value1, value2);
 }
 
 /**

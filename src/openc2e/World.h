@@ -56,6 +56,8 @@ class World {
   protected:
 	class PointerAgent* theHand;
 	std::list<scriptevent> scriptqueue;
+	// MESG WRT+ with a delay: when each is due (world ticks), and to whom
+	std::list<struct DelayedMessage> delayedmessages;
 
 	std::map<int, std::weak_ptr<Agent> > unidmap;
 	std::vector<caosVM*> vmpool;
@@ -127,6 +129,8 @@ class World {
 
 	caosVM* getVM(Agent* owner);
 	void freeVM(caosVM*);
+	// a message for when `ticks` more world ticks have passed (MESG WRT+)
+	void queueDelayedMessage(unsigned int ticks, AgentRef agent, AgentRef from, unsigned short scriptno, caosValue p0, caosValue p1);
 	void queueScript(unsigned short event, AgentRef agent, AgentRef from, caosValue p0, caosValue p1);
 
 	World();
