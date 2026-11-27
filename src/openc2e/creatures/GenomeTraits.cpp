@@ -38,7 +38,11 @@ namespace GenomeTraits {
 namespace {
 
 const int NUM_DRIVES = 17;
-const int DRIVE_CHEM = 148, RAISE_CHEM = 18;
+// C2's chemical numbers: drive d is chemical d + 1 (Pain 1 ... ), its
+// increase d + 18 (Pain Increase 18 ...). These were C3's (drive d at
+// 148 + d), which in C2 are other chemicals: drive emitters were missed and
+// half-lives read from the wrong chemicals
+const int DRIVE_CHEM = 1, RAISE_CHEM = 18;
 // a trait moves this much per unit of log gain (a doubling, ln 2 = 0.69,
 // is about half a step), at most this far either way
 const float K = 0.7f, MAX_SHIFT = 1.5f;
@@ -51,9 +55,11 @@ struct DriveChem {
 
 template <typename F>
 void eachGene(const genomeFile& g, F f) {
-	// (biochemistry genes follow their organ gene in the list: all top level)
+	// (biochemistry genes follow their organ gene in the list: all top level;
+	// genes the genome switches off are not read: the creature never has them)
 	for (auto& gp : g.genes)
-		f(gp.get());
+		if (!gp->header.flags.notexpressed)
+			f(gp.get());
 }
 
 std::array<DriveChem, NUM_DRIVES> readChem(const genomeFile& g) {
@@ -66,6 +72,7 @@ std::array<DriveChem, NUM_DRIVES> readChem(const genomeFile& g) {
 					c[d].stimulus += s->amounts[i];
 			}
 		} else if (auto* e = dynamic_cast<bioEmitterGene*>(gn)) {
+			// (a drive's own chemical, else its increase)
 			int d = (int)e->chemical - DRIVE_CHEM;
 			if (!(d >= 0 && d < NUM_DRIVES))
 				d = (int)e->chemical - RAISE_CHEM;
