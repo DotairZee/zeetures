@@ -125,14 +125,14 @@ bool SkeletalCreature::smoothMovement() {
 // creatures are drawn in a new place, at the game's own speed. 5 is the
 // game's own poses (no smooth movement), 60 every frame drawn; between, the
 // smooth movement held between steps of a world tick (C2: 10 ticks a
-// second). Saved as creature-frame-rate; an older smooth-movement 0 reads as
-// 5, anything else as 60.
+// second). 15 unless chosen (owner, 2026-11-27). Saved as
+// creature-frame-rate; an older smooth-movement 0 reads as 5.
 static const int s_rates[] = {5, 10, 15, 20, 30, 60};
 static int s_rate = -1;
 
 int SkeletalCreature::creatureFrameRate() {
 	if (s_rate < 0) {
-		s_rate = readPlayerSetting("smooth-movement") == "0" ? 5 : 60;
+		s_rate = readPlayerSetting("smooth-movement") == "0" ? 5 : 15;
 		const int r = atoi(readPlayerSetting("creature-frame-rate").c_str());
 		for (int ok : s_rates)
 			if (r == ok)

@@ -53,7 +53,7 @@ Albia is much larger than the window, and it has no ends: go far enough east and
 - **Halo:** shows a halo over the selected creature, so that you can find it in a crowd.
 - **Places:** press + beside Places on the Favourites toolbar to name the spot you are looking at (six at most), and choose it from the list to go back. Camera > Remove Favourite Place takes one off.
 - **Smooth scrolling** (File > Preferences > Display): the view glides to places and creatures instead of jumping.
-- **Creature frame rate** (File > Preferences > Display): how often creatures move on screen. 5 per Second is the original game, jumping from pose to pose. Above that, creatures move smoothly between their poses, drawn 10, 15, 20, 30, or 60 times a second; the world's other objects change about 10 times a second, so a lower rate matches them more closely. Every breed has it.
+- **Creature frame rate** (File > Preferences > Display): how often creatures move on screen. 5 per Second is the original game, jumping from pose to pose. Above that, creatures move smoothly between their poses, drawn 10, 15 (the default), 20, 30, or 60 times a second; the world's other objects change about 10 times a second, so a lower rate matches them more closely. Every breed has it.
 - **Tooltips for objects** (File > Preferences > Display): names whatever the hand rests on.
 
 ## Worlds and saving

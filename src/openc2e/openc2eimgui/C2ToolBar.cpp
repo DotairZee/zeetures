@@ -1640,7 +1640,7 @@ static void DrawPreferences() {
 			}
 			ImGui::SeparatorText("Movement");
 			if (engine.version == 2) {
-				static const std::pair<int, const char*> rates[] = {{5, "5 per second (original)"}, {10, "10 per second (world pace)"}, {15, "15 per second"},
+				static const std::pair<int, const char*> rates[] = {{5, "5 per second (original)"}, {10, "10 per second (world pace)"}, {15, "15 per second (default)"},
 					{20, "20 per second"}, {30, "30 per second"}, {60, "60 per second"}};
 				const int now = SkeletalCreature::creatureFrameRate();
 				std::string shown = fmt::format("{} per second", now);
