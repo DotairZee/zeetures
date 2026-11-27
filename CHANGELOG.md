@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 784 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 791 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.47.0](#version-0470): 7 commits, 27 November 2026
 - [0.46.1](#version-0461): 2 commits, 27 November 2026
 - [0.46.0](#version-0460): 2 commits, 27 November 2026
 - [0.45.2](#version-0452): 2 commits, 27 November 2026
@@ -117,6 +118,120 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.47.0
+
+Kai, Scorpio, Goat and Midsummer Norns are fetched with the other recommended breed packs (a breed whose slot is taken goes to the first two letters of its name: Kai to ka, Goat to go). File, World Picker: open, password-protect, unprotect or delete your worlds (to the Recycle Bin or Trash). The game's grendels and ettins now hatch in male and female pairs, and no more while as many live as you set: the egg machine no longer turns ettin eggs into an extra grendel. The export message wraps instead of running across the screen.
+
+### 27 November 2026
+
+#### Version 0.47.0
+
+[`ab9119c1`](https://github.com/DotairZee/zeetures/commit/ab9119c14a0d225ea8c59bd953606cca7761602f)
+
+Kai, Scorpio, Goat and Midsummer Norns among the recommended breed
+packs; File &gt; World Picker; the game's grendels and ettins in pairs and
+no more than set; export messages wrap.
+
+#### Help: the game's grendels and ettins come in pairs
+
+[`ed1b74c4`](https://github.com/DotairZee/zeetures/commit/ed1b74c4fe7fa047b6e1d2d0a544f54395f73c63)
+
+#### Export and import messages wrap instead of running across the screen
+
+[`dac7e394`](https://github.com/DotairZee/zeetures/commit/dac7e3941c4063d4a280fbfdbc634a7c18758730)
+
+Owner: the export confirmation pop-up was "waaay too wide": its message
+names the whole file path on one line. The Exported and Import messages
+now wrap at 440 pixels.
+
+#### The game's grendels and ettins come in pairs, and no more than set
+
+[`ba9c3dde`](https://github.com/DotairZee/zeetures/commit/ba9c3dde0b52d07ee30b343d0720be2d8f0dca5b)
+
+Owner: a new world set to two grendels and two ettins had three grendels
+and two male ettins; "sex should alternate", and the game should hatch
+no more while that many live.
+
+The extra grendel: the egg machine's hatching script still made an egg
+laid while an ettin lived a Boney (and since 0.45.0 also C1) grendel, a
+rule for grendel eggs the machine never lays (its grendel subroutine is
+never called). With two ettins set, the second ettin egg hatched as a
+grendel two times in three, past the pile's limit. The rule is gone:
+the machine's eggs hatch ettins, and only while fewer ettins live than
+Preferences &gt; World says, checked again at hatching (an egg laid before
+the ettins were back at their number waits).
+
+Sexes: a new CAOS word, HSEX genus (Kinds::hatchSex), gives the sex the
+kind has fewer of alive, or when even the other from the last it gave
+(saved as kinds-lastsex lines). The egg pile's eggs and the machine's
+use it; the gene splicer's eggs still hatch either sex at random.
+
+Tested: a new world set to two of each kept 2 grendels and 2 ettins over
+four and a half minutes, each hatchling the sex its kind was short of.
+
+#### File &gt; World Picker: open, protect, unprotect and delete worlds
+
+[`56705f85`](https://github.com/DotairZee/zeetures/commit/56705f85b947c6fabcd4f9b8961986275880b1e8)
+
+Owner: an option under File "so I can easily switch between worlds,
+delete some, and also choose to password protect or unprotect a world".
+The World Picker window lists every world, marked open now, protected,
+or opens at launch, with:
+- Open: saves this world and restarts into that one (double-click too);
+- Protect / Change Password: a password asked before the world opens
+  (here, in File &gt; Open World, in the start-up chooser, and for a world
+  set to open at launch, which then shows the chooser asking for it),
+  before it is deleted, and before it is taken off or changed. A lock
+  against opening it in Zeetures, not encryption: lock.txt in the world
+  folder holds a random salt and the SHA-256 of salt and password (the
+  updater's SHA-256, now Sha256Text);
+- Unprotect: takes the password off once it is typed;
+- Delete: after asking, the world's folder goes to the Trash (Recycle
+  Bin), save, photos and settings; not the world being played; a world
+  set to open at launch is no longer. moveToTrash (Breeding) is public
+  and moves folders, across drives too.
+
+Developer aids: OPENC2E_OPEN_KITS with "worldpicker" opens it;
+OPENC2E_TEST_WORLD_PICKER="NAME,PASSWORD" protects, checks right and
+wrong passwords, unprotects, protects again and trashes, printing each.
+Tested in a throwaway home: every step as expected, the world in the
+freedesktop Trash with its restore record and lock; the window drawn.
+Help (Worlds and saving) explains it.
+
+#### Midsummer Norns join the recommended breed packs
+
+[`76cc95ee`](https://github.com/DotairZee/zeetures/commit/76cc95ee00d3dba73b15c01e4cab9fda77ae5b14)
+
+Owner: Midsummer Norns (eem.foo 45de) too, labelled "Midsummer". Filed
+in the grendel set, slot w, and moved into the norns' as an import does;
+norn slot w is free in a new game, so it keeps w ("mi", the first two
+letters of its name, if it were taken). Credit as in the Breeder's Kit:
+Martina Hilsenbeck (Nimue) and Amanora, genome by Katira.
+
+Tested in a throwaway home with all seven packs offered from a folder:
+each installed once, Midsummer in w with its label. Help, README and
+the Preferences tooltip name all seven.
+
+#### Kai, Scorpio and Goat Norns join the recommended breed packs
+
+[`096fdf4d`](https://github.com/DotairZee/zeetures/commit/096fdf4df8601a00f7ea203615d7c9c60c6a9354)
+
+Owner: the Kai (eem.foo 64e8), Scorpio (7d35) and Goat (05a2) Norns are
+fetched and imported with the other recommended packs, labelled "Kai",
+"Scorpio" and "Goat" in the breed list; a breed whose slot is taken goes
+to the first two letters of its name. ImportBreedPackQuietly takes that
+slot (clashSlot) for a breed the plan had to move, if it is free, else
+the first free one as before. Kai and Goat are filed in the fourth
+picture set and moved into the norns' as before; their own slots k and
+g are C2's norns, so they go to ka and go; Scorpio keeps s. Credits as
+in the Breeder's Kit (Wafuru, Lis Morris, Mannkind, Angela Allan).
+
+Tested in a throwaway home with all six packs offered from a folder:
+each installed once (Kai ka, Goat go, Scorpio s, with their labels),
+their genomes' appearance genes on those slots, and a second start
+fetched and imported nothing. Help, README and the Preferences tooltip
+name all six.
 
 ## Version 0.46.1
 

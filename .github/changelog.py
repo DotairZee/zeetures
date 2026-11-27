@@ -399,6 +399,8 @@ VERSIONS = [
      "Every world keeps its own preferences, layout included: a new world starts with the defaults, and worlds from before keep the settings they had. A new tick box in Preferences, World, \"Grendel and ettin personalities\", on unless you untick it: unticked, grendels and ettins are as the games made them, and C1 grendels hatch with Creatures 1's own grendel genome (from your Creatures 1, when it is installed beside Creatures 2) in a Creatures 2 body."),
     ("0.46.1", "cafd4863",
      "Help has a topic of its own for the grendel and ettin personalities: what each kind does, how they breed, and what changes when they are switched off."),
+    ("0.47.0", "ab9119c1",
+     "Kai, Scorpio, Goat and Midsummer Norns are fetched with the other recommended breed packs (a breed whose slot is taken goes to the first two letters of its name: Kai to ka, Goat to go). File, World Picker: open, password-protect, unprotect or delete your worlds (to the Recycle Bin or Trash). The game's grendels and ettins now hatch in male and female pairs, and no more while as many live as you set: the egg machine no longer turns ettin eggs into an extra grendel. The export message wraps instead of running across the screen."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
