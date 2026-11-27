@@ -6,6 +6,8 @@
 #include "PathResolver.h"
 #include "GameFolder.h"
 #include "creatures/CreatureSpeech.h"
+#include "creatures/Breeding.h"
+#include "common/Random.h"
 #include "common/Ascii.h"
 #include "common/backend/Backend.h"
 #include "common/backend/BackendEvent.h"
@@ -17,6 +19,8 @@
 #include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_process.h>
 #include <cstdio>
+#include <ctime>
+#include <sstream>
 #include <cstdlib>
 #include <system_error>
 #ifdef __linux__
@@ -57,6 +61,44 @@ std::optional<WorldEntry> FindWorld(const std::string& name) {
 		if (to_ascii_lowercase(w.name) == to_ascii_lowercase(name))
 			return w;
 	return std::nullopt;
+}
+
+std::string Sha256Text(const std::string& text); // Updater.cpp
+
+// lock.txt: "zeetures-world-lock 1 SALT HASH", the hash of salt + password
+static bool readLock(const fs::path& dir, std::string& salt, std::string& hash) {
+	std::ifstream in(dir / "lock.txt");
+	std::string tag;
+	int version = 0;
+	return in >> tag >> version >> salt >> hash && tag == "zeetures-world-lock";
+}
+
+bool WorldProtected(const fs::path& dir) {
+	std::string salt, hash;
+	return readLock(dir, salt, hash);
+}
+
+bool WorldPasswordRight(const fs::path& dir, const std::string& password) {
+	std::string salt, hash;
+	if (!readLock(dir, salt, hash))
+		return true;
+	return Sha256Text(salt + password) == hash;
+}
+
+bool SetWorldPassword(const fs::path& dir, const std::string& password) {
+	std::error_code ec;
+	if (password.empty()) {
+		fs::remove(dir / "lock.txt", ec);
+		return !WorldProtected(dir);
+	}
+	std::string salt;
+	for (int i = 0; i < 16; i++)
+		salt += fmt::format("{:02x}", rand_int32(0, 255) ^ (int)((std::time(nullptr) >> (i % 8)) & 255));
+	{
+		std::ofstream out(dir / "lock.txt", std::ios::binary);
+		out << "zeetures-world-lock 1 " << salt << " " << Sha256Text(salt + password) << "\n";
+	}
+	return WorldPasswordRight(dir, password) && WorldProtected(dir);
 }
 
 // Where Creatures 2 itself keeps the worlds it has played (its own
@@ -377,6 +419,213 @@ void DefaultWorldOpened() {
 		writePlayerSetting("default-world-opening", "");
 }
 
+// ---- File > World Picker -------------------------------------------------------
+
+namespace {
+bool s_picker_open = false;
+std::string s_picker_select;
+} // namespace
+
+void OpenWorldPicker(const std::string& select) {
+	s_picker_open = true;
+	s_picker_select = select;
+}
+
+void DrawWorldPicker() {
+	// developer aids: OPENC2E_OPEN_KITS with "worldpicker" opens it;
+	// OPENC2E_TEST_WORLD_PICKER="NAME,PASSWORD" protects that world, checks
+	// the password right and wrong, unprotects it, then puts it in the Trash
+	// (headless tests in a throwaway home), printing each step
+	static bool s_test_done = false;
+	if (!s_test_done) {
+		s_test_done = true;
+		if (const char* k = devenv("OPENC2E_OPEN_KITS"); k && std::string(k).find("worldpicker") != std::string::npos)
+			OpenWorldPicker();
+		if (const char* t = devenv("OPENC2E_TEST_WORLD_PICKER")) {
+			std::string spec = t;
+			size_t comma = spec.find(',');
+			auto w = FindWorld(spec.substr(0, comma));
+			std::string pw = comma == std::string::npos ? "secret" : spec.substr(comma + 1);
+			if (w) {
+				bool before = WorldProtected(w->dir);
+				fmt::print("* WORLD PICKER test {}: protected {}\n", w->name, before);
+				bool set = SetWorldPassword(w->dir, pw);
+				bool locked = WorldProtected(w->dir);
+				fmt::print("* WORLD PICKER test: protect {}, protected {}\n", set, locked);
+				bool right = WorldPasswordRight(w->dir, pw), wrong = WorldPasswordRight(w->dir, pw + "x");
+				fmt::print("* WORLD PICKER test: right password {}, wrong password {}\n", right, wrong);
+				bool unset = SetWorldPassword(w->dir, "");
+				locked = WorldProtected(w->dir);
+				fmt::print("* WORLD PICKER test: unprotect {}, protected {}\n", unset, locked);
+				SetWorldPassword(w->dir, pw);
+				locked = WorldProtected(w->dir);
+				bool trashed = moveToTrash(w->dir);
+				bool still = (bool)FindWorld(w->name);
+				fmt::print("* WORLD PICKER test: protected again {}; to the Trash {}, still there {}\n", locked, trashed, still);
+			} else
+				fmt::print("* WORLD PICKER test: no world {}\n", spec);
+		}
+	}
+	if (!s_picker_open)
+		return;
+	static int s_selected = -1;
+	static char s_pw[128] = "", s_pw2[128] = "";
+	enum Asking { NONE,
+		OPEN,
+		PROTECT,
+		UNPROTECT,
+		DELETE };
+	static int s_asking = NONE;
+	static std::string s_message;
+	auto worlds = ListWorlds();
+	if (!s_picker_select.empty()) {
+		for (int i = 0; i < (int)worlds.size(); i++)
+			if (worlds[i].name == s_picker_select)
+				s_selected = i;
+		s_picker_select.clear();
+		s_asking = NONE;
+		s_message.clear();
+	}
+	if (s_selected < 0 || s_selected >= (int)worlds.size()) {
+		s_selected = 0;
+		for (int i = 0; i < (int)worlds.size(); i++)
+			if (worlds[i].name == engine.currentworld)
+				s_selected = i;
+	}
+	auto ask = [&](int what) {
+		s_asking = what;
+		s_pw[0] = s_pw2[0] = 0;
+		s_message.clear();
+	};
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui::SetNextWindowPos(ImGuiUtils::GameWindowPos() + ImVec2(io.DisplaySize.x / 2, io.DisplaySize.y / 2), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSize(ImVec2(420, 0), ImGuiCond_Appearing);
+	ImGuiUtils::KeepInGameWindow();
+	if (!ImGui::Begin("World Picker", &s_picker_open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse)) {
+		ImGui::End();
+		return;
+	}
+	ImGui::TextUnformatted("Your worlds:");
+	if (ImGui::BeginListBox("##pickerworlds", ImVec2(-1, 180))) {
+		for (int i = 0; i < (int)worlds.size(); i++) {
+			const auto& w = worlds[i];
+			std::string label = w.name;
+			if (w.name == engine.currentworld)
+				label += "  (open now)";
+			if (WorldProtected(w.dir))
+				label += "  (protected)";
+			if (w.name == DefaultWorld())
+				label += "  (opens at launch)";
+			if (ImGui::Selectable((label + "##" + w.name).c_str(), i == s_selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+				if (i != s_selected)
+					ask(NONE);
+				s_selected = i;
+				if (ImGui::IsMouseDoubleClicked(0) && w.name != engine.currentworld)
+					ask(OPEN);
+			}
+		}
+		ImGui::EndListBox();
+	}
+	if (worlds.empty()) {
+		ImGui::End();
+		return;
+	}
+	const WorldEntry w = worlds[s_selected];
+	const bool current = w.name == engine.currentworld;
+	const bool locked = WorldProtected(w.dir);
+	// Open: at once, or after its password
+	ImGui::BeginDisabled(current);
+	if (ImGui::Button("Open"))
+		ask(OPEN);
+	ImGui::EndDisabled();
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+		ImGui::SetTooltip(current ? "This is the world you are playing." : "Saves this world and opens that one (Zeetures starts again in it).");
+	ImGui::SameLine();
+	if (ImGui::Button(locked ? "Change Password..." : "Protect..."))
+		ask(PROTECT);
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("A password asked before the world opens here, is deleted, or is unprotected.\nIt keeps it from being opened in Zeetures; its files are not encrypted.");
+	ImGui::SameLine();
+	ImGui::BeginDisabled(!locked);
+	if (ImGui::Button("Unprotect..."))
+		ask(UNPROTECT);
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	ImGui::BeginDisabled(current);
+	if (ImGui::Button("Delete..."))
+		ask(DELETE);
+	ImGui::EndDisabled();
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+		ImGui::SetTooltip(current ? "Open another world first to delete this one." : "Puts the world in the Trash, with its save, photos and settings.");
+	if (s_asking == OPEN && !locked) {
+		ImGui::End();
+		RelaunchIntoWorld(w.name);
+		return;
+	}
+	if (s_asking != NONE) {
+		ImGui::Separator();
+		const bool needOld = locked && (s_asking == OPEN || s_asking == UNPROTECT || s_asking == DELETE || s_asking == PROTECT);
+		if (s_asking == DELETE)
+			ImGui::TextWrapped("Delete %s? It goes to the Trash with its save, photos and settings, and can be put back from there.", w.name.c_str());
+		else if (s_asking == PROTECT)
+			ImGui::TextWrapped(locked ? "A new password for %s:" : "A password for %s, asked before it opens, is deleted or is unprotected:", w.name.c_str());
+		else if (s_asking == UNPROTECT)
+			ImGui::TextWrapped("Take the password off %s:", w.name.c_str());
+		else
+			ImGui::TextWrapped("%s is protected.", w.name.c_str());
+		static char s_old[128] = "";
+		if (needOld) {
+			ImGui::SetNextItemWidth(220);
+			ImGui::InputText("Its password##pickerold", s_old, sizeof(s_old), ImGuiInputTextFlags_Password);
+		}
+		if (s_asking == PROTECT) {
+			ImGui::SetNextItemWidth(220);
+			ImGui::InputText("New password", s_pw, sizeof(s_pw), ImGuiInputTextFlags_Password);
+			ImGui::SetNextItemWidth(220);
+			ImGui::InputText("Again", s_pw2, sizeof(s_pw2), ImGuiInputTextFlags_Password);
+		}
+		const char* go = s_asking == OPEN ? "Open it" : s_asking == PROTECT ? "Protect" : s_asking == UNPROTECT ? "Unprotect" : "Delete";
+		if (ImGui::Button(go)) {
+			if (needOld && !WorldPasswordRight(w.dir, s_old))
+				s_message = "That is not its password.";
+			else if (s_asking == PROTECT && (std::string(s_pw).empty() || std::string(s_pw) != s_pw2))
+				s_message = std::string(s_pw).empty() ? "Type a password." : "The two passwords are not the same.";
+			else {
+				int what = s_asking;
+				s_old[0] = 0;
+				ask(NONE);
+				if (what == OPEN) {
+					ImGui::End();
+					RelaunchIntoWorld(w.name);
+					return;
+				}
+				if (what == PROTECT)
+					s_message = SetWorldPassword(w.dir, s_pw) ? w.name + " is protected." : "Couldn't protect it.";
+				else if (what == UNPROTECT)
+					s_message = SetWorldPassword(w.dir, "") ? w.name + " is no longer protected." : "Couldn't unprotect it.";
+				else if (what == DELETE) {
+					if (moveToTrash(w.dir)) {
+						if (DefaultWorld() == w.name)
+							SetDefaultWorld("");
+						s_message = w.name + " is in the Trash.";
+						s_selected = -1;
+					} else
+						s_message = "Couldn't move it to the Trash.";
+				}
+				s_pw[0] = s_pw2[0] = 0;
+			}
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel")) {
+			s_old[0] = 0;
+			ask(NONE);
+		}
+	}
+	if (!s_message.empty())
+		ImGui::TextWrapped("%s", s_message.c_str());
+	ImGui::End();
+}
+
 std::string RunWorldChooser() {
 	std::string chosen;
 	bool quit = false;
@@ -385,12 +634,15 @@ std::string RunWorldChooser() {
 	if (!byDefault.empty() && !FindWorld(byDefault))
 		byDefault.clear(); // (renamed or deleted since)
 	const bool failed = !byDefault.empty() && worldSetting("default-world-opening") == byDefault;
-	if (!byDefault.empty() && !failed) {
+	// (a protected world is never opened without its password: the chooser
+	// asks, with it selected)
+	const bool lockedDefault = !byDefault.empty() && WorldProtected(FindWorld(byDefault)->dir);
+	if (!byDefault.empty() && !failed && !lockedDefault) {
 		setWorldSetting("default-world-opening", byDefault);
 		return byDefault;
 	}
 	DefaultWorldOpened();
-	bool always = failed; // (kept ticked, not lost)
+	bool always = failed || lockedDefault; // (kept ticked, not lost)
 	DrawNewWorldForm(true);
 
 	get_backend()->run([&] {
@@ -410,6 +662,10 @@ std::string RunWorldChooser() {
 		ImGuiUtils::KeepInGameWindow();
 		ImGui::Begin("Choose a World", nullptr, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 		static int s_selected = 0;
+		static char s_password[128] = "";
+		static std::string s_asking = lockedDefault && !failed ? byDefault : std::string(); // the protected world being opened
+		static bool s_wrong = false;
+		static bool s_focus_pw = !s_asking.empty();
 		auto worlds = ListWorlds();
 		if (static bool first = true; first) {
 			first = false;
@@ -429,6 +685,7 @@ std::string RunWorldChooser() {
 						s_selected = i;
 						if (ImGui::IsMouseDoubleClicked(0))
 							chosen = worlds[i].name;
+						s_asking.clear();
 					}
 				}
 				ImGui::EndListBox();
@@ -439,6 +696,34 @@ std::string RunWorldChooser() {
 				ImGui::SetTooltip("Skips this window from now on.\nFile > Open This World at Launch turns it off again.");
 			if (ImGui::Button("Open"))
 				chosen = worlds[s_selected].name;
+			// a protected world: its password first
+			if (!chosen.empty() && WorldProtected(worlds[s_selected].dir) && s_asking != chosen) {
+				s_asking = chosen;
+				s_password[0] = 0;
+				s_wrong = false;
+				s_focus_pw = true;
+				chosen.clear();
+			}
+			if (!s_asking.empty()) {
+				ImGui::Separator();
+				ImGui::TextWrapped("%s is protected. Its password:", s_asking.c_str());
+				if (s_focus_pw) {
+					ImGui::SetKeyboardFocusHere();
+					s_focus_pw = false;
+				}
+				bool enter = ImGui::InputText("##worldpw", s_password, sizeof(s_password), ImGuiInputTextFlags_Password | ImGuiInputTextFlags_EnterReturnsTrue);
+				if (s_wrong)
+					ImGui::TextColored(ImVec4(0.8f, 0.2f, 0.2f, 1.0f), "That is not its password.");
+				if (ImGui::Button("Open it") || enter) {
+					auto w = FindWorld(s_asking);
+					if (w && WorldPasswordRight(w->dir, s_password)) {
+						chosen = s_asking;
+						s_asking.clear();
+					} else
+						s_wrong = true;
+					s_password[0] = 0;
+				}
+			}
 			ImGui::SameLine();
 			if (ImGui::Button("New World..."))
 				creating = true;

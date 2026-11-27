@@ -41,4 +41,18 @@ void SetDefaultWorld(const std::string& name);
 // once the world has loaded
 void DefaultWorldOpened();
 
+// Worlds with a password (owner, 2026-11-27: "choose to password protect or
+// unprotect a world"): asked before the world opens, is deleted, or loses
+// it. A lock against opening it here, not encryption: its files stay as
+// they are. Kept as a salt and a SHA-256 in the world's folder (lock.txt).
+bool WorldProtected(const std::filesystem::path& worlddir);
+bool WorldPasswordRight(const std::filesystem::path& worlddir, const std::string& password);
+bool SetWorldPassword(const std::filesystem::path& worlddir, const std::string& password); // "" unprotects
+
+// File > World Picker: every world, to open, protect, unprotect or delete
+// (to the Trash); called every frame, drawn while open. OpenWorldPicker
+// opens it, a world selected ("" none).
+void OpenWorldPicker(const std::string& select = "");
+void DrawWorldPicker();
+
 } // namespace Openc2eImgui

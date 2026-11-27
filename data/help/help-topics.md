@@ -65,6 +65,11 @@ Each world is its own copy of Albia, with its own creatures and history. When Ze
 - **New World** (File menu, or the first window): name it, and choose what to start from. Eden is a fresh Albia; other worlds you have installed are listed too.
 - **A world you played in Creatures 2** is listed as well, marked "played in Creatures 2" (Zeetures finds the ones the original game saved in its Documents folder). Its creatures come with it: each keeps its name, sex, age and life stage, its parents and birth, its body's chemistry (hunger, illness), and the words it knew. Each starts with a fresh Zeetures mind. A creature that was pregnant comes in without its unborn baby, for now.
 - **Open World** (File menu): switches worlds. The one you leave is saved first.
+- **World Picker** (File menu): every world in one window, marked if it is open now, protected, or opens at launch.
+  - **Open:** switches to it, saving the one you leave.
+  - **Protect:** gives it a password, asked before it opens (here, in the first window, or at launch), before it is deleted, and before the password is taken off or changed. It keeps the world from being opened in Zeetures; its files are not encrypted. Forgotten, the password cannot be found again: keep it somewhere safe.
+  - **Unprotect:** takes the password off, once you have typed it.
+  - **Delete:** puts the world in the Trash (the Recycle Bin on Windows), with its save, photos, and settings, after asking; it can be put back from there. The world you are playing cannot be deleted: open another first.
 - **Always open this world at launch:** a tick box in the first window, and in File > Preferences > World. Zeetures then starts in that world without asking. Untick it to be asked again. If Zeetures closed while opening the world last time, it asks, so that you are never stuck.
 
 ### What is saved

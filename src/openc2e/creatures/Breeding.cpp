@@ -496,8 +496,9 @@ bool loadDepartedGenes(const std::string& moniker, std::shared_ptr<genomeFile>& 
 	return true;
 }
 
-// a file to the system's Trash (recoverable); false if it could not be
-static bool moveToTrash(const fs::path& file) {
+// a file or folder to the system's Trash (recoverable); false if it could
+// not be (the World Picker deletes worlds with it)
+bool moveToTrash(const fs::path& file) {
 	std::error_code ec;
 #if defined(_WIN32)
 	// the Recycle Bin (SHFileOperation with undo)
@@ -546,9 +547,15 @@ static bool moveToTrash(const fs::path& file) {
 	if (ec) {
 		// another drive: copy, then remove
 		std::error_code ec2;
-		fs::copy_file(file, files / name, ec2);
-		if (!ec2)
-			fs::remove(file, ec2);
+		if (fs::is_directory(file, ec2)) {
+			fs::copy(file, files / name, fs::copy_options::recursive, ec2);
+			if (!ec2)
+				fs::remove_all(file, ec2);
+		} else {
+			fs::copy_file(file, files / name, ec2);
+			if (!ec2)
+				fs::remove(file, ec2);
+		}
 		if (ec2) {
 			fs::remove(info / (name + ".trashinfo"), ec2);
 			return false;

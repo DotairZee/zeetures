@@ -376,12 +376,20 @@ static bool s_set_aside_was_paused = false;
 		// worlds (C2 used a separate World Switcher; openc2e restarts into the chosen world)
 		if (ImGui::MenuItem("New World..."))
 			s_open_new_world = true;
+		if (ImGui::MenuItem("World Picker..."))
+			OpenWorldPicker();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Every world: open one, protect it with a password or take it off, or delete it");
 		auto worlds = ListWorlds();
 		if (ImGui::BeginMenu("Open World", worlds.size() > 1 || (worlds.size() == 1 && worlds[0].name != engine.currentworld))) {
 			for (auto& w : worlds) {
 				bool current = w.name == engine.currentworld;
-				if (ImGui::MenuItem(w.name.c_str(), nullptr, current, !current))
-					RelaunchIntoWorld(w.name);
+				if (ImGui::MenuItem(w.name.c_str(), nullptr, current, !current)) {
+					if (WorldProtected(w.dir))
+						OpenWorldPicker(w.name); // (its password first)
+					else
+						RelaunchIntoWorld(w.name);
+				}
 			}
 			ImGui::EndMenu();
 		}
@@ -815,6 +823,7 @@ static bool s_set_aside_was_paused = false;
 	}
 
 	// New World: create one, then restart into it
+	DrawWorldPicker();
 	if (s_open_new_world) {
 		ImGui::OpenPopup("New World");
 		DrawNewWorldForm(true);

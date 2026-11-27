@@ -490,6 +490,13 @@ void drawWindow() {
 
 } // namespace
 
+// a text's SHA-256, in hex (the World Picker's passwords)
+std::string Sha256Text(const std::string& text) {
+	Sha256 s;
+	s.add(reinterpret_cast<const uint8_t*>(text.data()), text.size());
+	return s.hex();
+}
+
 void UpdaterTick() {
 	if (engine.version != 2)
 		return;

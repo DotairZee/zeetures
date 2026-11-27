@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <filesystem>
+
 #include <memory>
 #include <string>
 
@@ -67,6 +69,8 @@ std::string genomeNameFromInt(int value);
 // only. OPENC2E_TEST_CONCEIVE=1 skips the fertility checks. Returns whether
 // she conceived.
 bool tryConceive(CreatureAgent* a, CreatureAgent* b);
+// a file or folder to the system's Trash (Recycle Bin), recoverable
+bool moveToTrash(const std::filesystem::path& file);
 // a C1 grendel's lone egg (Kinds.h): she conceives on her own, her genome
 // crossed with itself (the usual mutations); false if she is pregnant
 // already (grendels come first at the population limit: EGGL)
