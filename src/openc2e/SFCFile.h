@@ -65,6 +65,10 @@ class SFCFile {
 	std::vector<SFCScenery*> scenery;
 	std::vector<SFCScript> scripts;
 	std::vector<SFCMacro*> macros;
+	// C2: what follows the macros (read, not otherwise used yet), and the
+	// background's size from it, when its tile grid checks out (0: none)
+	std::vector<uint8_t> tail;
+	unsigned int mapWidth = 0, mapHeight = 0;
 
 	uint32_t scrollx, scrolly;
 	std::string favplacename;
@@ -82,6 +86,7 @@ class SFCFile {
 	SFCClass* slurpMFC(unsigned int reqtype = 0);
 
 	uint8_t read8();
+	uint8_t peekByte();
 	uint16_t read16();
 	uint32_t read32();
 	int32_t reads32() { return (int32_t)read32(); }
@@ -105,6 +110,7 @@ class SFCClass {
 
 	SFCClass* slurpMFC(unsigned int reqtype = 0) { return parent->slurpMFC(reqtype); }
 	uint8_t read8() { return parent->read8(); }
+	uint8_t peek_byte() { return parent->peekByte(); }
 	uint16_t read16() { return parent->read16(); }
 	uint32_t read32() { return parent->read32(); }
 	signed int reads32() { return parent->reads32(); }

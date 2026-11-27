@@ -88,10 +88,12 @@ void SFCFile::read(Reader* i) {
 	mapdata = (MapData*)slurpMFC(TYPE_MAPDATA);
 	sfccheck(mapdata);
 
-	// TODO: hackery to seek to the next bit
-	while (i->peek_byte() == 0) {
-		(void)read8();
-	}
+	// (C1: the map is followed by zero bytes to skip; C2's rooms take their
+	// own empty slots in MapData::read)
+	if (version() == 0)
+		while (i->peek_byte() == 0) {
+			(void)read8();
+		}
 
 	uint32_t numobjects = read32();
 	for (unsigned int i = 0; i < numobjects; i++) {
@@ -144,6 +146,36 @@ void SFCFile::read(Reader* i) {
 		SFCMacro* o = (SFCMacro*)slurpMFC(TYPE_MACRO);
 		if (o) // TODO: ugh
 			macros.push_back(o);
+	}
+
+	// C2: the rest of the file (Eden's is 300 bytes): the starting eggs'
+	// monikers and a few counters, and the background's tile grid: tile
+	// width and height, columns and rows (144, 150, 58, 16 in Eden: 8352 by
+	// 2400). Read only here; the objects above are untouched by it, so the
+	// numbering saves rely on is the same. The grid is taken only when its
+	// columns times rows is the background's own picture count; otherwise
+	// the map keeps the size it always had.
+	if (version() == 1) {
+		try {
+			while (tail.size() < 65536)
+				tail.push_back(read8());
+		} catch (...) {
+		}
+		auto at = [&](size_t i) {
+			uint32_t v = 0;
+			for (int k = 3; k >= 0; k--)
+				v = (v << 8) | tail[i + k];
+			return v;
+		};
+		unsigned int frames = mapdata && mapdata->background ? mapdata->background->noframes : 0;
+		for (size_t i = 0; frames && i + 16 <= tail.size(); i += 4) {
+			uint32_t tw = at(i), th = at(i + 4), cols = at(i + 8), rows = at(i + 12);
+			if (tw >= 32 && tw <= 1024 && th >= 32 && th <= 1024 && cols >= 1 && rows >= 1 && cols * rows == frames && cols <= 1000 && rows <= 1000) {
+				mapWidth = tw * cols;
+				mapHeight = th * rows;
+				break;
+			}
+		}
 	}
 }
 
@@ -260,6 +292,10 @@ SFCClass* SFCFile::slurpMFC(unsigned int reqtype) {
 	return newobj;
 }
 
+uint8_t SFCFile::peekByte() {
+	return ourStream->peek_byte();
+}
+
 uint8_t SFCFile::read8() {
 	return ::read8(*ourStream);
 }
@@ -343,6 +379,19 @@ void MapData::read() {
 				norooms++; // room got deleted
 		}
 	}
+	// C2 writes 300 room slots, the rooms first, so the slots left over
+	// follow as empty ones (two zero bytes each: Eden has 251 rooms and 49
+	// empty slots). They were skipped by eating every zero byte before the
+	// object count, which also ate that count's first byte whenever the
+	// count was a multiple of 256 (a world with 512 objects read as 2); now
+	// exactly the empty slots are read, and nothing else.
+	if (parent->version() == 1)
+		for (unsigned int slots = norooms; slots < 300 && peek_byte() == 0; slots++) {
+			(void)read8();
+			if (peek_byte() != 0)
+				throw Exception("SFCFile: an empty room slot that is not empty");
+			(void)read8();
+		}
 
 	// read groundlevel data
 	if (parent->version() == 0) {
@@ -872,9 +921,16 @@ void SFCFile::copyToWorld() {
 
 void MapData::copyToWorld() {
 	// create the global metaroom
-	// TODO: hardcoded size bad?
-	unsigned int w = parent->version() == 0 ? 1200 : 2400;
-	MetaRoom* m = world.map->addMetaRoom(0, 0, 8352, w, background->filename, true);
+	// (C2: the size of the file's own tile grid, when it has one that checks
+	// out; else, as always, 8352 by 2400)
+	unsigned int w = parent->version() == 0 ? 1200 : 2400, mw = 8352;
+	if (parent->version() == 1 && parent->mapWidth && parent->mapHeight) {
+		mw = parent->mapWidth;
+		w = parent->mapHeight;
+	}
+	if (parent->version() == 1)
+		fmt::print("* World file: background {} by {}{}\n", mw, w, parent->mapWidth ? " (its tile grid)" : " (no tile grid found: the usual size)");
+	MetaRoom* m = world.map->addMetaRoom(0, 0, mw, w, background->filename, true);
 
 	for (auto src : rooms) {
 		// retrieve our room data
