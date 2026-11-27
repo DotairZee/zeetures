@@ -53,12 +53,17 @@ enum Chem { PAIN = 1, HUNGER = 3, COLD = 4, HOT = 5, TIRED = 6, SLEEPY = 7, LONE
 // game minutes, 200-325 strikes a run). Something strange on one strike in
 // eight, at most once in ten minutes for a creature; a power far more
 // rarely; Frankenstein's creature rarer still (a creature struck within
-// half a minute of dying, one time in four).
+// half a minute of dying, one time in four; three in four while one of the
+// other sex lives).
 const float SURPRISE = 0.12f;
 const unsigned int SURPRISE_AGAIN = 6000;
 const float POWER = 0.03f;
 const unsigned int POWER_TICKS = 36000; // about an hour
 const float FRANKENSTEIN = 0.25f;
+// ... three times in four while one of the other sex lives (owner,
+// 2026-11-27: "the odds of an opposite sex Frankenstein creature to
+// increase if there is one already in-game")
+const float FRANKENSTEIN_MATE = 0.75f;
 const unsigned int STRUCK_AGAIN = 60; // one strike per bolt, however many segments touch it
 const float STATIC_REACH = 50.0f;
 const unsigned int SHOCK_AGAIN = 300;
@@ -491,8 +496,22 @@ void strikeCreature(std::shared_ptr<Agent> agent, oldCreature* c) {
 		// (and the other sex from the last that rose: owner, 2026-11-26)
 		auto* c2 = dynamic_cast<c2Creature*>(c);
 		int sex = c->isFemale() ? 2 : 1;
+		// (one of the other sex alive: likelier)
+		bool otherLives = false;
+		for (auto& a : world.agents) {
+			auto* ca = a && !a->isDying() ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
+			auto* oc = ca ? dynamic_cast<oldCreature*>(ca->getCreature()) : nullptr;
+			if (!oc || !oc->isAlive() || oc->isFemale() == c->isFemale())
+				continue;
+			auto it = s_struck.find(world.history->findMoniker(oc->getGenome()));
+			if (it != s_struck.end() && it->second.frankenstein)
+				otherLives = true;
+		}
+		const float odds = otherLives ? FRANKENSTEIN_MATE : FRANKENSTEIN;
+		if (watching())
+			fmt::print("* LIGHTNING struck the dead {}: rises with odds {:.2f} ({})\n", mon, odds, otherLives ? "Frankenstein's creature of the other sex lives" : "none of the other sex lives");
 		if (strange() && c2 && (c2->kickstartState() == c2Creature::stillDead || c2->kickstartState() == c2Creature::primed) && sex != s_lastRisenSex &&
-			rand_float(0, 1) < FRANKENSTEIN)
+			rand_float(0, 1) < odds)
 			riseAsFrankenstein(agent, c2, mon);
 		return;
 	}
@@ -645,6 +664,31 @@ void tick() {
 			engine.camera->trackAgent(pick, 0, 0, flexible, none);
 			fmt::print("* TEST LIGHTNING {} on {} at {:.0f},{:.0f}\n", t, mon, pick->x, pick->y);
 		}
+	}
+	// (OPENC2E_TEST_LIGHTNING=mateodds: the first grown norn is made
+	// Frankenstein's creature at tick 30; at 40 a grown norn of the other sex
+	// dies and is struck at 45, with the odds for one of the other sex alive)
+	static AgentRef oddsDead;
+	if (test && std::string(test) == "mateodds") {
+		static bool firstFemale = false;
+		if (world.tickcount == 30)
+			for (auto& a : world.agents)
+				if (oldCreature* c = a && a->family == 4 && a->genus == 1 ? creatureOf(a.get()) : nullptr; c && c->isAlive() && (int)c->getStage() >= 3) {
+					markFrankenstein(a, c, monikerOf(c), "");
+					firstFemale = c->isFemale();
+					fmt::print("* TEST LIGHTNING mateodds: {} made Frankenstein's creature ({})\n", monikerOf(c), firstFemale ? "female" : "male");
+					break;
+				}
+		if (world.tickcount == 40)
+			for (auto& a : world.agents)
+				if (oldCreature* c = a && a->family == 4 && a->genus == 1 ? creatureOf(a.get()) : nullptr; c && c->isAlive() && (int)c->getStage() >= 3 && c->isFemale() != firstFemale) {
+					oddsDead = AgentRef(a);
+					c->dieOf("a test");
+					break;
+				}
+		if (world.tickcount == 45 && oddsDead)
+			if (oldCreature* c = creatureOf(oddsDead.get()))
+				strikeCreature(oddsDead.lock(), c);
 	}
 	// (OPENC2E_TEST_LIGHTNING=rise: the first adult norn dies at tick 30 and
 	// rises as Frankenstein's creature at tick 40)
