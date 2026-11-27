@@ -495,7 +495,11 @@ void ImportCreatureTick() {
 		ImGui::OpenPopup("Exported");
 	}
 	if (ImGui::BeginPopupModal("Exported", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		// (wrapped: the message names a whole file path; owner, 2026-11-27:
+		// the pop-up was "waaay too wide")
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 440);
 		ImGui::TextUnformatted(s_message.c_str());
+		ImGui::PopTextWrapPos();
 		if (ImGui::Button("OK"))
 			ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
@@ -512,7 +516,11 @@ void ImportCreatureTick() {
 		ImGui::OpenPopup("Import Creature");
 	}
 	if (ImGui::BeginPopupModal("Import Creature", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+		// (wrapped: the message names a whole file path; owner, 2026-11-27:
+		// the pop-up was "waaay too wide")
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 440);
 		ImGui::TextUnformatted(s_message.c_str());
+		ImGui::PopTextWrapPos();
 		if (ImGui::Button("OK"))
 			ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
