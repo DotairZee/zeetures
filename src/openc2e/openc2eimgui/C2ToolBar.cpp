@@ -248,7 +248,7 @@ static const char* GenusName(int genus) {
 // 0.5.0 (2026-11-14, night): every object kept between launches (stage 3).
 // 0.6.0 (2026-11-14, night): signature scents; the hand takes things from
 // creatures and keeps its mode; the gene lab's east end sealed.
-#define OPENC2E_FORK_VERSION "0.44.1"
+#define OPENC2E_FORK_VERSION "0.44.2"
 
 const char* ZeeturesVersion() {
 	return OPENC2E_FORK_VERSION;
