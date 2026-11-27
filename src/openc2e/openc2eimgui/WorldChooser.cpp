@@ -478,6 +478,14 @@ void DrawWorldPicker() {
 	static int s_asking = NONE;
 	static std::string s_message;
 	auto worlds = ListWorlds();
+	// (developer aid: OPENC2E_TEST_PICKER_ASK=delete or protect opens it
+	// asking that, for snapshots)
+	static bool s_test_ask = true;
+	if (s_test_ask) {
+		s_test_ask = false;
+		if (const char* t = devenv("OPENC2E_TEST_PICKER_ASK"))
+			s_asking = std::string(t) == "protect" ? PROTECT : DELETE;
+	}
 	if (!s_picker_select.empty()) {
 		for (int i = 0; i < (int)worlds.size(); i++)
 			if (worlds[i].name == s_picker_select)
@@ -499,14 +507,17 @@ void DrawWorldPicker() {
 	};
 	ImGuiIO& io = ImGui::GetIO();
 	ImGui::SetNextWindowPos(ImGuiUtils::GameWindowPos() + ImVec2(io.DisplaySize.x / 2, io.DisplaySize.y / 2), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-	ImGui::SetNextWindowSize(ImVec2(420, 0), ImGuiCond_Appearing);
 	ImGuiUtils::KeepInGameWindow();
-	if (!ImGui::Begin("World Picker", &s_picker_open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse)) {
+	// (sized to what it holds, so a question or password box opens below
+	// the buttons instead of out of sight; owner, 2026-11-27)
+	if (!ImGui::Begin("World Picker", &s_picker_open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize)) {
 		ImGui::End();
 		return;
 	}
 	ImGui::TextUnformatted("Your worlds:");
-	if (ImGui::BeginListBox("##pickerworlds", ImVec2(-1, 180))) {
+	const float pickerWidth = 400;
+	ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + pickerWidth);
+	if (ImGui::BeginListBox("##pickerworlds", ImVec2(pickerWidth, 180))) {
 		for (int i = 0; i < (int)worlds.size(); i++) {
 			const auto& w = worlds[i];
 			std::string label = w.name;
@@ -527,6 +538,7 @@ void DrawWorldPicker() {
 		ImGui::EndListBox();
 	}
 	if (worlds.empty()) {
+		ImGui::PopTextWrapPos();
 		ImGui::End();
 		return;
 	}
@@ -558,6 +570,7 @@ void DrawWorldPicker() {
 	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 		ImGui::SetTooltip(current ? "Open another world first to delete this one." : "Puts the world in the Trash, with its save, photos and settings.");
 	if (s_asking == OPEN && !locked) {
+		ImGui::PopTextWrapPos();
 		ImGui::End();
 		RelaunchIntoWorld(w.name);
 		return;
@@ -595,6 +608,7 @@ void DrawWorldPicker() {
 				s_old[0] = 0;
 				ask(NONE);
 				if (what == OPEN) {
+					ImGui::PopTextWrapPos();
 					ImGui::End();
 					RelaunchIntoWorld(w.name);
 					return;
@@ -603,6 +617,8 @@ void DrawWorldPicker() {
 					s_message = SetWorldPassword(w.dir, s_pw) ? w.name + " is protected." : "Couldn't protect it.";
 				else if (what == UNPROTECT)
 					s_message = SetWorldPassword(w.dir, "") ? w.name + " is no longer protected." : "Couldn't unprotect it.";
+				else if (what == DELETE && current)
+					s_message = "Open another world first to delete this one.";
 				else if (what == DELETE) {
 					if (moveToTrash(w.dir)) {
 						if (DefaultWorld() == w.name)
@@ -623,6 +639,7 @@ void DrawWorldPicker() {
 	}
 	if (!s_message.empty())
 		ImGui::TextWrapped("%s", s_message.c_str());
+	ImGui::PopTextWrapPos();
 	ImGui::End();
 }
 

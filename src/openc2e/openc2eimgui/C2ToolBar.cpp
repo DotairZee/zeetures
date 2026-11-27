@@ -376,10 +376,6 @@ static bool s_set_aside_was_paused = false;
 		// worlds (C2 used a separate World Switcher; openc2e restarts into the chosen world)
 		if (ImGui::MenuItem("New World..."))
 			s_open_new_world = true;
-		if (ImGui::MenuItem("World Picker..."))
-			OpenWorldPicker();
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("Every world: open one, protect it with a password or take it off, or delete it");
 		auto worlds = ListWorlds();
 		if (ImGui::BeginMenu("Open World", worlds.size() > 1 || (worlds.size() == 1 && worlds[0].name != engine.currentworld))) {
 			for (auto& w : worlds) {
@@ -402,6 +398,10 @@ static bool s_set_aside_was_paused = false;
 			ImGui::SetTooltip("Saves the whole world now: creatures (bodies and minds), eggs and objects. It also saves itself (Autosave, and when you quit).");
 		if (ImGui::MenuItem("Save World As...", nullptr, false, !engine.currentworlddir.empty()))
 			s_open_save_as = true;
+		if (ImGui::MenuItem("World Picker..."))
+			OpenWorldPicker();
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Every world: open one, protect it with a password or take it off, or delete it");
 		ImGui::Separator();
 		ExportCreatureMenuItem();
 		ImportCreatureMenuItem();
