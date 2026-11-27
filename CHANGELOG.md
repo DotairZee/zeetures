@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 751 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 776 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.45.0](#version-0450): 25 commits, 26 November 2026 to 27 November 2026
 - [0.44.2](#version-0442): 5 commits, 26 November 2026
 - [0.44.1](#version-0441): 3 commits, 26 November 2026
 - [0.44.0](#version-0440): 2 commits, 26 November 2026
@@ -112,6 +113,629 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.45.0
+
+Grendels and ettins each have a role: bulbous grendels prowl by night and take eggs to their lair, Boney grendels roam in packs, scavenge and steal food, and ettins hoard gadgets, carry eggs to the incubator and food to the hungry; norns that fall ill near a grendel learn to keep away. Grendels and ettins breed while a mate of their kind lives, Preferences sets how many the game hatches, and they now come before norns' eggs at the population limit. C1 grendels arrive: RudeDog's C1-in-C2 Grendel, fetched as a third breed pack (its female's body data mended), on a genome made from your own game's grendel: gluttons and thieves, deaf to the hand, fearless loners that keep ettins' company, clean of germs, and mostly barren, now and then laying a lone egg. Things fall, bounce and sink as in Creatures 2; illness can harm organs (an option); worlds played in Creatures 2 open with their creatures, words and families; a census of hatchings, eggs and deaths; children talk themselves through what they do; things are no longer carried below the feet.
+
+### 27 November 2026
+
+#### Version 0.45.0
+
+[`29a18a90`](https://github.com/DotairZee/zeetures/commit/29a18a901b70de1abba8d7c9aab04350b8c098cb)
+
+Grendels and ettins each with a role; C1 grendels, a third kind of
+grendel from a third recommended breed pack; grendels and ettins come
+before norns at the population limit; things fall, bounce and sink, and
+illness can harm organs, as measured in Creatures 2. README: three breed
+packs, about 222 hours.
+
+#### One-age breeds: the age they were drawn at judged by every part, per breed
+
+[`21299790`](https://github.com/DotairZee/zeetures/commit/21299790b103890ba5e8c85a6a420bef12fb4367)
+
+A breed drawn at one age only grows by life stage from the age its
+pictures show, which was judged by the body picture alone and for each
+sex apart. The C1-in-C2 Grendel's male has a chunky body on child-sized
+head and limbs, so he was taken as drawn adult and never grew, while the
+female was taken as a child and grew past him. The drawn age is now
+judged by the mean log size of every part of both sexes against the
+reference grendel at each age, one age for the whole breed: both C1
+sexes are drawn as children and grow alike. Boney grendels still come
+out drawn as adults; ettins (no reference of their own) are unchanged.
+
+#### Grendels and ettins come before norns at the population limit
+
+[`afc6ce54`](https://github.com/DotairZee/zeetures/commit/afc6ce54d58a979d5f93e569a9910a5ce6b9bfcd)
+
+Owner: grendels, ettins and Frankenstein's creatures are given priority
+over the next egg hatched naturally once the population limit has been
+reached. EGGL now tells a grendel or ettin egg there is no limit: the
+grendels' egg pile (2 5 4), the egg machine's eggs (2 5 3), and a
+norn-style egg (2 5 2) whose genome (OV00) has the grendel or ettin
+genus, as their own laid eggs do. They hatch even with the world full,
+and norn eggs, which still see the limit, wait for room. Grendel and
+ettin pairs conceive at the limit, and C1 grendels' lone eggs ignore it.
+Frankenstein's creature never checked the limit when rising. Help says
+so.
+
+Tested with the limit at 1 and one norn alive: an egg carrying a
+grendel genome and the egg machine's ettin both hatched; a norn egg
+beside them waited the whole two minutes.
+
+#### C1 grendels: a third kind of grendel, on a genome of our own
+
+[`89d6550f`](https://github.com/DotairZee/zeetures/commit/89d6550f0c4c8f0dc80c887c029c939466037aeb)
+
+RudeDog's C1-in-C2 Grendel pictures (eem.foo 68a3) become a third
+recommended breed pack. The pack's own genome is a norn's, so Zeetures
+makes the C1 grendel genome on the player's machine from their own
+gren.gen (Kinds::makeC1Genome), written as Genetics/c1gr.gen and remade
+at each start while the breed is installed; the breed record points at
+it and the pack's own genomes are removed. Recipe: appearance genes on
+the pack's slot; hunger cells' emitters at twice the gain and Hunger
+Decrease fading faster (glutton); the hand's speech stimulus emptied and
+the instincts cut to three: hit a norn when angry, eat when hungry, rest
+when sleepy (deaf to the hand, born knowing little); another creature's
+speech angers it (Anger 48); Fear fades at once (fearless); Tiredness
+lingers as a norn's (asleep at night); reproduction stays off; and an
+unexpressed, unmutable marker gene (chemical 191 at 193) by which the
+kind is known and inherited.
+
+Rules (Kinds and friends): not bulbous (no night rule) and none of the
+Kinds fertility or longing; no mate for other grendels; clean: can fall
+ill but never carries germs, and no grendel scent for norns to learn to
+fear (Disease via Kinds::carriesGerms; grendel-kind scent now from
+bulbous and Boney only, c1-kind from C1s); the hand's words go unheard
+and its orders untaken; learning mind gene +1 at birth; scent rules:
+carry food to the lair by day, follow carrion when hungry, avoid crowds
+of norns and other grendels, seek ettins when lonely. Lone eggs: when a
+C1 is first seen grown, two females in three (about one adult in
+three) conceive on their own once, 5-30 minutes later (Breeding::
+layLoneEgg, her genome crossed with itself), then carry and lay as
+other grendels do; saved as kinds-lone lines; OPENC2E_TEST_LONE_EGG
+forces it. Health Kit and Help name the kind ("C1 grendel" until it is
+named) and its eight traits.
+
+The egg pile and egg machine hatch a third each of C2's own, Boney and
+C1 grendels; NEW: GENE falls back to gren without c1gr.gen. They grow
+by life stage as the other grendels do (per-part growth).
+
+Tested in throwaway homes: the pack installed with its three mends and
+c1gr.gen made (547 genes to 535, every change checked); C1 hunger 112
+and 88 against a C2 grendel's 48 over the same minutes, Fear 0 against
+84; a C1 male neither longed for nor counted as a mate; a forced lone
+egg conceived, carried 1,500 steps, laid and hatched a C1 baby; line-ups
+of all seven stages beside C2's grendel.
+
+#### Mend two more faults in the C1-in-C2 Grendel female's body data
+
+[`89a3cbe4`](https://github.com/DotairZee/zeetures/commit/89a3cbe4dbac7c276446fe3d000bf2fd88a20af5)
+
+Checked every line of the female's body data against the male's, picture
+by picture. Besides the left foot (e50b.att), two more files are wrong:
+- right shin (g50b.att): the four facing-left lines (pictures 4-7) are in
+  reverse order, and the first and last also have their points the wrong
+  way round, so her near leg facing left bent at the wrong places;
+- left upper arm (i50b.att): shoulder and elbow swapped in picture 6.
+
+The import mend is now a table of known faults per file, each applied
+only if every listed line matches exactly. Tested by importing the pack
+in a throwaway home: all three files mended, CRLF line ends kept.
+
+#### Mend the C1-in-C2 Grendel female's left foot on import
+
+[`e84f3e18`](https://github.com/DotairZee/zeetures/commit/e84f3e1817161d54b46747058d30b7e1473d0c1d)
+
+The C1-in-C2 Grendel pack (RudeDog) has the female's left foot body data
+(e50b.att) with its two attachment points swapped in pictures 0, 3, 4, and
+7, so in those poses the foot hung from its toes, with the claw at the
+ankle. The male's left foot and her right foot are correct. The Breeder's
+Kit now swaps those four lines back when it installs the pack. The match is
+exact, so no other pack's files are touched.
+
+Developer aids: OPENC2E_LINEUP_POSE sets the pose of the line-up creatures
+once they stand, and OPENC2E_WATCH_CHEMS adds chosen chemicals to the
+OPENC2E_WATCH_ORGANS lines.
+
+#### Preferences: how many grendels and ettins the game hatches at a time
+
+[`a50771c6`](https://github.com/DotairZee/zeetures/commit/a50771c6a05d58b53786c29e38ca808692732648)
+
+Two new fields in Preferences &gt; World, under the population limit:
+"Grendels the game hatches at a time" and "Ettins the game hatches at
+a time", 1 unless set (0-20; player settings game-grendels and
+game-ettins). Grendels and ettins bred in the world count too.
+
+- The grendels' egg pile: an egg goes on to hatch only while the
+  grendels alive and the pile's eggs already hatching are fewer than
+  the number (was: none alive and none hatching).
+- The pile's keeper (C2's own timer, now in grendels.cos with only
+  this changed): starts one of the pile's eggs while fewer grendels live
+  than the number (C2's: none), now and then stops one at exactly that
+  many, and tops the pile up to 20 as before.
+- The egg machine: lays an ettin egg while fewer ettins live than the
+  number (was: none).
+- New CAOS values for these, GRNL and ETNL (C2; Zeetures).
+
+Tested in worlds started from Eden, 15,000 ticks: with the defaults,
+one grendel and one ettin hatched; set to 3 and 2, three grendels and
+two ettins. Help &gt; Norns, grendels, and ettins names the fields.
+
+#### Grendels and ettins each have a role, and breed when a mate lives
+
+[`67c1734d`](https://github.com/DotairZee/zeetures/commit/67c1734d8e94632d87e4098fffa44711b9f18610)
+
+Our own design, built on what their C2 genes already hold
+(reports/Grendel and ettin roles.md; new module creatures/Kinds).
+
+Fertility: C2's grendel and ettin genes switch reproduction and the Sex
+drive off. Now every grendel and ettin is fertile, and longs for a
+mate, only while an adolescent-to-old of the other sex of its kind lives
+somewhere in the world (worked out every 50 ticks). Its longing is its
+own level, rising about one a second to 220, eased after mating as a
+norn's is, and gone without a mate; it is the Sex drive (Boney
+grendels' own genes can add to it). Kinds whose genes cannot carry a
+baby carry it for 1,500 biochemistry steps (5 minutes) and then lay
+through the world's own egg-laying script. Tested in a world started
+from Eden: a bulbous pair mated, she carried, laid, and the baby
+grendel hatched with a temperament from both parents.
+
+Scents (pheromones.txt, "Grendels and ettins"): each kind gives off its
+own (norn-kind, grendel-kind, boney-kind, ettin-kind); the grendels'
+lair (the egg pile's keeper, 2 1 52), the ettins' den (the egg
+machine, 2 1 25) and the incubator (3 7 1) give off theirs; also
+hungry creatures, the dead (carrion) and eggs.
+- A norn that falls ill within five minutes of being near a grendel
+  becomes wary (half of it fading in about an hour) and avoids
+  grendels' scent; ettins always do.
+- Bulbous grendels (C2's): lie up at the lair by day, prowl after norns
+  and bully ettins by night, take eggs to the lair; never sleepy at
+  night (Sleepiness held at 40), drowsy by day.
+- Boney grendels: home to the lair at night, in a pack (they follow
+  each other's scent), after the weak (the care scent) and the dead by
+  day, away from crowds of norns, snatch food home by day; mothers stay
+  near eggs; won over half again as fast, and learn words 1.3 times as
+  fast.
+- Ettins: gadgets and toys to a hoard (each ettin's quiet spot, found
+  where it was at ease for a minute, saved), eggs to the incubator,
+  food to the hungry when not crowded; seek norns when lonely, leave
+  them when crowded; drawn to push and pull machines, the more for
+  boredom.
+- A grendel fond of a norn (affinity 0.4 or more) does not hit it, and
+  defends it as any friend does.
+
+Engine additions for these: pheromones.txt rules for grendel.boney and
+grendel.bulbous; conditions day, night, empty and wary; "smell SCENT
+bring CATEGORY\[,CATEGORY\] \[WEIGHT\] \[drop D\]", which picks up the
+nearest such thing where a trail leads on and the scent is fainter
+than D and puts it down where the scent is at least D; scent laid at
+places by the engine (hoards).
+
+Shown: the Health Kit names a grendel's or ettin's kind, with what it
+means and whether it is fertile now on the pointer (and "Wary of
+grendels" for a wary norn); Help &gt; Norns, grendels, and ettins
+rewritten; pheromones.txt documents the new words.
+
+Tested in a copy of Home (an hour, with a male and a female of each
+kind added: grendels took eggs to the lair, ettins took eggs to the
+incubator and fruit to the hungry, three hoards made, 70 norns became
+wary; at the population limit nobody conceives) and in worlds started
+from Eden (an hour each: ettins carried 22 trinkets toward their
+hoards and left 18 there; the one conception above). Old worlds load
+(check_saves). Developer aids: OPENC2E_WATCH_KINDS (each bring choice,
+fertility and longing every 1,500 steps, wariness, hoards);
+OPENC2E_NO_KINDS turns it all off.
+
+### 26 November 2026
+
+#### Temperament from genes reads C2's chemical numbers
+
+[`fce2ab2b`](https://github.com/DotairZee/zeetures/commit/fce2ab2bb1900d3c897a5028caa1cc1e011fff88)
+
+GenomeTraits, which sets part of a creature's temperament from how its
+genes differ from its species' standard genome, looked for each drive's
+chemical at C3's numbers (148 + drive). In C2 the drive is chemical
+drive + 1 (Pain 1, Hunger 3, ... Stress 17): emitters of a drive's own
+chemical were missed, and drives' half-lives were read from unrelated
+chemicals. It also counted genes the genome switches off ("not
+expressed"), which the creature never has: C2's grendel has its Fear,
+Tiredness and Stress receptors switched off, for example.
+
+Now it reads C2's numbers (drive d at chemical d + 1, its increase at
+d + 18, as before) and skips switched-off genes. Of 137 genomes here
+(OPENC2E_DUMP_GENE_TRAITS), energy moved in 55 (mean -0.07, at most
+-1.13) and reactivity in 57 (mean -0.29, at most -0.77; Stress's
+half-life is now the real one); boldness, sociability and temper did
+not move. The Boney grendels against C2's grendel: fear +6.1 (was
++2.8), as C2's grendel feels none; tiredness clamped as before.
+Temperaments are worked out at each load, so creatures already in a
+world take the corrected values.
+
+#### Things moving across and down move across first, then down, as in C2
+
+[`240ac8b4`](https://github.com/DotairZee/zeetures/commit/240ac8b4de72c5ef811fa3ca23d8a96ad5ddbee3)
+
+Measured in real C2 over DDE (a ball sampled every tick in four runs:
+dropped onto a floor, thrown, dropped into the east sea, and thrown with
+AERO 0): with 1178e0e0's rules every position already matched, but for
+one thing. A ball landing while moving across made its whole step across
+and was stopped only in its fall (6 px across and 24 down: 5013 to 5018
+as it landed); Zeetures moved it diagonally and stopped both at the
+point of contact, 4 px short.
+
+Now, in C2 physics, an object moving both ways is moved across first
+and then up or down, each checked for walls and floors on its own; a
+wall bounce and a floor or ceiling bounce can both happen in one tick,
+each with the speed it had at that moment, each running the collision
+script with its side. Objects moving one way only are unchanged.
+
+All four real runs now match tick for tick across, and two exactly; the
+other two rest 1 px higher than C2 at two places on room 10's sloped
+floor (rounding along the floor line), left as it is. Two 18,000-tick
+runs of a copy of Home: no objects out of the room map, the same few
+found resting in rock at the scaffold as before (2-3 a run), and the
+same objects sunk into floors.
+
+#### Creatures no longer carry things below their feet, into the floor
+
+[`d5f72e80`](https://github.com/DotairZee/zeetures/commit/d5f72e801c1a3bb9780c413e8ac681d7a7d148e1)
+
+Most of the world's objects have no pickup point at all (neither the
+world file nor their scripts set one), and an object with none for the
+picture it shows was held by the top-left corner of its picture's box.
+One with empty rows at the top of its picture, or a tall one, then hung
+below the creature's feet, inside the floor, and was dropped there and
+stuck. In a copy of Home (OPENC2E_WATCH_CARRY), 1,229 of 1,958 samples
+of carried objects had them below their carrier's feet, up to 58 px:
+2 9 27 up to 58 (64 px tall), 2 19 3 57 (18 empty rows on top), 2 9 26
+53, 2 15 7 23, our fruit 2 25 144 21. Objects with a pickup point
+(2 21 1) rode where they should.
+
+Now, carried by a creature, an object with no pickup point for its
+picture is held by the middle of its topmost painted row, as eggs are
+(2026-11-12), and whatever its pickup point, its painted bottom is
+never below the carrier's feet. Same copy afterwards: 3 of 553 samples
+below the feet, at most 18 px (a tick behind a carrier on the move).
+The hand holds things as before.
+
+The carry watch now also lists each carried object's stored pickup
+points.
+
+#### Health Kit: what each lightning condition does, on the pointer
+
+[`31d24e1c`](https://github.com/DotairZee/zeetures/commit/31d24e1c1cef9210af41a430e7b08fa7237a7962)
+
+The Health Kit still names what lightning has done to a creature, and
+nothing until it has, but resting the pointer on a name now shows a
+sentence on what it does and roughly how long it lasts: all twelve
+powers, the strange effects that last a while (Scorched, Glowing,
+Charged, Machine-mad, Quick-footed, Dazed, Wide awake, Giant or Tiny,
+Ageless, Contrary, Fearless, Storm-shy, Backwards, Squeaky or Croaky,
+Parrot, Lightning rod, Magnetic, Dancing), Strange blood, and
+Frankenstein's creature. The names are laid out one by one so each can
+be pointed at, wrapping as before. Help &gt; Time, seasons, and weather
+says so.
+
+#### Illness harms organs at the pace measured in Creatures 2
+
+[`83d8837f`](https://github.com/DotairZee/zeetures/commit/83d8837fa5df4ed9315877cf26825dc280c9d913)
+
+The "Illness can damage organs" option (off unless ticked) now uses a
+scale measured in real C2 instead of a guess. A newborn norn from
+norn.gen, given antigen 250 +30 every 2.3 s for 3 minutes over DDE:
+antigen rose to about 165, its antibody (242) to 255 within 90 s, and
+its four organs with an antigen-250 receptor (injury about 25-28) fell
+from 100% to 35-42% short-term life force, the slowest-clocked to 18%,
+one with less injury held at 80%; none failed, and after the illness
+every organ stayed at its low: the long-term life force never mends.
+
+The same test in Zeetures (seasonal biology off; the same four organs,
+the same 2.5 activations a second, the same injury of 25) with the old
+scale left the organs at 84-90%. Each activation now takes injury/255
+of 1/55 of the organ's full life force (was 1/255): a typical organ
+then ends at 42.5% (real 40.5%), the four average 39% (real 44%), and
+none fails. Tried and dropped: applying it every biochemistry step
+whether the organ runs or not, which failed three of the four.
+
+With this scale natural illness can harm and kill too: in three runs
+of a copy of Home with the option on, a norn ill with a fever and a
+cold at once died of illness; with it off, it lived.
+
+Help and the option's tooltip now say the harm lasts (they said organs
+mend slowly), and that two illnesses at once can kill.
+
+Developer aids: OPENC2E_WATCH_ORGANS=N prints, every N ticks, the
+organs of a creature a script marks with OV97 (life force, injury,
+activations, chemical 250); OPENC2E_WATCH_CARRY=N prints each carried
+object's picture, pickup point and where it hangs against its carrier.
+
+#### World files: the toolbar's typed-text history read as text
+
+[`e002b723`](https://github.com/DotairZee/zeetures/commit/e002b723c6a8fc704550e23e5a21cc95ab670319)
+
+After the favourite places, C2 writes the toolbar's typed-text boxes: a
+count of boxes (2), then each box's count and its strings. The last box
+is the speech history the reader already kept. The first box was read
+as bytes, which worked only while its entries were empty (Eden: none;
+the played test world: three empty ones); a world with real text there
+would have misread. Eden and the played test world still read to their
+exact end, and old worlds load (check_saves).
+
+#### Worlds played in Creatures 2 open with their creatures
+
+[`01cbdb75`](https://github.com/DotairZee/zeetures/commit/01cbdb755ccde975156fa1110f0012db7356e177)
+
+A world file saved by Creatures 2 after play now reads to its end, and
+its creatures come into the Zeetures world with fresh minds.
+
+The world file reader:
+- Steps through every record of a creature (Creature, Body, Limb, CBrain,
+  CBiochemistry, COrgan/CBody, CReceptor, CInstinct, and CGenome in
+  exports) by its layout, so each takes its place in the numbering later
+  references count on. It keeps only plain facts: moniker, parents' and
+  own names, sex, life stage, age, whether dead or pregnant, its body's
+  place, every chemical's level, the 86 word slots, and its birth record.
+- Reads the object base's carrier, object and current-room fields as
+  references (none in Eden, where they were 2 zero bytes); the header's
+  selected creature, a macro's third object, and the tail's event-bar
+  list likewise. After the favourite places, the four bytes are a u16
+  and a count of bytes (0 in Eden, 3 in a played world with three
+  creatures). A room's field after its floor points is a 0/1 flag.
+- A script that was running on a creature at save time is not resumed:
+  the creature comes in anew.
+- Creatures are not numbered as world-file objects (saves keep creatures
+  their own way), but keep their place in the count, so Eden and every
+  saved world number their objects as before.
+
+Each living creature is made from its genome (the Genetics folder
+beside the world file, then the world's own Genetics folder, then the
+usual places), with its C2 moniker where free, its name, parents,
+birth and breeder's notes in its record, its life stage, its chemicals
+(ATP kept at 20 or more), and the words it knew on Zeetures' own scale.
+It is placed where its body was. The selected creature stays selected.
+Dead creatures are left out; an unborn baby is not brought in yet. A
+world that Zeetures has already saved takes its creatures from its save.
+
+The new-world form also lists the worlds Creatures 2 itself saved in
+its Documents folder (under Proton next to the Steam library, or
+Documents on Windows), marked "played in Creatures 2", and creating one
+copies its creatures' genomes into the new world. Zeetures' world
+additions now run in any world whose map is Eden's (same background and
+rooms), not only in a byte-for-byte copy of Eden.sfc, so a played world
+gets the lifts, bridges and lights too.
+
+Tested on a world played in real C2 (an ettin baby, a grendel adult, a
+norn adolescent) and its earlier backup: both read to the exact end
+(the census in the tail checks out); all three creatures came in,
+lived, and the norn knew 29 words; the world saved and reopened with
+the same three, none doubled; all 54 additions ran. Eden still loads
+unchanged, and old worlds load (check_saves). Not tested: a pregnant
+creature, a creature held by the hand or riding, an egg.
+
+Developer aids: OPENC2E_TRACE_SFC lists each record as it is read;
+OPENC2E_TEST_CREATE_WORLD="NAME" (or "NAME|file") makes a world as the
+new-world form does and opens it.
+
+#### Illness can damage organs, as in Creatures 2 (off unless ticked)
+
+[`82b78da7`](https://github.com/DotairZee/zeetures/commit/82b78da7a45e82cfb407debdbb25a92c735fa03b)
+
+A new option, Options &gt; World &gt; Illness, "Illness can damage organs, as
+in Creatures 2", off by default and for every world (player setting
+illness-organ-damage). Ticked, a red line under it says creatures can now
+die of illness. Help &gt; Illness and medicine explains it.
+
+What it does: each C2 organ's "injury to apply" receptors, which were
+worked out and averaged but never used, now take their injury at every
+activation: injury/255 of 1/255 of the organ's full life force from its
+short-term life force, the same scale as the genome's own "damage due to
+zero energy". The organ's repair rate brings it back, the long-term life
+force follows what is not repaired, and an organ at 0 is death, as
+before. The stock genomes wire it from each antigen (248-255, digital
+receptors above 16 with gain 50 or 75), lactate (68, above 128), fat (75,
+above 240) and heavy metals (140, above 16). The scale is our own until
+it is measured in real C2.
+
+Tested in copies of Home: five norns kept at antigen 250 (+30 every 50
+ticks) lost organ health to a balance with repair at about 8% within a
+few minutes, and none died in 12,000 ticks; with it off, no injury.
+Natural illness (eight creatures infected, 116 catches): no injury at
+all, since Zeetures' germs keep antigen under 16.
+
+Developer aids: OPENC2E_ILLNESS_DAMAGE=0/1 whatever the setting;
+OPENC2E_WATCH_INJURY prints each organ's first injury and every tenth
+of long-term life force it loses; OPENC2E_TEST_INFECT=N gives N
+creatures an illness at tick 100.
+
+#### Things fall, bounce and sink as in Creatures 2
+
+[`1178e0e0`](https://github.com/DotairZee/zeetures/commit/1178e0e0e2dac0a0f7cc792dc6a4fc3a23d433e1)
+
+C2 physics now follows the original game's own rules:
+- Order: an object moves by the velocity it has, then (still falling)
+  gravity is added and drag taken off, so the next tick moves by what this
+  one left. Before, gravity came before the move.
+- Drag every tick an object falls, moved or not (before, only on ticks it
+  moved): each axis loses trunc(v \* factor / 100), at least 1 while it
+  moves, so even AERO 0 slows a moving object by 1 a tick.
+- Water: in a water room (by the middle of the object's box) the factor
+  is AERO x 4/3 across and AERO x 2 up and down, each at most 100, and an
+  object entering water from a dry room takes one water step at once. No
+  buoyancy or speed limit. A ball dropped into the east sea slows from 20
+  px a tick to 9 and sinks to the bed; creatures too.
+- Bounces: REST is the share of speed lost, at least 1 while REST is not
+  \0. Hitting a floor or ceiling also takes REST/5 percent off the speed
+  across, the only floor friction there is; nothing slows an object at
+  rest. On a floor, a bounce smaller than gravity's step less REST's share
+  of it ends the fall with both speeds 0.
+Kept: no bounce for an object that did not move the tick before, and the
+stop after two still ticks, so nothing wedged falls forever; the sinking,
+rest-in-rock, floor-line and map-edge fixes are unchanged.
+
+Tested with four balls sampled every tick (dropped onto a floor, thrown,
+dropped into the sea, AERO 0), each following the rules above, and four
+pairs of 18,000-tick runs of a copy of Home against the old physics:
+deaths, drownings (none) and objects sunk into floors the same. The new
+physics shows about one object a run (raindrops and the hopping critter
+2 20 2) found resting in the thin rock between the scaffold's floor and
+the room below (room 61, x 2904-3006), put back at once by the existing
+rock check. Old worlds still load (check_saves).
+
+Also: a sound the game lacks is reported once, not each time (C2's own
+toy 2 13 2 asks for drp1, which never shipped, every time it lands, and
+now that it lands as in C2, its floor script runs and switches it off).
+Developer aids: OPENC2E_OLD_PHYSICS=1 brings back the old physics;
+OPENC2E_C2_BOUNCE_ALWAYS=1 bounces even after a still tick;
+OPENC2E_WATCH_PHYSICS="family genus species" prints those objects'
+position and speed every tick.
+
+#### Mild illness brings fewer sneezes and coughs
+
+[`8b7efb36`](https://github.com/DotairZee/zeetures/commit/8b7efb364c11da6b8abd4691666f9bdd6239ce52)
+
+Sneezing, coughing and shivering now come more often the stronger what
+triggers them (dose-response). Below its typical level (the median when
+it fires in a copy of Home: sneeze 20, cough 3, shiver 12) the pause each
+reflex sets itself runs down at level / typical level of the usual speed,
+down to a tenth, so a mildly ill creature sneezes now and then; at or
+above it, as before, so a badly ill one sneezes as often as ever. The
+other reflexes (flinching, laying an egg, falling asleep, dying) are
+unchanged.
+
+A first version also let strong triggers run the pause down up to three
+times faster: sneezes and coughs doubled in a copy of Home, and every one
+interrupts eating, so that was dropped. In 20-minute copies of Home, the
+capped version: sneezes 20% fewer, nearly all at low levels (31 against
+104), the strong ones about the same; coughs unchanged; shivers 28% fewer.
+Hunger differed between copies with or without it no more than between
+two copies without it (27% and 58% hungry).
+
+OPENC2E_NO_GRADED_REFLEXES turns it off; OPENC2E_WATCH_REFLEXES logs each
+sneeze, cough and shiver with its level.
+
+#### The census counts as C2 does, starts from the world file, and SCOR reads it
+
+[`9155b3b7`](https://github.com/DotairZee/zeetures/commit/9155b3b7b0488d0f8c45dd8957834e482282a47d)
+
+The world's census now keeps C2's six running tallies, each moved by
+exactly 1: hatched (DDE: HATC, which none of the game's own scripts
+call), eggs laid (DDE: NEGG), died (DDE: DIED, which also takes one from
+alive), alive (DDE: LIVE, which the hatching scripts call; File &gt; Import
+adds one, Export takes one), imported and exported. Alive never goes below
+\0. The earlier version counted DDE: LIVE as a hatching.
+
+- SCOR, new: one of the tallies, 0 hatched, 1 eggs laid, 2 died, 3
+  imported, 4 exported, 5 alive; 0 for any other index.
+- DDE: HATC, new.
+- A new world starts from its world file's census (Eden's: all 0), read
+  from the end of the file: the empty list, the event-bar icons (none: any,
+  and the rest is not read), the census (four 32-bit and two 16-bit
+  numbers), the tick count, the starting eggs' monikers, the mutation count,
+  the tile grid, the applet windows and settings. It is taken only when
+  that layout reaches the end of the file exactly; the tile grid now comes
+  from its place in it.
+- Saved with the world ("census", six numbers); a save from before starts
+  from its life log, its records and the creatures restored.
+- The Ecology Kit shows hatchings from the life log (the world's scripts
+  never count them) and the creatures living now.
+
+Checked: Eden's tail reads (8352 by 2400, census all 0); old Home restores
+fully; a ten-minute copy's tallies match its deaths and the creatures it
+saved.
+
+#### MESG WRT+ waits for its delay
+
+[`fe86e687`](https://github.com/DotairZee/zeetures/commit/fe86e687f2fcd2c9c874c6e3379597755bbe77a0)
+
+A message sent with MESG WRT+ and a delay was sent at once. In C2 worlds
+it is now held for that many ticks and then delivered, while the script
+that sent it carries on; a message held for an object that has gone by
+then goes nowhere, as MESG WRIT. A delay of 0 is as before. Add-ons pace
+themselves with it (Borg Doozer, the Inseminator, BunchaStuff); the
+world's own scripts don't use it. Held messages are not saved with the
+world. Tested: a message with a delay of 20 sent at tick 0 arrived at tick
+20.
+
+#### Creatures from Creatures 2 bring their words, parents and birth
+
+[`3322a04f`](https://github.com/DotairZee/zeetures/commit/3322a04fb155052f70e3b917dfbefab51c564acf)
+
+A creature exported from Creatures 2 (.exp) now brings, besides its genome,
+name, sex and life stage:
+- the words it knew, on Zeetures's own scale: known, and the better the
+  better C2 had them (a word C2 had at 240, said right, comes in at 248);
+  a word slot counts only if it holds the game's own word there;
+- its mother and father, by moniker (as an imported .zex keeps them), when
+  they were creatures (breed packs put a starting genome's name there,
+  which is left out), with their names in its notes;
+- when and where it was born, and its breeder's note, in its notes.
+
+The history record was misread when a creature's parents had names, or its
+record had an owner, a note or an address: its sex was lost. The layout was
+read from twelve exports of five breed packs on the Eem Foo archive
+(Scorpio, Marriage Norns, Speciation Norns, Kai Norns, Drozzy); all twelve
+import, with the right sex, and three bring known words (Sting 15, Barbie
+9). Not brought, as no export here shows them for sure: its chemistry, a
+baby it was carrying, and its life stage as stored (still matched from its
+pictures).
+
+Help: How words are learned has "Talking to themselves"; the Ecology Kit's
+Census, its totals; Import Creature, what a C2 creature brings. Research
+behind Zeetures: Talking to themselves (Vygotsky; Winsler).
+
+#### The world keeps a census: hatched, eggs laid, deaths, imports, exports
+
+[`72767402`](https://github.com/DotairZee/zeetures/commit/7276740277f643efbfd61beb641c579592e1dfcd)
+
+Each world now counts creatures hatched, eggs laid, deaths, creatures
+imported and exported, kept with the world. The world's own scripts feed
+it through the commands made for it, which did nothing until now
+(DDE: LIVE at hatching, DDE: NEGG when an egg is laid, DDE: DIED at a
+death); File &gt; Import and Export count the rest. A world saved before
+starts from its life log (births, eggs laid, deaths, and creatures marked
+exported). The Ecology Kit's Census shows the totals and how many are alive
+now.
+
+#### Children talk themselves through what they do
+
+[`a7542f53`](https://github.com/DotairZee/zeetures/commit/a7542f53b9bc959b13ca1748bc6c67717933160b)
+
+Children, and less often adolescents, now and then say to themselves what
+they are setting about as they start it: "push toy...", "get...", in their
+own tongue for words they do not know yet (private speech: Vygotsky,
+Winsler). They grow out of it. Others hear it as any talk; it teaches the
+speaker nothing and is no turn of conversation unless someone answers. In
+a ten-minute copy of Home: 27 such lines among 1,183, all from children
+and adolescents.
+
+#### Collision scripts are told which side was hit
+
+[`29036a5c`](https://github.com/DotairZee/zeetures/commit/29036a5cdeeeb4d44d415fa38604269377f36b6e)
+
+An object's collision script (event 6) now gets the side it hit as its
+first parameter (\_P1_: 0 left, 1 right, 2 top, 3 floor), the same value
+WALL gives, for add-ons that read it. The world's own scripts do not, so
+nothing in them changes.
+
+#### World files: room slots read exactly, and the map size from the file
+
+[`e779fd79`](https://github.com/DotairZee/zeetures/commit/e779fd7938579d366dc54ebfe5c1db88b47c0dfc)
+
+C2 writes 300 room slots, the rooms first and the empty ones after (Eden:
+251 rooms, 49 empty slots). The reader skipped the empty ones by eating
+every zero byte before the object count, which also ate that count's first
+byte whenever the count was a multiple of 256 (a world with 512 objects
+read as 2). Now exactly the empty slots are read and nothing more. The
+objects, and the numbering saves match them by, are unchanged: the save
+checker restores the old Home with every creature, egg and kept object.
+
+The rest of the file after the macros is now read too (Eden's is 300
+bytes), and the background's size is taken from its tile grid (tile width
+and height, columns and rows) when the columns times the rows is the
+background's own picture count; otherwise the map keeps 8352 by 2400.
+Eden's grid gives the same 8352 by 2400; a world file with another size of
+background now opens at that size.
 
 ## Version 0.44.2
 
