@@ -403,6 +403,7 @@ bool ImportExportedCreature(const fs::path& path, std::string& message) {
 		path.filename().string(), female ? "female" : "male", stages[std::clamp(stage, 0, 6)],
 		known ? fmt::format(" who knows {} word{}", known, known == 1 ? "" : "s") : "");
 	world.history->censusNow().imported++;
+	world.history->censusNow().alive++;
 	fmt::print("* Imported creature: {}\n", message);
 	return true;
 }

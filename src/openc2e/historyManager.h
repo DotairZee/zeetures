@@ -217,15 +217,17 @@ class historyManager {
 	// default names ("Norn 0005"): how many of each genus this world has had
 	std::map<int, unsigned int> namecount;
 	bool namesgiven = false; // the creatures there were at load have their numbers
-	// the world's running totals (owner, 2026-11-26: the census the world
-	// file keeps): creatures hatched, eggs laid, deaths, creatures imported
-	// and exported. Fed by the world's scripts (DDE: LIVE at hatching, NEGG
-	// when an egg is laid, DIED at a death) and by File > Import and Export;
-	// alive now is counted when asked. Saved with the world ("census"); a
-	// world saved before it starts from its life log (hatched = births,
-	// eggs = eggs laid, deaths; exports from the records; imports unknown, 0).
+	// the world's census (owner, 2026-11-26), six running tallies as C2
+	// keeps them, each moved by exactly 1: hatched (DDE: HATC), eggs laid
+	// (DDE: NEGG), died (DDE: DIED, which also takes one from alive), alive
+	// (DDE: LIVE adds one; the world's hatching scripts call it), imported
+	// and exported (File > Import and Export, which also add one to alive
+	// and take one from it). Alive never goes below 0. Scripts read them with
+	// SCOR. A new world starts from its world file's census (Eden's: all 0);
+	// a world saved before Zeetures kept it starts from its life log (eggs
+	// laid, deaths), its records (exported) and the creatures alive.
 	struct Census {
-		long hatched = 0, eggs = 0, deaths = 0, imported = 0, exported = 0;
+		long hatched = 0, eggs = 0, deaths = 0, imported = 0, exported = 0, alive = 0;
 		bool known = false;
 	} census;
 	Census& censusNow(); // (filled from the life log the first time)

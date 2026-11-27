@@ -439,11 +439,10 @@ monikerData& historyManager::addRecord(const std::string& mon, unsigned char gen
 
 historyManager::Census& historyManager::censusNow() {
 	if (!census.known) {
+		census = Census();
 		census.known = true;
 		for (auto& e : lifelog) {
-			if (e.kind == lifeLogEntry::birth)
-				census.hatched++;
-			else if (e.kind == lifeLogEntry::eggLaid)
+			if (e.kind == lifeLogEntry::eggLaid)
 				census.eggs++;
 			else if (e.kind == lifeLogEntry::death)
 				census.deaths++;
@@ -451,6 +450,10 @@ historyManager::Census& historyManager::censusNow() {
 		for (auto& [mon, m] : monikers)
 			if (m.status == exported)
 				census.exported++;
+		for (auto& a : world.agents)
+			if (auto* ca = a && !a->isDying() ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr)
+				if (ca->getCreature() && ca->getCreature()->isAlive())
+					census.alive++;
 	}
 	return census;
 }

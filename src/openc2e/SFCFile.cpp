@@ -20,6 +20,7 @@
 #include "PixelText.h"
 #include "WordLists.h"
 #include "SFCFile.h"
+#include "historyManager.h"
 
 #include "Agent.h"
 #include "Blackboard.h"
@@ -148,33 +149,81 @@ void SFCFile::read(Reader* i) {
 			macros.push_back(o);
 	}
 
-	// C2: the rest of the file (Eden's is 300 bytes): the starting eggs'
-	// monikers and a few counters, and the background's tile grid: tile
-	// width and height, columns and rows (144, 150, 58, 16 in Eden: 8352 by
-	// 2400). Read only here; the objects above are untouched by it, so the
-	// numbering saves rely on is the same. The grid is taken only when its
-	// columns times rows is the background's own picture count; otherwise
-	// the map keeps the size it always had.
+	// C2: the rest of the file (Eden's is 300 bytes, all of it read here,
+	// none of it touching the objects above, so the numbering saves rely on
+	// is the same), little-endian:
+	//   int32 0 (an empty list)
+	//   int32 event-bar icons, then the icons (Eden: none; any, and the rest
+	//         is not read: their layout is not known)
+	//   int32 hatched, eggs laid, died, alive now; int16 imported, exported
+	//   int32 the world's tick count
+	//   int32 count (up to 16), then that many monikers (the starting eggs)
+	//   int32 genome mutations so far; int32 (the selected creature)
+	//   int32 tile width, tile height, columns, rows (Eden: 144, 150, 58, 16)
+	//   20 applet windows (two int32 each), then four int32 settings
+	// The tile grid gives the background's size, taken only when columns
+	// times rows is the background's own picture count. The census starts a
+	// new world's (historyManager::Census). All of it is taken only when the
+	// layout holds to the file's end; otherwise the map keeps 8352 by 2400
+	// and the census starts at 0.
 	if (version() == 1) {
 		try {
 			while (tail.size() < 65536)
 				tail.push_back(read8());
 		} catch (...) {
 		}
-		auto at = [&](size_t i) {
-			uint32_t v = 0;
-			for (int k = 3; k >= 0; k--)
-				v = (v << 8) | tail[i + k];
+		size_t p = 0;
+		bool ok = true;
+		auto i32 = [&]() -> uint32_t {
+			if (p + 4 > tail.size()) {
+				ok = false;
+				return 0;
+			}
+			uint32_t v = tail[p] | (tail[p + 1] << 8) | (tail[p + 2] << 16) | ((uint32_t)tail[p + 3] << 24);
+			p += 4;
 			return v;
 		};
-		unsigned int frames = mapdata && mapdata->background ? mapdata->background->noframes : 0;
-		for (size_t i = 0; frames && i + 16 <= tail.size(); i += 4) {
-			uint32_t tw = at(i), th = at(i + 4), cols = at(i + 8), rows = at(i + 12);
-			if (tw >= 32 && tw <= 1024 && th >= 32 && th <= 1024 && cols >= 1 && rows >= 1 && cols * rows == frames && cols <= 1000 && rows <= 1000) {
-				mapWidth = tw * cols;
-				mapHeight = th * rows;
-				break;
+		auto i16 = [&]() -> uint16_t {
+			if (p + 2 > tail.size()) {
+				ok = false;
+				return 0;
 			}
+			uint16_t v = tail[p] | (tail[p + 1] << 8);
+			p += 2;
+			return v;
+		};
+		i32(); // the empty list
+		uint32_t icons = i32();
+		long c[6];
+		for (int k = 0; k < 4; k++)
+			c[k] = (int32_t)i32();
+		c[4] = i16();
+		c[5] = i16();
+		i32(); // tick count
+		uint32_t monikers = i32();
+		if (icons != 0 || monikers > 16)
+			ok = false;
+		else
+			p += 4 * monikers;
+		i32(); // mutations
+		i32(); // the selected creature
+		uint32_t tw = i32(), th = i32(), cols = i32(), rows = i32();
+		p += 20 * 8 + 4 * 4; // the applet windows and settings
+		if (p != tail.size())
+			ok = false;
+		unsigned int frames = mapdata && mapdata->background ? mapdata->background->noframes : 0;
+		if (ok && tw >= 32 && tw <= 1024 && th >= 32 && th <= 1024 && cols >= 1 && rows >= 1 && cols <= 1000 && rows <= 1000 && cols * rows == frames) {
+			mapWidth = tw * cols;
+			mapHeight = th * rows;
+		}
+		if (ok) {
+			hasCensus = true;
+			census[0] = c[0]; // hatched
+			census[1] = c[1]; // eggs laid
+			census[2] = c[2]; // died
+			census[3] = c[3]; // alive
+			census[4] = c[4]; // imported
+			census[5] = c[5]; // exported
 		}
 	}
 }
@@ -849,6 +898,22 @@ void SFCScript::read(SFCFile* f) {
 void SFCFile::copyToWorld() {
 	// add the map data
 	mapdata->copyToWorld();
+
+	// the world file's census starts the world's (a saved world's own, read
+	// after, takes over)
+	if (hasCensus && world.history) {
+		auto& c = world.history->census;
+		c = historyManager::Census();
+		c.hatched = census[0];
+		c.eggs = census[1];
+		c.deaths = census[2];
+		c.alive = census[3];
+		c.imported = census[4];
+		c.exported = census[5];
+		c.known = true;
+		fmt::print("* World file census: {} hatched, {} eggs laid, {} died, {} alive, {} imported, {} exported\n", c.hatched, c.eggs, c.deaths, c.alive,
+			c.imported, c.exported);
+	}
 
 	// install scripts
 	for (auto& script : scripts) {

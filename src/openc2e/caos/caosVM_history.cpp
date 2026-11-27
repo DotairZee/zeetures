@@ -618,8 +618,8 @@ void c_RMEV(caosVM* vm) {
  %status maybe
  %variants c1 c2
 
- Counts an egg laid (the world's egg-laying scripts) in the world's census (C2: historyManager::Census; shown in the
- Ecology Kit).
+ Counts an egg laid (the world's egg-laying scripts) in the world's census
+ (C2: historyManager::Census; read with SCOR).
 */
 void c_DDE_NEGG(caosVM*) {
 	if (world.history)
@@ -631,12 +631,15 @@ void c_DDE_NEGG(caosVM*) {
  %status maybe
  %variants c1 c2
 
- Counts a death (the creatures' dying scripts) in the world's census (C2: historyManager::Census; shown in the
- Ecology Kit).
+ Counts a death (the creatures' dying scripts) in the world's census, and
+ one fewer alive (C2: historyManager::Census; read with SCOR).
 */
 void c_DDE_DIED(caosVM*) {
-	if (world.history)
-		world.history->censusNow().deaths++;
+	if (world.history) {
+		auto& c = world.history->censusNow();
+		c.deaths++;
+		c.alive = std::max(0L, c.alive - 1);
+	}
 }
 
 /**
@@ -644,12 +647,46 @@ void c_DDE_DIED(caosVM*) {
  %status maybe
  %variants c1 c2
 
- Counts a creature hatched (the eggs' hatching scripts) in the world's census (C2: historyManager::Census; shown in the
- Ecology Kit).
+ Counts one more alive in the world's census (the eggs' hatching scripts
+ call it; C2: historyManager::Census; read with SCOR).
 */
 void c_DDE_LIVE(caosVM*) {
 	if (world.history)
+		world.history->censusNow().alive++;
+}
+
+/**
+ DDE: HATC (command)
+ %status maybe
+ %variants c1 c2
+
+ Counts a creature hatched in the world's census (C2: historyManager::Census;
+ read with SCOR). (No script of the game's own calls it.)
+*/
+void c_DDE_HATC(caosVM*) {
+	if (world.history)
 		world.history->censusNow().hatched++;
+}
+
+/**
+ SCOR (integer) index (integer)
+ %status maybe
+ %variants c2
+
+ One of the world's census tallies: 0 hatched, 1 eggs laid, 2 died, 3
+ imported, 4 exported, 5 alive now; 0 for any other index.
+*/
+void v_SCOR(caosVM* vm) {
+	VM_VERIFY_SIZE(1)
+	VM_PARAM_INTEGER(index)
+	long v = 0;
+	if (world.history) {
+		auto& c = world.history->censusNow();
+		const long all[6] = {c.hatched, c.eggs, c.deaths, c.imported, c.exported, c.alive};
+		if (index >= 0 && index < 6)
+			v = all[index];
+	}
+	vm->result.setInt((int)v);
 }
 
 

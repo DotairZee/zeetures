@@ -861,7 +861,7 @@ static bool SaveWorldStateUnguarded(const fs::path& worlddir, std::string& error
 	out << "names-given " << (world.history->namesgiven ? 1 : 0) << "\n";
 	{
 		auto& c = world.history->censusNow();
-		out << fmt::format("census {} {} {} {} {}\n", c.hatched, c.eggs, c.deaths, c.imported, c.exported);
+		out << fmt::format("census {} {} {} {} {} {}\n", c.hatched, c.eggs, c.deaths, c.imported, c.exported, c.alive);
 	}
 	// the Ecology Kit's pinned rooms
 	for (auto& [room, color] : world.history->ecologypins)
@@ -1575,6 +1575,7 @@ bool LoadWorldState(const fs::path& worlddir) {
 	bool hasWorldObjects = false;
 	std::vector<std::string> injectedCobs;
 	SavedInjected* io = nullptr;
+	bool sawCensus = false, censusNoAlive = false; // (a save before the census: it starts from the life log)
 	while (std::getline(in, line)) {
 		dropCR(line);
 		std::istringstream l(line);
@@ -1642,8 +1643,14 @@ bool LoadWorldState(const fs::path& worlddir) {
 			l >> namesgiven;
 		} else if (key == "census") {
 			auto& c = world.history->census;
-			if (l >> c.hatched >> c.eggs >> c.deaths >> c.imported >> c.exported)
+			if (l >> c.hatched >> c.eggs >> c.deaths >> c.imported >> c.exported) {
 				c.known = true;
+				sawCensus = true;
+				if (!(l >> c.alive)) {
+					c.alive = 0; // (filled below from the creatures restored)
+					censusNoAlive = true;
+				}
+			}
 		} else if (key.rfind("disease-", 0) == 0) {
 			Disease::readLine(key, l);
 		} else if (key.rfind("exposure-", 0) == 0) {
@@ -1826,6 +1833,13 @@ bool LoadWorldState(const fs::path& worlddir) {
 		restoreWorldObjects(worldObjects, wmatched, wremoved, wmade);
 	s_view = {camx >= 0 && camy >= 0, camx, camy, camzoom};
 	ApplySavedView(); // and again once the world has finished starting
+	// the census: a save from before it keeps none, so it starts from the
+	// life log and the creatures now restored; one saved without its alive
+	// tally takes the creatures restored
+	if (!sawCensus)
+		world.history->census.known = false;
+	else if (censusNoAlive)
+		world.history->census.alive = (long)creatures.size();
 	int nkept = (int)std::count_if(eggs.begin(), eggs.end(), [](const SavedEgg& e) { return e.kept; });
 	fmt::print("* Restored saved world: {} creatures, {} eggs, {} kept objects, {} injected objects ({} add-ons)\n", creatures.size(), (int)eggs.size() - nkept, nkept,
 		injected.size(), world.injectedCobs.size());
@@ -2119,7 +2133,11 @@ bool ExportCreature(std::shared_ptr<Agent> agent, const fs::path& file, std::str
 	if (world.selectedcreature.lock() == agent)
 		world.selectCreature(std::shared_ptr<Agent>());
 	m.wasExported();
-	world.history->censusNow().exported++;
+	{
+		auto& c = world.history->censusNow();
+		c.exported++;
+		c.alive = std::max(0L, c.alive - 1);
+	}
 	agent->kill();
 	fmt::print("* Exported creature {} ({}) to {}\n", m.name.empty() ? mon : m.name, mon, file.string());
 	return true;
@@ -2238,6 +2256,7 @@ bool ImportCreatureExport(const fs::path& file, std::string& message) {
 	message = fmt::format("{} came in from {}: a {} {} (the hand holds it; drop it somewhere).", m.name.empty() ? "A creature" : m.name,
 		file.filename().string(), s.female ? "female" : "male", stages[std::clamp(s.stage, 0, 6)]);
 	world.history->censusNow().imported++;
+	world.history->censusNow().alive++;
 	fmt::print("* Imported creature: {}\n", message);
 	return true;
 }

@@ -69,6 +69,10 @@ class SFCFile {
 	// background's size from it, when its tile grid checks out (0: none)
 	std::vector<uint8_t> tail;
 	unsigned int mapWidth = 0, mapHeight = 0;
+	// its census (hatched, eggs laid, died, alive, imported, exported), when
+	// the tail reads cleanly
+	bool hasCensus = false;
+	long census[6] = {};
 
 	uint32_t scrollx, scrolly;
 	std::string favplacename;
