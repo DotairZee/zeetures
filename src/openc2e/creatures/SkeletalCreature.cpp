@@ -412,12 +412,36 @@ static int oneSetDrawnAge(int species, bool female, int breed) {
 		return -1;
 	int drawn = -1;
 	if (g.species == species) {
+		// by every part of both sexes against the reference at each age (the
+		// mean of the log size ratios), one age for the whole breed: judged
+		// by the body alone, the C1-in-C2 Grendel's male (a chunky body on
+		// child-sized head and limbs) was taken as drawn adult and never
+		// grew, while its female was taken as a child and grew past him
+		// (owner, 2026-11-27). Boney grendels come out adult either way.
+		static std::map<std::pair<int, int>, int> cache;
+		if (auto it = cache.find({species, breed}); it != cache.end())
+			return it->second;
+		static const char parts[] = "abcdefghijkl";
 		float bestd = 1e9f;
-		for (int a = 0; a <= 6; a++)
-			if (g.ages[a] > 0 && std::fabs(std::log(own / g.ages[a])) < bestd) {
-				bestd = std::fabs(std::log(own / g.ages[a]));
+		for (int a = 0; a <= 6; a++) {
+			if (g.ages[a] <= 0)
+				continue;
+			float sum = 0;
+			int n = 0;
+			for (bool f : {false, true})
+				for (const char* p = parts; *p; p++) {
+					float mine = partSetSize(*p, species, f, 0, breed), ref = partSetSize(*p, g.species, false, a, g.breed);
+					if (mine > 0 && ref > 0) {
+						sum += std::log(mine / ref);
+						n++;
+					}
+				}
+			if (n && std::fabs(sum / n) < bestd) {
+				bestd = std::fabs(sum / n);
 				drawn = a;
 			}
+		}
+		cache[{species, breed}] = drawn;
 	} else {
 		for (int a = 6; a >= 0 && drawn < 0; a--)
 			if (g.ages[a] > 0)
