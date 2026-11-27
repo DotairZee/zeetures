@@ -3,7 +3,8 @@
 // (Creature Labs' own C2 release) and Frog Norns V3 (Alex, Norns of the
 // Round Table, from Nornenmeister's V2); since 2026-11-27 also the
 // C1-in-C2 Grendel (RudeDog) and Kai (Wafuru, genome Lis Morris), Scorpio
-// (Wafuru, genome Mannkind) and Goat Norns (Angela Allan). Zeetures does not carry or host
+// (Wafuru, genome Mannkind), Goat Norns (Angela Allan) and Midsummer Norns
+// (Martina Hilsenbeck and Amanora, genome Katira). Zeetures does not carry or host
 // them: on the player's machine, the first time a C2 world runs without
 // them, it fetches each from the community archive that already hosts it
 // (eem.foo) with the system's curl, and imports it as the owner's Home has
@@ -89,6 +90,10 @@ const Pack kPacks[] = {
 		"https://eem.foo/archive/downloads/7d35?download=true", "7d35-scorpio.zip", "scrp.gen", "PK", "Scorpio", false, false, "sc"},
 	{"Goat Norns", "Angela Allan", "https://eem.foo/archive/downloads/05a2-goat-norn",
 		"https://eem.foo/archive/downloads/05a2?download=true", "05a2-goatnorns.zip", "goatnornfemale.gen", "PK", "Goat", false, false, "go"},
+	// (owner, 2026-11-27: Midsummer Norns too; filed in the grendel set,
+	// slot w, and moved into the norns')
+	{"Midsummer Norns", "Martina Hilsenbeck (Nimue) and Amanora; genome by Katira", "https://eem.foo/archive/downloads/45de-midsummer-norns",
+		"https://eem.foo/archive/downloads/45de?download=true", "45de-Midsummer Norns.zip", "mids.gen", "PK", "Midsummer", false, false, "mi"},
 };
 constexpr int kCount = sizeof(kPacks) / sizeof(kPacks[0]);
 

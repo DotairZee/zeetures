@@ -1898,7 +1898,7 @@ static void DrawPreferences() {
 			if (ImGui::Checkbox("Recommended breed packs", &packs))
 				writePlayerSetting("breed-packs", packs ? "on" : "off");
 			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("Boney Grendels, Frog Norns V3, the C1-in-C2 Grendel, and Kai, Scorpio and Goat Norns, fetched from the community archive the first time a world runs without them (from the next start)");
+				ImGui::SetTooltip("Boney Grendels, Frog Norns V3, the C1-in-C2 Grendel, and Kai, Scorpio, Goat and Midsummer Norns, fetched from the community archive the first time a world runs without them (from the next start)");
 			if (ImGui::Button("Creatures 2 folder..."))
 				GameFolder::chooseAnother(SDL_GetKeyboardFocus());
 			if (ImGui::IsItemHovered())
