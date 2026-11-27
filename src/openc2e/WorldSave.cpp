@@ -787,7 +787,28 @@ static void writeCreatureRecord(std::ostream& out, Agent* a, oldCreature* c, con
 	out << "end\n";
 }
 
+static bool SaveWorldStateUnguarded(const fs::path& worlddir, std::string& error);
+
+// A save that fails part way (a file that could not be written: the disk
+// full, a folder taken away, another copy of the game saving the same world
+// at the same moment) is reported and the game goes on; before, the error
+// ended the program (found 2026-11-26, two test copies saving one world).
+// The previous save is untouched: everything is written to save.new/ first
+// and swapped in only at the end.
 bool SaveWorldState(const fs::path& worlddir, std::string& error) {
+	try {
+		return SaveWorldStateUnguarded(worlddir, error);
+	} catch (std::exception& e) {
+		error = std::string("Couldn't save the world: ") + e.what();
+	} catch (...) {
+		error = "Couldn't save the world.";
+	}
+	std::error_code ec;
+	fs::remove_all(worlddir / "save.new", ec); // (the unfinished save)
+	return false;
+}
+
+static bool SaveWorldStateUnguarded(const fs::path& worlddir, std::string& error) {
 	if (worlddir.empty()) {
 		error = "No world folder is open.";
 		return false;
