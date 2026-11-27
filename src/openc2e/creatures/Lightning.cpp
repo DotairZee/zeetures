@@ -1073,6 +1073,49 @@ std::vector<std::string> statusOf(Agent* creature) {
 	return out;
 }
 
+// (player-visible text: British spelling; how long each lasts follows
+// DURATION and POWER_TICKS, at ten ticks a second)
+std::string describe(const std::string& name) {
+	static const std::map<std::string, std::string> TEXT = {
+		{"Frankenstein's creature", "Brought back to life by lightning. It cannot die of age or failing organs and cannot have young; it eats only plants, is lonely, and seeks others of its kind. A mate of its own kind breaks the spell for both; another strike ends it for good."},
+		{"Healer", "Ill creatures close to it are cured. (About an hour.)"},
+		{"Green thumb", "Plants near it grow and fruit faster. (About an hour.)"},
+		{"Polyglot", "Learns words three times as fast, and others learn words from it twice as fast. (About an hour.)"},
+		{"Water-breather", "Can breathe under water. (About an hour.)"},
+		{"Weatherwise", "Senses a storm coming and says so. (About an hour.)"},
+		{"Featherweight", "Falls slowly, as light as a feather. (About an hour.)"},
+		{"Beast-friend", "Small animals near it, such as bees and butterflies, stop and stay. (About an hour.)"},
+		{"Spark-hands", "Machines near it now and then switch on by themselves. (About an hour.)"},
+		{"Leader", "Others near it grow fond of it. (About an hour.)"},
+		{"Food-finder", "Can smell the nearest food, wherever it is. (About an hour.)"},
+		{"Weatherproof", "Feels neither cold nor heat. (About an hour.)"},
+		{"Lucky", "Its meals go half as far again. (About an hour.)"},
+		{"Scorched", "Frizzled and sooty from the strike; only its look. (About five minutes.)"},
+		{"Glowing", "Glows pale and bright; only its look. (About ten minutes.)"},
+		{"Charged", "Full of static: creatures that come close get small shocks. (About a minute.)"},
+		{"Machine-mad", "Drawn to machines and anything electric. (About ten minutes.)"},
+		{"Quick-footed", "Walks twice as fast. (About a minute.)"},
+		{"Dazed", "Walks at half its pace. (About two minutes.)"},
+		{"Wide awake", "Feels no tiredness or sleepiness. (About five minutes.)"},
+		{"Giant", "A third bigger than it was. (About ten minutes.)"},
+		{"Tiny", "Shrunk to three quarters of its size. (About ten minutes.)"},
+		{"Ageless", "Stops ageing for a while. (About an hour.)"},
+		{"Contrary", "Its feelings for others are turned round: friends seem foes, and foes friends. (About five minutes.)"},
+		{"Fearless", "Feels no fear. (About five minutes.)"},
+		{"Storm-shy", "Afraid of storm clouds. (About an hour.)"},
+		{"Backwards", "Its words come out backwards. (About three minutes.)"},
+		{"Squeaky", "Its voice is higher. (About ten minutes.)"},
+		{"Croaky", "Its voice is deeper. (About ten minutes.)"},
+		{"Parrot", "Says back what it hears. (About three minutes.)"},
+		{"Lightning rod", "Storm clouds drift towards it. (About five minutes.)"},
+		{"Magnetic", "Small things near it drift towards it. (About a minute.)"},
+		{"Dancing", "Breaks into a jig. (A few seconds.)"},
+		{"Strange blood", "Its next baby will be born with a few new mutations."},
+	};
+	auto it = TEXT.find(name);
+	return it == TEXT.end() ? std::string() : it->second;
+}
+
 std::vector<std::pair<std::string, unsigned int>> couplesOnStone() {
 	std::vector<std::pair<std::string, unsigned int>> out;
 	for (auto& c : s_couples)

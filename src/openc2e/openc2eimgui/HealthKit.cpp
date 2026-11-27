@@ -278,16 +278,36 @@ static void DoctorPage() {
 
 void DrawHealthKit() {
 	KitCreatureHeader();
-	// what lightning has done to it, by name only, and nothing at all until
-	// it has (owner, 2026-11-26: "I want it to be a surprise"; Lightning.h)
+	// what lightning has done to it, by name, and nothing at all until it has
+	// (owner, 2026-11-26: "I want it to be a surprise"; Lightning.h); resting
+	// the pointer on a name says what it does (owner, 2026-11-26)
 	if (Agent* a = KitCreatureAgent()) {
 		std::vector<std::string> names = Lightning::statusOf(a);
 		if (!names.empty()) {
-			std::string line;
-			for (auto& n : names)
-				line += (line.empty() ? "" : ", ") + n;
 			ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 214, 102, 255));
-			ImGui::TextWrapped("%s", line.c_str());
+			float right = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
+			for (size_t i = 0; i < names.size(); i++) {
+				std::string label = names[i] + (i + 1 < names.size() ? "," : "");
+				if (i > 0) {
+					ImGui::SameLine();
+					// (to the next line when it would not fit)
+					if (ImGui::GetCursorScreenPos().x + ImGui::CalcTextSize(label.c_str()).x > right)
+						ImGui::NewLine();
+				}
+				ImGui::TextUnformatted(label.c_str());
+				if (ImGui::IsItemHovered()) {
+					std::string what = Lightning::describe(names[i]);
+					if (!what.empty()) {
+						ImGui::PopStyleColor();
+						ImGui::BeginTooltip();
+						ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
+						ImGui::TextUnformatted(what.c_str());
+						ImGui::PopTextWrapPos();
+						ImGui::EndTooltip();
+						ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 214, 102, 255));
+					}
+				}
+			}
 			ImGui::PopStyleColor();
 		}
 	}

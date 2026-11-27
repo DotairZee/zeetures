@@ -58,6 +58,9 @@ void slapped(Agent* creature); // Frankenstein's creature, spurned: angry
 std::vector<std::pair<std::string, unsigned int>> couplesOnStone();
 // the names of what it has now (Health Kit: nothing at all until struck)
 std::vector<std::string> statusOf(Agent* creature);
+// a sentence or two on what one of those names does (Health Kit: shown when
+// the pointer rests on the name; owner, 2026-11-26), or "" if unknown
+std::string describe(const std::string& name);
 // a photo to take now (a creature just risen as Frankenstein's creature: the
 // Owner's Kit takes it, as on its first day), or none
 std::shared_ptr<Agent> takePhotoRequest();
