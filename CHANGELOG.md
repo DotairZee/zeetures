@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 802 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 805 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.48.0](#version-0480): 3 commits, 27 November 2026
 - [0.47.4](#version-0474): 2 commits, 27 November 2026
 - [0.47.3](#version-0473): 2 commits, 27 November 2026
 - [0.47.2](#version-0472): 3 commits, 27 November 2026
@@ -122,6 +123,69 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.48.0
+
+The Metamorph Device now lays an egg at the gene lab's chute, where the gene splicer's eggs come out, and it hatches as the other sex. In the Owner's Kit family tree, a creature changed by the device shows its former self as its one parent, and a creature from the gene splicer shows the two it was spliced from; both are kept with the world, even if you save before the egg hatches. Anything held, by the hand or a creature, stays at its grip when it turns: the toy gun no longer jumps about in the hand.
+
+### 27 November 2026
+
+#### Version 0.48.0
+
+[`8a296ee2`](https://github.com/DotairZee/zeetures/commit/8a296ee247deb0deeba85be7599fa50f4cd79d59)
+
+The Metamorph Device lays an egg at the gene lab's chute; family trees
+show a changed creature's former self and a spliced creature's two
+parents; held objects stay at their grip when they turn (the toy gun).
+
+#### Metamorph Device lays an egg; family trees show machine-made parents
+
+[`d62af726`](https://github.com/DotairZee/zeetures/commit/d62af7264dd42a3ea23ee924c99d8141e5b49faa)
+
+The Metamorph Device no longer hatches its copy in the cabin: it lays an
+egg at the gene lab's chute, where the gene splicer's eggs come out,
+dropped by the chute's dispenser the same way (metamorph.cos). The egg
+(2 5 3, OV01 3) hatches as the sex the device chose, the other one, kept
+in OV02 (grendels.cos).
+
+Family trees: a creature changed by the device has one parent, its
+former self. NEW: GENE run by the device marks the genome; at hatching the
+record is "parents M M metamorph". The Owner's Kit shows a single card,
+"Former self" (status "metamorphosed"), and on the former self's tree the
+new one is "Later self"; its Parent row reads "changed in the Metamorph
+Device from ...". A one-pod splicer clone shows "Sole parent". The
+splicer's two creatures show as Mother and Father, their cards "spliced
+in the gene lab".
+
+Kept with the world: the splicer and device marks for eggs not yet
+hatched ("spliced-genome G M D", "metamorph-genome G M"), and records of
+creatures gone without dying that are a parent, or the parent of a
+waiting egg (no "died" line; before, only the dead were kept, so after a
+reload the tree lost them and a waiting egg hatched with no parents). A
+creature taken out of the world keeps its sex on its record.
+
+Tested in copies of a world: a male norn through the device gave a
+female baby, parent itself; two norns through the splicer gave a baby
+with both as parents; both held through a save before hatching and a
+reload; family tree pictures checked; AddressSanitizer clean.
+
+#### Held objects stay at their grip when their own script turns them
+
+[`6c0384bf`](https://github.com/DotairZee/zeetures/commit/6c0384bf01e01ddb77137af0e8b710b1185a01d6)
+
+The toy gun still jumped about in the hand (owner's screencast): its
+timer turns it to face the way it is carried, a picture with its grip at
+the other end, but a carried object was set at its grip only when its
+carrier moved, so after each turn it hung up to 71 px off until the hand
+next moved (over a second, measured per tick). What the hand or a
+creature holds is now set at its grip again at the end of every tick
+(Agent::reattachCarried). And the grip is looked up for the picture
+actually shown (SpritePart's current picture, from the first given to
+NEW:, as PUHL counts), not BASE + POSE: a script's BASE shows only at the
+next POSE or animation step, which set the gun for its turned picture a
+frame before it turned. Tested in a copy of a world: the hand carried the
+gun, moved and stopped both ways; in all 48 frames, one every 0.1 s, the
+hand is on the grip.
 
 ## Version 0.47.4
 
