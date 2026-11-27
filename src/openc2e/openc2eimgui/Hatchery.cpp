@@ -1443,6 +1443,12 @@ static void TestLineup() {
 	if (pauseAt >= 0 && (int)world.tickcount >= pauseAt) {
 		world.paused = true;
 		pauseAt = -2;
+		// OPENC2E_LINEUP_POSE="pose": each stands in that pose (a C2 pose
+		// string: direction, then the parts), e.g. side on, mid-stride
+		if (const char* pose = devenv("OPENC2E_LINEUP_POSE"))
+			for (auto& a : world.agents)
+				if (auto* sc = a ? dynamic_cast<SkeletalCreature*>(a.get()) : nullptr)
+					sc->setPose(pose);
 		std::string where;
 		for (auto& a : world.agents)
 			if (a && a->family == 4)

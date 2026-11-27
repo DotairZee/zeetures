@@ -73,6 +73,7 @@
 #include <cassert>
 #include <filesystem>
 #include <fmt/core.h>
+#include <sstream>
 #include <limits.h> // for MAXINT
 #include <memory>
 #include <stdint.h>
@@ -615,6 +616,16 @@ void World::tick() {
 			if (!c2 || !a->var[97].hasInt() || a->var[97].getInt() < 1)
 				continue;
 			std::string line = fmt::format("* ORGANS t{} mark {} chem250 {} |", tickcount, a->var[97].getInt(), (int)c2->getChemical(250));
+			// (OPENC2E_WATCH_CHEMS="60,61,...": those chemicals too)
+			if (const char* wc = devenv("OPENC2E_WATCH_CHEMS")) {
+				std::stringstream cs(wc);
+				std::string n;
+				line = line.substr(0, line.size() - 1) + "chems";
+				while (std::getline(cs, n, ','))
+					if (!n.empty())
+						line += fmt::format(" {}:{}", n, (int)c2->getChemical((unsigned char)atoi(n.c_str())));
+				line += " |";
+			}
 			for (auto& o : c2->getOrgans())
 				line += fmt::format(" {:.1f}/{:.1f}/{}/{}", 100.0f * o->getShortTermLifeforce() / std::max(1.0f, o->getInitialLifeforce()),
 					100.0f * o->getLongTermLifeforce() / std::max(1.0f, o->getInitialLifeforce()), (int)o->getInjuryToApply(), o->getActivations());

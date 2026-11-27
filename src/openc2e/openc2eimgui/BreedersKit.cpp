@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
+#include <sstream>
 #include <fmt/format.h>
 #include <fstream>
 #include <functional>
@@ -1184,6 +1185,48 @@ static std::string renamed(const std::string& name, int target, int species) {
 }
 
 
+// Known faults in breed packs' body data, mended as they are installed
+// (owner, 2026-11-26). The C1-in-C2 Grendel (RudeDog; eem.foo 68a3): the
+// female's left foot (e50b.att) has its two points the wrong way round in
+// pictures 0, 3, 4 and 7 (the male's left foot and her own right foot have
+// them as every other picture does), so the foot hung from its toes and its
+// claw sat at the ankle. Matched exactly, so nothing else is changed.
+static std::vector<uint8_t> mendBodyData(const std::string& name, const std::vector<uint8_t>& data) {
+	if (to_ascii_lowercase(name) != "e50b.att")
+		return data;
+	std::string text(data.begin(), data.end());
+	std::vector<std::string> lines;
+	size_t at = 0;
+	while (at < text.size()) {
+		size_t end = text.find('\n', at);
+		lines.push_back(text.substr(at, end == std::string::npos ? std::string::npos : end + 1 - at));
+		if (end == std::string::npos)
+			break;
+		at = end + 1;
+	}
+	auto numbers = [](const std::string& l) {
+		std::vector<int> v;
+		std::istringstream in(l);
+		int n;
+		while (in >> n)
+			v.push_back(n);
+		return v;
+	};
+	const std::map<int, std::vector<int>> broken = {{0, {21, 17, 5, 3}}, {3, {23, 1, 3, 14}}, {4, {1, 18, 17, 4}}, {7, {2, 0, 22, 13}}};
+	for (auto& [i, v] : broken)
+		if ((int)lines.size() <= i || numbers(lines[i]) != v)
+			return data;
+	for (auto& [i, v] : broken) {
+		std::string eol = lines[i].size() >= 2 && lines[i][lines[i].size() - 2] == '\r' ? "\r\n" : "\n";
+		lines[i] = fmt::format("{:2d} {:2d} {:2d} {:2d} ", v[2], v[3], v[0], v[1]) + eol;
+	}
+	std::string out;
+	for (auto& l : lines)
+		out += l;
+	fmt::print("* Breed import: mended {} (the C1-in-C2 Grendel's left foot, pictures 0, 3, 4 and 7)\n", name);
+	return std::vector<uint8_t>(out.begin(), out.end());
+}
+
 static void installPlan(ImportPlan& plan) {
 	fs::path main = getUserDataDir();
 	fs::path images = BreedDataSubdir(main, "Images"), bodyData = BreedDataSubdir(main, "Body Data");
@@ -1261,7 +1304,7 @@ static void installPlan(ImportPlan& plan) {
 		for (size_t i : g.files) {
 			auto& f = plan.files[i];
 			bool att = to_ascii_lowercase(fs::path(f.name).extension().string()) == ".att";
-			write(att ? bodyDataHere : imagesHere, renamed(f.name, g.target, g.fromSpecies >= 0 ? g.species : -1), f.data, b.files);
+			write(att ? bodyDataHere : imagesHere, renamed(f.name, g.target, g.fromSpecies >= 0 ? g.species : -1), att ? mendBodyData(f.name, f.data) : f.data, b.files);
 		}
 		b.files.insert(b.files.end(), shared.begin(), shared.end());
 		added.push_back(b);
