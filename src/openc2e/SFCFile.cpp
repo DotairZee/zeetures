@@ -162,18 +162,25 @@ void SFCFile::read(Reader* i) {
 		}
 		favplaces.push_back({name, px, py});
 	}
-	// C2: a u16 (2 in Eden), then a count and that many bytes (none in Eden;
-	// three in a played world with three creatures)
+	// C2: the toolbar's typed-text history: a count of boxes (2), then each
+	// box's count and its strings; the last box is the speech history (in
+	// C1, the speech history alone)
+	unsigned int boxes = 1;
 	if (version() != 0) {
-		read16();
-		uint16_t n = read16();
-		sfccheck(n <= 4096);
-		readBytes(n);
+		boxes = read16();
+		sfccheck(boxes <= 16);
+		for (unsigned int b = 0; b + 1 < boxes; b++) {
+			uint16_t n = read16();
+			for (unsigned int i = 0; i < n; i++)
+				readstring();
+		}
 	}
 
-	uint16_t numspeech = read16();
-	for (unsigned int i = 0; i < numspeech; i++) {
-		speech_history.push_back(readstring());
+	if (boxes > 0) {
+		uint16_t numspeech = read16();
+		for (unsigned int i = 0; i < numspeech; i++) {
+			speech_history.push_back(readstring());
+		}
 	}
 
 	if (traceSfc)
