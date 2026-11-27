@@ -401,6 +401,8 @@ VERSIONS = [
      "Help has a topic of its own for the grendel and ettin personalities: what each kind does, how they breed, and what changes when they are switched off."),
     ("0.47.0", "ab9119c1",
      "Kai, Scorpio, Goat and Midsummer Norns are fetched with the other recommended breed packs (a breed whose slot is taken goes to the first two letters of its name: Kai to ka, Goat to go). File, World Picker: open, password-protect, unprotect or delete your worlds (to the Recycle Bin or Trash). The game's grendels and ettins now hatch in male and female pairs, and no more while as many live as you set: the egg machine no longer turns ettin eggs into an extra grendel. The export message wraps instead of running across the screen."),
+    ("0.47.1", "80b0b6db",
+     "A Frankenstein's creature is likelier to rise while one of the other sex lives. The World Picker grows downward to show its questions, and sits below Save World As in the File menu. Creatures are drawn 15 times a second unless you choose otherwise (File, Preferences, Display)."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 791 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 795 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.47.1](#version-0471): 4 commits, 27 November 2026
 - [0.47.0](#version-0470): 7 commits, 27 November 2026
 - [0.46.1](#version-0461): 2 commits, 27 November 2026
 - [0.46.0](#version-0460): 2 commits, 27 November 2026
@@ -118,6 +119,54 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.47.1
+
+A Frankenstein's creature is likelier to rise while one of the other sex lives. The World Picker grows downward to show its questions, and sits below Save World As in the File menu. Creatures are drawn 15 times a second unless you choose otherwise (File, Preferences, Display).
+
+### 27 November 2026
+
+#### Version 0.47.1
+
+[`80b0b6db`](https://github.com/DotairZee/zeetures/commit/80b0b6db9c526f56e939d69b5e3abeec2e2c602b)
+
+Frankenstein's creature likelier to rise while one of the other sex
+lives; the World Picker grows to show its questions and sits below Save
+World As; creatures drawn 15 times a second by default.
+
+#### Creature frame rate: 15 a second by default
+
+[`79c9a128`](https://github.com/DotairZee/zeetures/commit/79c9a12822403df094023c78f05711839794137c)
+
+A world that has not chosen a creature frame rate now draws creatures 15
+times a second instead of 60 (File &gt; Preferences &gt; Display). A world that
+chose one keeps it, and an older "smooth movement off" still reads as 5.
+Preferences, Help and the README mark 15 as the default.
+
+#### World Picker: grows to show its questions; below Save World As
+
+[`068f30ec`](https://github.com/DotairZee/zeetures/commit/068f30ec098d6fe56bfebaca7230abaaf283f9cb)
+
+Owner: after clicking Delete the question was below the window's edge,
+to be scrolled to; and the World Picker belongs below Save World As in
+the File menu. The window now sizes itself to what it holds (the list
+400 pixels wide, text wrapped to it), so the delete question and the
+password boxes open below the buttons, in sight. The confirm step also
+refuses to delete the world being played, whatever was selected.
+OPENC2E_TEST_PICKER_ASK=delete or protect opens it asking that (for
+snapshots); both were checked so.
+
+#### Frankenstein's creature: likelier to rise while one of the other sex lives
+
+[`73e5f3c0`](https://github.com/DotairZee/zeetures/commit/73e5f3c0f3441b4559e8a23a069bd51b72be38b1)
+
+Owner: "the odds of an opposite sex Frankenstein creature to increase if
+there is one already in-game". A creature struck within half a minute
+of dying rises one time in four, as before, and three times in four
+while a Frankenstein's creature of the other sex is alive (still only
+the other sex from the last to rise). OPENC2E_TEST_LIGHTNING=mateodds
+makes the first grown norn one, kills a grown norn of the other sex and
+strikes it; in a copy of Home the strike logged odds 0.75.
 
 ## Version 0.47.0
 
