@@ -507,6 +507,71 @@ static float partGrowth(char part, int species, bool female, int breed, int foun
 	return now / then * aging;
 }
 
+// Young proportions for every breed (owner, 2026-11-27: Kai babies lacked
+// "the bigger head and other proportional elements of baby norns"). A breed
+// with pictures at several ages may have drawn its young as its adult
+// shrunk evenly (Kai: every part 0.57-0.70 of the adult), where C2's own
+// norn keeps the head large and shortens the rest (head 0.90, body 0.76,
+// thighs 0.68). Each part of a young set is scaled so that, against the
+// breed's own adult set, it shrinks as its species' reference breed does
+// (held within 0.75-1.4; within 3% of 1 left as drawn; the tail as the
+// body, since tails differ by design). Kai babies come out
+// with the head 1.30 and the body 1.15 times as drawn. Breeds already drawn
+// like the reference (Midsummer, Goat, Scorpio, Frog) stay much as they are.
+// Not the reference breed itself, nor breeds drawn at one age only
+// (partGrowth above grows those). OPENC2E_PROPORTION_FIT=0 turns it off.
+static float proportionFit(char part, int species, bool female, int breed, int foundstage) {
+	static const bool off = devenv("OPENC2E_PROPORTION_FIT") && std::string(devenv("OPENC2E_PROPORTION_FIT")) == "0";
+	if (off || engine.version != 2 || foundstage < 0 || foundstage >= 4)
+		return 1.0f;
+	const StageGrowth& g = stageGrowth(species);
+	if (g.breed < 0 || g.species != species || g.breed == breed)
+		return 1.0f;
+	static std::map<std::tuple<int, bool, int, int>, std::map<char, float>> cache;
+	auto key = std::make_tuple(species, female, breed, foundstage);
+	auto it = cache.find(key);
+	if (it == cache.end()) {
+		std::map<char, float> fit;
+		// the breed's own grown-up set: its oldest age before old age (adult,
+		// else adolescent, youth, child) above the one shown
+		int adult = -1;
+		for (int a = 4; a > foundstage && adult < 0; a--)
+			if (bodySetSize(species, female, a, breed) > 0)
+				adult = a;
+		if (adult >= 0) {
+			static const char parts[] = "abcdefghijklmn";
+			int n = 0;
+			std::string shown;
+			for (const char* p = parts; *p; p++) {
+				float young = partSetSize(*p, species, female, foundstage, breed), grown = partSetSize(*p, species, female, adult, breed);
+				float ryoung = referencePartSize(*p, g, foundstage), rgrown = referencePartSize(*p, g, adult);
+				if (young <= 0 || grown <= 0 || ryoung <= 0 || rgrown <= 0)
+					continue;
+				float f = std::clamp((ryoung / rgrown) / (young / grown), 0.75f, 1.4f);
+				fit[*p] = std::fabs(f - 1.0f) < 0.03f ? 1.0f : f;
+				n++;
+			}
+			// tails differ by design from breed to breed (Midsummer's long
+			// tip, Goat's): they go with the body
+			if (fit.count('b'))
+				for (char tail : {'m', 'n'})
+					if (fit.count(tail))
+						fit[tail] = fit['b'];
+			for (auto& [p, f] : fit)
+				shown += fmt::format(" {}{:.2f}", p, f);
+			if (n < 4)
+				fit.clear();
+			else {
+				fmt::print("* PROPORTIONS species {} {} breed {} age {} (against its age {}):{}\n", species, female ? "female" : "male",
+					breedSlotName(breed), foundstage, adult, shown);
+			}
+		}
+		it = cache.emplace(key, std::move(fit)).first;
+	}
+	auto p = it->second.find(part);
+	return p == it->second.end() ? 1.0f : p->second;
+}
+
 // OPENC2E_SENILE_TINT=1 (prototype): a senile creature's pictures muted toward
 // grey and lightened a little (owner, 2026-11-13); OPENC2E_SENILE_TINT=g,l
 // sets the grey share and the lift
@@ -632,6 +697,7 @@ void SkeletalCreature::skeletonInit() {
 		// pictures and every joint point together, so the parts still meet
 		float k = partGrowthOn() ? partGrowth(x, spe, foundfemale, foundvar, foundstage, creature->getStage())
 								 : stageScale(spe, foundfemale, foundvar, creature->getStage());
+		k *= proportionFit(x, spe, foundfemale, foundvar, foundstage); // (young drawn as a shrunk adult)
 		k *= Lightning::sizeFactor(this); // (grown or shrunk by lightning)
 		partk[i] = k;
 		if (std::fabs(k - 1.0f) > 0.01f) {
