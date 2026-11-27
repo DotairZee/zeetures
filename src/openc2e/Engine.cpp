@@ -516,8 +516,24 @@ void Engine::setZoom(float z, int anchorx, int anchory) {
 		anchory = main->getHeight() / 2;
 	}
 	float wx = camera->getX() + anchorx / zoom, wy = camera->getY() + anchory / zoom;
+	const float oldzoom = zoom;
 	zoom = z;
-	camera->trackAgent(AgentRef(), 0, 0, brittle, none);
+	if (camera->trackedAgent()) {
+		// following a creature: it stays followed, and the view centres on it
+		// at the new zoom (owner, 2026-11-27: zooming stopped the tracking);
+		// the hand keeps its place in the window
+		float hx = 0, hy = 0;
+		if (world.hand()) {
+			hx = (world.hand()->pointerX() - (float)camera->getX()) * oldzoom;
+			hy = (world.hand()->pointerY() - (float)camera->getY()) * oldzoom;
+		}
+		camera->updateTracking();
+		if (world.hand())
+			world.hand()->moveTo((int)std::lround(camera->getX() + hx / zoom) - (world.hand()->pointerX() - (int)world.hand()->x),
+				(int)std::lround(camera->getY() + hy / zoom) - (world.hand()->pointerY() - (int)world.hand()->y));
+		refreshdisplay = true;
+		return;
+	}
 	camera->moveTo((int)std::lround(wx - anchorx / zoom), (int)std::lround(wy - anchory / zoom), jump);
 	if (world.hand())
 		world.hand()->moveTo((int)std::lround(wx) - (world.hand()->pointerX() - (int)world.hand()->x), (int)std::lround(wy) - (world.hand()->pointerY() - (int)world.hand()->y));
