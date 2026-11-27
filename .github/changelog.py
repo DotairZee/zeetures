@@ -395,6 +395,8 @@ VERSIONS = [
      "Grendels and ettins now shrink a little in old age, as norns do: senile ones are about seven-eighths of their grown size."),
     ("0.45.2", "e6f437f6",
      "The C1 grendels have a name: grouchy grendels."),
+    ("0.46.0", "7b9358fa",
+     "Every world keeps its own preferences, layout included: a new world starts with the defaults, and worlds from before keep the settings they had. A new tick box in Preferences, World, \"Grendel and ettin personalities\", on unless you untick it: unticked, grendels and ettins are as the games made them, and C1 grendels hatch with Creatures 1's own grendel genome (from your Creatures 1, when it is installed beside Creatures 2) in a Creatures 2 body."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

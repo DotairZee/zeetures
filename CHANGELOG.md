@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 780 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 782 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.46.0](#version-0460): 2 commits, 27 November 2026
 - [0.45.2](#version-0452): 2 commits, 27 November 2026
 - [0.45.1](#version-0451): 2 commits, 27 November 2026
 - [0.45.0](#version-0450): 25 commits, 26 November 2026 to 27 November 2026
@@ -115,6 +116,71 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.46.0
+
+Every world keeps its own preferences, layout included: a new world starts with the defaults, and worlds from before keep the settings they had. A new tick box in Preferences, World, "Grendel and ettin personalities", on unless you untick it: unticked, grendels and ettins are as the games made them, and C1 grendels hatch with Creatures 1's own grendel genome (from your Creatures 1, when it is installed beside Creatures 2) in a Creatures 2 body.
+
+### 27 November 2026
+
+#### Version 0.46.0
+
+[`7b9358fa`](https://github.com/DotairZee/zeetures/commit/7b9358face0963cca971ab4dc347b60c87910120)
+
+Preferences are kept with each world; grendel and ettin personalities
+can be switched off, leaving them as the games made them, with C1
+grendels on Creatures 1's own grendel genome.
+
+#### Preferences per world; grendel and ettin personalities can be switched off
+
+[`c1003b29`](https://github.com/DotairZee/zeetures/commit/c1003b29559132bfc2442932207b50224ac49bf0)
+
+Owner: every preference keeps its default, and any change is saved with
+its world, layout included; and the grendel and ettin personalities are
+a checkbox, on by default, that when off leaves them as the games made
+them, the C1 grendels on Creatures 1's own grendel genome converted.
+
+Preferences per world: settings are read from and written to the open
+world's settings.txt, and the kit and window layout (kits.ini, with the
+Observation Kit's alarms) is the world's too. Only which world opens at
+launch, the updates, and words across all worlds stay in the user data
+folder's settings.txt (machineSetting), as does everything while no
+world is open. A world from before this opens with a copy of the shared
+settings and layout, so it plays on as before; a new world starts with
+an empty settings.txt (every default); Save World As copies both files,
+and the layout follows the copy.
+
+Personalities (Preferences &gt; World, "Grendel and ettin personalities",
+the world's grendel-personalities): Kinds::off() is now also the setting
+unticked. Off: no Kinds rules (fertility while a mate lives, longing,
+the bulbous night, wariness, hoards, lone eggs, deafness, clean of
+germs), with fertility and longing the rules had set cleared and a
+female already carrying still laying; the scent rules between
+"personalities" and "end personalities" in pheromones.txt stop (a new
+section keyword); the Health Kit names no kinds. Grouchy grendels alive
+keep their genes. Unaffected: the three-kind egg pile, growth and old
+age, the population priority, illness.
+
+C1 grendels, stock (Kinds::makeC1StockGenome): with the personalities
+off, c1gr.gen is Creatures 1's own Gren.GEN carried into C2's grendel,
+from the Creatures 1 folder beside Creatures 2. From C1, chemicals
+renumbered by name (allchemicals.str of each game, without asides such
+as "(Saccharin)"): its stimuli (none for the hand's speech), its five
+instincts (C1 ate by activating food: eat), the half-lives of drives,
+raisers, reducers, reward and punishment, its sense emitters, its drive
+reactions and starting drives. From C2's grendel: organs, the energy
+chain, digestion and hunger sensing, immune system, poses and gaits,
+the brain's chemical relays; reproduction off. Without Creatures 1, C2's
+own grendel in the C1 pictures. The genome is written at each start and
+when the box is changed, as the world's setting asks.
+
+Tested in a throwaway home: an old world took a copy of two settings and
+the layout (the updater setting stayed shared); a new world started
+from the defaults; off, the converted genome (547 genes to 523: C1's 5
+instincts with eat, stimuli and senses, no marker) kept two C1 grendels
+and a C2 grendel at ATP 209-246 over three minutes with no Kinds rules;
+on again, the grouchy genome. check_saves: Home 100/100 creatures,
+56/56 eggs.
 
 ## Version 0.45.2
 
