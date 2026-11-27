@@ -33,6 +33,9 @@
 #include "WorldSave.h"
 #include "creatures/CreatureAgent.h"
 #include "imageManager.h"
+#include "PixelText.h"
+#include "WordLists.h"
+#include "creatures/CreatureSpeech.h"
 
 #include <SDL3/SDL_dialog.h>
 #include <algorithm>
@@ -88,7 +91,41 @@ struct Exported {
 	std::string moniker, name;
 	int sex = 0; // 1 male, 2 female, 0 unknown
 	std::vector<std::pair<int, int>> headFrames; // the first pictures of its gallery: its head
+	// its mother and father in C2 (moniker and name; empty if none, or a
+	// starting genome's name rather than a creature's), when and where it
+	// was born, and its breeder's note
+	std::string mother, motherName, father, fatherName, born, birthplace, note;
+	// the words it knew: slot of the game's word list, and how well (C2's
+	// 0-255: "pull" said right at 240, "push" said "puth" at 120)
+	std::vector<std::pair<int, int>> words;
 };
+
+// a creature's moniker in C2: a digit and three capital letters ("2BAQ";
+// breed packs put a starting genome's name there instead: "toby", "MLAM")
+bool isMoniker(const std::string& m) {
+	return m.size() == 4 && m[0] >= '0' && m[0] <= '9' && std::all_of(m.begin() + 1, m.end(), [](char ch) { return ch >= 'A' && ch <= 'Z'; });
+}
+
+// one word of its vocabulary: the word (as the list has it, or babble
+// before it is learned), how it says it, and how well (32-bit); false if
+// what is there is not one
+bool vocabEntry(const std::vector<uint8_t>& d, size_t& at, std::string& word, std::string& said, int& strength) {
+	size_t p = at;
+	if (p >= d.size() || d[p] == 0 || d[p] > 20 || !pstr(d, p, word))
+		return false;
+	if (p >= d.size() || d[p] == 0 || d[p] > 24 || !pstr(d, p, said))
+		return false;
+	if (p + 4 > d.size())
+		return false;
+	strength = i32(d, p);
+	if (strength < 0 || strength > 255)
+		return false;
+	for (char ch : word + said)
+		if ((unsigned char)ch < 32 || (unsigned char)ch > 126)
+			return false;
+	at = p + 4;
+	return true;
+}
 
 // What an export holds, as far as is used here. The layout was read from
 // exports of four C2 breed packs (Midsummer, Scorpio): a "Creature" record
@@ -123,20 +160,72 @@ bool readExport(const std::vector<uint8_t>& d, Exported& e, std::string& err) {
 			p += 12;
 		}
 	}
-	// the history record: the moniker, then the name
+	// the history record: the moniker and name; its mother's and father's
+	// moniker (4) and name; the time and place of its birth; four more
+	// strings (an owner's name, one unused, the breeder's note, an address);
+	// a number, then its sex (1 male, 2 female). (Read from twelve exports
+	// of five breed packs on the Eem Foo archive, 2026-11-26: Scorpio,
+	// Marriage, Speciation and Kai Norns, Drozzy. The parents' names were
+	// once taken to be always empty, which lost the sex of a creature with
+	// named parents, and the four strings likewise.)
 	if (!e.moniker.empty()) {
 		size_t h = rfind(d, e.moniker, g);
 		size_t p = h == std::string::npos ? std::string::npos : h + 4;
-		std::string date, place;
-		if (p != std::string::npos && pstr(d, p, e.name)) {
-			p += 10; // the parents' monikers
-			if (pstr(d, p, date) && pstr(d, p, place)) {
-				int sex = i32(d, p + 8);
-				if (sex == 1 || sex == 2)
-					e.sex = sex;
+		std::string owner, unused, address;
+		if (p != std::string::npos && pstr(d, p, e.name) && p + 4 <= d.size()) {
+			std::string mother((const char*)d.data() + p, 4), father;
+			p += 4;
+			bool ok = pstr(d, p, e.motherName) && p + 4 <= d.size();
+			if (ok) {
+				father.assign((const char*)d.data() + p, 4);
+				p += 4;
+				ok = pstr(d, p, e.fatherName) && pstr(d, p, e.born) && pstr(d, p, e.birthplace);
+			}
+			if (ok) {
+				if (isMoniker(mother))
+					e.mother = mother;
+				else
+					e.motherName.clear();
+				if (isMoniker(father))
+					e.father = father;
+				else
+					e.fatherName.clear();
+				size_t q = p;
+				if (pstr(d, q, owner) && pstr(d, q, unused) && pstr(d, q, e.note) && pstr(d, q, address)) {
+					int sex = i32(d, q + 4);
+					if (sex == 1 || sex == 2)
+						e.sex = sex;
+				}
+				if (!e.sex) {
+					int sex = i32(d, p + 8); // (four empty strings)
+					if (sex == 1 || sex == 2)
+						e.sex = sex;
+				}
 			}
 		}
 	}
+
+	// its words: 77 of them, one for each slot of the game's word list, in
+	// the creature's own record, after its body (Limb) and before its brain
+	// (CBrain); found as the run of entries that are words
+	size_t from = find(d, "Limb"), to = find(d, "CBrain");
+	if (from != std::string::npos && to != std::string::npos && from < to)
+		for (size_t start = from; start < to && e.words.empty(); start++) {
+			size_t p = start;
+			std::vector<std::tuple<std::string, std::string, int>> run;
+			std::string word, said;
+			int strength;
+			while (vocabEntry(d, p, word, said, strength))
+				run.push_back({word, said, strength});
+			if (run.size() < 60)
+				continue;
+			// a slot counts only if it holds the list's own word there
+			auto& en = WordLists::english();
+			for (size_t k = 0; k < run.size() && k < en.size(); k++)
+				if (!en[k].empty() && PixelText::lower(std::get<0>(run[k])) == PixelText::lower(en[k]))
+					e.words.push_back({(int)k, std::get<2>(run[k])});
+			break;
+		}
 	return true;
 }
 
@@ -266,17 +355,54 @@ bool ImportExportedCreature(const fs::path& path, std::string& message) {
 	world.newMoniker(genome, "imported", a);
 	std::string mon = world.history->findMoniker(genome);
 	world.history->getMoniker(mon).moveToCreature(a);
+	monikerData& rec = world.history->getMoniker(mon);
 	if (!e.name.empty())
-		world.history->getMoniker(mon).name = e.name;
+		rec.name = e.name;
+	// its parents in C2, by moniker (as an imported .zex keeps them: they
+	// have no records here), unless that moniker is someone else here
+	auto parent = [&](const std::string& pm, const std::string& pname) -> std::string {
+		if (pm.empty() || pm == mon)
+			return {};
+		if (world.history->hasMoniker(pm)) {
+			monikerData& p = world.history->getMoniker(pm);
+			return p.name.empty() || pname.empty() || p.name == pname ? pm : std::string();
+		}
+		return pm;
+	};
+	rec.mother = parent(e.mother, e.motherName);
+	rec.father = parent(e.father, e.fatherName);
+	historyManager::lineageGeneration++;
+	// when and where it was born, its parents' names, and its breeder's note
+	std::string from = "Brought in from Creatures 2";
+	if (!e.born.empty())
+		from += ", born " + e.born + (e.birthplace.empty() || e.birthplace == "The birthplace" ? "" : " at " + e.birthplace);
+	from += ".";
+	if (!e.motherName.empty() || !e.fatherName.empty())
+		from += fmt::format(" Its mother {}, its father {}.", e.motherName.empty() ? "unknown" : e.motherName, e.fatherName.empty() ? "unknown" : e.fatherName);
+	if (!e.note.empty())
+		from += " " + e.note;
+	rec.notes = rec.notes.empty() ? from : from + "\n" + rec.notes;
 	for (int i = 0; i < stage; i++)
 		c->ageCreature();
 	c->born();
+	// the words it knew, on Zeetures' own scale: known (128) and better the
+	// better C2 had it ("pull" said right at 240: 248)
+	if (c->vocab.size() < engine.wordlist.size())
+		c->vocab.resize(engine.wordlist.size(), 0);
+	int known = 0;
+	for (auto& [slot, strength] : e.words)
+		if (slot >= 0 && (size_t)slot < c->vocab.size()) {
+			c->vocab[slot] = (unsigned char)std::clamp(WORD_KNOWN + strength / 2, WORD_KNOWN, 255);
+			known++;
+		}
 	world.hand()->addCarried(a);
 	world.selectCreature(AgentRef(a).lock());
 
 	static const char* stages[] = {"baby", "child", "adolescent", "youth", "adult", "old", "senile"};
-	message = fmt::format("{} came in from {}: a {} {} (the hand holds it; drop it somewhere).",
-		e.name.empty() ? "A creature" : e.name, path.filename().string(), female ? "female" : "male", stages[std::clamp(stage, 0, 6)]);
+	message = fmt::format("{} came in from {}: a {} {}{} (the hand holds it; drop it somewhere).", e.name.empty() ? "A creature" : e.name,
+		path.filename().string(), female ? "female" : "male", stages[std::clamp(stage, 0, 6)],
+		known ? fmt::format(" who knows {} word{}", known, known == 1 ? "" : "s") : "");
+	world.history->censusNow().imported++;
 	fmt::print("* Imported creature: {}\n", message);
 	return true;
 }

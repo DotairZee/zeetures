@@ -288,6 +288,10 @@ Two choices in File > Preferences > Creatures, under Talking. The first is off u
 - **Babies say their first words.** A baby that has learned the word for what it wants to say says just that word: "food!", "tired", "hand". The rest of the time it cries and babbles as before, and when it is hurt or upset it still cries more often than not. It also says a learned word back to you and to a teaching machine.
 - **Words come out a little wrong while being learned.** Heard a few times, a word comes out as its start run into the creature's own tongue ("han-nah-do"); nearly learned, as the word a little off, with W for R and Th for S as Creatures 1's young said them ("wetht" for rest), or one sound slipped ("hanb"); learned, right. Each creature keeps its own slip for a word. Without it, a word stays in the creature's own tongue until it is learned.
 
+### Talking to themselves
+
+Children, and now and then adolescents, say to themselves what they are setting about: "push toy...", "get...". It is how the young learn to steer what they do, and they grow out of it. Others hear it, as they hear any talk.
+
 ### How words are learned
 
 Each hearing makes a word more familiar, until it is known. Children learn fastest, then adolescents; the senile slowest.
@@ -1063,6 +1067,7 @@ The pinned rooms over the last quarter of an hour, with what each is now and how
 ### Census
 
 - Living creatures and eggs, and everything else in the world by kind, with how many can be eaten.
+- **Since this world began:** how many creatures have hatched, how many eggs were laid, how many have died, been imported and been exported, and how many are alive now.
 - **Where the food is,** west to east. Red marks a part of the world with two or fewer things to eat.
 
 # Add-ons
@@ -1094,7 +1099,7 @@ Two packs are fetched the first time, from the Eem Foo archive: Boney Grendels (
 
 File > Export Current Creature saves the selected creature to a file (.zex) and takes it out of the world, as the original game did. Everything comes with it: its body and chemistry, its mind and what it has learned, its words, its friends and foes, its temperament, its life story, and its photos. Exports go to the Exported Creatures folder unless you choose another place.
 
-File > Import Creature brings a creature back in. One exported from Zeetures (.zex) comes back as it was, in the world it left or in another. One exported from Creatures 2 (.exp) brings its genome, name, sex, and life stage, with its chemistry and mind made anew. The hand holds it: right-click to put it down. The original game cannot open Zeetures's exports.
+File > Import Creature brings a creature back in. One exported from Zeetures (.zex) comes back as it was, in the world it left or in another. One exported from Creatures 2 (.exp) brings its genome, name, sex, and life stage; the words it knew (said the better, the better it knew them); its parents, when it had them; and when it was born and its breeder's note, in its notes. Its chemistry and mind are made anew. The hand holds it: right-click to put it down. The original game cannot open Zeetures's exports.
 
 ### What cannot go back
 

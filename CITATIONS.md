@@ -181,6 +181,11 @@ How the brain grows, holds up, and wears (researched 2026-11-26; several entries
 - Luchetti, M., Terracciano, A., Sutin, A. R., et al. (2024). A meta-analysis of loneliness and risk of dementia using longitudinal data from >600,000 individuals. *Nature Mental Health* (title from memory; details from a summary). Loneliness raising the risk of dementia by about 31%. Informed: loneliness from adulthood speeding the brain's ageing a little.
 - Quan, L., Bierens, J. J. L. M., Lis, R., et al. (2016). Predicting outcome of drowning at the scene: a systematic review and meta-analyses. *Resuscitation, 104*, 63-75. [Link](https://doi.org/10.1016/j.resuscitation.2016.04.006) Under five minutes under water mostly recoverable, much longer almost never. Informed: oxygen gone for more than 30 s damaging the brain, fast.
 
+## Talking to themselves
+
+- Vygotsky, L. S. (1934/1986). *Thought and Language* (A. Kozulin, Trans.). MIT Press. Children's private speech: talking themselves through what they do, which turns inward as they grow. Informed: children, and less often adolescents, saying to themselves what they set about ("push toy...").
+  - Since then: Winsler, A. (2009). Still talking to ourselves after all these years: a review of current research on private speech. In A. Winsler, C. Fernyhough & I. Montero (Eds.), *Private Speech, Executive Functioning, and the Development of Verbal Self-Regulation* (pp. 3-41). Cambridge University Press. Private speech peaks in the preschool years and helps with hard tasks.
+
 ## The world
 
 - Davidson, E. A., & Janssens, I. A. (2006). Temperature sensitivity of soil carbon decomposition and feedbacks to climate change. *Nature, 440*, 165-173. Decomposition speeding up with warmth, roughly doubling for each step of warming (from memory, not looked up again). Informed organic nutrient breaking down faster in warm rooms.
