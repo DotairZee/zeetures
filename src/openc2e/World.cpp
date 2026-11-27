@@ -590,6 +590,13 @@ void World::tick() {
 						break;
 					}
 			std::pair<int, int> hand = c->getCarryPoint();
+			std::string keys;
+			for (auto& [k, v] : a->carried_points)
+				if (keys.size() < 80)
+					keys += fmt::format(" {}:{},{}", k, v.first, v.second);
+			if (keys.empty())
+				keys = " (none at all)";
+			fmt::print("* CARRY points{} | ", keys);
 			fmt::print("* CARRY t{} {} pose {} (first {}) point {}{},{} size {}x{} painted rows {}-{} | carrier {} {} {} hand y {:.0f} feet {:.0f} | object top {:.0f} painted bottom {:.0f} ({:+.0f} vs feet)\n", tickcount, a->identify(), key,
 				sp ? sp->getFirstImg() : 0, has ? "" : "none (corner) ", cp.first, cp.second, w, h, top, bottom, (int)c->family, (int)c->genus, c->species, c->y + hand.second,
 				c->y + c->getHeight(), a->y, a->y + bottom, a->y + bottom - (c->y + c->getHeight()));

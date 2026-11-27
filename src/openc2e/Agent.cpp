@@ -2050,6 +2050,45 @@ std::pair<int, int> Agent::getCarryPoint() {
 	return pos;
 }
 
+// The middle of the topmost painted row of a part's current picture, and
+// its lowest painted row (cached by picture)
+namespace {
+struct Painted {
+	std::pair<int, int> topMiddle{0, 0};
+	int bottom = 0;
+};
+const Painted& paintedOf(SpritePart* s) {
+	static std::map<std::pair<const creaturesImage*, unsigned int>, Painted> s_painted;
+	auto key = std::make_pair((const creaturesImage*)s->getSprite().get(), s->getCurrentSprite());
+	auto t = s_painted.find(key);
+	if (t == s_painted.end()) {
+		Painted p;
+		unsigned int w = s->getWidth(), h = s->getHeight();
+		p.bottom = (int)h - 1;
+		bool found = false;
+		for (unsigned int yy = 0; yy < h; yy++) {
+			unsigned int first = w, last = 0;
+			for (unsigned int xx = 0; xx < w; xx++)
+				if (!s->transparentAt(xx, yy)) {
+					first = std::min(first, xx);
+					last = xx;
+				}
+			if (first < w) {
+				if (!found)
+					p.topMiddle = {(int)(first + last) / 2, (int)yy};
+				found = true;
+				p.bottom = (int)yy;
+			}
+		}
+		t = s_painted.emplace(key, p).first;
+	}
+	return t->second;
+}
+std::pair<int, int> paintedTopMiddle(SpritePart* s) {
+	return paintedOf(s).topMiddle;
+}
+} // namespace
+
 std::pair<int, int> Agent::getCarriedPoint() {
 	unsigned int theirpose = 0;
 
@@ -2066,28 +2105,7 @@ std::pair<int, int> Agent::getCarriedPoint() {
 		// C2: an egg is held by the top of the egg in its picture (its
 		// topmost painted pixel), not by the corner of the picture's empty
 		// box above it (owner, 2026-11-12), by the hand and by creatures
-		static std::map<std::pair<const creaturesImage*, unsigned int>, std::pair<int, int>> s_tops;
-		auto key = std::make_pair((const creaturesImage*)s->getSprite().get(), s->getCurrentSprite());
-		auto t = s_tops.find(key);
-		if (t == s_tops.end()) {
-			std::pair<int, int> top(0, 0);
-			unsigned int w = s->getWidth(), h = s->getHeight();
-			bool found = false;
-			for (unsigned int yy = 0; yy < h && !found; yy++) {
-				unsigned int first = w, last = 0;
-				for (unsigned int xx = 0; xx < w; xx++)
-					if (!s->transparentAt(xx, yy)) {
-						first = std::min(first, xx);
-						last = xx;
-					}
-				if (first < w) {
-					top = {(int)(first + last) / 2, (int)yy};
-					found = true;
-				}
-			}
-			t = s_tops.emplace(key, top).first;
-		}
-		pos = t->second;
+		pos = paintedTopMiddle(s);
 	} else if (s && engine.version > 2) {
 		// TODO: why fudge pickup location here and not in default carried points or something?
 		// (this is nornagon's code which i moved - fuzzie)
@@ -2129,8 +2147,27 @@ void Agent::adjustCarried(float unusedxoffset, float unusedyoffset) {
 	yoffset += carrypoint.second;
 
 	std::pair<int, int> carriedpoint = carrying->getCarriedPoint();
+	// C2, carried by a creature: an object with no pickup point for the
+	// picture it shows (most of the world's objects have none at all) was
+	// held by the top-left corner of its picture's box, so one with empty
+	// rows above it, or a tall one, hung below the creature's feet, inside
+	// the floor, and was dropped there, stuck (owner, 2026-11-26; a copy of
+	// Home: 2 9 27 hung up to 49 px below the feet, 2 13 13 22, our fruit
+	// 2 25 144 14). Now, as eggs are (owner, 2026-11-12), it is held by the
+	// middle of its topmost painted row; and, whatever its pickup point, its
+	// painted bottom is never below its carrier's feet.
+	SpritePart* cs = dynamic_cast<SpritePart*>(carrying->part(0));
+	bool byCreature = engine.version == 2 && cs && dynamic_cast<CreatureAgent*>(this);
+	if (byCreature && !(carrying->family == 2 && carrying->genus == 5) && !carrying->carried_points.count(cs->getBase() + cs->getPose()))
+		carriedpoint = paintedTopMiddle(cs);
 	xoffset -= carriedpoint.first;
 	yoffset -= carriedpoint.second;
+	if (byCreature) {
+		float paintedBottom = y + yoffset + paintedOf(cs).bottom;
+		float feet = y + getHeight();
+		if (paintedBottom > feet)
+			yoffset -= (int)std::ceil(paintedBottom - feet);
+	}
 
 	if (xoffset != 0 || yoffset != 0)
 		carrying->moveTo(x + xoffset, y + yoffset, true);
