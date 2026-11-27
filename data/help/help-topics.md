@@ -204,7 +204,7 @@ File > Preferences gathers the settings in one window, in six sections. Each tak
 - **Display:** the letters in the world (see [[Words and languages]]), the creature frame rate, smooth scrolling, scroll bars, tooltips for objects, full screen, and the toolbars and their text labels.
 - **Creatures:** speech and thought bubbles; the Creature's View: its eye's lids (blinking; no blinking, only drooping and closing with sleep; or always open), whether it shows the creature itself, its own bubbles, and its name in the title, and its size; whether heads follow the hand, babies say their first words, and words come out a little wrong while being learned (see [[Talking to creatures]]); and the experimental way of learning to talk (see [[Learning to talk (experimental)]]).
 - **Words:** the words creatures learn and the teaching computers show. See [[Words and languages]].
-- **World:** how often the world saves itself; opening this world at launch; in this world, whether all creatures are fertile and the limit on their number, the grendels' and ettins' personalities (ticked: each kind has its own ways; unticked: they are as the games made them), and how many grendels and ettins the game hatches; Zeetures's recommended breed packs; and your Creatures 2 folder.
+- **World:** how often the world saves itself; opening this world at launch; in this world, whether all creatures are fertile and the limit on their number, the grendels' and ettins' personalities (ticked: each kind has its own ways; unticked: they are as the games made them; see [[Grendel and ettin personalities]]), and how many grendels and ettins the game hatches; Zeetures's recommended breed packs; and your Creatures 2 folder.
 - **Status Bar:** whether it shows at all, which of its parts show, and which happenings show there as notices.
 - **Updates:** checking for new versions and installing them by themselves, and a button to check now.
 
@@ -634,7 +634,7 @@ The [[Breeder's Kit]] shows readiness, has aphrodisiacs, can inseminate a female
 
 ### Germs
 
-Germs live in dark caves, in rotting food, and on grendels, who carry them without falling ill. They seep from room to room, and light kills them. Norns and ettins catch them from a room, from rotten fruit, or from a sneeze.
+Germs live in dark caves, in rotting food, and on grendels, who carry them without falling ill (all but grouchy grendels, while the [[Grendel and ettin personalities]] are on). They seep from room to room, and light kills them. Norns and ettins catch them from a room, from rotten fruit, or from a sneeze.
 
 There are four illnesses to begin with: a sneezing cold and a sleeping sickness from caves, a cough from rotting food, and a fever from grendels. Now and then a changed strain appears, against which old immunity does not work.
 
@@ -672,17 +672,29 @@ Radiation comes from the volcano's chamber and from high in the sky, and spreads
 ## Norns, grendels, and ettins
 
 - **Norns** are the sociable ones, and the ones most breeds are of.
-- **Grendels** hatch from a pile of eggs in a chamber of their own, their lair, where the next begins to hatch when none is left alive (or fewer than you choose: **Grendels the game hatches at a time**, Preferences, World; one unless you set it). Most carry germs without falling ill. They have the same kind of mind as norns, with their own genomes: they learn, and talk in a dialect of their own. There are three kinds:
-  - **Bulbous grendels** (the game's own) never tire. They lie up at the lair by day and prowl by night, angry at norns and a bully to ettins, and they take any eggs they find back to the lair. One won over by a norn's long kindness stops hitting it, and may stand up for it.
-  - **Boney grendels** (Boney Grendels by Creature Labs) are about by day and go home to the lair at night, in a pack. Scavengers, they go for the weak, the young, the ill and the dead, and run from a crowd of norns. Thieves, they snatch food and run home with it. They learn quickly and are won over more easily, and mothers stay near the eggs.
-  - **Grouchy grendels**, the C1 grendels (the C1-in-C2 Grendel by RudeDog, on a genome Zeetures makes from the game's own grendel) are gluttons, always hungry, and thieves that carry food off to the lair. They are deaf to the hand: they learn no words from it and take no orders. Loners, they are angered by other creatures' pats, slaps and chatter, and keep only ettins' company. They know no fear, carry no germs (though they can fall ill), are about by day and asleep at night, and are born knowing little but learn quickly. Mostly barren, they have no mates; now and then a grown female lays a lone egg of her own.
-- **Ettins** have a mind of the same kind too, and a dialect of their own. When none is alive, the egg machine by the volcano lays one of their eggs (or while fewer than **Ettins the game hatches at a time** live, in the same place). They gather gadgets and toys and leave them in a hoard somewhere quiet; they carry eggs left lying about to the incubator, and food to where creatures are hungry; they are drawn to machines and switch them on; they seek norns when lonely and leave a crowd.
+- **Grendels** hatch from a pile of eggs in a chamber of their own, their lair, where the next begins to hatch when none is left alive (or fewer than you choose: **Grendels the game hatches at a time**, Preferences, World; one unless you set it). They have the same kind of mind as norns, with their own genomes: they learn, and talk in a dialect of their own. There are three kinds, and the pile hatches each a third of the time, either sex:
+  - **Bulbous grendels,** the game's own.
+  - **Boney grendels,** from Boney Grendels by Creature Labs.
+  - **Grouchy grendels,** the C1 grendels: the C1-in-C2 Grendel's pictures by RudeDog, on a genome Zeetures makes from the game's own grendel.
+- **Ettins** have a mind of the same kind too, and a dialect of their own. When none is alive, the egg machine by the volcano lays one of their eggs (or while fewer than **Ettins the game hatches at a time** live, in the same place).
 
-Each kind gives off a scent of its own, which the others come to know. A norn that falls ill soon after being near a grendel learns to keep away from grendels' scent, and the young learn it the same way.
+Grendels and ettins grow from babies as norns do, and shrink a little when senile. At the limit on creatures their eggs come first: they hatch, and the norns' eggs wait for room (see [[Breeding and eggs]]). In the [[Hatchery]] all three kinds have their shelves. What each kind does is in [[Grendel and ettin personalities]].
 
-Each kind breeds with its own. Grendels (all but grouchy grendels) and ettins are fertile, and long for a mate, only while an adult of the other sex of their kind lives somewhere in the world; without one they have no young. The world's own grendel eggs hatch either sex, bulbous, Boney or grouchy; ettin eggs hatch either sex too. In the [[Hatchery]] all three have their shelves. The [[Health Kit]] names a grendel's or ettin's kind: rest the pointer on it for what that means for this one, and whether it is fertile now.
+## Grendel and ettin personalities
 
-All of this is the grendels' and ettins' personalities, on unless you untick them in File > Preferences > World. Unticked, they are as the games made them: C2's own grendels and ettins have no young and keep no hours, the Boney grendels are as Cyberlife made them, and C1 grendels hatch with Creatures 1's own grendel genome (from your Creatures 1, when it is installed beside Creatures 2), its feelings and instincts in a Creatures 2 body; without Creatures 1, a C2 grendel in their pictures. Grendels already alive keep their genes but not their ways.
+Each kind of grendel, and the ettins, have ways of their own, built on what their genes already hold. They are on unless you untick **Grendel and ettin personalities** in File > Preferences > World (each world keeps its own choice).
+
+- **Bulbous grendels** never tire. They lie up at the lair by day and prowl by night, angry at norns and a bully to ettins, and they take any eggs they find back to the lair. They carry germs without falling ill. One won over by a norn's long kindness stops hitting it, and may stand up for it.
+- **Boney grendels** are about by day and go home to the lair at night, in a pack. Scavengers, they go for the weak, the young, the ill and the dead, and run from a crowd of norns. Thieves, they snatch food and run home with it. They carry germs without falling ill. They learn quickly and are won over more easily, and mothers stay near the eggs.
+- **Grouchy grendels** are gluttons, always hungry, and thieves that carry food off to the lair. They are deaf to the hand: they learn no words from it and take no orders. Loners, they are angered by other creatures' pats, slaps and chatter, keep out of crowds, and keep only ettins' company. They know no fear, carry no germs (though they can fall ill), are about by day and asleep at night, and are born knowing little but learn quickly.
+- **Ettins** gather gadgets and toys and leave them in a hoard somewhere quiet; they carry eggs left lying about to the incubator, and food to where creatures are hungry; they are drawn to machines and switch them on; they seek norns when lonely, leave a crowd, and keep away from grendels.
+- **Scents:** each kind gives off a scent of its own, which the others come to know, and the lair, the ettins' den, the incubator and each ettin's hoard have theirs (see [[Scents]]). A norn that falls ill soon after being near a grendel learns to keep away from grendels' scent, and the young learn it the same way. Grouchy grendels carry no germs, so they give off no grendel scent for norns to fear.
+- **Breeding:** each kind breeds with its own. Bulbous and Boney grendels and ettins are fertile, and long for a mate, only while an adult of the other sex of their kind lives somewhere in the world; without one they have no young. Grouchy grendels have no mates: now and then a grown female lays a lone egg of her own (about one grown grouchy grendel in three, once).
+- **The [[Health Kit]]** names a grendel's or ettin's kind: rest the pointer on it for what that means for this one, and whether it is fertile now.
+
+### With the personalities off
+
+Unticked, grendels and ettins are as the games made them. C2's own grendels and ettins have no young and keep no hours, and the Health Kit names no kinds. The Boney grendels are as Cyberlife made them, breeding through their own genes. C1 grendels hatch with Creatures 1's own grendel genome, from your Creatures 1 when it is installed beside Creatures 2: its feelings and instincts in a Creatures 2 body. It is deaf to the hand's words there too, as it was in Creatures 1. Without Creatures 1, they are a C2 grendel in their pictures. Grendels already alive keep their genes but not their ways. The egg pile's three kinds, growing up and old age, illness, and the eggs that come first at the limit stay as they are.
 
 # The world
 
@@ -736,12 +748,13 @@ Rooms hold scents, which drift through doorways and fade. Creatures smell the ro
 - **Mates:** grown creatures give off the scent of their kind and sex. It stirs the other sex, who follow it when the mood is on them.
 - **Care:** babies, children, the senile, the ill, and the poisoned give it off, and grown creatures of their kind come.
 - **A creature's own:** each has a scent of its own, by which others can find it again.
+- **Grendels and ettins:** each kind's own scent, the grendels' lair, the ettins' den, the incubator, and each ettin's hoard, which their [[Grendel and ettin personalities]] answer to.
 
 Show any of them on the Ecology Kit's map; "Tint the world too" colours the main view.
 
 ### Making your own
 
-The rules are in the plain-text file pheromones.txt. Its own notes explain every line, and it has examples to switch on: alarm, danger, kindness, and trails. Take a copy from Zeetures's page on GitHub (in its additions folder), change it, and put it in your Zeetures folder (see [[Where things are kept]]). It is read each time a world opens.
+The rules are in the plain-text file pheromones.txt. Its own notes explain every line, and it has examples to switch on: alarm, danger, kindness, and trails. Take a copy from Zeetures's page on GitHub (in its additions folder), change it, and put it in your Zeetures folder (see [[Where things are kept]]). It is read each time a world opens. The rules between the lines "personalities" and "end personalities" stop while a world's grendel and ettin personalities are off; grendel.bulbous, grendel.boney and grendel.grouchy name one kind of grendel.
 
 ## Getting about, and new places
 
@@ -877,6 +890,7 @@ How a creature's body is, and what to do about it.
 - **Overall health:** the strength of its weakest organ, as that is what kills. Rest the pointer on it for how many organs it has and their average; beneath it is what is holding it back. The ageing clock wears down in every creature; that one is not an illness.
 - **Body temperature, pulse, and life stage.** The first two draw the last two minutes as a line while the page is open. Click the temperature to change between Celsius and Fahrenheit.
 - **Illness:** what it has, for how long, and how far its antibodies have come, with what it is immune to for now. For a grendel, what it carries.
+- **Its kind:** for a grendel or an ettin, which kind it is (bulbous, Boney, grouchy, or ettin); rest the pointer on it for its ways and whether it is fertile now. Shown while the [[Grendel and ettin personalities]] are on.
 - **Weakest organs:** the five worst. The button beneath opens them all in the [[Science Kit]].
 
 ### Mind

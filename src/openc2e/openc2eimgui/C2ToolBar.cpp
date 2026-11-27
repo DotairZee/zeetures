@@ -1882,7 +1882,7 @@ static void DrawPreferences() {
 				ImGui::SetTooltip("Ticked, grendels and ettins each have their own ways: bulbous grendels prowl by night, Boney ones roam in packs,\n"
 								  "grouchy grendels are gluttons and loners, ettins hoard gadgets and carry eggs, and they breed while a mate of their kind lives.\n"
 								  "Unticked, they are as the games made them: C2's own grendels and ettins, the original Boney grendels, and C1 grendels\n"
-								  "on Creatures 1's own grendel genome. Grendels already alive keep their genes. See Help > Norns, grendels, and ettins.");
+								  "on Creatures 1's own grendel genome. Grendels already alive keep their genes. See Help > Grendel and ettin personalities.");
 			// how many grendels and ettins the game's own eggs keep (Kinds.h)
 			for (int genus : {2, 3}) {
 				int keep = Kinds::gameKeeps(genus);
