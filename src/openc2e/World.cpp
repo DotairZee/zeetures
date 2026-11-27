@@ -566,6 +566,51 @@ void World::tick() {
 	// that make or use ATP and ADP)
 	// (OPENC2E_DUMP_ORGANS=OV97: the creature a script marks with OV97 = 1,
 	// once it exists, e.g. one just made from a genome file)
+	// developer aid: OPENC2E_WATCH_CARRY=N prints, every N ticks, each object
+	// a creature carries: its picture (base + pose), the pickup point found
+	// for it (or none: the picture's top-left corner), its picture's size and
+	// where its painted pixels begin and end, and where it hangs: its top and
+	// painted bottom against the carrier's hand and feet
+	if (static const int wcEvery = devenv("OPENC2E_WATCH_CARRY") ? atoi(devenv("OPENC2E_WATCH_CARRY")) : 0; wcEvery > 0 && tickcount % wcEvery == 0)
+		for (auto& a : agents) {
+			if (!a || a->isDying() || !a->carriedby || !dynamic_cast<CreatureAgent*>(a->carriedby.get()))
+				continue;
+			Agent* c = a->carriedby.get();
+			SpritePart* sp = dynamic_cast<SpritePart*>(a->part(0));
+			unsigned int key = sp ? sp->getBase() + sp->getPose() : 0;
+			bool has = a->carried_points.count(key) > 0;
+			std::pair<int, int> cp = a->getCarriedPoint();
+			int w = sp ? (int)sp->getWidth() : 0, h = sp ? (int)sp->getHeight() : 0, top = -1, bottom = -1;
+			for (int yy = 0; sp && yy < h; yy++)
+				for (int xx = 0; xx < w; xx++)
+					if (!sp->transparentAt(xx, yy)) {
+						if (top < 0)
+							top = yy;
+						bottom = yy;
+						break;
+					}
+			std::pair<int, int> hand = c->getCarryPoint();
+			fmt::print("* CARRY t{} {} pose {} (first {}) point {}{},{} size {}x{} painted rows {}-{} | carrier {} {} {} hand y {:.0f} feet {:.0f} | object top {:.0f} painted bottom {:.0f} ({:+.0f} vs feet)\n", tickcount, a->identify(), key,
+				sp ? sp->getFirstImg() : 0, has ? "" : "none (corner) ", cp.first, cp.second, w, h, top, bottom, (int)c->family, (int)c->genus, c->species, c->y + hand.second,
+				c->y + c->getHeight(), a->y, a->y + bottom, a->y + bottom - (c->y + c->getHeight()));
+		}
+
+	// developer aid: OPENC2E_WATCH_ORGANS=N prints, every N ticks, each organ
+	// of the creature a script marks with OV97 (1 or 2): short- and
+	// long-term life force (% of full), injury, activations, and chemical
+	// 250 (to compare an illness with real C2's)
+	if (static const int woEvery = devenv("OPENC2E_WATCH_ORGANS") ? atoi(devenv("OPENC2E_WATCH_ORGANS")) : 0; woEvery > 0 && tickcount % woEvery == 0)
+		for (auto& a : agents) {
+			auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr;
+			auto* c2 = ca ? dynamic_cast<c2Creature*>(ca->getCreature()) : nullptr;
+			if (!c2 || !a->var[97].hasInt() || a->var[97].getInt() < 1)
+				continue;
+			std::string line = fmt::format("* ORGANS t{} mark {} chem250 {} |", tickcount, a->var[97].getInt(), (int)c2->getChemical(250));
+			for (auto& o : c2->getOrgans())
+				line += fmt::format(" {:.1f}/{:.1f}/{}/{}", 100.0f * o->getShortTermLifeforce() / std::max(1.0f, o->getInitialLifeforce()),
+					100.0f * o->getLongTermLifeforce() / std::max(1.0f, o->getInitialLifeforce()), (int)o->getInjuryToApply(), o->getActivations());
+			fmt::print("{}\n", line);
+		}
 	static bool organsDumped = false;
 	if (static const char* dmEnv = devenv("OPENC2E_DUMP_ORGANS"); dmEnv && !organsDumped && tickcount % 100 == 70) {
 		bool byMark = std::string(dmEnv) == "OV97";

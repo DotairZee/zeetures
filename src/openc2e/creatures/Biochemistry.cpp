@@ -739,13 +739,22 @@ void c2Organ::tick() {
 
 		// Injury (only with "Illness can damage organs" ticked, Disease.h):
 		// the organ's injury receptors (antigens, lactate, fat, heavy metals
-		// in the stock genomes) take injury/255 of 1/255 of its full life
-		// force from its short-term life force each activation, the scale of
-		// the genome's own "damage due to zero energy". The repair rate brings
-		// it back; what is not repaired in time wears the long-term life
-		// force down, and an organ at 0 is death.
+		// in the stock genomes) take injury/255 of 1/55 of its full life
+		// force from its short-term life force each time the organ runs. The
+		// scale is
+		// measured in real C2 (2026-11-26: a newborn norn from norn.gen given
+		// antigen 250 +30 every 2.3 s for 3 minutes; its four organs with an
+		// antigen-250 receptor, injury about 25-28, went from 100% to 35-42%
+		// short-term, the slowest to 18%, one with less injury held at 80%,
+		// and none failed. Ours with 55: a typical organ declines as fast,
+		// about 0.3% a second; tried and dropped: every biochemistry step
+		// whether the organ runs or not, which failed three of the four). The repair rate brings
+		// it back, but only up to the long-term life force, which follows
+		// what is not repaired in time and never mends: the harm is lasting,
+		// as in C2 (its organs stayed at their low after the illness), and an
+		// organ at 0 is death.
 		if (injurytoapply > 0 && Disease::organHarm()) {
-			shorttermlifeforce -= injurytoapply * (lifeforce / (255.0f * 255.0f));
+			shorttermlifeforce -= injurytoapply * (lifeforce / (255.0f * 55.0f));
 			if (shorttermlifeforce < 0.0f)
 				shorttermlifeforce = 0.0f;
 			// developer aid: OPENC2E_WATCH_INJURY prints an organ's first injury,

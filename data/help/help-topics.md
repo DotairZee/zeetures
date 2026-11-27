@@ -642,7 +642,7 @@ An illness is a nuisance more than a danger to a creature that is well fed. It l
 
 ### Illness that harms
 
-In the original game, illness could wear down a creature's organs and kill it. Zeetures leaves that off. To have it, tick **Illness can damage organs, as in Creatures 2** (Options, World; it applies to every world). Then, while a creature is ill, the organs its genes name for each germ wear down, and they mend slowly once it is well. A long or severe illness can kill. **Creatures can die of illness with this on.** The [[Science Kit]] shows each organ's health.
+In the original game, illness could wear down a creature's organs and kill it. Zeetures leaves that off. To have it, tick **Illness can damage organs, as in Creatures 2** (Options, World; it applies to every world). Then, while a creature is ill, the organs its genes name for each germ wear down, at the pace measured in the original game, and **the harm lasts**: an organ stays as worn as it was when the illness ended. A long or severe illness, or two at once, can kill. **Creatures can die of illness with this on.** The [[Science Kit]] shows each organ's health.
 
 ### What helps
 

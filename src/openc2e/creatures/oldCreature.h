@@ -391,6 +391,7 @@ class c2Organ {
 	unsigned char getDamageRate() { return damagerate; }
 	unsigned char getEnergyCost() { return energycost; }
 	unsigned char getInjuryToApply() { return injurytoapply; }
+	unsigned int getActivations() const { return biochemticks; }
 	float getInitialLifeforce() { return lifeforce; }
 	float getShortTermLifeforce() { return shorttermlifeforce; }
 	float getLongTermLifeforce() { return longtermlifeforce; }

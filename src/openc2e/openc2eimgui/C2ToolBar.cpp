@@ -1838,7 +1838,7 @@ static void DrawPreferences() {
 				if (ImGui::Checkbox("Illness can damage organs, as in Creatures 2", &harm))
 					Disease::setOrganHarm(harm);
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("Ticked, an ill creature's organs wear down while it is ill, as its genes ask, and mend slowly after.\nA long or severe illness can kill it. Unticked, illness only makes creatures feel ill.\nApplies to every world. See Help > Illness and medicine.");
+					ImGui::SetTooltip("Ticked, an ill creature's organs wear down while it is ill, as its genes ask, at the original game's pace,\nand stay worn after. A long or severe illness, or two at once, can kill it. Unticked, illness only makes creatures feel ill.\nApplies to every world. See Help > Illness and medicine.");
 				if (harm) {
 					ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 420);
 					ImGui::TextColored(ImVec4(0.9f, 0.45f, 0.3f, 1.0f), "Creatures can now die of illness. Untick to go back to illness without lasting harm.");
