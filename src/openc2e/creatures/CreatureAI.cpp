@@ -119,13 +119,38 @@ void oldCreature::tickInvoluntaryActions() {
 	if (zombie)
 		return;
 	bool lyingDown = parentagent->getLastScript() == 41 && !parentagent->vmStopped();
+	// Sneezing, coughing and shivering (2-4) come more often the stronger
+	// their trigger (dose-response; owner, 2026-11-26): below its typical
+	// level (the median when it fires, in a copy of Home: sneeze 20, cough
+	// 3, shiver 12) the pause each sets itself (LTCY) runs down at level /
+	// typical level of the usual speed, down to a tenth, so a mildly ill
+	// creature sneezes now and then; at or above it, as before, so a badly
+	// ill one sneezes as often as ever. (Letting strong triggers run it down
+	// faster, up to three times, doubled sneezes and coughs in a copy of
+	// Home, and every one interrupts eating.) The other reflexes (flinching,
+	// laying an egg, falling asleep, dying) are as before.
+	// OPENC2E_NO_GRADED_REFLEXES for comparison.
+	static const bool ungraded = devenv("OPENC2E_NO_GRADED_REFLEXES") != nullptr;
+	static const float typical[8] = {0, 0, 20, 3, 12, 0, 0, 0};
 	for (unsigned int i = 0; i < 8; i++) {
 		if (involactionlatency[i] > 0) {
-			involactionlatency[i]--;
+			if (!ungraded && typical[i] > 0 && involaction[i] > 0) {
+				involactionCredit[i] += std::clamp(involaction[i] / typical[i], 0.1f, 1.0f);
+				while (involactionCredit[i] >= 1.0f && involactionlatency[i] > 0) {
+					involactionCredit[i] -= 1.0f;
+					involactionlatency[i]--;
+				}
+			} else
+				involactionlatency[i]--;
 			continue;
 		}
-		if (involaction[i] > 0 && !asleep && !(i == 5 && (resistsleep || lyingDown)))
+		involactionCredit[i] = 0.0f;
+		if (involaction[i] > 0 && !asleep && !(i == 5 && (resistsleep || lyingDown))) {
+			static const bool watchReflexes = devenv("OPENC2E_WATCH_REFLEXES") != nullptr; // developer aid
+			if (watchReflexes && i >= 2 && i <= 4)
+				fmt::print("* REFLEX {} level {}\n", i == 2 ? "sneeze" : i == 3 ? "cough" : "shiver", (int)involaction[i]);
 			parentagent->queueScript(i + 64);
+		}
 	}
 }
 

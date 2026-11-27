@@ -68,6 +68,7 @@ class oldCreature : public Creature {
 	unsigned char dead;
 	unsigned char involaction[8];
 	unsigned int involactionlatency[8];
+	float involactionCredit[8] = {}; // graded reflexes: latency owed (CreatureAI.cpp)
 
 	void addGene(gene*);
 	void tickBrain();
