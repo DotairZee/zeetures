@@ -244,7 +244,11 @@ void c_NEW_GENE(caosVM* vm) {
 		throw Exception("NEW: GENE: couldn't store the new genome");
 	fmt::print("* NEW: GENE {} and {}: genome {} ({} genes, {} mutations)\n", mumName, dadName, name, rep.genes, rep.mutations);
 	if (mumName != dadName && world.history->hasMoniker(mumName) && world.history->hasMoniker(dadName))
-		world.history->splicedGenomes.insert(name);
+		world.history->splicedGenomes[name] = {mumName, dadName};
+	// one creature's genome copied by the Metamorph Device (3 10 13): its
+	// creature will be the first one changed
+	if (mumName == dadName && world.history->hasMoniker(mumName) && vm->owner && vm->owner->family == 3 && vm->owner->genus == 10 && vm->owner->species == 13)
+		world.history->metamorphGenomes[name] = mumName;
 	destination->setInt(genomeNameToInt(name));
 }
 

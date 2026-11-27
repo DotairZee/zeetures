@@ -126,7 +126,13 @@ scrp 2 5 3 9
     doif totl 4 3 0 ge etnl lock tick 1200 stop endi
     setv ov01 hsex 3
   else
-    rndv var0 1 2 setv ov01 var0
+* (the Metamorph Device's eggs, OV01 3, hatch as the sex it chose, in OV02:
+* the other sex from the creature it changed; owner, 2026-11-27)
+    doif ov01 eq 3
+      setv ov01 ov02
+    else
+      rndv var0 1 2 setv ov01 var0
+    endi
   endi
   anim [3456543R] wait 50
   snde crak

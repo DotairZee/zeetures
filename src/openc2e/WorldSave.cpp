@@ -761,7 +761,7 @@ static void writeCreatureRecord(std::ostream& out, Agent* a, oldCreature* c, con
 		monikerData& m = world.history->getMoniker(mon);
 		out << "moniker " << mon << "\n";
 		if (!m.mother.empty() || !m.father.empty())
-			out << "parents " << (m.mother.empty() ? "-" : m.mother) << " " << (m.father.empty() ? "-" : m.father) << (m.spliced ? " spliced" : "") << "\n";
+			out << "parents " << (m.mother.empty() ? "-" : m.mother) << " " << (m.father.empty() ? "-" : m.father) << (m.spliced ? " spliced" : m.metamorph ? " metamorph" : "") << "\n";
 		if (!m.name.empty())
 			out << "name " << escapeLine(m.name) << "\n";
 		out << "registered " << (m.registered ? 1 : 0) << "\n";
@@ -888,6 +888,12 @@ static bool SaveWorldStateUnguarded(const fs::path& worlddir, std::string& error
 	Lightning::save(out); // (extra mutations owed to children)
 	BrainOrgan::save(out); // (how dazed each creature is)
 	Kinds::save(out); // (wariness of grendels, ettins' hoards)
+	// genomes made for eggs not yet hatched: spliced, or by the Metamorph
+	// Device (historyManager), so their creatures are recorded so
+	for (auto& [g, p] : world.history->splicedGenomes)
+		out << "spliced-genome " << g << " " << p.first << " " << p.second << "\n";
+	for (auto& [g, self] : world.history->metamorphGenomes)
+		out << "metamorph-genome " << g << " " << self << "\n";
 	// the life log (Owner's Kit): kind, tick, genus, female, stage, age, age
 	// known, old age, moniker, then the name
 	auto entry = [&](const char* key, const lifeLogEntry& e) {
@@ -956,19 +962,37 @@ static bool SaveWorldStateUnguarded(const fs::path& worlddir, std::string& error
 	// the records of the dead (Owner's Kit family tree, life log): no body,
 	// just who they were
 	int nrecords = 0;
+	// and of creatures gone without dying that are someone's parent: those
+	// the gene splicer used up, or changed in the Metamorph Device (their
+	// former selves), for the family tree (owner, 2026-11-27); no "died"
+	std::set<std::string> parentsOfSome;
 	for (auto& [mon, m] : world.history->all()) {
-		if (!m.died)
+		if (!m.mother.empty())
+			parentsOfSome.insert(m.mother);
+		if (!m.father.empty())
+			parentsOfSome.insert(m.father);
+	}
+	// (and the parents of eggs not yet hatched from those machines)
+	for (auto& [g, p] : world.history->splicedGenomes) {
+		parentsOfSome.insert(p.first);
+		parentsOfSome.insert(p.second);
+	}
+	for (auto& [g, self] : world.history->metamorphGenomes)
+		parentsOfSome.insert(self);
+	for (auto& [mon, m] : world.history->all()) {
+		if (!m.died && !(parentsOfSome.count(mon) && !m.owner))
 			continue;
 		out << "record\n";
 		out << "moniker " << mon << "\n";
 		out << "genus " << (int)m.genus << " " << m.gender << "\n";
 		if (!m.mother.empty() || !m.father.empty())
-			out << "parents " << (m.mother.empty() ? "-" : m.mother) << " " << (m.father.empty() ? "-" : m.father) << (m.spliced ? " spliced" : "") << "\n";
+			out << "parents " << (m.mother.empty() ? "-" : m.mother) << " " << (m.father.empty() ? "-" : m.father) << (m.spliced ? " spliced" : m.metamorph ? " metamorph" : "") << "\n";
 		if (!m.name.empty())
 			out << "name " << escapeLine(m.name) << "\n";
 		out << "registered " << (m.registered ? 1 : 0) << "\n";
 		out << "born " << m.borntick << " " << (m.bornknown ? 1 : 0) << "\n";
-		out << "died " << m.diedtick << " " << m.diedstage << "\n";
+		if (m.died)
+			out << "died " << m.diedtick << " " << m.diedstage << "\n";
 		for (auto& ph : m.photos)
 			out << "photo " << escapeLine(ph) << "\n";
 		for (auto& e : m.story)
@@ -1033,10 +1057,12 @@ struct SavedCreature {
 	std::vector<storyEntry> story; // its life story
 	std::string moniker, mother, father; // as saved (monikers used to be new each load)
 	bool spliced = false; // "parents M F spliced": made by the gene splicer
+	bool metamorph = false; // "parents M M metamorph": changed by the Metamorph Device
 	// a record only (a creature that has died): its kind, sex and death
 	bool record = false;
 	int genus = 1, gender = -1, diedstage = -1;
 	unsigned int diedtick = 0;
+	bool died = false; // a record with a "died" line (a parent gone without dying has none)
 };
 
 // one line of free text in state.txt: backslashes and line breaks escaped
@@ -1270,6 +1296,7 @@ static std::string adoptRecords(std::shared_ptr<genomeFile> genome, const SavedC
 	m.mother = s.mother;
 	m.father = s.father;
 	m.spliced = s.spliced;
+	m.metamorph = s.metamorph;
 	historyManager::lineageGeneration++;
 	m.story = s.story;
 	m.registered = s.registered;
@@ -1477,15 +1504,19 @@ static void readCreatureLine(SavedCreature* c, const std::string& key, std::istr
 	else if (key == "parents") {
 		l >> c->mother >> c->father;
 		std::string how;
-		c->spliced = (l >> how) && how == "spliced";
+		l >> how;
+		c->spliced = how == "spliced";
+		c->metamorph = how == "metamorph";
 		if (c->mother == "-")
 			c->mother.clear();
 		if (c->father == "-")
 			c->father.clear();
 	} else if (key == "genus")
 		l >> c->genus >> c->gender;
-	else if (key == "died")
+	else if (key == "died") {
 		l >> c->diedtick >> c->diedstage;
+		c->died = true;
+	}
 	else if (key == "name")
 		c->name = unescapeLine(restOfLine(l));
 	else if (key == "registered")
@@ -1663,6 +1694,18 @@ bool LoadWorldState(const fs::path& worlddir) {
 			BrainOrgan::readLine(key, l);
 		} else if (key.rfind("kinds-", 0) == 0) {
 			Kinds::readLine(key, l);
+		} else if (key == "spliced-genome") {
+			std::string g, mum, dad;
+			if (l >> g) {
+				l >> mum >> dad;
+				world.history->splicedGenomes[g] = {mum, dad};
+			}
+		} else if (key == "metamorph-genome") {
+			std::string g, self;
+			if (l >> g) {
+				l >> self;
+				world.history->metamorphGenomes[g] = self;
+			}
 		} else if (key == "nutrients") {
 			SavedNutrients n;
 			if (l >> n.room >> n.ontr >> n.intr >> n.ontrBase >> n.intrBase)
@@ -1799,12 +1842,13 @@ bool LoadWorldState(const fs::path& worlddir) {
 		m.gravephoto = r.gravephoto;
 		m.borntick = r.born;
 		m.bornknown = r.bornknown;
-		m.died = true;
+		m.died = r.died; // (a parent gone without dying has no "died" line)
 		m.diedtick = r.diedtick;
 		m.diedstage = r.diedstage;
 		m.mother = r.mother;
 		m.father = r.father;
 		m.spliced = r.spliced;
+		m.metamorph = r.metamorph;
 		historyManager::lineageGeneration++;
 	}
 	for (auto& s : eggs)

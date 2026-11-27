@@ -786,8 +786,8 @@ Swimmers drown if they cannot get out, so there are ways out everywhere. The sub
 - **The path behind the waterfall** west of the incubator's pond, and the passage from the volcano to the potion room.
 - **The lab's treat dispenser.**
 - **The two cactus seed launchers,** hidden at the west end of the glass tube under the Gelsemium pit, for creatures with the determination to carry them to the desert.
-- **The gene splicer** in the gene lab. It has power when a world opens; the button in the domed lab turns it off and on (green on, red off). Put a creature in each pod and press the console: the egg is a splice of both, and they do not survive it. With only one pod filled, the egg is a clone.
-- **The Metamorph Device** in the splicer room replaces the creature in its cabin with a newly hatched one of the opposite sex, made from its own genome. The lever chooses how the old one ends: at once, or by poison. Only the hand can work it.
+- **The gene splicer** in the gene lab. It has power when a world opens; the button in the domed lab turns it off and on (green on, red off). Put a creature in each pod and press the console: the egg is a splice of both, and they do not survive it. With only one pod filled, the egg is a clone. The baby's family tree shows the two it was spliced from as its parents.
+- **The Metamorph Device** in the splicer room turns the creature in its cabin into one of the opposite sex, made from its own genome: it lays an egg at the gene lab's chute, where the splicer's eggs come out. The lever chooses how the old one ends: at once, or by poison. Only the hand can work it. The new creature's family tree shows one parent, its former self.
 
 ### Walls and bridges
 

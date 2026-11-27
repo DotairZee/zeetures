@@ -1875,8 +1875,15 @@ void Agent::kill() {
 	// a creature's genome stays findable by its moniker for a while after
 	// it leaves the world (historyManager::goneGenomes)
 	if (family == 4)
-		if (auto g = genome_slots.find(0); g != genome_slots.end() && g->second)
-			world.history->rememberGoneGenome(world.history->findMoniker(g->second), g->second);
+		if (auto g = genome_slots.find(0); g != genome_slots.end() && g->second) {
+			std::string mon = world.history->findMoniker(g->second);
+			world.history->rememberGoneGenome(mon, g->second);
+			// its sex kept on its record (one taken by the gene splicer or the
+			// Metamorph Device is kept for the family tree without dying)
+			auto* ca = dynamic_cast<CreatureAgent*>(this);
+			if (ca && ca->getCreature() && !mon.empty() && world.history->hasMoniker(mon))
+				world.history->getMoniker(mon).gender = ca->getCreature()->isFemale() ? 2 : 1;
+		}
 
 	dying = true; // what a world, what a world...
 

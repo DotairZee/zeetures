@@ -1368,6 +1368,10 @@ void c_NEW_CREA_c1(caosVM* vm) {
 					bool spliced = world.history->splicedGenomes.count(realmoniker) > 0;
 					m.addEvent(spliced ? 1 : 0, mum, dad);
 					m.spliced = spliced;
+					// the Metamorph Device's: its one parent is its former self
+					m.metamorph = mum == dad && world.history->metamorphGenomes.count(realmoniker) > 0;
+					world.history->splicedGenomes.erase(realmoniker);
+					world.history->metamorphGenomes.erase(realmoniker);
 				}
 				break;
 			}

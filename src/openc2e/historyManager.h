@@ -95,6 +95,7 @@ class monikerData {
 	std::string moniker;
 
   public:
+	const std::string& getMonikerName() const { return moniker; }
 	weak_ptr<genomeFile> genome;
 	AgentRef owner;
 	std::vector<historyevent> events;
@@ -123,6 +124,10 @@ class monikerData {
 	// made by the gene splicer from its parents' genomes (NEW: GENE), not
 	// conceived (kept with the world)
 	bool spliced = false;
+	// made by the Metamorph Device from one creature's genome: its parent
+	// (mother and father both) is its former self (owner, 2026-11-27; kept
+	// with the world)
+	bool metamorph = false;
 	// its own life story, from 2026-11-11 on (storyEntry)
 	std::vector<storyEntry> story;
 
@@ -192,7 +197,15 @@ class historyManager {
   public:
 	// genomes NEW: GENE made from two creatures' genomes, by name: a
 	// creature hatched from one was spliced, not conceived
-	std::set<std::string> splicedGenomes;
+	// (with the monikers of the parents, so their records are kept with the
+	// world until the egg hatches)
+	std::map<std::string, std::pair<std::string, std::string>> splicedGenomes;
+	// genomes the Metamorph Device made from one creature's (NEW: GENE run by
+	// the device, 3 10 13): a creature hatched from one is that creature
+	// changed. Both sets are kept with the world, so an egg laid before a
+	// save still hatches as spliced or changed; a name leaves its set when
+	// its creature hatches.
+	std::map<std::string, std::string> metamorphGenomes; // (with its former self)
 	void rememberGoneGenome(const std::string& moniker, std::shared_ptr<genomeFile> g) {
 		if (moniker.empty() || !g)
 			return;

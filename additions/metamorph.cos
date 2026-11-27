@@ -13,9 +13,10 @@
 * anew at each load, so this runs each time; a second device (from the
 * Agent Injector) is removed, keeping one.
 *
-* What it does: a creature in its cabin is replaced by a newly hatched copy
-* of the opposite sex, from its own genome with the usual small mutations
-* (NEW: GENE of one creature). The two versions in the COB differ only in
+* What it does: a creature in its cabin is replaced by a copy of the
+* opposite sex, from its own genome with the usual small mutations (NEW:
+* GENE of one creature), laid as an egg at the gene lab's chute (owner,
+* 2026-11-27; before, the copy hatched at once in the cabin). The two versions in the COB differ only in
 * how the creature put in ends: one fills it with five poisons (heavy
 * metals, cyanide, belladonna, geddonase and glycotoxin; it is let out and
 * dies of them), the other ends it at once. Here OV10 picks: 0 at once
@@ -125,23 +126,41 @@ scrp 3 10 13 1
     setv var1 spcs
     doif var1 eq 1 setv var1 2 else setv var1 1 endi
     setv var2 monk
-    setv var3 posx
-    setv var4 posy
     doif var5 eq 1
       chem 140 255 chem 141 255 chem 143 255 chem 144 255 chem 145 255
     else
       kill targ
     endi
     wait 30
+* (the copy comes as an egg, laid at the gene lab's chute where the gene
+* splicer's and the egg machine's eggs come out, and dropped by the chute's
+* dispenser as the splicer's are; it hatches as the other sex, OV01 3 with
+* the sex in OV02 (grendels.cos), and its one parent in the family tree is
+* the creature it was; owner, 2026-11-27)
     inst
-    new: gene var2 var2 var9
-    new: crea var9 var1
-    drea 1
-    mvto var3 var4
+    rndv var0 0 5
+    mulv var0 8
+    new: simp eggs 8 var0 2 0
+    setv cls2 2 5 3
+    setv attr 196
+    bhvr 1 0
+    new: gene var2 var2 ov00
+    setv ov01 3
+    setv ov02 var1
+    pose 3
+    mvto 6305 2090
     slim
+    setv var9 targ
+    tick 50
+    slow
+    rtar 3 10 7
+    doif targ ne 0
+      mesg writ targ 0
+    endi
+    wait 10
+    targ var9
     setv grav 1
     targ ownr
-    slow
   endi
   part 1
   anim [6543210] over

@@ -140,8 +140,10 @@ static void RegistrationPage() {
 	};
 	if (m->mother.empty() && m->father.empty())
 		row("Parents", "none: it hatched from an egg laid by the Hatchery or the Breeder's Kit");
-	else if (m->mother == m->father) // one genome copied (NEW: GENE of one creature: the Metamorphosis device)
-		row("Parents", "cloned from " + nameOf(m->mother));
+	else if (m->mother == m->father && m->metamorph) // the Metamorph Device: its former self
+		row("Parent", "changed in the Metamorph Device from " + nameOf(m->mother) + ", its former self");
+	else if (m->mother == m->father) // one genome copied (NEW: GENE of one creature: the gene splicer with one pod)
+		row("Parent", "cloned from " + nameOf(m->mother));
 	else if (m->spliced) // the gene splicer's (NEW: GENE of two creatures)
 		row("Parents", fmt::format("spliced from {} and {} in the gene lab", nameOf(m->mother), nameOf(m->father)));
 	else
@@ -867,6 +869,15 @@ static std::pair<std::string, std::string> recordStatus(monikerData* m) {
 		age = age.substr(0, age.find(" ("));
 		return {fmt::format("{}{}", sex, stageWord((int)c->getStage())), (m->bornknown ? "age " : "at least ") + age};
 	}
+	// gone without dying: changed in the Metamorph Device, or used up by
+	// the gene splicer, if a creature made from it says so
+	for (auto& [mon, r] : world.history->all())
+		if (r.mother == m->getMonikerName() || r.father == m->getMonikerName()) {
+			if (r.metamorph)
+				return {"metamorphosed", ""};
+			if (r.spliced)
+				return {"spliced in the gene lab", ""};
+		}
 	return {"no longer in the world", ""};
 }
 
@@ -1095,14 +1106,28 @@ static FamilyLayout layOutFamily(const std::string& self) {
 		if (cards[b].mon.empty())
 			unknownOf.push_back({b, child});
 	};
-	addPair(mother, father, "Mother", "Father", 1.0f, 3.0f, me);
-	if (!mother.empty()) {
-		auto [mm, mf] = parentsOf(mother);
-		addPair(mm, mf, "Mother's mother", "Mother's father", 0.5f, 1.5f, index[mother]);
-	}
-	if (!father.empty()) {
-		auto [fm, ff] = parentsOf(father);
-		addPair(fm, ff, "Father's mother", "Father's father", 2.5f, 3.5f, index[father]);
+	// one parent only (owner, 2026-11-27): a creature changed by the
+	// Metamorph Device shows its former self, a clone the one it was copied
+	// from, as a single card above it, that one's parents above that
+	monikerData* selfRec = recordOf(self);
+	if (!mother.empty() && mother == father) {
+		const bool changed = selfRec && selfRec->metamorph;
+		int p = add(mother, changed ? "Former self" : "Sole parent", 2.0f);
+		auto [pm, pf] = parentsOf(mother);
+		if (pm == pf && !pm.empty())
+			add(pm, changed ? "Former self's sole parent" : "Parent's sole parent", 2.0f);
+		else
+			addPair(pm, pf, changed ? "Former self's mother" : "Parent's mother", changed ? "Former self's father" : "Parent's father", 1.5f, 2.5f, p);
+	} else {
+		addPair(mother, father, "Mother", "Father", 1.0f, 3.0f, me);
+		if (!mother.empty()) {
+			auto [mm, mf] = parentsOf(mother);
+			addPair(mm, mf, "Mother's mother", "Mother's father", 0.5f, 1.5f, index[mother]);
+		}
+		if (!father.empty()) {
+			auto [fm, ff] = parentsOf(father);
+			addPair(fm, ff, "Father's mother", "Father's father", 2.5f, 3.5f, index[father]);
+		}
 	}
 	// children, oldest first
 	std::vector<std::string> children;
@@ -1111,8 +1136,13 @@ static FamilyLayout layOutFamily(const std::string& self) {
 			children.push_back(mon);
 	std::sort(children.begin(), children.end(), [](auto& x, auto& y) { return recordOf(x)->borntick < recordOf(y)->borntick; });
 	for (auto& ch : children) {
-		int f = femaleOf(recordOf(ch));
-		add(ch, f == 1 ? "Daughter" : f == 0 ? "Son" : "Child", 2.0f);
+		monikerData* cr = recordOf(ch);
+		int f = femaleOf(cr);
+		// (the creature this one became in the Metamorph Device)
+		if (cr->metamorph && cr->mother == self)
+			add(ch, "Later self", 2.0f);
+		else
+			add(ch, f == 1 ? "Daughter" : f == 0 ? "Son" : "Child", 2.0f);
 	}
 	for (auto& ch : children) { // a child of a child here is also a grandchild
 		monikerData* r = recordOf(ch);
@@ -1128,7 +1158,7 @@ static FamilyLayout layOutFamily(const std::string& self) {
 		if (!r)
 			continue;
 		for (auto& p : {r->mother, r->father})
-			if (!p.empty() && p != cards[i].mon && index.count(p))
+			if (!p.empty() && p != cards[i].mon && index.count(p) && !(&p == &r->father && r->father == r->mother)) // (one line from a sole parent)
 				L.edges.push_back({index[p], (int)i});
 	}
 	for (auto& [u, child] : unknownOf)
