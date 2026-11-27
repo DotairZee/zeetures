@@ -828,12 +828,18 @@ class HomeostatMind : public CreatureMind {
 	//   "need"   now and then, a pressing need (the "express need" action
 	//            says it too, through SAYN)
 	//   "babble" babies and children, now and then, when content
+	//   "self"   children (adolescents less often), now and then, as they
+	//            set about something: what they are doing, to themselves
+	//            ("push toy..."; private speech, Vygotsky 1934, Winsler
+	//            2009), fading as they grow up
 	// Never asleep. A pause after anything said, and each kind of remark
 	// has its own longer pause.
 	struct SpeechState {
 		std::array<float, NUM_DRIVES> prev{};
 		bool havePrev = false;
 		unsigned int lastSaid = 0;
+		int lastDecision = -1;
+		unsigned int decisionSince = 0; // the mind tick it began
 		std::map<std::string, unsigned int> lastKind;
 		std::map<int, unsigned int> lastSeenKind; // creature category -> mind tick last in view
 	} speech;
@@ -890,10 +896,18 @@ class HomeostatMind : public CreatureMind {
 					say = fmt::format("need:{}:{}", best, (int)(level * 255));
 				else if ((int)p.stage <= 1 && overallDrive(d) < 0.3f && ready("babble", 200) && std::uniform_real_distribution<float>(0, 1)(rng) < 0.02f)
 					say = "babble";
+				else if (((int)p.stage == 1 || (int)p.stage == 2) && t <= s.decisionSince + 10 && p.currentDecision > 0 && p.currentDecision != 8 &&
+						 p.currentDecision != 25 && p.currentAttention >= 0 && ready("self", 300) &&
+						 std::uniform_real_distribution<float>(0, 1)(rng) < ((int)p.stage == 1 ? 0.15f : 0.05f))
+					say = "self";
 			}
 		}
 		for (auto& [cat, yes] : seenNow)
 			s.lastSeenKind[cat] = t;
+		if (p.currentDecision != s.lastDecision) {
+			s.lastDecision = p.currentDecision;
+			s.decisionSince = t;
+		}
 		s.prev = d;
 		s.havePrev = true;
 		if (!say.empty()) {

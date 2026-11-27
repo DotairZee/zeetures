@@ -904,8 +904,10 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 			return u;
 		ways = {{{W_NORN + a - 1}, 0}, {{W_LOOK, W_NORN + a - 1}, 1}};
 		end = "!";
-	} else if (kind == "doing") {
-		// what it is doing, in words: "me push toy" (asked "what")
+	} else if (kind == "doing" || kind == "self") {
+		// what it is doing, in words: "me push toy" (asked "what"); or, said
+		// to itself as it sets about it, "push toy..." (private speech: a
+		// child talking itself through what it does; owner, 2026-11-26)
 		int decision = c->getDecisionId();
 		Agent* focus = c->getAttentionFocus().get();
 		if (focus == creature || (focus && focus->isDying()))
@@ -923,10 +925,12 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 			verb = decision - 16; // walking west or east
 		else
 			verb = W_LOOK;
-		std::vector<int> w = {W_ME, verb};
+		std::vector<int> w = kind == "self" ? std::vector<int>{verb} : std::vector<int>{W_ME, verb};
 		if (focus && focus->category >= 0 && focus->category < 40 && isWord(16 + focus->category))
 			w.push_back(16 + focus->category);
-		ways.push_back({w, 1});
+		ways.push_back({w, kind == "self" ? 0 : 1});
+		if (kind == "self")
+			end = "...";
 	} else if (kind == "name") {
 		// a thing's name (owner, 2026-11-20: the young learn words by hearing
 		// others name things): C2's noun for category a follows its 16 verbs
