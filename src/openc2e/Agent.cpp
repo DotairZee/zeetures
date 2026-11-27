@@ -1452,6 +1452,15 @@ void Agent::physicsTickC2() {
 					vely = 0;
 			}
 		}
+		// and its sides wrap: an object whose x was set past the west or
+		// east edge without moveTo (which wraps) is taken across the seam
+		// (a creature set back on its last good foot was left at x -35 and
+		// stuck; 2026-11-26)
+		if (!m && engine.version == 2)
+			if (MetaRoom* fm = world.map->getFallbackMetaroom(); fm && fm->wraparound() && (x < fm->x() || x >= fm->x() + fm->width())) {
+				moveTo(x < fm->x() ? x + fm->width() : x - fm->width(), y);
+				m = world.map->metaRoomAt(x, y);
+			}
 		if (!m) {
 			if (!outofroomsystem)
 				unhandledException(fmt::format("{} out of room system at ({}, {})", identify(), x, y), false);

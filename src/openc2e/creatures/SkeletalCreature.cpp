@@ -1245,6 +1245,17 @@ void SkeletalCreature::snapDownFoot() {
 
 		// TODO: sucky code
 		x = lastgoodfootx - attachmentX(orig_footpart, 1);
+		// (across the world's seam, as moveTo does: a foot a few px from
+		// the west edge put the body at x -35, outside the map, where
+		// physics found no metaroom and left the creature stuck "out of
+		// room system"; seen 2026-11-26)
+		if (engine.version < 3 && world.map)
+			if (MetaRoom* fm = world.map->getFallbackMetaroom(); fm && fm->wraparound()) {
+				if (x < fm->x())
+					x += fm->width();
+				else if (x >= fm->x() + fm->width())
+					x -= fm->width();
+			}
 		wrapshift = wrapFoot(lastgoodfootx);
 		footx = lastgoodfootx + wrapshift;
 		footy = lastgoodfooty;
