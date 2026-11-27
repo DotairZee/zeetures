@@ -38,7 +38,16 @@ class oldCreature;
 // find nothing to answer); OPENC2E_WATCH_KINDS logs.
 namespace Kinds {
 
+// off: OPENC2E_NO_KINDS, or the world's "Grendel and ettin personalities"
+// unticked (Preferences > World; on by default, saved with the world). Off,
+// grendels and ettins are stock: none of this module's rules or the scent
+// rules' personalities section, C2's grendels and ettins sterile as their
+// genes say, and the C1 grendels' genome converted from Creatures 1's own
+// (makeC1StockGenome) in place of the grouchy one; living grouchy grendels
+// keep their genes but none of their ways
 bool off();
+bool personalities(); // the world's setting
+void setPersonalities(bool on);
 bool watching();
 
 // genes: a reproductive receptor that is switched on (Boney grendels, norns;
@@ -67,6 +76,11 @@ bool deafToHand(oldCreature* c);
 // Kinds.cpp; written to the user data folder's Genetics as C1_GENOME.gen
 const char* const C1_GENOME = "c1gr";
 bool makeC1Genome(genomeFile& g, int slot);
+// with the personalities off, C1 grendels' genome is Creatures 1's own
+// converted (g: the game's gren.gen; c1: C1's Gren.GEN; each game's chemical
+// names, normalised, to renumber by): Kinds.cpp. writeC1Genome writes the
+// one the world's setting asks for.
+bool makeC1StockGenome(genomeFile& g, genomeFile& c1, const std::vector<std::string>& c1names, const std::vector<std::string>& c2names, int slot);
 bool writeC1Genome(int slot, std::string& why);
 // the name players see for the kind (owner, 2026-11-27: "I want grouchy
 // grendel!"); in the code they stay "C1 grendels". The pack was first

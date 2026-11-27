@@ -138,6 +138,16 @@ void ToggleC2Kit(const char* id) {
 // folder (openc2e's own windows used no ini file before).
 
 static int s_settings_entry; // stands for the [settings] section
+static std::string s_kits_ini; // the layout file in use (the open world's)
+
+// "Save World As": the copy's layout file from now on (it was copied with
+// the world, CopyWorldExtras)
+void KitLayoutFollowsWorld() {
+	if (s_kits_ini.empty() || engine.currentworlddir.empty())
+		return;
+	s_kits_ini = (engine.currentworlddir / "kits.ini").string();
+	ImGui::GetIO().IniFilename = s_kits_ini.c_str();
+}
 
 // notice kinds switched off (KitNoticeShown)
 static std::set<int> s_notices_off;
@@ -301,9 +311,11 @@ static void SetUpKitSettings() {
 	h.ReadLineFn = KitsReadLine;
 	h.WriteAllFn = KitsWriteAll;
 	ImGui::AddSettingsHandler(&h);
-	static std::string path;
+	std::string& path = s_kits_ini;
 	try {
-		path = (getUserDataDir() / "kits.ini").string();
+		// the open world's own layout (preferences live with each world:
+		// CreatureSpeech.h), or the shared one with none open
+		path = ((engine.currentworlddir.empty() ? getUserDataDir() : engine.currentworlddir) / "kits.ini").string();
 	} catch (...) {
 		return;
 	}

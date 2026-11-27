@@ -729,6 +729,7 @@ static bool s_set_aside_was_paused = false;
 				if (w && CopyWorldExtras(engine.currentworlddir, w->dir, s_error) && WorldSave::SaveWorldState(w->dir, s_error)) {
 					engine.currentworld = w->name;
 					engine.currentworlddir = w->dir;
+					KitLayoutFollowsWorld(); // (its preferences follow by themselves)
 					get_backend()->setWindowTitle(w->name + " - " FORK_NAME);
 					s_name[0] = 0;
 					ImGui::CloseCurrentPopup();
@@ -1839,7 +1840,7 @@ static void DrawPreferences() {
 				if (ImGui::Checkbox("Illness can damage organs, as in Creatures 2", &harm))
 					Disease::setOrganHarm(harm);
 				if (ImGui::IsItemHovered())
-					ImGui::SetTooltip("Ticked, an ill creature's organs wear down while it is ill, as its genes ask, at the original game's pace,\nand stay worn after. A long or severe illness, or two at once, can kill it. Unticked, illness only makes creatures feel ill.\nApplies to every world. See Help > Illness and medicine.");
+					ImGui::SetTooltip("Ticked, an ill creature's organs wear down while it is ill, as its genes ask, at the original game's pace,\nand stay worn after. A long or severe illness, or two at once, can kill it. Unticked, illness only makes creatures feel ill.\nFor this world. See Help > Illness and medicine.");
 				if (harm) {
 					ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 420);
 					ImGui::TextColored(ImVec4(0.9f, 0.45f, 0.3f, 1.0f), "Creatures can now die of illness. Untick to go back to illness without lasting harm.");
@@ -1870,6 +1871,18 @@ static void DrawPreferences() {
 				if (ImGui::InputInt("##poplimit", &v, 1, 10))
 					setPopulationLimit(std::clamp(v, 2, 999));
 			}
+			// the grendels' and ettins' personalities (Kinds.h; owner,
+			// 2026-11-27: on by default; off, stock grendels and ettins)
+			bool personalities = Kinds::personalities();
+			if (ImGui::Checkbox("Grendel and ettin personalities", &personalities)) {
+				Kinds::setPersonalities(personalities);
+				RemakeC1Genome();
+			}
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Ticked, grendels and ettins each have their own ways: bulbous grendels prowl by night, Boney ones roam in packs,\n"
+								  "grouchy grendels are gluttons and loners, ettins hoard gadgets and carry eggs, and they breed while a mate of their kind lives.\n"
+								  "Unticked, they are as the games made them: C2's own grendels and ettins, the original Boney grendels, and C1 grendels\n"
+								  "on Creatures 1's own grendel genome. Grendels already alive keep their genes. See Help > Norns, grendels, and ettins.");
 			// how many grendels and ettins the game's own eggs keep (Kinds.h)
 			for (int genus : {2, 3}) {
 				int keep = Kinds::gameKeeps(genus);
@@ -1885,7 +1898,7 @@ static void DrawPreferences() {
 			if (ImGui::Checkbox("Recommended breed packs", &packs))
 				writePlayerSetting("breed-packs", packs ? "on" : "off");
 			if (ImGui::IsItemHovered())
-				ImGui::SetTooltip("Boney Grendels and Frog Norns V3, fetched from the community archive the first time a world runs without them (from the next start)");
+				ImGui::SetTooltip("Boney Grendels, Frog Norns V3 and the C1-in-C2 Grendel, fetched from the community archive the first time a world runs without them (from the next start)");
 			if (ImGui::Button("Creatures 2 folder..."))
 				GameFolder::chooseAnother(SDL_GetKeyboardFocus());
 			if (ImGui::IsItemHovered())

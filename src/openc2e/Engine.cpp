@@ -2700,6 +2700,9 @@ bool Engine::initialSetup() {
 		}
 		currentworld = w->name;
 		currentworlddir = w->dir;
+		// its own preferences and layout (CreatureSpeech.h)
+		if (version == 2)
+			prepareWorldSettings(currentworlddir);
 		// its words (WordLists: its own, every world's, or the game's)
 		if (version == 2)
 			WordLists::applyForWorld(currentworlddir);

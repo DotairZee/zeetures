@@ -23,6 +23,7 @@
 #include "AgentRef.h"
 
 #include <deque>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -136,6 +137,12 @@ void setWordAttempts(bool on);
 // a try at it, by how well it knows it)
 std::string attemptWord(Agent* creature, oldCreature* c, int w);
 void writePlayerSetting(const std::string& key, const std::string& value);
+// Preferences live with each world (CreatureSpeech.cpp, readSetting):
+// prepareWorldSettings when a world is opened (one from before they did
+// takes a copy of the shared ones), startWorldSettings for a new world (all
+// defaults)
+void prepareWorldSettings(const std::filesystem::path& worldDir);
+void startWorldSettings(const std::filesystem::path& worldDir);
 
 // Autosave: minutes between automatic saves of the open world (0: only on
 // quit and when switching worlds). 5 unless the player chose otherwise

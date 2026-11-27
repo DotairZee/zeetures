@@ -199,12 +199,12 @@ The eye is its own: a norn's round pupil, a grendel's slit, an ettin's coarse si
 
 ## Preferences
 
-File > Preferences gathers the settings in one window, in six sections. Each takes effect at once and is remembered.
+File > Preferences gathers the settings in one window, in six sections. Each takes effect at once and is remembered with the world you are playing: every world keeps its own, and a new world starts with them all as they come. Only which world opens at launch, the updates, and whether words carry across all worlds are the same for every world.
 
 - **Display:** the letters in the world (see [[Words and languages]]), the creature frame rate, smooth scrolling, scroll bars, tooltips for objects, full screen, and the toolbars and their text labels.
 - **Creatures:** speech and thought bubbles; the Creature's View: its eye's lids (blinking; no blinking, only drooping and closing with sleep; or always open), whether it shows the creature itself, its own bubbles, and its name in the title, and its size; whether heads follow the hand, babies say their first words, and words come out a little wrong while being learned (see [[Talking to creatures]]); and the experimental way of learning to talk (see [[Learning to talk (experimental)]]).
 - **Words:** the words creatures learn and the teaching computers show. See [[Words and languages]].
-- **World:** how often the world saves itself; opening this world at launch; in this world, whether all creatures are fertile and the limit on their number; Zeetures's recommended breed packs; and your Creatures 2 folder.
+- **World:** how often the world saves itself; opening this world at launch; in this world, whether all creatures are fertile and the limit on their number, the grendels' and ettins' personalities (ticked: each kind has its own ways; unticked: they are as the games made them), and how many grendels and ettins the game hatches; Zeetures's recommended breed packs; and your Creatures 2 folder.
 - **Status Bar:** whether it shows at all, which of its parts show, and which happenings show there as notices.
 - **Updates:** checking for new versions and installing them by themselves, and a button to check now.
 
@@ -682,6 +682,8 @@ Each kind gives off a scent of its own, which the others come to know. A norn th
 
 Each kind breeds with its own. Grendels (all but grouchy grendels) and ettins are fertile, and long for a mate, only while an adult of the other sex of their kind lives somewhere in the world; without one they have no young. The world's own grendel eggs hatch either sex, bulbous, Boney or grouchy; ettin eggs hatch either sex too. In the [[Hatchery]] all three have their shelves. The [[Health Kit]] names a grendel's or ettin's kind: rest the pointer on it for what that means for this one, and whether it is fertile now.
 
+All of this is the grendels' and ettins' personalities, on unless you untick them in File > Preferences > World. Unticked, they are as the games made them: C2's own grendels and ettins have no young and keep no hours, the Boney grendels are as Cyberlife made them, and C1 grendels hatch with Creatures 1's own grendel genome (from your Creatures 1, when it is installed beside Creatures 2), its feelings and instincts in a Creatures 2 body; without Creatures 1, a C2 grendel in their pictures. Grendels already alive keep their genes but not their ways.
+
 # The world
 
 ## Time, seasons, and weather
@@ -1126,10 +1128,9 @@ Your worlds, settings, and add-ons are in your Zeetures folder, apart from the g
 
 In it:
 
-- **Worlds:** a folder for each world, with its save and photos. Copy a folder to keep a spare. To take a world to another computer, take the Genetics, Images, Body Data, Objects, and Sounds folders too.
+- **Worlds:** a folder for each world, with its save, photos, its settings (settings.txt), and where its kits are (kits.ini). Copy a folder to keep a spare. To take a world to another computer, take the Genetics, Images, Body Data, Objects, and Sounds folders too.
 - **Genetics, Images, Body Data, Objects, Sounds:** what you have imported, and your creatures' genomes.
-- **settings.txt:** what you have set in the menus.
-- **kits.ini:** where the kits are, their alarms, and their notices.
+- **settings.txt:** which world opens at launch, the updates, and whether words carry across worlds (each world's other settings are in its own folder).
 - **Additions:** your own versions of Zeetures's world scripts, used in place of the built-in ones of the same name.
 - **pheromones.txt:** scents, if you have made your own. See [[Scents]].
 

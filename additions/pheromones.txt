@@ -155,6 +155,10 @@ ettin@adolescent-old smell ettin-care follow 1 tend
 # night, empty (carrying nothing) and wary (a creature that fell ill soon
 # after being near a grendel, and has learned to link the two).
 
+# (The rules from here to "end personalities" are the personalities, and
+# stop while a world's "Grendel and ettin personalities" is unticked,
+# Preferences > World. Scents are named above them so they stay known.)
+
 scent norn-kind fade 0.03
 scent grendel-kind fade 0.03
 scent boney-kind fade 0.03
@@ -168,6 +172,7 @@ scent hungry fade 0.04
 scent egg spread 0.1 fade 0.03
 scent carrion fade 0.02
 
+personalities
 norn emit norn-kind 1
 grendel.bulbous emit grendel-kind 1
 grendel.boney emit grendel-kind 1
@@ -225,6 +230,8 @@ ettin smell incubator bring 5 1.5 drop 0.6
 ettin smell hungry bring 6,25 1 drop 0.4 when 9<100
 ettin smell norn-kind follow for lonely 1
 ettin smell norn-kind avoid for crowded 1.5 when 9>80
+
+end personalities
 
 # ---- Examples, off (remove the "# " to try one) --------------------------------
 #

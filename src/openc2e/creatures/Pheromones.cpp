@@ -75,6 +75,9 @@ struct Who {
 	bool object = false; // an object by classifier (only for emit)
 	int family = 0, genus = 0, species = 0; // object classifier (0 = any)
 	int creatureGenus = 0; // 0 any, 1 norn, 2 grendel, 3 ettin
+	// in the file's "personalities" ... "end personalities" section: off
+	// while the world's grendel and ettin personalities are (Kinds::off)
+	bool personality = false;
 	int breed = 0; // grendels: 0 any, 1 Boney ("grendel.boney"), 2 bulbous ("grendel.bulbous"), 3 Grouchy, the C1 grendels ("grendel.grouchy" or "grendel.c1"; Kinds.h)
 	int sex = -1; // -1 either, 0 male, 1 female
 	int stageFrom = 0, stageTo = 6;
@@ -272,6 +275,8 @@ oldCreature* creatureOf(Agent* a) {
 }
 
 bool matches(const Who& w, Agent* a, oldCreature* c) {
+	if (w.personality && Kinds::off())
+		return false;
 	if (w.object)
 		return !c && (w.family == 0 || a->family == w.family) && (w.genus == 0 || a->genus == w.genus) &&
 			   (w.species == 0 || a->species == w.species);
@@ -559,7 +564,8 @@ void load() {
 		return;
 	std::string text;
 	int line = 0;
-	std::vector<std::pair<int, std::string>> pending; // rules, read after every scent is named
+	std::vector<std::tuple<int, std::string, bool>> pending; // rules, read after every scent is named
+	bool personalities = false; // inside "personalities" ... "end personalities"
 	while (std::getline(in, text)) {
 		line++;
 		size_t hash = text.find('#');
@@ -569,6 +575,14 @@ void load() {
 		std::string first;
 		if (!(l >> first))
 			continue;
+		if (first == "personalities") {
+			personalities = true;
+			continue;
+		}
+		if (first == "end") {
+			personalities = false;
+			continue;
+		}
 		if (first == "signature") {
 			std::string key;
 			float v;
@@ -607,12 +621,14 @@ void load() {
 			if (channelIndex(ch.name) < 0)
 				channels.push_back(ch);
 		} else
-			pending.push_back({line, text});
+			pending.push_back({line, text, personalities});
 	}
-	for (auto& [ln, t] : pending) {
+	for (auto& [ln, t, pers] : pending) {
 		Rule r;
-		if (parseRule(ln, t, r))
+		if (parseRule(ln, t, r)) {
+			r.who.personality = pers;
 			rules.push_back(r);
+		}
 	}
 	fmt::print("* Pheromones: {} scents, {} rules\n", channels.size(), rules.size());
 }

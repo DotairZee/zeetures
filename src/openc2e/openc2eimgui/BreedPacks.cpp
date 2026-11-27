@@ -206,6 +206,21 @@ bool makeC1(const Pack& p, std::string& why) {
 	return true;
 }
 
+} // namespace
+
+// the C1 grendels' genome again, as the world's personalities setting now
+// asks (Preferences > World: grouchy, or Creatures 1's own converted)
+void RemakeC1Genome() {
+	for (const Pack& p : kPacks)
+		if (p.c1Genome && installedGrendelSlot(p) >= 0) {
+			std::string why;
+			if (!makeC1(p, why))
+				fmt::print("* Breed packs: couldn't make the {} genome: {}\n", p.breedName, why);
+		}
+}
+
+namespace {
+
 void say(const std::string& s) {
 	fmt::print("* Breed packs: {}\n", s);
 	s_status = s;

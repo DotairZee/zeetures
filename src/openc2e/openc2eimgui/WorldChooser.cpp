@@ -190,6 +190,8 @@ bool CreateWorld(const std::string& name, const fs::path& tmpl, std::string& err
 				genomes++;
 		}
 	}
+	// its preferences start at the defaults (CreatureSpeech.h)
+	startWorldSettings(dir);
 	fmt::print("* Created world '{}' from {}{}\n", name, tmpl.filename().string(), genomes ? fmt::format(" (with {} creatures' genomes)", genomes) : "");
 	return true;
 }
@@ -204,6 +206,12 @@ bool CopyWorldExtras(const fs::path& from, const fs::path& to, std::string& erro
 			error = fmt::format("Couldn't copy the world's {} folder: {}", name, ec.message());
 			return false;
 		}
+	}
+	// its preferences and kit layout too (CreatureSpeech.h)
+	for (const char* name : {"settings.txt", "kits.ini"}) {
+		std::error_code ec;
+		if (fs::exists(from / name, ec))
+			fs::copy_file(from / name, to / name, fs::copy_options::overwrite_existing, ec);
 	}
 	return true;
 }

@@ -22,6 +22,7 @@
 #include "World.h"
 #include "common/devenv.h"
 #include "creatures/CreatureAgent.h"
+#include "creatures/CreatureSpeech.h"
 #include "creatures/Pheromones.h"
 #include "creatures/oldCreature.h"
 #include "fileformats/genomeFile.h"
@@ -35,6 +36,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cctype>
+#include <fstream>
 #include <filesystem>
 #include <fmt/core.h>
 #include <map>
@@ -83,9 +86,19 @@ std::string monikerOf(oldCreature* c) {
 
 } // namespace
 
+// (owner, 2026-11-27: a checkbox, on by default, saved with each world:
+// Preferences > World, "Grendel and ettin personalities")
 bool off() {
 	static const bool o = devenv("OPENC2E_NO_KINDS") != nullptr;
-	return o;
+	return o || !personalities();
+}
+
+bool personalities() {
+	return readPlayerSetting("grendel-personalities") != "0";
+}
+
+void setPersonalities(bool on) {
+	writePlayerSetting("grendel-personalities", on ? "1" : "0");
 }
 
 bool watching() {
@@ -146,7 +159,8 @@ bool isC1(oldCreature* c) {
 }
 
 bool carriesGerms(Agent* a) {
-	return a && a->genus == 2 && !isC1(creatureOf(a));
+	// (a grouchy grendel is clean only with the personalities on)
+	return a && a->genus == 2 && (off() || !isC1(creatureOf(a)));
 }
 
 bool deafToHand(oldCreature* c) {
@@ -220,6 +234,240 @@ bool makeC1Genome(genomeFile& g, int slot) {
 	return hit && eat && rest;
 }
 
+// ---- C1 grendels, stock: the genome converted from Creatures 1's own ------
+
+namespace {
+
+// a game's chemical names (allchemicals.str: a 16-bit count, then each name
+// with a length byte), normalised: lower case, without a "(...)" aside, so
+// C1's "Hunger Decrease (Saccharin)" is C2's "Hunger Decrease"
+std::vector<std::string> chemicalNames(const std::filesystem::path& file) {
+	std::vector<std::string> out;
+	std::ifstream in(file, std::ios::binary);
+	std::string d((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	if (d.size() < 2)
+		return out;
+	size_t n = (uint8_t)d[0] | ((uint8_t)d[1] << 8), p = 2;
+	for (size_t i = 0; i < n && p < d.size(); i++) {
+		size_t len = (uint8_t)d[p++];
+		std::string s = d.substr(p, len);
+		p += len;
+		if (size_t b = s.find('('); b != std::string::npos)
+			s = s.substr(0, b);
+		while (!s.empty() && std::isspace((unsigned char)s.back()))
+			s.pop_back();
+		for (auto& ch : s)
+			ch = (char)std::tolower((unsigned char)ch);
+		out.push_back(s);
+	}
+	return out;
+}
+
+// a file in a folder, its name matched without regard to case
+std::filesystem::path findNoCase(const std::filesystem::path& dir, const std::string& name) {
+	std::error_code ec;
+	for (auto& e : std::filesystem::directory_iterator(dir, ec)) {
+		std::string a = e.path().filename().string(), b = name;
+		if (a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](char x, char y) { return std::tolower((unsigned char)x) == std::tolower((unsigned char)y); }))
+			return e.path();
+	}
+	return {};
+}
+
+} // namespace
+
+// The C1 grendel, stock (owner, 2026-11-27: with the personalities off, C1
+// grendels are "their stock genomes": "Yes, recommended conversion"; reports/
+// Grendel personalities switch plan.md). Creatures 1's own grendel genome,
+// read as data, carried into C2's grendel: from C1 what it feels and does,
+// from C2 the body that keeps it alive.
+// - From C1, chemicals renumbered by name: its stimuli (what a pat, slap,
+//   word, bump or rest does to it; C1's grendel has none for the hand's
+//   speech, so neither has this), its instincts (C1 ate by activating food:
+//   that is "eat" here), how fast each drive rises and fades (half-lives of
+//   the drives, their raisers and reducers, reward and punishment), its
+//   senses' emitters (boredom, the need for pleasure, heat, cold, sleepiness
+//   in the dark, loneliness, crowding), its drive reactions, and its
+//   starting drives.
+// - From C2's grendel: organs, the energy chain C2's organs live on, food's
+//   digestion and the hunger it is sensed by, the immune system, poses and
+//   gaits for C2 bodies, and the brain's chemical relays. Reproduction stays
+//   off (C1's grendel had none).
+// - Left out: C1's brain lobes (the mind is Zeetures' own) and its ageing.
+bool makeC1StockGenome(genomeFile& g, genomeFile& c1, const std::vector<std::string>& c1names, const std::vector<std::string>& c2names, int slot) {
+	if (g.getVersion() != 2 || c1.getVersion() != 1)
+		return false;
+	std::map<std::string, int> c2index;
+	for (size_t i = 0; i < c2names.size(); i++)
+		if (!c2names[i].empty())
+			c2index.emplace(c2names[i], (int)i);
+	auto chem = [&](int c1chem) -> int { // 0 if C2 has no such chemical
+		if (c1chem <= 0 || c1chem >= (int)c1names.size() || c1names[c1chem].empty())
+			return 0;
+		auto it = c2index.find(c1names[c1chem]);
+		return it == c2index.end() ? 0 : it->second;
+	};
+	// drives and what moves them: C2's 1-17 drives, 18-34 raisers, 35-51
+	// reducers, 52-54 reward, punishment, reinforcement
+	auto driveChem = [](int c2chem) { return c2chem >= 1 && c2chem <= 54; };
+	std::map<int, creatureStimulusGene*> c1stim;
+	std::vector<creatureInstinctGene*> c1inst;
+	std::vector<bioEmitterGene*> c1sense;
+	std::vector<bioReactionGene*> c1react;
+	std::vector<bioInitialConcentrationGene*> c1start;
+	bioHalfLivesGene* c1half = nullptr;
+	for (auto& gn : c1.genes) {
+		gene* x = gn.get();
+		if (auto* s = dynamic_cast<creatureStimulusGene*>(x)) {
+			if (!c1stim.count(s->stim))
+				c1stim[s->stim] = s;
+		} else if (auto* in = dynamic_cast<creatureInstinctGene*>(x))
+			c1inst.push_back(in);
+		else if (auto* e = dynamic_cast<bioEmitterGene*>(x)) {
+			if (e->organ == 1 && e->tissue == 4 && driveChem(chem(e->chemical)))
+				c1sense.push_back(e);
+		} else if (auto* r = dynamic_cast<bioReactionGene*>(x)) {
+			bool drives = true;
+			for (int k = 0; k < 4; k++)
+				if (r->reactant[k] && r->quantity[k] && !driveChem(chem(r->reactant[k])))
+					drives = false;
+			if (drives)
+				c1react.push_back(r);
+		} else if (auto* ic = dynamic_cast<bioInitialConcentrationGene*>(x)) {
+			if (driveChem(chem(ic->chemical)))
+				c1start.push_back(ic);
+		} else if (auto* h = dynamic_cast<bioHalfLivesGene*>(x))
+			c1half = h;
+	}
+	if (c1stim.empty() || c1inst.empty())
+		return false;
+	std::vector<std::unique_ptr<gene>> out;
+	bool sensesPlaced = false, reactionsPlaced = false, instinctsPlaced = false;
+	auto placeInstincts = [&]() {
+		for (auto* in : c1inst) {
+			auto n = std::make_unique<creatureInstinctGene>(g.getVersion());
+			n->header = in->header;
+			n->header.mutweighting = 255;
+			n->note.which = in->note.which;
+			for (int k = 0; k < 3; k++) {
+				n->lobes[k] = in->lobes[k];
+				n->neurons[k] = in->neurons[k];
+			}
+			n->action = in->action;
+			// (C1 ate by activating food, category 6: C2 eats)
+			if (in->action == 1)
+				for (int k = 0; k < 3; k++)
+					if (in->lobes[k] == 2 && in->neurons[k] == 6)
+						n->action = 12;
+			n->drive = (uint8_t)chem(in->drive);
+			n->level = in->level;
+			out.push_back(std::move(n));
+		}
+		instinctsPlaced = true;
+	};
+	for (auto& gn : g.genes) {
+		gene* x = gn.get();
+		if (auto* a = dynamic_cast<creatureAppearanceGene*>(x)) {
+			a->variant = (uint8_t)slot;
+			a->species = 1;
+		} else if (dynamic_cast<creatureInstinctGene*>(x)) {
+			if (!instinctsPlaced)
+				placeInstincts();
+			continue; // (C2's own go)
+		} else if (auto* st = dynamic_cast<creatureStimulusGene*>(x)) {
+			int n = st->stim % 46;
+			if (auto it = c1stim.find(n); it != c1stim.end()) {
+				creatureStimulusGene* s = it->second;
+				st->significance = s->significance;
+				st->sensoryneuron = s->sensoryneuron;
+				st->intensity = s->intensity;
+				st->modulate = s->modulate;
+				st->addoffset = s->addoffset;
+				st->whenasleep = s->whenasleep;
+				for (int k = 0; k < 4; k++) {
+					int c = s->drives[k] == 255 ? 0 : chem(s->drives[k]);
+					st->drives[k] = (uint8_t)c;
+					st->amounts[k] = c ? s->amounts[k] : 0;
+					st->silent[k] = s->silent[k];
+				}
+			} else if (n == 10)
+				for (int k = 0; k < 4; k++)
+					st->drives[k] = st->amounts[k] = 0; // (the hand's speech: none in C1's)
+		} else if (auto* h = dynamic_cast<bioHalfLivesGene*>(x)) {
+			if (c1half)
+				for (int c = 1; c < 256; c++)
+					if (int m = chem(c); driveChem(m))
+						h->halflives[m] = c1half->halflives[c];
+		} else if (auto* e = dynamic_cast<bioEmitterGene*>(x)) {
+			// C2's own sense emitters for drives give way to C1's, in place
+			if (e->organ == 1 && e->tissue == 4 && driveChem(e->chemical)) {
+				if (!sensesPlaced) {
+					for (auto* s : c1sense) {
+						auto n = std::make_unique<bioEmitterGene>(g.getVersion());
+						n->header = s->header;
+						n->header.mutweighting = 255;
+						n->note.which = s->note.which;
+						n->organ = 1;
+						n->tissue = 4;
+						n->locus = s->locus;
+						n->chemical = (uint8_t)chem(s->chemical);
+						n->threshold = s->threshold;
+						n->rate = s->rate;
+						n->gain = s->gain;
+						n->clear = s->clear;
+						n->digital = s->digital;
+						n->invert = s->invert;
+						out.push_back(std::move(n));
+					}
+					sensesPlaced = true;
+				}
+				continue;
+			}
+		} else if (auto* r = dynamic_cast<bioReactionGene*>(x)) {
+			// C2's drive reactions give way to C1's, in place
+			bool drives = true;
+			for (int k = 0; k < 4; k++)
+				if (r->reactant[k] && r->quantity[k] && !driveChem(r->reactant[k]))
+					drives = false;
+			if (drives) {
+				if (!reactionsPlaced) {
+					for (auto* s : c1react) {
+						auto n = std::make_unique<bioReactionGene>(g.getVersion());
+						n->header = s->header;
+						n->header.mutweighting = 255;
+						n->note.which = s->note.which;
+						for (int k = 0; k < 4; k++) {
+							n->reactant[k] = (uint8_t)chem(s->reactant[k]);
+							n->quantity[k] = n->reactant[k] ? s->quantity[k] : 0;
+						}
+						n->rate = s->rate;
+						out.push_back(std::move(n));
+					}
+					reactionsPlaced = true;
+				}
+				continue;
+			}
+		} else if (auto* ic = dynamic_cast<bioInitialConcentrationGene*>(x)) {
+			if (driveChem(ic->chemical))
+				continue; // (C1's starting drives below)
+		}
+		out.push_back(std::move(gn));
+	}
+	for (auto* s : c1start) {
+		auto n = std::make_unique<bioInitialConcentrationGene>(g.getVersion());
+		n->header = s->header;
+		n->header.mutweighting = 255;
+		n->note.which = s->note.which;
+		n->chemical = (uint8_t)chem(s->chemical);
+		n->quantity = s->quantity;
+		out.push_back(std::move(n));
+	}
+	if (!instinctsPlaced)
+		placeInstincts();
+	g.genes = std::move(out);
+	return true;
+}
+
 bool writeC1Genome(int slot, std::string& why) {
 	// the game's own grendel genome, never one the player put in their own
 	// Genetics folder under its name
@@ -240,7 +488,33 @@ bool writeC1Genome(int slot, std::string& why) {
 		why = fmt::format("couldn't read gren.gen: {}", e.what());
 		return false;
 	}
-	if (!makeC1Genome(g, slot)) {
+	if (off()) {
+		// stock: converted from Creatures 1's own, beside this game (Steam's
+		// and GOG's "Creatures The Albian Years" hold both)
+		std::filesystem::path c2chems = findMainDirectoryFile("allchemicals.str");
+		std::filesystem::path c1dir = c2chems.empty() ? std::filesystem::path() : c2chems.parent_path().parent_path() / "Creatures 1";
+		std::filesystem::path c1gen = c1dir.empty() ? std::filesystem::path() : findNoCase(findNoCase(c1dir, "Genetics"), "Gren.GEN");
+		genomeFile c1;
+		bool converted = false;
+		if (!c1gen.empty()) {
+			try {
+				FileReader in(c1gen);
+				in >> c1;
+				converted = makeC1StockGenome(g, c1, chemicalNames(findNoCase(c1dir, "allchemicals.str")), chemicalNames(c2chems), slot);
+			} catch (std::exception& e) {
+				fmt::print("* C1 grendels: couldn't read {}: {}\n", c1gen.string(), e.what());
+			}
+		}
+		if (!converted) {
+			// (no Creatures 1 here: C2's own grendel in the C1 pictures)
+			for (auto& gn : g.genes)
+				if (auto* a = dynamic_cast<creatureAppearanceGene*>(gn.get())) {
+					a->variant = (uint8_t)slot;
+					a->species = 1;
+				}
+			fmt::print("* C1 grendels, stock: no Creatures 1 grendel genome found beside the game; C2's own grendel in their pictures\n");
+		}
+	} else if (!makeC1Genome(g, slot)) {
 		why = "gren.gen is not the genome the recipe expects";
 		return false;
 	}
@@ -412,8 +686,8 @@ bool readLine(const std::string& key, std::istringstream& l) {
 }
 
 std::string kindName(oldCreature* c) {
-	if (!c)
-		return {};
+	if (!c || off())
+		return {}; // (stock: the game names no kinds)
 	if (c->getGenus() == 1)
 		return isC1(c) ? C1_KIND_NAME : isBoney(c) ? "Boney grendel" : "Bulbous grendel";
 	if (c->getGenus() == 2)

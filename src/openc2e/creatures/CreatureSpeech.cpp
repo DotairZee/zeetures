@@ -234,42 +234,57 @@ struct Wording {
 
 std::map<int, AgentRef> bubbles; // each speaker's bubble, by UNID
 
-// the player's settings file: "key value" lines
+// The player's settings: "key value" lines. Each world keeps its own
+// (owner, 2026-11-27: "all preferences ... have their defaults but any
+// changes should be saved per world"), in settings.txt in its folder, beside
+// its window and kit layout (kits.ini). Only what must be known before a
+// world is open, or spans every world, stays in the user data folder's
+// settings.txt: machineSetting. With no world open (the world chooser,
+// headless runs without one) every setting is read from there.
+bool machineSetting(const std::string& key) {
+	return key == "default-world-opening" || key == "update-auto" || key == "update-check" || key == "words-all-worlds";
+}
+
 std::filesystem::path settingsFile() {
 	return getUserDataDir() / "settings.txt";
 }
 
-// The file is read once and kept (2026-11-26: some settings were asked for
+static std::filesystem::path settingsFileFor(const std::string& key) {
+	if (!machineSetting(key) && !engine.currentworlddir.empty())
+		return engine.currentworlddir / "settings.txt";
+	return settingsFile();
+}
+
+// Each file is read once and kept (2026-11-26: some settings were asked for
 // every frame, which opened and read the file 60 times a second; on a
 // Windows Documents folder watched by an antivirus or synced by OneDrive a
 // single open can stall). writeSetting, the only writer, has it read again.
-static bool s_settingsLoaded = false;
-static std::filesystem::path s_settingsFor;
-static std::map<std::string, std::string> s_settings;
+static std::map<std::filesystem::path, std::map<std::string, std::string>> s_settings;
 
 std::string readSetting(const std::string& key) {
-	std::filesystem::path file = settingsFile();
-	if (!s_settingsLoaded || file != s_settingsFor) {
-		s_settings.clear();
+	std::filesystem::path file = settingsFileFor(key);
+	auto f = s_settings.find(file);
+	if (f == s_settings.end()) {
+		std::map<std::string, std::string> m;
 		std::ifstream in(file);
 		std::string line;
 		while (std::getline(in, line)) {
 			std::istringstream l(line);
 			std::string k, v;
 			if (l >> k >> v)
-				s_settings.emplace(k, v); // (the first line for a key, as before)
+				m.emplace(k, v); // (the first line for a key, as before)
 		}
-		s_settingsLoaded = true;
-		s_settingsFor = file;
+		f = s_settings.emplace(file, std::move(m)).first;
 	}
-	auto it = s_settings.find(key);
-	return it == s_settings.end() ? "" : it->second;
+	auto it = f->second.find(key);
+	return it == f->second.end() ? "" : it->second;
 }
 
 void writeSetting(const std::string& key, const std::string& value) {
+	std::filesystem::path file = settingsFileFor(key);
 	std::vector<std::string> lines;
 	{
-		std::ifstream in(settingsFile());
+		std::ifstream in(file);
 		std::string line;
 		while (std::getline(in, line)) {
 			std::istringstream l(line);
@@ -280,16 +295,21 @@ void writeSetting(const std::string& key, const std::string& value) {
 	}
 	lines.push_back(key + " " + value);
 	{
-		std::ofstream out(settingsFile(), std::ios::binary);
+		std::ofstream out(file, std::ios::binary);
 		for (auto& l : lines)
 			out << l << "\n";
 	}
-	s_settingsLoaded = false;
+	s_settings.erase(file);
 }
 
 int s_bubbles_shown = -1; // -1: not read yet
 
 } // namespace
+
+static bool fs_exists(const std::filesystem::path& p) {
+	std::error_code ec;
+	return std::filesystem::exists(p, ec);
+}
 
 std::string readPlayerSetting(const std::string& key) {
 	return readSetting(key);
@@ -297,6 +317,41 @@ std::string readPlayerSetting(const std::string& key) {
 
 void writePlayerSetting(const std::string& key, const std::string& value) {
 	writeSetting(key, value);
+}
+
+// A world opened for the first time since preferences moved into worlds
+// (2026-11-27) takes a copy of the shared settings and layout, so it plays
+// on as before; a world made since starts with none (CreateWorld writes its
+// empty settings.txt), that is, every default.
+void prepareWorldSettings(const std::filesystem::path& dir) {
+	std::error_code ec;
+	if (dir.empty() || fs_exists(dir / "settings.txt"))
+		return;
+	std::ofstream out(dir / "settings.txt", std::ios::binary);
+	out << "# this world's preferences: only those changed from the defaults\n";
+	std::ifstream in(settingsFile());
+	std::string line;
+	int n = 0;
+	while (std::getline(in, line)) {
+		std::istringstream l(line);
+		std::string k;
+		if (l >> k && !machineSetting(k) && k[0] != '#') {
+			out << line << "\n";
+			n++;
+		}
+	}
+	bool kits = false;
+	if (!fs_exists(dir / "kits.ini") && fs_exists(getUserDataDir() / "kits.ini")) {
+		std::filesystem::copy_file(getUserDataDir() / "kits.ini", dir / "kits.ini", ec);
+		kits = !ec;
+	}
+	fmt::print("* Preferences: this world takes a copy of the shared ones ({} settings{})\n", n, kits ? ", and the kit layout" : "");
+	s_settings.clear();
+}
+
+void startWorldSettings(const std::filesystem::path& dir) {
+	std::ofstream out(dir / "settings.txt", std::ios::binary);
+	out << "# this world's preferences: only those changed from the defaults\n";
 }
 
 static int s_babyWords = -1; // -1: not read yet

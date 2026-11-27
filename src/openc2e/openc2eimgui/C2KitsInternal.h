@@ -25,6 +25,8 @@ namespace Openc2eImgui {
 // loaded at runtime and never shipped. Pictures are cached by name.
 Texture KitPicture(const std::string& name); // a .bmp drawn as it is
 Texture KitPhotoTexture(const std::filesystem::path& path); // a photo in the world folder (cached)
+void KitLayoutFollowsWorld(); // C2Kits.cpp: after "Save World As", the copy's kits.ini
+void RemakeC1Genome(); // BreedPacks.cpp: the C1 grendels' genome, as the world's personalities setting asks
 void DrawGraveyardKit();
 void DrawMindKit(); // MindKit.cpp
 void DrawEcologyKit(); // EcologyKit.cpp

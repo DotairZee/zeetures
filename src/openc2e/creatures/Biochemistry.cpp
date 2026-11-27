@@ -132,8 +132,22 @@ void c1Creature::tickBiochemistry() {
 // sleep at night (Sleepiness, chemical 7, held at 40 in the dark) and grow
 // drowsy by day.
 void c2Creature::kindsStep() {
-	if (Kinds::off() || !parentagent || !alive)
+	if (!parentagent || !alive)
 		return;
+	if (Kinds::off()) {
+		// (personalities switched off: stock again. Genes that switch
+		// reproduction off set no fertility of their own, so what this
+		// set is cleared, as is the longing)
+		const bool cannotCarry = (parentagent->genus == 2 || parentagent->genus == 3) && !Kinds::reproGenes(genome.get());
+		if (kindsDesire > 0 || (cannotCarry && (fertile || receptive))) {
+			fertile = receptive = 0;
+			kindsDesire = 0;
+		}
+		// (one already carrying still lays)
+		if (cannotCarry && pregnant && female && ++kindsGestation >= Kinds::GESTATION_STEPS)
+			involaction[1] = 255;
+		return;
+	}
 	kindsSteps++;
 	if (Kinds::watching() && kindsSteps % 1500 == 0 && parentagent->genus >= 2)
 		fmt::print("* KINDS {} genus {} {} stage {}: fertile {} receptive {} sex chem {} desire {:.0f} drive {} pregnant {} gestation {} mate alive {} sterile genes {}\n",
