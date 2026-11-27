@@ -580,8 +580,13 @@ static bool s_set_aside_was_paused = false;
 				continue;
 			n++;
 			std::string given = KitGivenName(a.get());
+			// the kind in the description in lower case: "(female norn)",
+			// "(male grendel)" (owner, 2026-11-27); names are left as they are
+			std::string kind = GenusName(a->genus);
+			for (auto& ch : kind)
+				ch = (char)std::tolower((unsigned char)ch);
 			std::string label = given.empty() ? fmt::format("{} {} ({})", GenusName(a->genus), n, ca->getCreature()->isFemale() ? "female" : "male")
-											   : fmt::format("{} ({} {})##{}", given, ca->getCreature()->isFemale() ? "female" : "male", GenusName(a->genus), n);
+											   : fmt::format("{} ({} {})##{}", given, ca->getCreature()->isFemale() ? "female" : "male", kind, n);
 			if (ImGui::MenuItem(label.c_str(), nullptr, a == current)) {
 				world.selectCreature(a);
 				int cx = (int)(a->x + a->getWidth() / 2.0f) - (int)engine.camera->getWidth() / 2;
