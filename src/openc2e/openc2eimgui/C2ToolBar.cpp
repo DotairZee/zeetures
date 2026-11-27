@@ -10,6 +10,7 @@
 #include "HelpWindow.h"
 #include "Updater.h"
 #include "creatures/CreatureSpeech.h"
+#include "creatures/Disease.h"
 #include "creatures/Lightning.h"
 #include "creatures/Language.h"
 #include "creatures/Thoughts.h"
@@ -1829,6 +1830,20 @@ static void DrawPreferences() {
 					Lightning::setStrange(strange);
 				if (ImGui::IsItemHovered())
 					ImGui::SetTooltip("A creature struck by lightning always feels the jolt. Ticked, a strike may now and then leave it changed,\nor give it a gift; and a body struck just after death may not stay dead. See Help > Time, seasons, and weather.");
+			}
+			// illness and organs (creatures/Disease.h; owner, 2026-11-26)
+			ImGui::SeparatorText("Illness");
+			{
+				bool harm = Disease::organHarm();
+				if (ImGui::Checkbox("Illness can damage organs, as in Creatures 2", &harm))
+					Disease::setOrganHarm(harm);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Ticked, an ill creature's organs wear down while it is ill, as its genes ask, and mend slowly after.\nA long or severe illness can kill it. Unticked, illness only makes creatures feel ill.\nApplies to every world. See Help > Illness and medicine.");
+				if (harm) {
+					ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 420);
+					ImGui::TextColored(ImVec4(0.9f, 0.45f, 0.3f, 1.0f), "Creatures can now die of illness. Untick to go back to illness without lasting harm.");
+					ImGui::PopTextWrapPos();
+				}
 			}
 			ImGui::SeparatorText("Creatures in this world");
 			ImGui::Checkbox("All creatures fertile", &world.allFertile);

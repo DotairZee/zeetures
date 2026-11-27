@@ -72,6 +72,15 @@ void sneeze(Agent* creature);
 // a creature ate rotten fruit: it may catch what lives in rotting food
 void ateRotten(Agent* creature);
 
+// Illness can damage organs, as in Creatures 2 (owner, 2026-11-26: "an
+// option that is off by default"). The genomes wire each antigen, and
+// lactate, fat and heavy metals, to their organs' "injury" receptors; with
+// this on, each organ takes that injury at every activation, and a long or
+// severe illness can kill. Off unless the player ticks it (Options, World);
+// OPENC2E_ILLNESS_DAMAGE=0/1 (developer aid) whatever the setting.
+bool organHarm();
+void setOrganHarm(bool on);
+
 // for the kits and the mind
 bool isIll(const std::string& moniker);
 // lightning (Lightning.h): every illness cured at once; or one caught (a

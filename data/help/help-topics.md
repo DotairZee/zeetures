@@ -639,6 +639,10 @@ There are four illnesses to begin with: a sneezing cold and a sleeping sickness 
 
 An illness is a nuisance more than a danger to a creature that is well fed. It lasts several minutes of play while the body makes antibodies, and then the creature is immune for a time.
 
+### Illness that harms
+
+In the original game, illness could wear down a creature's organs and kill it. Zeetures leaves that off. To have it, tick **Illness can damage organs, as in Creatures 2** (Options, World; it applies to every world). Then, while a creature is ill, the organs its genes name for each germ wear down, and they mend slowly once it is well. A long or severe illness can kill. **Creatures can die of illness with this on.** The [[Science Kit]] shows each organ's health.
+
 ### What helps
 
 - **Warmth, food, and vitamin C** speed recovery.

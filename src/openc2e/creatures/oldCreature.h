@@ -364,6 +364,7 @@ class c2Organ {
 	// variables
 	float lifeforce, shorttermlifeforce, longtermlifeforce;
 	float zeroenergydamage; // short-term life force lost per activation without enough ATP
+	int injuryTenthShown = 10; // (OPENC2E_WATCH_INJURY; 10: never injured)
 
 	// locuses
 	unsigned char damagerate, repairrate, clockrate, injurytoapply;

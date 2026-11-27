@@ -27,6 +27,8 @@
 #include "c2eCreature.h"
 #include "oldBrain.h"
 #include "oldCreature.h"
+#include "Disease.h"
+#include "historyManager.h"
 #include "Agent.h"
 #include "Engine.h"
 #include "caosValue.h"
@@ -735,7 +737,30 @@ void c2Organ::tick() {
 		float repair = diff * (repairrate / 255.0); // TODO: correct?
 		shorttermlifeforce += repair;
 
-		// TODO: adjust injury chem, apply injury
+		// Injury (only with "Illness can damage organs" ticked, Disease.h):
+		// the organ's injury receptors (antigens, lactate, fat, heavy metals
+		// in the stock genomes) take injury/255 of 1/255 of its full life
+		// force from its short-term life force each activation, the scale of
+		// the genome's own "damage due to zero energy". The repair rate brings
+		// it back; what is not repaired in time wears the long-term life
+		// force down, and an organ at 0 is death.
+		if (injurytoapply > 0 && Disease::organHarm()) {
+			shorttermlifeforce -= injurytoapply * (lifeforce / (255.0f * 255.0f));
+			if (shorttermlifeforce < 0.0f)
+				shorttermlifeforce = 0.0f;
+			// developer aid: OPENC2E_WATCH_INJURY prints an organ's first injury,
+			// and each time its long-term life force falls past another tenth
+			static const bool watchInjury = devenv("OPENC2E_WATCH_INJURY") != nullptr;
+			if (watchInjury) {
+				int tenth = (int)(10.0f * longtermlifeforce / lifeforce);
+				if (injuryTenthShown == 10) // (its first injury)
+					injuryTenthShown = 11;
+				if (tenth < injuryTenthShown) {
+					injuryTenthShown = tenth;
+					fmt::print("* INJURY {} organ {}: long-term {}%, short-term {:.0f}%, injury {}\n", world.history->findMoniker(parent->getGenome()), fmt::ptr(this), tenth * 10, 100.0f * shorttermlifeforce / lifeforce, (int)injurytoapply);
+				}
+			}
+		}
 	}
 
 	// TODO: ensure we've ticked at least once

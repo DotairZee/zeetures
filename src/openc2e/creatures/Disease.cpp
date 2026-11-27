@@ -24,6 +24,7 @@
 #include "Map.h"
 #include "Room.h"
 #include "World.h"
+#include "creatures/CreatureSpeech.h"
 #include "common/Random.h"
 #include "creatures/CreatureAgent.h"
 #include "creatures/oldCreature.h"
@@ -69,6 +70,8 @@ bool watching() {
 	static const bool w = devenv("OPENC2E_WATCH_DISEASE") != nullptr;
 	return w;
 }
+
+int s_organHarm = -1; // -1: not read yet
 
 std::vector<Strain> s_strains;
 int s_nextId = 1;
@@ -293,6 +296,17 @@ void reset() {
 }
 
 void tick() {
+	// developer aid: OPENC2E_TEST_INFECT=N gives N creatures an illness they
+	// can catch (one each, at random) at world tick 100, to watch its course
+	static int testInfect = devenv("OPENC2E_TEST_INFECT") ? atoi(devenv("OPENC2E_TEST_INFECT")) : 0;
+	if (testInfect > 0 && world.tickcount >= 100) {
+		for (auto& a : world.agents)
+			if (testInfect > 0 && a && !a->isDying() && dynamic_cast<CreatureAgent*>(a.get()) && catchSome(a.get())) {
+				fmt::print("* TEST INFECT {}\n", a->identify());
+				testInfect--;
+			}
+		testInfect = 0;
+	}
 	if (off() || engine.version != 2 || !world.map || !world.history)
 		return;
 	if (world.tickcount % stepTicks != 0)
@@ -418,6 +432,21 @@ void sneeze(Agent* sneezer) {
 	}
 	if (watching())
 		fmt::print("* DISEASE {} sneezed at {:.0f},{:.0f}\n", mon, sx, sy);
+}
+
+bool organHarm() {
+	if (s_organHarm < 0) {
+		if (const char* e = devenv("OPENC2E_ILLNESS_DAMAGE"))
+			s_organHarm = atoi(e) ? 1 : 0;
+		else
+			s_organHarm = readPlayerSetting("illness-organ-damage") == "1" ? 1 : 0;
+	}
+	return s_organHarm == 1;
+}
+
+void setOrganHarm(bool on) {
+	s_organHarm = on ? 1 : 0;
+	writePlayerSetting("illness-organ-damage", on ? "1" : "0");
 }
 
 bool isIll(const std::string& moniker) {
