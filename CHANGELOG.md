@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 805 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 807 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.48.1](#version-0481): 2 commits, 27 November 2026
 - [0.48.0](#version-0480): 3 commits, 27 November 2026
 - [0.47.4](#version-0474): 2 commits, 27 November 2026
 - [0.47.3](#version-0473): 2 commits, 27 November 2026
@@ -123,6 +124,26 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.48.1
+
+The Creatures menu describes each creature in lower case: "Norn 0003 (female norn)".
+
+### 27 November 2026
+
+#### Version 0.48.1
+
+[`067b0e8d`](https://github.com/DotairZee/zeetures/commit/067b0e8d216dab48862ed4e927f70de6eb81334a)
+
+The Creatures menu gives a creature's kind in lower case ("female norn").
+
+#### Creatures menu: "female norn", not "female Norn"
+
+[`c52059cf`](https://github.com/DotairZee/zeetures/commit/c52059cf6a8bf9b96ec423eb10dc825dd6a8ac66)
+
+In the Creatures menu, a named creature's description gives its kind in
+lower case: "Norn 0008 (male norn)", "Grendel 0002 (male grendel)".
+Names, and the "Norn 3" of an unnamed creature, are unchanged.
 
 ## Version 0.48.0
 

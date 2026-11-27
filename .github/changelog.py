@@ -411,6 +411,8 @@ VERSIONS = [
      "The toy gun is held by its grip, whichever way it faces and while it fires, by the hand and by creatures; before, it jumped about in the hand as it animated."),
     ("0.48.0", "8a296ee2",
      "The Metamorph Device now lays an egg at the gene lab's chute, where the gene splicer's eggs come out, and it hatches as the other sex. In the Owner's Kit family tree, a creature changed by the device shows its former self as its one parent, and a creature from the gene splicer shows the two it was spliced from; both are kept with the world, even if you save before the egg hatches. Anything held, by the hand or a creature, stays at its grip when it turns: the toy gun no longer jumps about in the hand."),
+    ("0.48.1", "067b0e8d",
+     "The Creatures menu describes each creature in lower case: \"Norn 0003 (female norn)\"."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
