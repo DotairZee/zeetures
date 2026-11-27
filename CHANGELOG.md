@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 800 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 802 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.47.4](#version-0474): 2 commits, 27 November 2026
 - [0.47.3](#version-0473): 2 commits, 27 November 2026
 - [0.47.2](#version-0472): 3 commits, 27 November 2026
 - [0.47.1](#version-0471): 4 commits, 27 November 2026
@@ -121,6 +122,34 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.47.4
+
+The toy gun is held by its grip, whichever way it faces and while it fires, by the hand and by creatures; before, it jumped about in the hand as it animated.
+
+### 27 November 2026
+
+#### Version 0.47.4
+
+[`c5a5e6f4`](https://github.com/DotairZee/zeetures/commit/c5a5e6f47b6fdbbe39c78948b61a679a688669de)
+
+The toy gun is held by its grip, whichever way it faces.
+
+#### The toy gun is held by its grip, whichever way it faces
+
+[`1d0cd78b`](https://github.com/DotairZee/zeetures/commit/1d0cd78b20181c9883df57fdc8c38db83a45dcf2)
+
+The toy gun (2 13 14, pgun: 26 pictures, 0-12 facing left, 13-25 facing
+right, each with firing frames) came with its pickup points one picture
+out: none for picture 0, and picture 13, the first facing right, held at
+the left-facing gun's handle. As its idle animation cycled, the point it
+was held by jumped from one end of the gun to the other. toy-gun.cos (any
+world) sets every picture's point to the middle of the grip, drawn in the
+same place in all of them, firing or not: 81,45 facing left, 10,45 facing
+right. The hand now holds the gun between its finger and thumb, as it
+holds eggs; from the picture's edge the gun ran back under the palm when
+facing right. Tested on a copy of a new world: carried right and left,
+the hand stays on the grip.
 
 ## Version 0.47.3
 

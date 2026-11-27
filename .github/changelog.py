@@ -407,6 +407,8 @@ VERSIONS = [
      "Ants' nests stay on the ground: they no longer bounce in place or hop away into the sky, and a nest already stranded up there falls back down when the world opens. Every breed's babies and young are drawn with the proportions of Creatures 2's own norns against their grown-up pictures, so the Kai Norns' babies get their big heads."),
     ("0.47.3", "89efec51",
      "Zooming in or out while following a creature keeps following it, centred at the new zoom."),
+    ("0.47.4", "c5a5e6f4",
+     "The toy gun is held by its grip, whichever way it faces and while it fires, by the hand and by creatures; before, it jumped about in the hand as it animated."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
