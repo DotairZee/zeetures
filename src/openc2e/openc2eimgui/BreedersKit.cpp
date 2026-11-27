@@ -1186,13 +1186,44 @@ static std::string renamed(const std::string& name, int target, int species) {
 
 
 // Known faults in breed packs' body data, mended as they are installed
-// (owner, 2026-11-26). The C1-in-C2 Grendel (RudeDog; eem.foo 68a3): the
-// female's left foot (e50b.att) has its two points the wrong way round in
-// pictures 0, 3, 4 and 7 (the male's left foot and her own right foot have
-// them as every other picture does), so the foot hung from its toes and its
-// claw sat at the ankle. Matched exactly, so nothing else is changed.
+// (owner, 2026-11-26 and 11-27). The C1-in-C2 Grendel (RudeDog; eem.foo 68a3),
+// female only (the male's body data is right throughout, and is what these
+// were checked against, picture by picture):
+// - left foot (e50b.att): the two points the wrong way round in pictures 0,
+//   3, 4 and 7, so the foot hung from its toes with its claw at the ankle;
+// - right shin (g50b.att): the four facing-left pictures (4-7) have their
+//   lines in reverse order, and the first and last also the wrong way round,
+//   so the near leg facing left bent at the wrong places;
+// - left upper arm (i50b.att): the two points the wrong way round in
+//   picture 6.
+// Each file is mended only if every listed line matches exactly, so a
+// corrected copy of the pack, or any other file, is left as it is.
+struct BodyDataMend {
+	const char* file;
+	const char* what;
+	std::map<int, std::pair<std::vector<int>, std::vector<int>>> lines; // line: as shipped, mended
+};
+static const std::vector<BodyDataMend> s_bodyDataMends = {
+	{"e50b.att", "the C1-in-C2 Grendel's left foot, pictures 0, 3, 4 and 7",
+		{{0, {{21, 17, 5, 3}, {5, 3, 21, 17}}},
+			{3, {{23, 1, 3, 14}, {3, 14, 23, 1}}},
+			{4, {{1, 18, 17, 4}, {17, 4, 1, 18}}},
+			{7, {{2, 0, 22, 13}, {22, 13, 2, 0}}}}},
+	{"g50b.att", "the C1-in-C2 Grendel's right shin, pictures 4-7",
+		{{4, {{4, 14, 8, 2}, {5, 7, 17, 3}}},
+			{5, {{3, 2, 6, 13}, {4, 3, 13, 12}}},
+			{6, {{4, 3, 13, 12}, {3, 2, 6, 13}}},
+			{7, {{17, 3, 5, 7}, {8, 2, 4, 14}}}}},
+	{"i50b.att", "the C1-in-C2 Grendel's left upper arm, picture 6",
+		{{6, {{2, 16, 10, 2}, {10, 2, 2, 16}}}}},
+};
+
 static std::vector<uint8_t> mendBodyData(const std::string& name, const std::vector<uint8_t>& data) {
-	if (to_ascii_lowercase(name) != "e50b.att")
+	const BodyDataMend* m = nullptr;
+	for (auto& c : s_bodyDataMends)
+		if (to_ascii_lowercase(name) == c.file)
+			m = &c;
+	if (!m)
 		return data;
 	std::string text(data.begin(), data.end());
 	std::vector<std::string> lines;
@@ -1212,18 +1243,20 @@ static std::vector<uint8_t> mendBodyData(const std::string& name, const std::vec
 			v.push_back(n);
 		return v;
 	};
-	const std::map<int, std::vector<int>> broken = {{0, {21, 17, 5, 3}}, {3, {23, 1, 3, 14}}, {4, {1, 18, 17, 4}}, {7, {2, 0, 22, 13}}};
-	for (auto& [i, v] : broken)
-		if ((int)lines.size() <= i || numbers(lines[i]) != v)
+	for (auto& [i, fix] : m->lines)
+		if ((int)lines.size() <= i || numbers(lines[i]) != fix.first)
 			return data;
-	for (auto& [i, v] : broken) {
-		std::string eol = lines[i].size() >= 2 && lines[i][lines[i].size() - 2] == '\r' ? "\r\n" : "\n";
-		lines[i] = fmt::format("{:2d} {:2d} {:2d} {:2d} ", v[2], v[3], v[0], v[1]) + eol;
+	for (auto& [i, fix] : m->lines) {
+		std::string eol = lines[i].size() >= 2 && lines[i][lines[i].size() - 2] == '\r' ? "\r\n" : (lines[i].back() == '\n' ? "\n" : "");
+		std::string l;
+		for (int n : fix.second)
+			l += fmt::format("{:2d} ", n);
+		lines[i] = l + eol;
 	}
 	std::string out;
 	for (auto& l : lines)
 		out += l;
-	fmt::print("* Breed import: mended {} (the C1-in-C2 Grendel's left foot, pictures 0, 3, 4 and 7)\n", name);
+	fmt::print("* Breed import: mended {} ({})\n", name, m->what);
 	return std::vector<uint8_t>(out.begin(), out.end());
 }
 
