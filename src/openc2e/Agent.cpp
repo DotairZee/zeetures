@@ -1486,6 +1486,9 @@ void Agent::physicsTickC2() {
 	double delta = 1000000000;
 
 	bool collided = false;
+	// (C2, moved across then down: what each part hit, -1 none, and how far
+	// across it has already gone)
+	int sideAcross = -1, sideDown = -1, movedAcross = 0;
 
 	// back inside the room map: no longer out of it
 	if (outofroomsystem && validInRoomSystem())
@@ -1534,10 +1537,42 @@ void Agent::physicsTickC2() {
 			return;
 		}
 
-		for (unsigned int i = 0; i < 4; i++) {
-			Point src = boundingBoxPoint(i);
-			findCollisionInDirection(i, m, src, dx, dy, deltapt, delta, collided, true);
-		}
+		if (c2order && dx != 0 && dy != 0) {
+			// C2 moves an object across first, then up or down, each looked
+			// at on its own: one that comes down on a floor while moving
+			// across makes its whole step across and is stopped only in its
+			// fall (real C2, 2026-11-26: a ball at 6 px a tick across and 24
+			// down went the whole 5 across as it landed; moved at once, it
+			// was stopped 4 px short)
+			int ax = dx, none = 0;
+			Point across(0, 0);
+			double adelta = 1000000000;
+			bool hitAcross = false;
+			for (unsigned int i = 0; i < 4; i++)
+				findCollisionInDirection(i, m, boundingBoxPoint(i), ax, none, across, adelta, hitAcross, true);
+			sideAcross = hitAcross ? (int)lastcollidedirection : -1;
+			if ((int)across.x != 0) {
+				moveTo(x + (int)across.x, y);
+				movedAcross = (int)across.x;
+				m = world.map->metaRoomAt(x, y);
+			}
+			if (m) {
+				int dn = dy, none2 = 0;
+				Point down(0, 0);
+				double ddelta = 1000000000;
+				bool hitDown = false;
+				for (unsigned int i = 0; i < 4; i++)
+					findCollisionInDirection(i, m, boundingBoxPoint(i), none2, dn, down, ddelta, hitDown, true);
+				sideDown = hitDown ? (int)lastcollidedirection : -1;
+				deltapt.y = down.y;
+			}
+			deltapt.x = across.x;
+			collided = sideAcross >= 0 || sideDown >= 0;
+		} else
+			for (unsigned int i = 0; i < 4; i++) {
+				Point src = boundingBoxPoint(i);
+				findCollisionInDirection(i, m, src, dx, dy, deltapt, delta, collided, true);
+			}
 	} else {
 		deltapt.x = dx;
 		deltapt.y = dy;
@@ -1560,25 +1595,39 @@ void Agent::physicsTickC2() {
 			return r;
 		};
 		int r = (int)rest;
-		if (lastcollidedirection >= 2) {
-			int f = share(r / 5, dx);
-			if (f == 0 && r != 0 && dx != 0)
-				f = dx > 0 ? 1 : -1;
+		// (moved across then down: a wall first, then a floor or ceiling,
+		// each with the speed it had then; else the one side it hit)
+		int across = sideAcross, downward = sideDown;
+		if (across < 0 && downward < 0) {
+			if (lastcollidedirection >= 2)
+				downward = (int)lastcollidedirection;
+			else
+				across = (int)lastcollidedirection;
+		}
+		int vx = dx;
+		if (across >= 0) {
+			velx = share(r, vx) - vx;
+			vx = (int)velx;
+			queueScript(6, 0, across);
+		}
+		if (downward >= 0) {
+			int f = share(r / 5, vx);
+			if (f == 0 && r != 0 && vx != 0)
+				f = vx > 0 ? 1 : -1;
 			vely = share(r, dy) - dy;
 			if (sufferphysics()) {
-				velx = dx - f;
+				velx = vx - f;
 				int g = (int)round(accg);
 				int t = g - (g * r) / 100;
-				if (lastcollidedirection == 3 && vely >= -t && vely <= t) {
+				if (downward == 3 && vely >= -t && vely <= t) {
 					falling = false;
 					velx = 0;
 					vely = 0;
 					stopped = true;
 				}
 			}
-		} else
-			velx = share(r, dx) - dx;
-		queueScript(6, 0, (int)lastcollidedirection);
+			queueScript(6, 0, downward);
+		}
 	} else if (!c2order && collided && (round(velx) != 0 || round(vely) != 0) && moved_last_tick) {
 		if (lastcollidedirection >= 2) // up and down
 			vely = -(round(vely) - (rest * round(vely)) / 100);
@@ -1604,7 +1653,7 @@ void Agent::physicsTickC2() {
 			moved_last_tick = false;
 		} else {
 			moved_last_tick = true;
-			moveTo(x + (int)deltapt.x, y + (int)deltapt.y);
+			moveTo(x + (int)deltapt.x - movedAcross, y + (int)deltapt.y);
 			// into water from a room that is not: one water drag step at once
 			if (sufferphysics() && !stopped && from && from->type != 2) {
 				std::shared_ptr<Room> to = world.map->roomAt(x + getWidth() / 2.0f, y + getHeight() / 2.0f);
