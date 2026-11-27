@@ -17,6 +17,8 @@ std::filesystem::path WorldFile(const std::filesystem::path& worlddir);
 std::vector<WorldEntry> ListWorlds();
 std::optional<WorldEntry> FindWorld(const std::string& name);
 std::vector<std::filesystem::path> ListWorldTemplates();
+// a world file Creatures 2 itself played (in its Documents folder)
+bool IsPlayedWorld(const std::filesystem::path& tmpl);
 bool CreateWorld(const std::string& name, const std::filesystem::path& tmpl, std::string& error);
 
 // Copies what a world keeps beside its save (its photos, the genes of its

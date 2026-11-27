@@ -4,6 +4,7 @@
 
 #include "Engine.h"
 #include "PathResolver.h"
+#include "GameFolder.h"
 #include "creatures/CreatureSpeech.h"
 #include "common/Ascii.h"
 #include "common/backend/Backend.h"
@@ -11,6 +12,7 @@
 
 #include <algorithm>
 #include <fmt/core.h>
+#include <fstream>
 #include <imgui.h>
 #include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_process.h>
@@ -57,6 +59,36 @@ std::optional<WorldEntry> FindWorld(const std::string& name) {
 	return std::nullopt;
 }
 
+// Where Creatures 2 itself keeps the worlds it has played (its own
+// Documents folder): under Steam's Proton on Linux, next to the game's
+// Steam library; in the Documents folder on Windows
+static std::vector<fs::path> PlayedWorldFolders() {
+	std::vector<fs::path> result;
+	std::error_code ec;
+	fs::path game = GameFolder::currentFolder();
+	for (fs::path p = game; !p.empty() && p != p.parent_path(); p = p.parent_path())
+		if (p.filename() == "steamapps") {
+			result.push_back(p / "compatdata/1818340/pfx/drive_c/users/steamuser/Documents/Creatures/Creatures 2");
+			break;
+		}
+#ifdef _WIN32
+	if (const char* home = std::getenv("USERPROFILE"))
+		result.push_back(fs::path(home) / "Documents" / "Creatures" / "Creatures 2");
+#endif
+	std::vector<fs::path> found;
+	for (auto& f : result)
+		if (fs::is_directory(f, ec))
+			found.push_back(f);
+	return found;
+}
+
+bool IsPlayedWorld(const fs::path& tmpl) {
+	for (auto& f : PlayedWorldFolders())
+		if (tmpl.parent_path() == f)
+			return true;
+	return false;
+}
+
 std::vector<fs::path> ListWorldTemplates() {
 	// .sfc files in the game's own data folders (not the user folder);
 	// Eden.sfc, the game's fresh starting world, first
@@ -72,6 +104,15 @@ std::vector<fs::path> ListWorldTemplates() {
 				result.push_back(entry.path());
 		}
 	}
+	// and the worlds played in Creatures 2 itself, after the game's own
+	std::vector<fs::path> played;
+	for (auto& dir : PlayedWorldFolders()) {
+		std::error_code ec;
+		for (auto& entry : fs::directory_iterator(dir, ec))
+			if (entry.is_regular_file() && to_ascii_lowercase(entry.path().extension().string()) == ".sfc")
+				played.push_back(entry.path());
+	}
+	std::sort(played.begin(), played.end());
 	std::sort(result.begin(), result.end(), [](const fs::path& a, const fs::path& b) {
 		bool aeden = to_ascii_lowercase(a.filename().string()) == "eden.sfc";
 		bool beden = to_ascii_lowercase(b.filename().string()) == "eden.sfc";
@@ -79,6 +120,7 @@ std::vector<fs::path> ListWorldTemplates() {
 			return aeden;
 		return a < b;
 	});
+	result.insert(result.end(), played.begin(), played.end());
 	return result;
 }
 
@@ -130,7 +172,25 @@ bool CreateWorld(const std::string& name, const fs::path& tmpl, std::string& err
 		error = fmt::format("Couldn't create the world: {}", ec.message());
 		return false;
 	}
-	fmt::print("* Created world '{}' from {}\n", name, tmpl.filename().string());
+	// a world played in Creatures 2: its creatures' genomes come too (from
+	// the Genetics folder beside it, those whose moniker is in the world
+	// file), so they can be brought in at its first opening
+	int genomes = 0;
+	if (fs::is_directory(tmpl.parent_path() / "Genetics", ec) && to_ascii_lowercase(tmpl.filename().string()) != "eden.sfc") {
+		std::ifstream in(tmpl, std::ios::binary);
+		std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+		for (auto& entry : fs::directory_iterator(tmpl.parent_path() / "Genetics", ec)) {
+			std::string stem = entry.path().stem().string();
+			if (stem.size() != 4 || to_ascii_lowercase(entry.path().extension().string()) != ".gen" || bytes.find(stem) == std::string::npos)
+				continue;
+			std::error_code ec2;
+			fs::create_directories(dir / "Genetics", ec2);
+			fs::copy_file(entry.path(), dir / "Genetics" / entry.path().filename(), fs::copy_options::overwrite_existing, ec2);
+			if (!ec2)
+				genomes++;
+		}
+	}
+	fmt::print("* Created world '{}' from {}{}\n", name, tmpl.filename().string(), genomes ? fmt::format(" (with {} creatures' genomes)", genomes) : "");
 	return true;
 }
 
@@ -259,6 +319,8 @@ std::string DrawNewWorldForm(bool reset) {
 			std::string label = s_templates[i].filename().string();
 			if (to_ascii_lowercase(label) == "eden.sfc")
 				label += "  (a fresh Albia)";
+			else if (IsPlayedWorld(s_templates[i]))
+				label += "  (played in Creatures 2)";
 			if (ImGui::Selectable(label.c_str(), i == s_template))
 				s_template = i;
 		}

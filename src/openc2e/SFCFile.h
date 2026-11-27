@@ -21,6 +21,7 @@
 #define _SFCFILE_H
 
 #include <cstdint>
+#include <filesystem>
 #include <map>
 #include <string>
 #include <vector>
@@ -75,6 +76,8 @@ class SFCFile {
 	long census[6] = {};
 
 	uint32_t scrollx, scrolly;
+	SFCClass* selected = nullptr; // (C2: the selected creature)
+	std::filesystem::path folder; // where the world file is (its creatures' genomes may be beside it)
 	std::string favplacename;
 	uint32_t favplacex, favplacey;
 	struct FavPlace {
@@ -229,6 +232,7 @@ class SFCObject : public SFCClass {
 	uint32_t range, accg, rest, aero;
 	int32_t velx, vely;
 	uint32_t gravdata;
+	SFCClass *carrier = nullptr, *objectRef = nullptr, *roomRef = nullptr; // (C2: references, not fixed bytes)
 
 	bool frozen;
 
@@ -365,6 +369,52 @@ class SFCScenery : public SFCObject {
 	class Agent* copiedAgent() {
 		return (Agent*)ourAgent;
 	}
+};
+
+// C2: the records a played world (or an exported creature) holds for each
+// creature. Only stepped over, by their layout, keeping each record's place
+// in the numbering; the plain facts about the creature are kept, and the
+// creature comes into the world anew from its genome, with a fresh mind.
+class SFCOpaque : public SFCClass {
+  public:
+	enum Kind { BODY, LIMB, BRAIN, BIOCHEMISTRY, ORGAN, RECEPTOR, INSTINCT, GENOME };
+	Kind kind;
+	unsigned char chemicals[256] = {}; // (biochemistry: each chemical's level)
+	std::string genomeMoniker; // (genome: whose)
+	std::string genomeData; // (genome: the genome file's bytes)
+	int32_t x = 0, y = 0; // (body: where it is drawn)
+	bool placed = false;
+	SFCOpaque(SFCFile* p, Kind k)
+		: SFCClass(p), kind(k) {}
+	void read();
+	void readOrganBlock();
+};
+
+class SFCCreature : public SFCObject {
+  protected:
+	class Agent* ourAgent = nullptr;
+
+  public:
+	std::string moniker, mother, father, motherName, fatherName;
+	uint8_t facing = 0, asleep = 0, sex = 0, stage = 0, dead = 0;
+	uint32_t unconscious = 0, age = 0;
+	std::string babyMoniker;
+	SFCOpaque* biochemistry = nullptr;
+	SFCOpaque* body = nullptr;
+	struct Word {
+		std::string word, said;
+		uint32_t strength;
+	};
+	std::vector<Word> words;
+	std::string name, born, birthplace, notes;
+
+	SFCCreature(SFCFile* p)
+		: SFCObject(p) {}
+	void read();
+	void copyToWorld();
+	// (not numbered as a world-file object: saves keep creatures their own way)
+	class Agent* copiedAgent() { return nullptr; }
+	class Agent* madeCreature() { return ourAgent; }
 };
 
 class SFCMacro : public SFCClass {

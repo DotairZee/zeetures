@@ -63,6 +63,7 @@ Albia is much larger than the window, and it has no ends: go far enough east and
 Each world is its own copy of Albia, with its own creatures and history. When Zeetures starts, it asks which to open.
 
 - **New World** (File menu, or the first window): name it, and choose what to start from. Eden is a fresh Albia; other worlds you have installed are listed too.
+- **A world you played in Creatures 2** is listed as well, marked "played in Creatures 2" (Zeetures finds the ones the original game saved in its Documents folder). Its creatures come with it: each keeps its name, sex, age and life stage, its parents and birth, its body's chemistry (hunger, illness), and the words it knew. Each starts with a fresh Zeetures mind. A creature that was pregnant comes in without its unborn baby, for now.
 - **Open World** (File menu): switches worlds. The one you leave is saved first.
 - **Always open this world at launch:** a tick box in the first window, and in File > Preferences > World. Zeetures then starts in that world without asking. Untick it to be asked again. If Zeetures closed while opening the world last time, it asks, so that you are never stuck.
 

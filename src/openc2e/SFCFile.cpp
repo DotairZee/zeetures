@@ -20,6 +20,13 @@
 #include "PixelText.h"
 #include "WordLists.h"
 #include "SFCFile.h"
+#include "common/devenv.h"
+#include "common/io/FileReader.h"
+#include "fileformats/genomeFile.h"
+#include "creatures/oldCreature.h"
+#include "creatures/SkeletalCreature.h"
+#include "creatures/CreatureSpeech.h"
+#include "WorldSave.h"
 #include "historyManager.h"
 
 #include "Agent.h"
@@ -69,6 +76,15 @@
 #define TYPE_CALLBUTTON 12
 #define TYPE_SCENERY 13
 #define TYPE_MACRO 14
+#define TYPE_CREATURE 15
+#define TYPE_BODY 16
+#define TYPE_LIMB 17
+#define TYPE_CBRAIN 18
+#define TYPE_CBIOCHEMISTRY 19
+#define TYPE_CORGAN 20
+#define TYPE_CRECEPTOR 21
+#define TYPE_CINSTINCT 22
+#define TYPE_CGENOME 23
 #define TYPE_OBJECT 100
 
 #define sfccheck(x) \
@@ -103,6 +119,9 @@ void SFCFile::read(Reader* i) {
 		objects.push_back(o);
 	}
 
+	static const bool traceSfc = devenv("OPENC2E_TRACE_SFC") != nullptr;
+	if (traceSfc)
+		fmt::print("* SFC {} objects read, at {}\n", objects.size(), i->tell());
 	uint32_t numscenery = read32();
 	for (unsigned int i = 0; i < numscenery; i++) {
 		SFCScenery* o = (SFCScenery*)slurpMFC(TYPE_SCENERY);
@@ -110,6 +129,8 @@ void SFCFile::read(Reader* i) {
 		scenery.push_back(o);
 	}
 
+	if (traceSfc)
+		fmt::print("* SFC {} scenery read, at {}\n", scenery.size(), i->tell());
 	uint32_t numscripts = read32();
 	for (unsigned int i = 0; i < numscripts; i++) {
 		SFCScript x;
@@ -117,10 +138,17 @@ void SFCFile::read(Reader* i) {
 		scripts.push_back(x);
 	}
 
+	if (traceSfc)
+		fmt::print("* SFC {} scripts read, at {}\n", scripts.size(), i->tell());
 	scrollx = read32();
 	scrolly = read32();
 
-	sfccheck(read16() == 0); // TODO
+	// the selected creature (C2; none in Eden): a reference to one in the
+	// object list
+	if (version() == 1)
+		selected = slurpMFC();
+	else
+		sfccheck(read16() == 0); // TODO
 
 	// six favorite places (name, x, y); unused slots have empty names
 	for (unsigned int i = 0; i < 6; i++) {
@@ -134,14 +162,22 @@ void SFCFile::read(Reader* i) {
 		}
 		favplaces.push_back({name, px, py});
 	}
-	if (version() != 0)
-		readBytes(4); // TODO: C2 has four more bytes here
+	// C2: a u16 (2 in Eden), then a count and that many bytes (none in Eden;
+	// three in a played world with three creatures)
+	if (version() != 0) {
+		read16();
+		uint16_t n = read16();
+		sfccheck(n <= 4096);
+		readBytes(n);
+	}
 
 	uint16_t numspeech = read16();
 	for (unsigned int i = 0; i < numspeech; i++) {
 		speech_history.push_back(readstring());
 	}
 
+	if (traceSfc)
+		fmt::print("* SFC header read, at {}\n", i->tell());
 	uint32_t nomacros = read32();
 	for (unsigned int i = 0; i < nomacros; i++) {
 		SFCMacro* o = (SFCMacro*)slurpMFC(TYPE_MACRO);
@@ -193,7 +229,16 @@ void SFCFile::read(Reader* i) {
 			return v;
 		};
 		i32(); // the empty list
+		// the event bar: a count, then that many references to objects
+		// already read (a played world has one)
 		uint32_t icons = i32();
+		if (icons > 64)
+			ok = false;
+		for (uint32_t k = 0; ok && k < icons; k++) {
+			uint16_t tag = i16();
+			if (tag == 0xffff || (tag & 0x8000) || tag == 0x7fff)
+				ok = false; // (only references back are expected here)
+		}
 		long c[6];
 		for (int k = 0; k < 4; k++)
 			c[k] = (int32_t)i32();
@@ -201,7 +246,7 @@ void SFCFile::read(Reader* i) {
 		c[5] = i16();
 		i32(); // tick count
 		uint32_t monikers = i32();
-		if (icons != 0 || monikers > 16)
+		if (monikers > 16)
 			ok = false;
 		else
 			p += 4 * monikers;
@@ -233,7 +278,7 @@ bool validSFCType(unsigned int type, unsigned int reqtype) {
 		return true;
 	if (type == reqtype)
 		return true;
-	if ((reqtype == TYPE_OBJECT) && (type >= TYPE_COMPOUNDOBJECT))
+	if ((reqtype == TYPE_OBJECT) && ((type >= TYPE_COMPOUNDOBJECT && type <= TYPE_MACRO) || type == TYPE_CREATURE))
 		return true;
 	if ((reqtype == TYPE_COMPOUNDOBJECT) && (type >= TYPE_COMPOUNDOBJECT) && (type <= TYPE_LIFT))
 		return true;
@@ -291,6 +336,25 @@ SFCClass* SFCFile::slurpMFC(unsigned int reqtype) {
 			types[pid] = TYPE_SCENERY;
 		else if (classname == "Macro")
 			types[pid] = TYPE_MACRO;
+		// (C2: a played world's creatures, and an exported creature)
+		else if (classname == "Creature")
+			types[pid] = TYPE_CREATURE;
+		else if (classname == "Body")
+			types[pid] = TYPE_BODY;
+		else if (classname == "Limb")
+			types[pid] = TYPE_LIMB;
+		else if (classname == "CBrain")
+			types[pid] = TYPE_CBRAIN;
+		else if (classname == "CBiochemistry")
+			types[pid] = TYPE_CBIOCHEMISTRY;
+		else if (classname == "COrgan" || classname == "CBody")
+			types[pid] = TYPE_CORGAN;
+		else if (classname == "CReceptor")
+			types[pid] = TYPE_CRECEPTOR;
+		else if (classname == "CInstinct")
+			types[pid] = TYPE_CINSTINCT;
+		else if (classname == "CGenome")
+			types[pid] = TYPE_CGENOME;
 		else
 			throw Exception(std::string("SFCFile doesn't understand class name '") + classname + "'!");
 	} else if ((pid & 0x8000) != 0x8000) {
@@ -328,6 +392,15 @@ SFCClass* SFCFile::slurpMFC(unsigned int reqtype) {
 		case TYPE_CALLBUTTON: newobj = new SFCCallButton(this); break;
 		case TYPE_SCENERY: newobj = new SFCScenery(this); break;
 		case TYPE_MACRO: newobj = new SFCMacro(this); break;
+		case TYPE_CREATURE: newobj = new SFCCreature(this); break;
+		case TYPE_BODY: newobj = new SFCOpaque(this, SFCOpaque::BODY); break;
+		case TYPE_LIMB: newobj = new SFCOpaque(this, SFCOpaque::LIMB); break;
+		case TYPE_CBRAIN: newobj = new SFCOpaque(this, SFCOpaque::BRAIN); break;
+		case TYPE_CBIOCHEMISTRY: newobj = new SFCOpaque(this, SFCOpaque::BIOCHEMISTRY); break;
+		case TYPE_CORGAN: newobj = new SFCOpaque(this, SFCOpaque::ORGAN); break;
+		case TYPE_CRECEPTOR: newobj = new SFCOpaque(this, SFCOpaque::RECEPTOR); break;
+		case TYPE_CINSTINCT: newobj = new SFCOpaque(this, SFCOpaque::INSTINCT); break;
+		case TYPE_CGENOME: newobj = new SFCOpaque(this, SFCOpaque::GENOME); break;
 		default:
 			throw Exception("SFCFile didn't find a valid type in internal variable, argh!");
 	}
@@ -335,6 +408,10 @@ SFCClass* SFCFile::slurpMFC(unsigned int reqtype) {
 	// push the object onto storage, and make it deserialize itself
 	types[storage.size()] = types[pid];
 	storage.push_back(newobj);
+	// developer aid: OPENC2E_TRACE_SFC lists each record as it is read
+	static const bool traceSfc = devenv("OPENC2E_TRACE_SFC") != nullptr;
+	if (traceSfc)
+		fmt::print("* SFC record {} type {} at {}\n", storage.size(), types[pid], ourStream->tell());
 	newobj->read();
 
 	// return this new object
@@ -540,8 +617,7 @@ void CRoom::read() {
 		floorpoints.push_back(std::pair<uint32_t, uint32_t>(x, y));
 	}
 
-	// discard unknown bytes
-	sfccheck(read32() == 0);
+	read32(); // (0 or 1: 1 in some rooms of a played world)
 
 	music = readstring();
 	dropstatus = read32();
@@ -563,7 +639,12 @@ void SFCMacro::read() {
 	owner = (SFCObject*)slurpMFC(TYPE_OBJECT);
 	sfccheck(owner);
 	from = (SFCObject*)slurpMFC(TYPE_OBJECT);
-	sfccheck(read16() == 0);
+	// (another reference: none in Eden; in a played world a creature's
+	// script may hold one)
+	if (parent->version() == 1)
+		slurpMFC();
+	else
+		sfccheck(read16() == 0);
 	targ = (SFCObject*)slurpMFC(TYPE_OBJECT);
 
 	readBytes(18);
@@ -650,8 +731,12 @@ void SFCObject::read() {
 	right = read32();
 	bottom = read32();
 
-	// discard unknown bytes
-	read16();
+	// what carries it (C2: a reference; a creature carried by the hand, a
+	// vehicle or another creature)
+	if (parent->version() == 1)
+		carrier = slurpMFC();
+	else
+		read16();
 
 	// read ACTV
 	actv = read8();
@@ -664,8 +749,11 @@ void SFCObject::read() {
 	tickstate = read32();
 	sfccheck(tickreset >= tickstate);
 
-	// discard unknown bytes
-	sfccheck(read16() == 0);
+	// an object it points to (C2: a reference)
+	if (parent->version() == 1)
+		objectRef = slurpMFC();
+	else
+		sfccheck(read16() == 0);
 
 	// read currently-looping sound, if any
 	currentsound = readBytes(4);
@@ -691,8 +779,9 @@ void SFCObject::read() {
 		rest = read32();
 		aero = read32();
 
-		// discard unknown bytes
-		readBytes(6);
+		// the room it is in (a reference), then four unknown bytes
+		roomRef = slurpMFC();
+		readBytes(4);
 
 		// read threats
 		threat = read8();
@@ -894,6 +983,335 @@ void SFCScript::read(SFCFile* f) {
 }
 
 // ------------------------------------------------------------------
+// C2 creatures (a played world's, or an exported one's). Every record is
+// stepped through by its layout, so each takes its place in the numbering
+// that references count on; only the plain facts are kept.
+
+namespace {
+// an object-array count: u16, 0xffff for a u32 after it
+uint32_t arrayCount(SFCClass* c, SFCFile* f) {
+	(void)c;
+	uint32_t n = f->read16();
+	if (n == 0xffff)
+		n = f->read32();
+	return n;
+}
+std::string monikerText(uint32_t m) {
+	if (m == 0)
+		return {};
+	std::string t;
+	for (int k = 0; k < 4; k++)
+		t += (char)((m >> (8 * k)) & 0xff);
+	return t;
+}
+} // namespace
+
+void SFCOpaque::readOrganBlock() {
+	readBytes(42);
+	uint32_t groups = read32();
+	sfccheck(groups <= 4096);
+	for (uint32_t g = 0; g < groups; g++) {
+		uint32_t c = arrayCount(this, parent);
+		sfccheck(c <= 65536);
+		for (uint32_t k = 0; k < c; k++)
+			slurpMFC(TYPE_CRECEPTOR);
+	}
+	uint32_t e = read32();
+	sfccheck(e <= 65536);
+	readBytes(e * 8);
+	uint32_t r = read32();
+	sfccheck(r <= 65536);
+	readBytes(r * 9);
+}
+
+void SFCOpaque::read() {
+	switch (kind) {
+		case BODY:
+		case LIMB: {
+			SFCEntity entity(parent); // (the entity layout: picture, place, animation)
+			entity.read();
+			x = (int32_t)entity.x;
+			y = (int32_t)entity.y;
+			placed = true;
+			read32();
+			read32();
+			readBytes(kind == BODY ? 120 : 40);
+			if (kind == LIMB)
+				slurpMFC(TYPE_LIMB); // the next limb in its chain, or none
+			break;
+		}
+		case BRAIN: {
+			readOrganBlock();
+			uint32_t lobes = read32();
+			sfccheck(lobes <= 256);
+			std::vector<uint32_t> neurons;
+			for (uint32_t l = 0; l < lobes; l++) {
+				readBytes(47 + 108 + 108);
+				uint32_t n = read32();
+				sfccheck(n <= 65536);
+				neurons.push_back(n);
+				read32();
+			}
+			for (uint32_t n : neurons)
+				for (uint32_t k = 0; k < n; k++) {
+					readBytes(8);
+					for (int d = 0; d < 2; d++) {
+						uint8_t count = read8();
+						read32();
+						readBytes(count * 10u);
+					}
+				}
+			readBytes(64);
+			read32();
+			break;
+		}
+		case BIOCHEMISTRY:
+			slurpMFC(); // its creature (back)
+			for (int i = 0; i < 256; i++) {
+				chemicals[i] = read8();
+				read8();
+			}
+			for (int i = 0; i < 128; i++)
+				slurpMFC(TYPE_CORGAN);
+			read32();
+			read8();
+			break;
+		case ORGAN:
+			readOrganBlock();
+			break;
+		case RECEPTOR:
+			readBytes(8);
+			break;
+		case INSTINCT:
+			readBytes(40);
+			break;
+		case GENOME: {
+			uint32_t n = read32();
+			sfccheck(n <= 16 * 1024 * 1024);
+			genomeMoniker = readBytes(4);
+			read32();
+			read8();
+			genomeData = readBytes(n);
+			break;
+		}
+	}
+}
+
+void SFCCreature::read() {
+	SFCObject::read();
+
+	// its skeleton
+	moniker = monikerText(read32());
+	mother = monikerText(read32());
+	father = monikerText(read32());
+	motherName = readstring();
+	fatherName = readstring();
+	body = dynamic_cast<SFCOpaque*>(slurpMFC(TYPE_BODY));
+	for (int i = 0; i < 6; i++)
+		slurpMFC(TYPE_LIMB);
+	facing = read8();
+	read8();
+	read32();
+	read32();
+	read32();
+	readstring();
+	read8();
+	read8();
+	asleep = read8();
+	unconscious = read32();
+	for (int i = 0; i < 256 + 16; i++)
+		readstring();
+	read32();
+	readBytes(3);
+	readBytes(8);
+	slurpMFC();
+	readBytes(8);
+	slurpMFC();
+	read32();
+
+	// the creature
+	for (int i = 0; i < 86; i++) {
+		Word w;
+		w.word = readstring();
+		w.said = readstring();
+		w.strength = read32();
+		words.push_back(w);
+	}
+	readBytes(320);
+	readBytes(552);
+	slurpMFC(TYPE_CBRAIN);
+	biochemistry = dynamic_cast<SFCOpaque*>(slurpMFC(TYPE_CBIOCHEMISTRY));
+	sex = read8();
+	stage = read8();
+	read32();
+	read32();
+	babyMoniker = monikerText(read32());
+	dead = read8();
+	age = read32();
+	readBytes(83);
+	uint32_t instincts = read32();
+	sfccheck(instincts <= 65536);
+	read32();
+	for (uint32_t i = 0; i < instincts; i++)
+		slurpMFC(TYPE_CINSTINCT);
+	readBytes(2720);
+	for (int i = 0; i < 3; i++)
+		slurpMFC();
+	read32();
+	read32();
+	read32();
+	readBytes(580); // (its voice)
+
+	// its life record
+	read32(); // (its moniker again)
+	name = readstring();
+	read32(); // (a parent's moniker and name: the skeleton's are kept)
+	readstring();
+	read32();
+	readstring(); // (the other's name)
+	born = readstring();
+	birthplace = readstring();
+	readstring(); // (owner or author)
+	readstring();
+	notes = readstring();
+	readstring(); // (contact)
+	read32();
+	read32();
+	read32();
+	readstring();
+	read32();
+	read32();
+	read32();
+	read32();
+	read32();
+	read32();
+	read32();
+	readBytes(256);
+	readBytes(36);
+}
+
+void SFCCreature::copyToWorld() {
+	static const char* stages[] = {"baby", "child", "adolescent", "youth", "adult", "old", "senile"};
+	std::string what = fmt::format("{} {} ({}, {})", genus == 2 ? "grendel" : genus == 3 ? "ettin" : "norn", moniker, sex == 2 ? "female" : "male", stages[std::min<int>(stage, 6)]);
+	if (engine.version != 2 || family != 4)
+		return;
+	if (dead) {
+		fmt::print("* World file: {} was dead; not brought in\n", what);
+		return;
+	}
+	// a world already saved by Zeetures has its creatures in its save
+	if (!engine.currentworlddir.empty() && WorldSave::HasSavedState(engine.currentworlddir))
+		return;
+	// its genome: beside the world file (a played Creatures 2 world keeps
+	// its creatures' genomes in the Genetics folder next to it, and a world
+	// made from one gets a copy), else wherever genomes are found
+	std::shared_ptr<genomeFile> genome;
+	std::vector<std::filesystem::path> places;
+	if (!parent->folder.empty())
+		places.push_back(parent->folder / "Genetics" / (moniker + ".gen"));
+	if (!engine.currentworlddir.empty())
+		places.push_back(std::filesystem::path(engine.currentworlddir) / "Genetics" / (moniker + ".gen"));
+	for (auto& f : places) {
+		std::error_code ec;
+		if (!genome && std::filesystem::exists(f, ec)) {
+			try {
+				auto g = std::make_shared<genomeFile>();
+				FileReader r(f);
+				r >> *g;
+				genome = g;
+			} catch (std::exception& e) {
+				fmt::print("* World file: {}'s genome {} can't be read ({})\n", what, f.string(), e.what());
+			}
+		}
+	}
+	if (!genome) {
+		try {
+			genome = world.loadGenome(moniker);
+		} catch (std::exception&) {
+		}
+	}
+	if (!genome) {
+		fmt::print("* World file: {}'s genome ({}.gen) was not found; not brought in\n", what, moniker);
+		return;
+	}
+	bool female = sex == 2;
+	SkeletalCreature* a = new SkeletalCreature(4);
+	oldCreature* c;
+	try {
+		c = new c2Creature(genome, female, 0, a);
+	} catch (std::exception& e) {
+		delete a;
+		fmt::print("* World file: {} could not be made ({})\n", what, e.what());
+		return;
+	}
+	a->setCreature(c);
+	try {
+		a->finishInit();
+	} catch (std::exception& e) {
+		a->kill(); // (never left half made in the world)
+		fmt::print("* World file: {} could not be made ({})\n", what, e.what());
+		return;
+	}
+	a->genome_slots[0] = genome;
+	world.newMoniker(genome, "world file", a);
+	std::string mon = world.history->findMoniker(genome);
+	if (moniker.size() == 4 && mon != moniker && world.history->renameMoniker(mon, moniker))
+		mon = moniker;
+	world.history->getMoniker(mon).moveToCreature(a);
+	monikerData& rec = world.history->getMoniker(mon);
+	if (!name.empty() && name != "<UnNamed>")
+		rec.name = name;
+	// its parents, by moniker (a starting egg's are the game's genome files)
+	auto isMon = [](const std::string& m) { return m.size() == 4 && m[0] >= '0' && m[0] <= '9'; };
+	if (isMon(mother) && mother != mon)
+		rec.mother = mother;
+	if (isMon(father) && father != mon)
+		rec.father = father;
+	std::string from = "Lived in a Creatures 2 world before this one";
+	if (!born.empty())
+		from += ", born " + born + (birthplace.empty() || birthplace == "The birthplace" ? "" : " at " + birthplace);
+	from += ".";
+	if (!notes.empty())
+		from += " " + notes;
+	rec.notes = rec.notes.empty() ? from : from + "\n" + rec.notes;
+	{
+		bool wasquiet = world.history->quiet;
+		world.history->quiet = true; // stages reached before, not now
+		for (int i = 0; i < std::min<int>(stage, 6); i++)
+			c->ageCreature();
+		world.history->quiet = wasquiet;
+	}
+	c->born();
+	// its body as it was: every chemical's level (hunger, illness, its age in
+	// Life), with its energy store kept from running dry
+	if (biochemistry) {
+		for (int i = 1; i < 256; i++)
+			c->setChemicalLevel((unsigned char)i, biochemistry->chemicals[i]);
+		if (c->getChemical(99) < 20) // ATP
+			c->setChemicalLevel(99, 20);
+	}
+	// the words it knew, on Zeetures' own scale (as an imported creature's)
+	if (c->vocab.size() < engine.wordlist.size())
+		c->vocab.resize(engine.wordlist.size(), 0);
+	auto& en = WordLists::english();
+	int known = 0;
+	for (size_t k = 0; k < words.size() && k < en.size() && k < c->vocab.size(); k++)
+		if (!en[k].empty() && PixelText::lower(words[k].word) == PixelText::lower(en[k])) {
+			c->vocab[k] = (unsigned char)std::clamp<int>(WORD_KNOWN + (int)std::min<uint32_t>(words[k].strength, 255) / 2, WORD_KNOWN, 255);
+			known++;
+		}
+	// where it was: its body's place (the box above is the room it was in);
+	// physics sets it on the floor
+	if (body && body->placed)
+		a->moveTo((float)body->x, (float)body->y);
+	else
+		a->moveTo((float)left, (float)bottom - a->getHeight());
+	ourAgent = a;
+	fmt::print("* World file: brought in {}{}{}{} at {},{} (in the room {},{} to {},{})\n", what, rec.name.empty() ? "" : " \"" + rec.name + "\"", known ? fmt::format(", knowing {} word{}", known, known == 1 ? "" : "s") : "",
+		babyMoniker.empty() ? "" : " (it was carrying " + babyMoniker + "; the unborn are not brought in yet)", (int)a->x, (int)a->y, left, top, right, bottom);
+}
+
+// ------------------------------------------------------------------
 
 void SFCFile::copyToWorld() {
 	// add the map data
@@ -928,6 +1346,10 @@ void SFCFile::copyToWorld() {
 			a->sfcIndex = sfcIndex;
 		sfcIndex++;
 	}
+
+	// the creature that was selected (C2)
+	if (auto* sc = dynamic_cast<SFCCreature*>(selected); sc && sc->madeCreature())
+		world.selectCreature(AgentRef(sc->madeCreature()).lock());
 
 	// create scenery
 	for (auto& i : scenery) {
@@ -1408,6 +1830,10 @@ void SFCScript::install() {
 void SFCMacro::activate() {
 	assert(owner);
 	Agent* ourAgent = owner->copiedAgent();
+	// (a played world's creature, running a script when it was saved: it
+	// comes in anew, with nothing running)
+	if (!ourAgent && dynamic_cast<SFCCreature*>(owner))
+		return;
 	assert(ourAgent);
 
 	/*

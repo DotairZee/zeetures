@@ -2428,14 +2428,35 @@ static bool worldStartedFromEden(const fs::path& worlddir) {
 	std::error_code ec;
 	if (eden.empty() || !fs::exists(mine, ec) || !fs::exists(eden, ec))
 		return true; // (nothing to compare: as before)
-	if (fs::file_size(mine, ec) != fs::file_size(eden, ec))
-		return false;
-	std::ifstream a(mine, std::ios::binary), b(eden, std::ios::binary);
-	std::istreambuf_iterator<char> ia(a), ib(b), end;
-	for (; ia != end && ib != end; ++ia, ++ib)
-		if (*ia != *ib)
-			return false;
-	return ia == end && ib == end;
+	if (fs::file_size(mine, ec) == fs::file_size(eden, ec)) {
+		std::ifstream a(mine, std::ios::binary), b(eden, std::ios::binary);
+		std::istreambuf_iterator<char> ia(a), ib(b), end;
+		for (; ia != end && ib != end; ++ia, ++ib)
+			if (*ia != *ib)
+				break;
+		if (ia == end && ib == end)
+			return true;
+	}
+	// a world played in Creatures 2 from Eden (owner, 2026-11-26): its own
+	// file differs, but its map is Eden's: the same background and rooms
+	auto mapOf = [](const fs::path& f) -> std::string {
+		try {
+			SFCFile sfc;
+			FileReader r(f);
+			sfc.read(&r);
+			if (!sfc.mapdata || !sfc.mapdata->background)
+				return {};
+			std::string sig = sfc.mapdata->background->filename;
+			for (auto* room : sfc.mapdata->rooms)
+				if (room)
+					sig += fmt::format(";{} {} {} {} {}", room->id, room->left, room->top, room->right, room->bottom);
+			return sig;
+		} catch (std::exception&) {
+			return {};
+		}
+	};
+	std::string a = mapOf(mine);
+	return !a.empty() && a == mapOf(eden);
 }
 
 // an addition marked "* any world" in its opening comment lines
@@ -2640,6 +2661,27 @@ bool Engine::initialSetup() {
 
 	loadGameData();
 
+	// developer aid: OPENC2E_TEST_CREATE_WORLD="NAME" (or "NAME|world file")
+	// makes world NAME as the new-world form does, from the first world
+	// Creatures 2 itself played (or the file given), and opens it
+	if (const char* cw = devenv("OPENC2E_TEST_CREATE_WORLD"); cw && version == 2) {
+		std::string nm = cw;
+		fs::path tmpl;
+		if (size_t bar = nm.find('|'); bar != std::string::npos) {
+			tmpl = nm.substr(bar + 1);
+			nm = nm.substr(0, bar);
+		} else
+			for (auto& t : Openc2eImgui::ListWorldTemplates())
+				if (Openc2eImgui::IsPlayedWorld(t)) {
+					tmpl = t;
+					break;
+				}
+		std::string err;
+		if (!Openc2eImgui::FindWorld(nm) && !tmpl.empty() && !Openc2eImgui::CreateWorld(nm, tmpl, err))
+			fmt::print("* TEST CREATE WORLD failed: {}\n", err);
+		cmdline_world = nm;
+	}
+
 	// execute the initial scripts!
 	// C1/C2 worlds: open the requested world, or let the player choose one
 	// (unless a world file was given with -b, or the chooser is turned off)
@@ -2692,6 +2734,7 @@ bool Engine::initialSetup() {
 					throw Exception("non-existant bootstrap file provided in C1/C2 mode");
 				// TODO: the default SFCFile loading code is in World, maybe this should be too..
 				SFCFile sfc;
+				sfc.folder = scriptdir.parent_path();
 				FileReader f(scriptdir);
 				sfc.read(&f);
 				sfc.copyToWorld();
