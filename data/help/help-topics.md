@@ -677,11 +677,13 @@ Radiation comes from the volcano's chamber and from high in the sky, and spreads
 ## Norns, grendels, and ettins
 
 - **Norns** are the sociable ones, and the ones most breeds are of.
-- **Grendels** hatch from a pile of eggs in a chamber of their own, their lair, where the next begins to hatch when none is left alive (or fewer than you choose: **Grendels the game hatches at a time**, Preferences, World; one unless you set it). They have the same kind of mind as norns, with their own genomes: they learn, and talk in a dialect of their own. There are three kinds, and the pile hatches each a third of the time, either sex:
+- **Grendels** hatch from a pile of eggs in a chamber of their own, their lair, where the next begins to hatch when none is left alive (or fewer than you choose: **Grendels the game hatches at a time**, Preferences, World; one unless you set it). They have the same kind of mind as norns, with their own genomes: they learn, and talk in a dialect of their own. There are three kinds, and the pile hatches each a third of the time:
   - **Bulbous grendels,** the game's own.
   - **Boney grendels,** from Boney Grendels by Creature Labs.
   - **Grouchy grendels,** the C1 grendels: the C1-in-C2 Grendel's pictures by RudeDog, on a genome Zeetures makes from the game's own grendel.
 - **Ettins** have a mind of the same kind too, and a dialect of their own. When none is alive, the egg machine by the volcano lays one of their eggs (or while fewer than **Ettins the game hatches at a time** live, in the same place).
+
+The game's grendels and ettins come in pairs: each hatches the sex its kind has fewer of, alternating when they are even, and none hatches while as many live as you set.
 
 Grendels and ettins grow from babies as norns do, and shrink a little when senile. At the limit on creatures their eggs come first: they hatch, and the norns' eggs wait for room (see [[Breeding and eggs]]). In the [[Hatchery]] all three kinds have their shelves. What each kind does is in [[Grendel and ettin personalities]].
 
