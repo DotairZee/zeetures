@@ -167,7 +167,7 @@ void download(int i) {
 // registry (by the name it was imported under), or -1
 int installedGrendelSlot(const Pack& p) {
 	for (auto& b : KnownBreeds())
-		if (b.imported && b.species == 1 && b.name == p.breedName)
+		if (b.imported && b.species == 1 && (b.name == p.breedName || (p.c1Genome && b.name == Kinds::C1_OLD_NAME)))
 			return b.slot;
 	return -1;
 }
@@ -200,6 +200,7 @@ bool makeC1(const Pack& p, std::string& why) {
 				keep.push_back(ours);
 			b.files = keep;
 			b.genome = std::string(Kinds::C1_GENOME) + ".gen";
+			b.name = p.breedName; // (installed under the old name: renamed)
 			SaveBreedRegistry();
 		}
 	return true;

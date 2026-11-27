@@ -68,8 +68,11 @@ bool deafToHand(oldCreature* c);
 const char* const C1_GENOME = "c1gr";
 bool makeC1Genome(genomeFile& g, int slot);
 bool writeC1Genome(int slot, std::string& why);
-// the name players see for the kind (owner, 2026-11-27: not chosen yet)
-const char* const C1_KIND_NAME = "C1 grendel";
+// the name players see for the kind (owner, 2026-11-27: "I want grouchy
+// grendel!"); in the code they stay "C1 grendels". The pack was first
+// installed under C1_OLD_NAME (0.45.0-0.45.1), still recognised
+const char* const C1_KIND_NAME = "Grouchy grendel";
+const char* const C1_OLD_NAME = "C1 grendel";
 
 // an adolescent-to-old of that agent genus (1 norn, 2 grendel, 3 ettin) and
 // sex is alive (worked out every 50 ticks)

@@ -148,17 +148,17 @@ ettin@adolescent-old smell ettin-care follow 1 tend
 # incubator (3 7 1); and each ettin's hoard, a quiet spot it found
 # ("ettin-hoard", laid by the engine). "bring" carries things up a scent and
 # puts them down where it is at least "drop".
-# New words for these rules: grendel.boney / grendel.bulbous / grendel.c1
+# New words for these rules: grendel.boney / grendel.bulbous / grendel.grouchy
 # (Boney grendels have working reproductive genes; C2's own, bulbous, do
-# not; C1 grendels are the C1-in-C2 Grendel pack's, on the engine's own
-# genome); conditions day,
+# not; grouchy grendels, the C1 grendels, are the C1-in-C2 Grendel pack's,
+# on the engine's own genome; "grendel.c1" works too); conditions day,
 # night, empty (carrying nothing) and wary (a creature that fell ill soon
 # after being near a grendel, and has learned to link the two).
 
 scent norn-kind fade 0.03
 scent grendel-kind fade 0.03
 scent boney-kind fade 0.03
-scent c1-kind fade 0.03
+scent grouchy-kind fade 0.03
 scent ettin-kind fade 0.03
 scent grendel-lair spread 0.16 fade 0.01
 scent ettin-den spread 0.16 fade 0.01
@@ -172,7 +172,7 @@ norn emit norn-kind 1
 grendel.bulbous emit grendel-kind 1
 grendel.boney emit grendel-kind 1
 grendel.boney emit boney-kind 1
-grendel.c1 emit c1-kind 1
+grendel.grouchy emit grouchy-kind 1
 ettin emit ettin-kind 1
 object 2 1 52 emit grendel-lair 3
 object 2 1 25 emit ettin-den 3
@@ -207,15 +207,15 @@ grendel.boney smell norn-kind avoid for fear 1 when here>0.5
 grendel.boney smell grendel-lair bring 6,25 1 drop 0.5 when day
 grendel.boney:female@youth-old smell egg follow 1 when awake
 
-# C1 grendels (owner, 2026-11-27): clean (no germs, so no grendel scent for
+# Grouchy grendels, the C1 grendels (owner, 2026-11-27): clean (no germs, so no grendel scent for
 # norns to learn to fear), gluttons and thieves that take food off to eat
 # alone, loners that keep out of crowds and from other grendels, and seek
 # out ettins, the only company they keep.
-grendel.c1 smell grendel-lair bring 6,25 1 drop 0.5 when day
-grendel.c1 smell carrion follow for hunger 1.5
-grendel.c1 smell norn-kind avoid for crowded 1 when here>0.5
-grendel.c1 smell grendel-kind avoid for crowded 1
-grendel.c1 smell ettin-kind follow for lonely 1.5
+grendel.grouchy smell grendel-lair bring 6,25 1 drop 0.5 when day
+grendel.grouchy smell carrion follow for hunger 1.5
+grendel.grouchy smell norn-kind avoid for crowded 1 when here>0.5
+grendel.grouchy smell grendel-kind avoid for crowded 1
+grendel.grouchy smell ettin-kind follow for lonely 1.5
 
 # Ettins: hoard gadgets and toys in quiet spots, carry eggs left lying about
 # to the incubator, carry food to where creatures are hungry (when not

@@ -75,7 +75,7 @@ struct Who {
 	bool object = false; // an object by classifier (only for emit)
 	int family = 0, genus = 0, species = 0; // object classifier (0 = any)
 	int creatureGenus = 0; // 0 any, 1 norn, 2 grendel, 3 ettin
-	int breed = 0; // grendels: 0 any, 1 Boney ("grendel.boney"), 2 bulbous ("grendel.bulbous"), 3 C1 ("grendel.c1"; Kinds.h)
+	int breed = 0; // grendels: 0 any, 1 Boney ("grendel.boney"), 2 bulbous ("grendel.bulbous"), 3 Grouchy, the C1 grendels ("grendel.grouchy" or "grendel.c1"; Kinds.h)
 	int sex = -1; // -1 either, 0 male, 1 female
 	int stageFrom = 0, stageTo = 6;
 };
@@ -183,7 +183,7 @@ bool parseWho(const std::string& tok, Who& w) {
 			w.breed = 1;
 		else if (breed == "bulbous")
 			w.breed = 2;
-		else if (breed == "c1")
+		else if (breed == "c1" || breed == "grouchy")
 			w.breed = 3;
 		else
 			return false;
