@@ -17,6 +17,7 @@
  *
  */
 
+#include "creatures/Kinds.h"
 #include "creatures/CreatureSpeech.h"
 #include "Agent.h"
 #include "Catalogue.h"
@@ -1050,6 +1051,32 @@ void v_HATL(caosVM* vm) {
 	// openc2e: no cap on the population (owner, 2026-11-10), unless the
 	// player sets one in the Hatchery (owner, 2026-11-13); C2's was 12
 	vm->result.setInt(nornsAllowedUnderLimit());
+}
+
+/**
+ GRNL (integer)
+ %status maybe
+ %variants c2
+
+ openc2e (Zeetures): how many grendels the game's own egg pile keeps alive
+ at a time (Preferences > World; 1 unless set). The pile's eggs and keeper
+ hatch another while fewer than this many grendels live.
+*/
+void v_GRNL(caosVM* vm) {
+	vm->result.setInt(Kinds::gameKeeps(2));
+}
+
+/**
+ ETNL (integer)
+ %status maybe
+ %variants c2
+
+ openc2e (Zeetures): how many ettins the egg machine keeps alive at a time
+ (Preferences > World; 1 unless set). It lays an ettin egg while fewer than
+ this many ettins live.
+*/
+void v_ETNL(caosVM* vm) {
+	vm->result.setInt(Kinds::gameKeeps(3));
 }
 
 /* vim: set noet: */

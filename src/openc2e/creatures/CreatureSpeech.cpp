@@ -430,6 +430,17 @@ void setPopulationLimit(int norns) {
 	writeSetting("population-limit", std::to_string(s_population_limit));
 }
 
+// how many grendels and ettins the game's own eggs keep alive (Kinds.h)
+namespace Kinds {
+int gameKeeps(int agentGenus) {
+	std::string v = readSetting(agentGenus == 2 ? "game-grendels" : "game-ettins");
+	return v.empty() ? 1 : std::clamp(atoi(v.c_str()), 0, 20);
+}
+void setGameKeeps(int agentGenus, int n) {
+	writeSetting(agentGenus == 2 ? "game-grendels" : "game-ettins", std::to_string(std::clamp(n, 0, 20)));
+}
+} // namespace Kinds
+
 static int s_autosave_minutes = -1; // -1: not read yet
 
 int autosaveMinutes() {

@@ -11,6 +11,7 @@
 #include "Updater.h"
 #include "creatures/CreatureSpeech.h"
 #include "creatures/Disease.h"
+#include "creatures/Kinds.h"
 #include "creatures/Lightning.h"
 #include "creatures/Language.h"
 #include "creatures/Thoughts.h"
@@ -1868,6 +1869,16 @@ static void DrawPreferences() {
 				int v = limit;
 				if (ImGui::InputInt("##poplimit", &v, 1, 10))
 					setPopulationLimit(std::clamp(v, 2, 999));
+			}
+			// how many grendels and ettins the game's own eggs keep (Kinds.h)
+			for (int genus : {2, 3}) {
+				int keep = Kinds::gameKeeps(genus);
+				ImGui::SetNextItemWidth(110);
+				if (ImGui::InputInt(genus == 2 ? "Grendels the game hatches at a time" : "Ettins the game hatches at a time", &keep, 1, 1))
+					Kinds::setGameKeeps(genus, keep);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip(genus == 2 ? "The grendels' egg pile hatches another egg while fewer than this many grendels live\n(grendels bred in the world count too). 0: none from the pile. Usually 1."
+												 : "The egg machine by the volcano lays an ettin egg while fewer than this many ettins live\n(ettins bred in the world count too). 0: none from the machine. Usually 1.");
 			}
 			ImGui::SeparatorText("The game");
 			bool packs = readPlayerSetting("breed-packs") != "off";

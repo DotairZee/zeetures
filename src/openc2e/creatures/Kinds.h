@@ -49,6 +49,13 @@ bool wary(oldCreature* c);
 float wariness(oldCreature* c);
 void noteCaught(oldCreature* c); // Disease: it has just caught something
 
+// how many grendels and ettins the game's own eggs keep alive at a time: the
+// grendels' egg pile and the egg machine hatch another while fewer live
+// (owner, 2026-11-26: "only one ... at a time" by default, set in
+// Preferences > World; a world setting, 0-20; CAOS GRNL and ETNL)
+int gameKeeps(int agentGenus); // 2 grendels, 3 ettins
+void setGameKeeps(int agentGenus, int n);
+
 // steps a pregnancy lasts for kinds whose genes cannot carry one
 const int GESTATION_STEPS = 1500; // biochemistry steps (5 a second): 5 minutes
 
