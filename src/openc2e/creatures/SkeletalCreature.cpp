@@ -469,21 +469,42 @@ int BreedOneSetLooksAge(int species, int breed) {
 	return -1;
 }
 
+// Growing old (owner, 2026-11-27: grendels and ettins should shrink a
+// little in old age, "like norns"): a grendel or ettin shown at an old stage
+// (old, senile) from younger pictures takes on the shrinking of C2's own norn
+// (breed h: its old pictures are its youth's size, its senile ones about 87%,
+// part by part). Breeds with old pictures of their own keep them; norns
+// without any already follow breed h's growth, old age included.
+static float agingFactor(char part, int foundstage, int stage) {
+	if (stage < 5 || foundstage >= 5)
+		return 1.0f;
+	const StageGrowth& n = stageGrowth(0);
+	if (n.species != 0 || n.breed < 0)
+		return 1.0f;
+	float old = referencePartSize(part, n, stage), grown = referencePartSize(part, n, 3);
+	return old > 0 && grown > 0 ? std::min(1.0f, old / grown) : 1.0f;
+}
+
 // the factor for part `part` shown at `stage` from pictures found at
 // `foundstage`
 static float partGrowth(char part, int species, bool female, int breed, int foundstage, int stage) {
+	// (only where the species' own growth has no old pictures to follow:
+	// grendels and ettins; norns' growth is C2's norn's, old age and all)
+	const StageGrowth& ref = stageGrowth(species);
+	const bool refHasOld = ref.breed >= 0 && (ref.ages[5] > 0 || ref.ages[6] > 0);
+	const float aging = refHasOld ? 1.0f : agingFactor(part, foundstage, stage);
 	int drawn = oneSetDrawnAge(species, female, breed);
 	if (drawn < 0)
 		drawn = foundstage;
 	if (drawn == stage)
-		return 1.0f;
+		return aging;
 	const StageGrowth& g = stageGrowth(species);
 	if (g.breed < 0)
-		return 1.0f;
+		return aging;
 	float now = referencePartSize(part, g, stage), then = referencePartSize(part, g, drawn);
 	if (now <= 0 || then <= 0)
-		return 1.0f;
-	return now / then;
+		return aging;
+	return now / then * aging;
 }
 
 // OPENC2E_SENILE_TINT=1 (prototype): a senile creature's pictures muted toward
