@@ -1,7 +1,9 @@
 // Zeetures's recommended breed packs (owner, 2026-11-15: "do whatever is
 // needed to make it so Zeetures ... gets those two breeds"): Boney Grendels
 // (Creature Labs' own C2 release) and Frog Norns V3 (Alex, Norns of the
-// Round Table, from Nornenmeister's V2). Zeetures does not carry or host
+// Round Table, from Nornenmeister's V2); since 2026-11-27 also the
+// C1-in-C2 Grendel (RudeDog) and Kai (Wafuru, genome Lis Morris), Scorpio
+// (Wafuru, genome Mannkind) and Goat Norns (Angela Allan). Zeetures does not carry or host
 // them: on the player's machine, the first time a C2 world runs without
 // them, it fetches each from the community archive that already hosts it
 // (eem.foo) with the system's curl, and imports it as the owner's Home has
@@ -51,7 +53,7 @@ std::string readPlayerSetting(const std::string& key); // CreatureSpeech.h
 
 namespace Openc2eImgui {
 
-bool ImportBreedPackQuietly(const std::string& path, const std::string& name, bool inPlaceOfGame, std::string& message); // BreedersKit.cpp
+bool ImportBreedPackQuietly(const std::string& path, const std::string& name, bool inPlaceOfGame, std::string& message, const std::string& clashSlot); // BreedersKit.cpp
 
 namespace {
 
@@ -66,6 +68,7 @@ struct Pack {
 	const char* breedName;
 	bool inPlaceOfGame;
 	bool c1Genome = false; // pictures only: the genome is Zeetures' own (Kinds::writeC1Genome)
+	const char* clashSlot = ""; // its slot when its own is taken (the first two letters of its name)
 };
 
 const Pack kPacks[] = {
@@ -77,6 +80,15 @@ const Pack kPacks[] = {
 	// mended on import, on a genome made here from the player's gren.gen)
 	{"C1-in-C2 Grendel", "RudeDog", "https://eem.foo/archive/downloads/68a3-c1-in-c2-grendel",
 		"https://eem.foo/archive/downloads/68a3?download=true", "68a3-C1inC2Grendel.zip", "c1gr.gen", "PK", Kinds::C1_KIND_NAME, false, true},
+	// (owner, 2026-11-27: Kai, Scorpio and Goat Norns too, labelled so in
+	// the breed list; a breed whose slot is taken goes to the first two
+	// letters of its name: Kai's k and Goat's g are C2's own norns)
+	{"Kai Norns", "Wafuru (pictures, and the milk bottle); genome by Lis Morris", "https://eem.foo/archive/downloads/64e8-kai-norns-repacked",
+		"https://eem.foo/archive/downloads/64e8?download=true", "C2-KaiNorns-Repacked.zip", "nadia.gen", "PK", "Kai", false, false, "ka"},
+	{"Scorpio Norns", "Wafuru (pictures and body data); genome by Mannkind", "https://eem.foo/archive/downloads/7d35-scorpio-exe",
+		"https://eem.foo/archive/downloads/7d35?download=true", "7d35-scorpio.zip", "scrp.gen", "PK", "Scorpio", false, false, "sc"},
+	{"Goat Norns", "Angela Allan", "https://eem.foo/archive/downloads/05a2-goat-norn",
+		"https://eem.foo/archive/downloads/05a2?download=true", "05a2-goatnorns.zip", "goatnornfemale.gen", "PK", "Goat", false, false, "go"},
 };
 constexpr int kCount = sizeof(kPacks) / sizeof(kPacks[0]);
 
@@ -270,7 +282,7 @@ void BreedPacksTick() {
 			std::thread(download, i).detach();
 		} else if (st == downloaded) {
 			std::string message;
-			bool ok = ImportBreedPackQuietly(j.path.string(), p.breedName, p.inPlaceOfGame, message);
+			bool ok = ImportBreedPackQuietly(j.path.string(), p.breedName, p.inPlaceOfGame, message, p.clashSlot);
 			std::error_code ec;
 			if (ok && p.c1Genome) {
 				KnownBreeds(true);

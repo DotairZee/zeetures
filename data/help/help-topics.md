@@ -1112,7 +1112,7 @@ Zeetures reads the add-ons players have made for Creatures 2 for more than twent
 - **If it is already installed,** it says so.
 - **Its eggs** go on the [[Hatchery]]'s shelf, and its objects to the [[Agent Injector]].
 
-Three packs are fetched the first time, from the Eem Foo archive: Boney Grendels (Creature Labs), Frog Norns V3 (Alex of Norns of the Round Table, from Nornenmeister's V2), and the C1-in-C2 Grendel (RudeDog), whose female's body data is mended as it is installed.
+Six packs are fetched the first time, from the Eem Foo archive: Boney Grendels (Creature Labs), Frog Norns V3 (Alex of Norns of the Round Table, from Nornenmeister's V2), the C1-in-C2 Grendel (RudeDog), whose female's body data is mended as it is installed, and Kai Norns (Wafuru; genome by Lis Morris), Scorpio Norns (Wafuru; genome by Mannkind) and Goat Norns (Angela Allan). A breed whose slot is already taken goes to a slot named by the first two letters of its name: the Kai Norns to ka and the Goat Norns to go.
 
 ### Objects
 

@@ -1372,7 +1372,10 @@ static void installPlan(ImportPlan& plan) {
 // BreedPacks.cpp): its breeds named name, in their own slots in place of the
 // game's when inPlaceOfGame, else where the review would put them. A plan
 // the player has open in the kit is kept.
-bool ImportBreedPackQuietly(const std::string& path, const std::string& name, bool inPlaceOfGame, std::string& message) {
+// (clashSlot: a slot name for a breed whose own slot is taken, "go"; owner,
+// 2026-11-27: "go with the first two letters of their breed name"; if it is
+// taken too, the first free slot, as before)
+bool ImportBreedPackQuietly(const std::string& path, const std::string& name, bool inPlaceOfGame, std::string& message, const std::string& clashSlot) {
 	auto open = std::move(s_plan);
 	std::string openMessage = s_breed_message;
 	planImport({path});
@@ -1386,6 +1389,10 @@ bool ImportBreedPackQuietly(const std::string& path, const std::string& name, bo
 			if (inPlaceOfGame) {
 				g.target = g.slot;
 				g.inPlaceOfGame = true;
+			} else if (!clashSlot.empty() && g.target != g.slot) {
+				int s = breedSlotFromName(clashSlot);
+				if (s >= 0 && slotFree(g.species, s, plan.get(), &g))
+					g.target = s;
 			}
 		}
 		installPlan(*plan);
