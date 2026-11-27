@@ -18,6 +18,8 @@
  */
 
 #include "Bubble.h"
+#include "common/devenv.h"
+#include <fmt/core.h>
 #include "creatures/Lightning.h"
 #include "PixelText.h"
 
@@ -307,8 +309,31 @@ void BubblePart::setText(std::string str) {
 			}
 		}
 	}
-	if (twidth > textwidth)
-		return;
+	if (twidth > textwidth) {
+		// typing into it: no more room, so the letter isn't taken
+		if (editable)
+			return;
+		// a line wider than the widest bubble was not shown at all (the
+		// bubble kept its old text, or none); likelier with the 12 px font
+		// and in languages of long words. It is shortened to fit, at a
+		// word if one ends late enough, and ends "..." (fixed 2026-11-26)
+		std::u32string cps = PixelText::decode(newtext);
+		const std::string dots = PixelText::canDraw(U'.', charsetsprite.get()) ? "..." : "";
+		auto fits = [&](const std::u32string& t) { return (unsigned int)PixelText::width(PixelText::encode(t) + dots, charsetsprite.get()) <= textwidth; };
+		size_t n = cps.size();
+		while (n > 0 && !fits(cps.substr(0, n)))
+			n--;
+		std::u32string cut = cps.substr(0, n);
+		size_t space = cut.find_last_of(U' ');
+		if (space != std::u32string::npos && space >= n * 2 / 3)
+			cut = cut.substr(0, space);
+		while (!cut.empty() && (cut.back() == U' ' || cut.back() == U',' || cut.back() == U'.'))
+			cut.pop_back();
+		newtext = PixelText::encode(cut) + dots;
+		twidth = PixelText::width(newtext, charsetsprite.get());
+		if (static const bool watch = devenv("OPENC2E_WATCH_SPEECH") != nullptr; watch)
+			fmt::print("* BUBBLE line too wide ({} px): shown as \"{}\"\n", PixelText::width(str, charsetsprite.get()), newtext);
+	}
 
 	text = newtext;
 	textoffset = (textwidth - twidth) / 2;
