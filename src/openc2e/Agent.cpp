@@ -19,6 +19,7 @@
 
 #include "Profile.h"
 #include "common/devenv.h"
+#include <set>
 #include "Agent.h"
 #ifndef _WIN32
 #include <dlfcn.h>
@@ -632,7 +633,11 @@ void Agent::playAudio(std::string filename, bool controlled, bool loop) {
 	sound.stop();
 	sound = soundmanager.playSound(filename, loop);
 	if (!sound && !noAudioDevice()) {
-		unhandledException(fmt::format("Couldn't play sound '{}'", filename), false);
+		// (once per sound: C2's own toy 2 13 2 asks for drp1, which the game
+		// never shipped, each time it lands; real C2 says nothing)
+		static std::set<std::string> reported;
+		if (reported.insert(filename).second)
+			unhandledException(fmt::format("Couldn't play sound '{}' (not reported again)", filename), false);
 	}
 	updateAudio(sound);
 	if (!controlled) {
@@ -1297,6 +1302,41 @@ bool Agent::healOutOfRoomSystem() {
 	return true;
 }
 
+// C2's drag, as real C2 does it (owner, 2026-11-26): each axis loses
+// trunc(v * factor / 100), at least 1 while it moves (so even AERO 0 slows
+// a moving object by 1 a tick). The factor is AERO in air; in a water room
+// (type 2, by the middle of the object's box) AERO x 4/3 across and AERO x 2
+// down or up, each at most 100. Water does nothing else: no buoyancy, no
+// speed limit.
+void Agent::dragStepC2(bool water) {
+	int a = aero;
+	int fx = water ? (a * 4) / 3 : a, fy = water ? a * 2 : a;
+	fx = std::min(fx, 100);
+	fy = std::min(fy, 100);
+	auto drag = [](int v, int f) {
+		int d = (v * f) / 100;
+		if (v > 0 && d < 1)
+			d = 1;
+		else if (v < 0 && d > -1)
+			d = -1;
+		return v - d;
+	};
+	velx = drag((int)round(velx), fx);
+	vely = drag((int)round(vely), fy);
+}
+
+// the falling pass: gravity (unless it was added before the move), then
+// drag if it is in a room
+void Agent::fallingPassC2(bool addGravity) {
+	if (addGravity)
+		vely = round(vely) + round(accg);
+	if (!world.map)
+		return;
+	std::shared_ptr<Room> r = world.map->roomAt(x + getWidth() / 2.0f, y + getHeight() / 2.0f);
+	if (r)
+		dragStepC2(r->type == 2);
+}
+
 void Agent::physicsTickC2() {
 	if (outofroomsystem && healOutOfRoomSystem())
 		return;
@@ -1362,11 +1402,32 @@ void Agent::physicsTickC2() {
 		}
 	}
 
-	if (falling && sufferphysics()) {
+	// C2's falling rules (owner, 2026-11-26: "let's just do 1-3"), as real
+	// C2 does: an object first moves by the velocity it has; then, still
+	// falling, gravity is added and drag taken off, every tick it falls,
+	// moved or not, so the next tick moves by what this one left (before,
+	// gravity came before the move and drag only on ticks it moved). Drag is
+	// stronger in water, and bounces, floor friction and stopping are C2's
+	// (below). OPENC2E_OLD_PHYSICS=1 brings back the old way (to compare).
+	static const bool oldPhysics = devenv("OPENC2E_OLD_PHYSICS") != nullptr;
+	const bool c2order = engine.version == 2 && !oldPhysics;
+
+	if (!c2order && falling && sufferphysics()) {
 		dy += round(accg);
 	}
 
+	const bool wasFalling = falling; // (or set falling by the checks above)
 	falling = true;
+
+	if (c2order && dy == 0 && dx == 0) {
+		// nothing to move: a falling object (still, at the top of a throw,
+		// or just let go) gains its gravity for the next tick
+		if (wasFalling && sufferphysics())
+			fallingPassC2(true);
+		else
+			falling = false;
+		return;
+	}
 
 	if (dy == 0 && dx == 0) { // nothing to do
 		if (round(vely) == 0) {
@@ -1416,6 +1477,10 @@ void Agent::physicsTickC2() {
 				moveTo(x, floory - getHeight());
 		}
 	}
+
+	std::shared_ptr<Room> waterRoomCheckFrom;
+	if (c2order && world.map)
+		waterRoomCheckFrom = world.map->roomAt(x + getWidth() / 2.0f, y + getHeight() / 2.0f);
 
 	Point deltapt(0, 0);
 	double delta = 1000000000;
@@ -1478,7 +1543,43 @@ void Agent::physicsTickC2() {
 		deltapt.y = dy;
 	}
 
-	if (collided && (round(velx) != 0 || round(vely) != 0) && moved_last_tick) {
+	bool stopped = false;
+	static const bool bounceAlways = devenv("OPENC2E_C2_BOUNCE_ALWAYS") != nullptr;
+	if (c2order && collided && (dx != 0 || dy != 0) && (moved_last_tick || bounceAlways)) {
+		// C2's bounce, from the speeds it moved with. REST is the share of
+		// the speed lost (trunc(REST * v / 100), at least 1 while REST is
+		// not 0). Hitting a floor or ceiling also takes REST/5 percent off
+		// the speed across (the only floor friction there is), and on a
+		// floor a bounce smaller than gravity's step, less REST's share of
+		// it, ends the fall: both speeds 0. Nothing slows an object while
+		// it rests.
+		auto share = [](int pct, int v) {
+			int r = (pct * v) / 100;
+			if (r == 0 && pct != 0 && v != 0)
+				r = v > 0 ? 1 : -1;
+			return r;
+		};
+		int r = (int)rest;
+		if (lastcollidedirection >= 2) {
+			int f = share(r / 5, dx);
+			if (f == 0 && r != 0 && dx != 0)
+				f = dx > 0 ? 1 : -1;
+			vely = share(r, dy) - dy;
+			if (sufferphysics()) {
+				velx = dx - f;
+				int g = (int)round(accg);
+				int t = g - (g * r) / 100;
+				if (lastcollidedirection == 3 && vely >= -t && vely <= t) {
+					falling = false;
+					velx = 0;
+					vely = 0;
+					stopped = true;
+				}
+			}
+		} else
+			velx = share(r, dx) - dx;
+		queueScript(6, 0, (int)lastcollidedirection);
+	} else if (!c2order && collided && (round(velx) != 0 || round(vely) != 0) && moved_last_tick) {
 		if (lastcollidedirection >= 2) // up and down
 			vely = -(round(vely) - (rest * round(vely)) / 100);
 		else
@@ -1487,6 +1588,33 @@ void Agent::physicsTickC2() {
 		// 1 right, 2 top, 3 floor; the same as WALL), for add-ons that
 		// read it; the world's own scripts don't
 		queueScript(6, 0, (int)lastcollidedirection);
+	}
+	if (c2order) {
+		// (the room by the box's middle before the move: see below)
+		std::shared_ptr<Room> from = waterRoomCheckFrom;
+		if ((int)deltapt.x == 0 && (int)deltapt.y == 0) {
+			// (kept from before: an object that has not moved for two ticks
+			// stops, so nothing wedged falls for ever)
+			if (!moved_last_tick && !stopped) {
+				falling = false;
+				velx = 0;
+				vely = 0;
+				stopped = true;
+			}
+			moved_last_tick = false;
+		} else {
+			moved_last_tick = true;
+			moveTo(x + (int)deltapt.x, y + (int)deltapt.y);
+			// into water from a room that is not: one water drag step at once
+			if (sufferphysics() && !stopped && from && from->type != 2) {
+				std::shared_ptr<Room> to = world.map->roomAt(x + getWidth() / 2.0f, y + getHeight() / 2.0f);
+				if (to && to->type == 2)
+					dragStepC2(true);
+			}
+		}
+		if (falling && !stopped && sufferphysics())
+			fallingPassC2(true);
+		return;
 	}
 	if ((int)deltapt.x == 0 && (int)deltapt.y == 0) {
 		if (!moved_last_tick) {
@@ -1552,6 +1680,18 @@ void Agent::tick() {
 	physicsTick();
 	if (dying)
 		return; // in case we were autokilled
+
+	// developer aid: OPENC2E_WATCH_PHYSICS="family genus species" prints the
+	// position and speed of those objects every tick (to compare drops and
+	// throws with real C2's)
+	static const char* watchPhysics = devenv("OPENC2E_WATCH_PHYSICS");
+	if (watchPhysics) {
+		static int wf = -1, wg = -1, ws = -1;
+		if (wf < 0 && std::sscanf(watchPhysics, "%d %d %d", &wf, &wg, &ws) != 3)
+			wf = wg = ws = 0;
+		if (family == wf && genus == wg && species == ws)
+			fmt::print("* PHYS {} t{} x {:.0f} y {:.0f} vx {:.0f} vy {:.0f}{}\n", identify(), world.tickcount, x, y, velx, vely, falling ? " falling" : "");
+	}
 
 	// update the timer if needed, and then queue a timer event if necessary
 	if (timerrate) {

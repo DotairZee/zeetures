@@ -240,6 +240,7 @@ The hand is you, as far as creatures know. They can see it, hear it, be touched 
 - **Left click** a button, lift, machine, or toy to use it.
 - **Right click** to pick a thing up, and again to put it down. Throw it by moving as you let go. You can take things that creatures are carrying.
 - **You may not drop a thing** inside rock, or in a few places that would trap it: the hand shows that it cannot, and plays a sound.
+- **Things fall and bounce as in the original game.** Each bounce loses some speed, a landing slows a thing sliding along the floor, and a soft landing ends the fall where it is. In water things sink slowly and drift less far, creatures included.
 
 ### Teaching by touch
 

@@ -84,6 +84,8 @@ class Agent : public std::enable_shared_from_this<Agent> {
 
 	virtual void physicsTick();
 	void physicsTickC2();
+	void dragStepC2(bool water);
+	void fallingPassC2(bool addGravity);
 
 	virtual void carry(AgentRef);
 	virtual void drop(AgentRef);
