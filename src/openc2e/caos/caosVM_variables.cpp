@@ -1090,6 +1090,21 @@ void v_HATL(caosVM* vm) {
 }
 
 /**
+ HSEX (integer) genus (integer)
+ %status maybe
+ %variants c2
+
+ openc2e (Zeetures): the sex the game's next egg of that creature genus (2
+ grendel, 3 ettin) should hatch, 1 male or 2 female: the sex fewer of that
+ kind have alive, or when they are even the other from the last one
+ chosen, so the game's grendels and ettins come in pairs.
+*/
+void v_HSEX(caosVM* vm) {
+	VM_PARAM_INTEGER(genus)
+	vm->result.setInt(Kinds::hatchSex(genus));
+}
+
+/**
  GRNL (integer)
  %status maybe
  %variants c2

@@ -73,6 +73,7 @@ struct Lone {
 	unsigned int at = 0;
 };
 std::map<std::string, Lone> s_lone;
+int s_lastSex[4] = {}; // [agent genus]: the sex hatchSex chose last (1 male, 2 female)
 const unsigned int LONE_EARLIEST = 3000, LONE_LATEST = 18000; // 5-30 minutes after
 
 oldCreature* creatureOf(Agent* a) {
@@ -531,6 +532,20 @@ bool writeC1Genome(int slot, std::string& why) {
 	return true;
 }
 
+int hatchSex(int agentGenus) {
+	int g = std::clamp(agentGenus, 0, 3), males = 0, females = 0;
+	for (auto& a : world.agents) {
+		oldCreature* c = a && !a->isDying() && a->genus == g ? creatureOf(a.get()) : nullptr;
+		if (c && c->isAlive())
+			(c->isFemale() ? females : males)++;
+	}
+	int sex = males < females ? 1 : females < males ? 2 : s_lastSex[g] == 1 ? 2 : s_lastSex[g] == 2 ? 1 : rand_int32(1, 2);
+	s_lastSex[g] = sex;
+	if (watching())
+		fmt::print("* KINDS next hatchling of genus {}: {} ({} males, {} females alive)\n", g, sex == 2 ? "female" : "male", males, females);
+	return sex;
+}
+
 bool mateAlive(int agentGenus, bool female) {
 	return agentGenus >= 1 && agentGenus <= 3 && s_mate[agentGenus][female ? 1 : 0];
 }
@@ -644,6 +659,7 @@ void reset() {
 	s_hoards.clear();
 	s_quietSince.clear();
 	s_lone.clear();
+	std::fill(s_lastSex, s_lastSex + 4, 0);
 	std::fill(&s_mate[0][0], &s_mate[0][0] + 8, false);
 	Pheromones::setPlaceEmissions({});
 }
@@ -654,6 +670,9 @@ void save(std::ostream& out) {
 			out << "kinds-wary " << mon << " " << w << "\n";
 	for (auto& [mon, s] : s_hoards)
 		out << "kinds-hoard " << mon << " " << s.x << " " << s.y << "\n";
+	for (int g = 1; g <= 3; g++)
+		if (s_lastSex[g])
+			out << "kinds-lastsex " << g << " " << s_lastSex[g] << "\n";
 	for (auto& [mon, l] : s_lone)
 		out << "kinds-lone " << mon << " " << (int)l.lays << " " << (int)l.done << " " << l.at << "\n";
 }
@@ -664,6 +683,12 @@ bool readLine(const std::string& key, std::istringstream& l) {
 		float w;
 		if (l >> mon >> w)
 			s_wary[mon] = std::clamp(w, 0.0f, 1.0f);
+		return true;
+	}
+	if (key == "kinds-lastsex") {
+		int g = 0, sex = 0;
+		if (l >> g >> sex && g >= 0 && g <= 3 && (sex == 1 || sex == 2))
+			s_lastSex[g] = sex;
 		return true;
 	}
 	if (key == "kinds-lone") {

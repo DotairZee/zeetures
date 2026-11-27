@@ -102,6 +102,11 @@ void noteCaught(oldCreature* c); // Disease: it has just caught something
 // (owner, 2026-11-26: "only one ... at a time" by default, set in
 // Preferences > World; a world setting, 0-20; CAOS GRNL and ETNL)
 int gameKeeps(int agentGenus); // 2 grendels, 3 ettins
+// the sex the game's next egg of that agent genus hatches (1 male, 2
+// female; owner, 2026-11-27: "sex should alternate"): the sex fewer of its
+// kind have, alive; when even, the other from the last it chose (saved with
+// the world). CAOS HSEX.
+int hatchSex(int agentGenus);
 void setGameKeeps(int agentGenus, int n);
 
 // steps a pregnancy lasts for kinds whose genes cannot carry one

@@ -16,6 +16,8 @@
 * hatching scripts replace the eggs' own timer scripts; the keeper and the
 * machine are unchanged. Ettin eggs (also from the machine) hatch a male or
 * female at random too (owner, 2026-11-10; they were always male).
+* Since 2026-11-27 the game's grendels and ettins come in pairs: each hatches
+* the sex its kind has fewer of, alternating when even (HSEX).
 * C1 grendels joined them (owner, 2026-11-27): a third each of C2's own,
 * Boney and C1 ("c1gr", made by the engine when the C1-in-C2 Grendel
 * pictures are installed; Kinds.h).
@@ -66,7 +68,9 @@ scrp 2 5 4 9
   doif var0 eq 0 new: gene tokn gren tokn gren var4 endi
   doif var0 eq 1 new: gene tokn bone tokn bone var4 endi
   doif var0 eq 2 new: gene tokn c1gr tokn c1gr var4 endi
-  rndv var3 1 2
+* (the sex its kind has fewer of, or the other from the last: HSEX;
+* owner, 2026-11-27: "sex should alternate")
+  setv var3 hsex 2
   snde crak
   anim [34563456345634563456] over
   wait 20
@@ -100,12 +104,10 @@ scrp 2 1 52 9
 endm
 *
 * The egg machine's egg: pictures 3-6 rocking and cracking, 7 the empty
-* shell. A grendel egg is made a Bony one a third of the time and a C1 one
-* a third; grendel and ettin eggs alike hatch either sex. The machine's
-* eggs have OV01 1 (the gene splicer's eggs, of the same class, leave it 0),
-* and it lays a grendel egg only while there are ettins (with none, an ettin
-* egg). OV00 can't tell them apart: since NEW: GENE works (2026-11-12) it
-* holds each egg's own new genome, not "gren" or "ettn".
+* shell. The machine's eggs have OV01 1 (the gene splicer's eggs, of the
+* same class, leave it 0) and are always ettins' (its grendel subroutine is
+* never called); each hatches the sex the ettins have fewer of (HSEX), a
+* gene splicer's egg either sex at random.
 scrp 2 5 3 9
   tick 0
   doif pose eq 7 kill ownr stop endi
@@ -115,15 +117,17 @@ scrp 2 5 3 9
 * above: 13 of the machine's 22 eggs in Home lay at its chute with their
 * hatching cut off, some since 2026-11-08)
   lock tick 300
+* (its eggs are always ettins': the rule that made an egg laid while an
+* ettin lived a Boney or C1 grendel was for grendel eggs it never lays,
+* and gave a world a grendel more than the pile's; owner, 2026-11-27)
   doif ov01 eq 1
-    setv var0 0 enum 4 3 0 addv var0 1 next
-    doif var0 gt 0
-      rndv var0 0 2
-      doif var0 eq 1 new: gene tokn bone tokn bone ov00 endi
-      doif var0 eq 2 new: gene tokn c1gr tokn c1gr ov00 endi
-    endi
+* (and only while fewer ettins live than Preferences > World says, as when
+* it was laid: the limit is on ettins in the world; owner, 2026-11-27)
+    doif totl 4 3 0 ge etnl lock tick 1200 stop endi
+    setv ov01 hsex 3
+  else
+    rndv var0 1 2 setv ov01 var0
   endi
-  rndv var0 1 2 setv ov01 var0
   anim [3456543R] wait 50
   snde crak
   anim [345634563456] over
