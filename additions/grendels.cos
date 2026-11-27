@@ -16,6 +16,9 @@
 * hatching scripts replace the eggs' own timer scripts; the keeper and the
 * machine are unchanged. Ettin eggs (also from the machine) hatch a male or
 * female at random too (owner, 2026-11-10; they were always male).
+* C1 grendels joined them (owner, 2026-11-27): a third each of C2's own,
+* Boney and C1 ("c1gr", made by the engine when the C1-in-C2 Grendel
+* pictures are installed; Kinds.h).
 *
 * The egg pile's egg: pictures 0-2 while it waits (each step a random 3-6 s
 * apart once started), 3-9 cracking, 10 the empty shell, gone at 11.
@@ -57,12 +60,12 @@ scrp 2 5 4 9
 * ended this script mid-hatch with the timer stopped, and the egg never
 * hatched; 2026-11-19. A retry timer, too, in case it is ever cut off.)
   lock tick 300
-  rndv var0 0 1
-  doif var0 eq 0
-    new: gene tokn gren tokn gren var4
-  else
-    new: gene tokn bone tokn bone var4
-  endi
+* (a third of each: C2's own, Boney and C1 grendels; owner, 2026-11-27.
+* A missing pack's genome gives C2's own: NEW: GENE.)
+  rndv var0 0 2
+  doif var0 eq 0 new: gene tokn gren tokn gren var4 endi
+  doif var0 eq 1 new: gene tokn bone tokn bone var4 endi
+  doif var0 eq 2 new: gene tokn c1gr tokn c1gr var4 endi
   rndv var3 1 2
   snde crak
   anim [34563456345634563456] over
@@ -97,12 +100,12 @@ scrp 2 1 52 9
 endm
 *
 * The egg machine's egg: pictures 3-6 rocking and cracking, 7 the empty
-* shell. A grendel egg is made a Bony one half the time; grendel and ettin
-* eggs alike hatch either sex. The machine's eggs have OV01 1 (the gene
-* splicer's eggs, of the same class, leave it 0), and it lays a grendel egg
-* only while there are ettins (with none, an ettin egg). OV00 can't tell
-* them apart: since NEW: GENE works (2026-11-12) it holds each egg's own new
-* genome, not "gren" or "ettn".
+* shell. A grendel egg is made a Bony one a third of the time and a C1 one
+* a third; grendel and ettin eggs alike hatch either sex. The machine's
+* eggs have OV01 1 (the gene splicer's eggs, of the same class, leave it 0),
+* and it lays a grendel egg only while there are ettins (with none, an ettin
+* egg). OV00 can't tell them apart: since NEW: GENE works (2026-11-12) it
+* holds each egg's own new genome, not "gren" or "ettn".
 scrp 2 5 3 9
   tick 0
   doif pose eq 7 kill ownr stop endi
@@ -115,8 +118,9 @@ scrp 2 5 3 9
   doif ov01 eq 1
     setv var0 0 enum 4 3 0 addv var0 1 next
     doif var0 gt 0
-      rndv var0 0 1
+      rndv var0 0 2
       doif var0 eq 1 new: gene tokn bone tokn bone ov00 endi
+      doif var0 eq 2 new: gene tokn c1gr tokn c1gr ov00 endi
     endi
   endi
   rndv var0 1 2 setv ov01 var0

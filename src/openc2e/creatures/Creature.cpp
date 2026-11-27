@@ -20,6 +20,7 @@
 #include "Profile.h"
 #include "common/devenv.h"
 #include "Creature.h"
+#include "creatures/Kinds.h"
 #include "Disease.h"
 #include "Lightning.h"
 #include "GenomeTraits.h"
@@ -386,6 +387,10 @@ oldCreature::oldCreature(std::shared_ptr<genomeFile> g, bool is_female, unsigned
 		geneShift = GenomeTraits::shift(*g);
 	refreshTemperament();
 	mindGenes = MindGeneSet::roll();
+	// C1 grendels, born knowing little, are quick to learn (Kinds.h); a
+	// genes file of its own beside its genome still has the last word
+	if (Kinds::isC1Genome(g.get()))
+		mindGenes.z[MG_LEARNING] = std::min(2.0f, mindGenes.z[MG_LEARNING] + 1.0f);
 	// its own pace of ageing, 0.9-1.1 and most often near 1 (the sum of two
 	// draws); OPENC2E_NO_LIFE_SPREAD keeps every creature at its genome's
 	if (engine.version == 2 && !devenv("OPENC2E_NO_LIFE_SPREAD"))

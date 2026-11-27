@@ -63,6 +63,7 @@ const char* PackCredit(const std::string& source) {
 		{"Kai", "Wafuru (pictures, and the milk bottle); genome by Lis Morris"},
 		{"Scorpio", "Wafuru (pictures and body data); genome by Mannkind"},
 		{"Boney", "Creature Labs, an official Creatures 2 release; updated by Lis Morris"},
+		{"C1inC2Grendel", "RudeDog (pictures and body data, the female's mended here); genome by Zeetures, from the game's own grendel"},
 	};
 	std::string lower = source;
 	for (auto& c : lower)

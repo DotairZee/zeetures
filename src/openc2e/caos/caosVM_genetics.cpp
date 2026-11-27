@@ -19,6 +19,7 @@
 
 #include "Engine.h"
 #include "World.h"
+#include "creatures/Kinds.h"
 #include "caosVM.h"
 #include "common/throw_ifnot.h"
 #include "creatures/Breeding.h"
@@ -219,6 +220,14 @@ void c_NEW_GENE(caosVM* vm) {
 		fmt::print("* NEW: GENE: no Boney Grendels pack here, a standard grendel instead\n");
 		for (auto* name : {&mumName, &dadName})
 			if (*name == "bone")
+				*name = "gren";
+	}
+	// the same for the C1 grendels' genome (Kinds.h), made when their
+	// pictures are installed
+	if ((mumName == Kinds::C1_GENOME || dadName == Kinds::C1_GENOME) && !genomeByName(Kinds::C1_GENOME)) {
+		fmt::print("* NEW: GENE: no C1 grendels here, a standard grendel instead\n");
+		for (auto* name : {&mumName, &dadName})
+			if (*name == Kinds::C1_GENOME)
 				*name = "gren";
 	}
 	std::shared_ptr<genomeFile> m = genomeByName(mumName), d = genomeByName(dadName);

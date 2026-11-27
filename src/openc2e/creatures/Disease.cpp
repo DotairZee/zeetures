@@ -153,7 +153,7 @@ void announce(int kind, const std::string& mon, oldCreature* c, const Strain& s)
 }
 
 bool canCatch(oldCreature* c, Agent* a, const std::string& mon, const Strain& s) {
-	if (a->genus == 2) // grendels carry, they do not fall ill
+	if (Kinds::carriesGerms(a)) // grendels carry, they do not fall ill (C1 grendels can: Kinds.h)
 		return false;
 	auto& ill = s_ill[mon];
 	if ((int)ill.size() >= mostAtOnce)
@@ -323,7 +323,7 @@ void tick() {
 	for (auto& b : bodies) {
 		alive[b.moniker] = true;
 		int room = b.room ? (int)b.room->id : -1;
-		if (b.agent->genus == 2) {
+		if (Kinds::carriesGerms(b.agent)) {
 			// a grendel carries a strain for life (the grendel strains,
 			// else any), and sheds it
 			auto it = s_carrier.find(b.moniker);
@@ -416,7 +416,7 @@ void sneeze(Agent* sneezer) {
 	std::vector<int> what;
 	for (auto& i : s_ill[mon])
 		what.push_back(i.strain);
-	if (sneezer->genus == 2 && s_carrier.count(mon))
+	if (Kinds::carriesGerms(sneezer) && s_carrier.count(mon))
 		what.push_back(s_carrier[mon]);
 	if (what.empty())
 		return;

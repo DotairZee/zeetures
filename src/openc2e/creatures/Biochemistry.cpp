@@ -149,6 +149,10 @@ void c2Creature::kindsStep() {
 			fertile = 0;
 			receptive = 0;
 		}
+	}
+	// carrying, then laying: these kinds' genes cannot carry young (C1
+	// grendels' lone eggs too)
+	if (Kinds::sterileGenes(this) || Kinds::isC1(this)) {
 		if (pregnant && female) {
 			if (++kindsGestation >= Kinds::GESTATION_STEPS)
 				involaction[1] = 255; // lay the egg
@@ -161,7 +165,7 @@ void c2Creature::kindsStep() {
 	// a second to 220, eased after mating as a norn's is (matedNow,
 	// satedUntil), and gone with no mate; it is the Sex drive, and shows as
 	// the chemical
-	if (parentagent->genus == 2 || parentagent->genus == 3) {
+	if ((parentagent->genus == 2 || parentagent->genus == 3) && !Kinds::isC1(this)) {
 		int st = (int)stage;
 		bool canMate = st >= 2 && st <= 5 && Kinds::mateAlive(parentagent->genus, !female) && !pregnant;
 		if (!canMate)

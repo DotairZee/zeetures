@@ -67,6 +67,10 @@ std::string genomeNameFromInt(int value);
 // only. OPENC2E_TEST_CONCEIVE=1 skips the fertility checks. Returns whether
 // she conceived.
 bool tryConceive(CreatureAgent* a, CreatureAgent* b);
+// a C1 grendel's lone egg (Kinds.h): she conceives on her own, her genome
+// crossed with itself (the usual mutations); false if she can't now
+// (pregnant already, or the world at its population limit)
+bool layLoneEgg(CreatureAgent* mum);
 
 // Insemination (Breeder's Kit, owner 2026-11-20): she conceives from a
 // donor's genes, any creature of her kind, male or female, living, departed

@@ -722,6 +722,31 @@ static void matedNow(oldCreature* c) {
 		c->subChemical(13, (unsigned char)(c->getChemical(13) - 32));
 }
 
+bool layLoneEgg(CreatureAgent* a) {
+	oldCreature* mum = a ? dynamic_cast<oldCreature*>(a->getCreature()) : nullptr;
+	Agent* body = dynamic_cast<Agent*>(a);
+	if (!mum || !body || engine.version != 2 || !mum->isFemale() || !mum->getGenome())
+		return false;
+	if (body->babymoniker != 0 || mum->getPregnant() != 0 || atPopulationLimit())
+		return false;
+	std::string mon = world.history->findMoniker(mum->getGenome());
+	CrossReport rep;
+	std::shared_ptr<genomeFile> child = crossGenomes(*mum->getGenome(), *mum->getGenome(), mon, mon, &rep);
+	std::string name = storeGenome(*child);
+	if (name.empty())
+		return false;
+	float childSeasonal = SeasonalRhythm::child(mum->seasonalZ, mum->seasonalZ);
+	SeasonalRhythm::store(name, childSeasonal);
+	Temperament childTemperament = Temperaments::child(mum->inheritableTemperament(), mum->inheritableTemperament());
+	Temperaments::store(name, childTemperament);
+	MindGeneSet::store(name, MindGeneSet::child(mum->mindGenes, mum->mindGenes));
+	body->babymoniker = genomeNameToInt(name);
+	mum->setPregnant(255);
+	world.history->tell(mon, storyEntry::pregnant, mon, "alone");
+	fmt::print("* LONE EGG {}: conceived on her own, genome {} ({} genes, {} mutations)\n", mon, name, rep.genes, rep.mutations);
+	return true;
+}
+
 bool tryConceive(CreatureAgent* a, CreatureAgent* b) {
 	if (!a || !b || engine.version != 2 || a == b)
 		return false;

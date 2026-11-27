@@ -27,6 +27,13 @@ class oldCreature;
 //   learns to link the two, and keeps away from grendels' scent ("wary");
 // - each ettin's hoard spot, a quiet place it found, which gives off the
 //   "ettin-hoard" scent its trinkets are carried to.
+// - C1 grendels (owner, 2026-11-27: "let's go with them!", from reports/C1
+//   grendel genome plan.md): RudeDog's C1-in-C2 Grendel pictures (eem.foo
+//   68a3) on a genome Zeetures builds on the player's machine from their own
+//   gren.gen (makeC1Genome). Gluttons and thieves, deaf to the hand, touchy
+//   loners, fearless, clean (no germs carried; they can fall ill), about by
+//   day and asleep at night, few instincts, quick to learn, and mostly
+//   barren: about one adult in three lays a lone egg of its own once.
 // OPENC2E_NO_KINDS switches all of it off (and the scent rules that use it
 // find nothing to answer); OPENC2E_WATCH_KINDS logs.
 namespace Kinds {
@@ -38,8 +45,32 @@ bool watching();
 // not C2's grendel or ettin)
 bool reproGenes(const genomeFile* g);
 bool isBoney(oldCreature* c); // a grendel with working reproductive genes
-bool isBulbous(oldCreature* c); // C2's own grendel (its reproduction off)
-bool sterileGenes(oldCreature* c); // a grendel or ettin whose genes switch reproduction off
+bool isBulbous(oldCreature* c); // C2's own grendel (its reproduction off), not a C1 grendel
+// a grendel or ettin whose genes switch reproduction off (not C1 grendels:
+// they have their lone eggs instead)
+bool sterileGenes(oldCreature* c);
+
+// C1 grendels: a genome carrying the marker gene makeC1Genome adds (an
+// initial-concentration gene, never expressed and not mutable, of chemical
+// C1_MARK_CHEMICAL at C1_MARK_AMOUNT); inherited, so the kind is
+// whichever its genes say, whatever it looks like
+const int C1_MARK_CHEMICAL = 191, C1_MARK_AMOUNT = 193;
+bool isC1Genome(const genomeFile* g);
+bool isC1(oldCreature* c); // a grendel with the C1 marker
+// a grendel that carries germs for life without falling ill (Disease.h): any
+// grendel but a C1 one
+bool carriesGerms(Agent* a);
+// the hand's words go unheard (CreatureSpeech): C1 grendels
+bool deafToHand(oldCreature* c);
+// the C1 grendel genome from the game's grendel genome (loaded fresh), on
+// the pictures in grendel breed slot `slot` (0 a, 1 b, ...): the recipe in
+// Kinds.cpp; written to the user data folder's Genetics as C1_GENOME.gen
+const char* const C1_GENOME = "c1gr";
+bool makeC1Genome(genomeFile& g, int slot);
+bool writeC1Genome(int slot, std::string& why);
+// the name players see for the kind (owner, 2026-11-27: not chosen yet)
+const char* const C1_KIND_NAME = "C1 grendel";
+
 // an adolescent-to-old of that agent genus (1 norn, 2 grendel, 3 ettin) and
 // sex is alive (worked out every 50 ticks)
 bool mateAlive(int agentGenus, bool female);

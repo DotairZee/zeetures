@@ -25,10 +25,17 @@
 #include "creatures/Pheromones.h"
 #include "creatures/oldCreature.h"
 #include "fileformats/genomeFile.h"
+#include "PathResolver.h"
+#include "common/Random.h"
+#include "creatures/Breeding.h"
+#include "fileformats/genomeFile.h"
 #include "historyManager.h"
+#include "common/io/FileReader.h"
+#include "common/io/FileWriter.h"
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <fmt/core.h>
 #include <map>
 #include <ostream>
@@ -56,6 +63,14 @@ struct Spot {
 std::map<std::string, Spot> s_hoards; // ettin moniker: its hoard
 std::map<std::string, unsigned int> s_quietSince;
 bool s_mate[4][2] = {}; // [agent genus][female]: an adolescent-to-old lives
+// C1 grendels' lone eggs: whether each adult was found to lay one (decided
+// once, when first seen adult), and the tick it will
+struct Lone {
+	bool lays = false, done = false;
+	unsigned int at = 0;
+};
+std::map<std::string, Lone> s_lone;
+const unsigned int LONE_EARLIEST = 3000, LONE_LATEST = 18000; // 5-30 minutes after
 
 oldCreature* creatureOf(Agent* a) {
 	CreatureAgent* ca = dynamic_cast<CreatureAgent*>(a);
@@ -101,11 +116,145 @@ bool isBoney(oldCreature* c) {
 }
 
 bool isBulbous(oldCreature* c) {
-	return c && c->getGenus() == 1 && !reproGenes(c->getGenome().get());
+	return c && c->getGenus() == 1 && !reproGenes(c->getGenome().get()) && !isC1Genome(c->getGenome().get());
 }
 
 bool sterileGenes(oldCreature* c) {
-	return c && (c->getGenus() == 1 || c->getGenus() == 2) && !reproGenes(c->getGenome().get());
+	return c && (c->getGenus() == 1 || c->getGenus() == 2) && !reproGenes(c->getGenome().get()) && !isC1(c);
+}
+
+bool isC1Genome(const genomeFile* g) {
+	if (!g)
+		return false;
+	static std::map<const genomeFile*, bool> cache;
+	auto it = cache.find(g);
+	if (it != cache.end())
+		return it->second;
+	bool mark = false;
+	for (auto& gn : g->genes)
+		if (auto* ic = dynamic_cast<bioInitialConcentrationGene*>(gn.get()))
+			if (ic->chemical == C1_MARK_CHEMICAL && ic->quantity == C1_MARK_AMOUNT)
+				mark = true;
+	if (cache.size() > 4000)
+		cache.clear();
+	cache[g] = mark;
+	return mark;
+}
+
+bool isC1(oldCreature* c) {
+	return c && c->getGenus() == 1 && isC1Genome(c->getGenome().get());
+}
+
+bool carriesGerms(Agent* a) {
+	return a && a->genus == 2 && !isC1(creatureOf(a));
+}
+
+bool deafToHand(oldCreature* c) {
+	return !off() && isC1(c);
+}
+
+// The C1 grendel genome (owner, 2026-11-27; reports/C1 grendel genome
+// plan.md). Our own recipe on the player's gren.gen, read as data; each
+// change is one of the eight traits:
+// - looks: every appearance gene on the C1 pictures' grendel slot;
+// - glutton: the hunger cells' emitters (organ 0, chemical 3 Hunger) at
+//   twice the gain, and Hunger Decrease (37) fading faster (half-life 24,
+//   was 40), so food eases it less;
+// - deaf to the hand: the hand's speech (stimulus 10) does nothing, and the
+//   obedience instincts (heard verb) go with the rest below;
+// - touchy loner: another creature's speech (stimulus 11) angers it as much
+//   as its pats do (Anger at least 48; C2's grendel already angers at pats
+//   and slaps from creatures);
+// - fearless: Fear (10) fades at once (half-life 16), as Stress already does;
+// - about by day, asleep at night: Tiredness (6) lingers as a norn's (248,
+//   was 16); its genes already make it sleepy in the dark;
+// - blank slate: three instincts only (hit a norn when angry, eat when
+//   hungry, rest when sleepy);
+// - mostly barren: C2's grendel's reproduction stays off (lone eggs: tick);
+// - and the marker gene (isC1Genome).
+bool makeC1Genome(genomeFile& g, int slot) {
+	if (g.getVersion() != 2)
+		return false;
+	bool hit = false, eat = false, rest = false;
+	std::vector<std::unique_ptr<gene>> kept;
+	for (auto& gn : g.genes) {
+		if (auto* a = dynamic_cast<creatureAppearanceGene*>(gn.get())) {
+			a->variant = (uint8_t)slot;
+			a->species = 1;
+		} else if (auto* in = dynamic_cast<creatureInstinctGene*>(gn.get())) {
+			bool keep = false;
+			if (!hit && in->action == 13 && in->lobes[0] == 2 && in->neurons[0] == 36 && in->lobes[1] == 1 && in->neurons[1] == 11)
+				keep = hit = true;
+			else if (!eat && in->action == 12 && in->lobes[0] == 1 && in->neurons[0] == 2 && in->lobes[1] == 0)
+				keep = eat = true;
+			else if (!rest && in->action == 9 && in->lobes[0] == 1 && in->neurons[0] == 6 && in->lobes[1] == 0)
+				keep = rest = true;
+			if (!keep)
+				continue;
+		} else if (auto* st = dynamic_cast<creatureStimulusGene*>(gn.get())) {
+			if (st->stim % 46 == 10)
+				for (int i = 0; i < 4; i++)
+					st->drives[i] = st->amounts[i] = 0;
+			if (st->stim % 46 == 11)
+				for (int i = 0; i < 4; i++)
+					if (st->drives[i] == 12 && st->amounts[i] < 48)
+						st->amounts[i] = 48;
+		} else if (auto* h = dynamic_cast<bioHalfLivesGene*>(gn.get())) {
+			h->halflives[6] = 248;
+			h->halflives[10] = 16;
+			h->halflives[37] = 24;
+		} else if (auto* e = dynamic_cast<bioEmitterGene*>(gn.get())) {
+			if (e->organ == 0 && e->chemical == 3)
+				e->gain = (uint8_t)std::min(255, e->gain * 2);
+		}
+		kept.push_back(std::move(gn));
+	}
+	g.genes = std::move(kept);
+	auto mark = std::make_unique<bioInitialConcentrationGene>(g.getVersion());
+	mark->chemical = C1_MARK_CHEMICAL;
+	mark->quantity = C1_MARK_AMOUNT;
+	mark->header.flags._mutable = mark->header.flags.dupable = mark->header.flags.delable = false;
+	mark->header.flags.notexpressed = true;
+	mark->note.which = 1;
+	g.genes.push_back(std::move(mark));
+	return hit && eat && rest;
+}
+
+bool writeC1Genome(int slot, std::string& why) {
+	// the game's own grendel genome, never one the player put in their own
+	// Genetics folder under its name
+	std::filesystem::path src;
+	const std::string user = getUserDataDir().lexically_normal().string();
+	for (auto& f : findGeneticsFiles("gren.gen"))
+		if (f.lexically_normal().string().rfind(user, 0) != 0)
+			src = f;
+	if (src.empty()) {
+		why = "the game's grendel genome (gren.gen) was not found";
+		return false;
+	}
+	genomeFile g;
+	try {
+		FileReader in(src);
+		in >> g;
+	} catch (std::exception& e) {
+		why = fmt::format("couldn't read gren.gen: {}", e.what());
+		return false;
+	}
+	if (!makeC1Genome(g, slot)) {
+		why = "gren.gen is not the genome the recipe expects";
+		return false;
+	}
+	std::filesystem::path dir = getUserDataDir() / "Genetics";
+	std::error_code ec;
+	std::filesystem::create_directories(dir, ec);
+	try {
+		FileWriter out(dir / (std::string(C1_GENOME) + ".gen"));
+		out << g;
+	} catch (std::exception& e) {
+		why = fmt::format("couldn't write {}.gen: {}", C1_GENOME, e.what());
+		return false;
+	}
+	return true;
 }
 
 bool mateAlive(int agentGenus, bool female) {
@@ -145,9 +294,12 @@ void tick() {
 		if (!c || !c->isAlive())
 			continue;
 		int st = (int)c->getStage();
-		if (a->genus >= 1 && a->genus <= 3 && st >= 2 && st <= 5)
+		// (C1 grendels are no mate for the others, and no carrier to keep
+		// away from)
+		const bool c1 = isC1(c);
+		if (a->genus >= 1 && a->genus <= 3 && st >= 2 && st <= 5 && !c1)
 			mate[a->genus][c->isFemale() ? 1 : 0] = true;
-		if (a->genus == 2)
+		if (a->genus == 2 && !c1)
 			grendels.push_back({a->x + a->getWidth() / 2.0f, a->y + a->getHeight() / 2.0f});
 	}
 	std::copy(&mate[0][0], &mate[0][0] + 8, &s_mate[0][0]);
@@ -168,6 +320,31 @@ void tick() {
 				near = near || std::hypot(gx - cx, gy - cy) < NEAR_GRENDEL_PX;
 			if (near)
 				s_nearGrendel[mon] = world.tickcount;
+		}
+		// a C1 grendel's lone egg: decided once, when first seen adult;
+		// about one adult in three lays one (females only, two in three of
+		// them), 5-30 minutes later, through the usual carrying and laying
+		if (isC1(c) && c->getStage() >= 4 && c->getStage() <= 5) {
+			auto [it, fresh] = s_lone.emplace(mon, Lone{});
+			Lone& l = it->second;
+			if (fresh) {
+				// (developer aid: OPENC2E_TEST_LONE_EGG, every grown female
+				// lays one, 100 ticks later)
+				static const bool test = devenv("OPENC2E_TEST_LONE_EGG") != nullptr;
+				l.lays = c->isFemale() && (test || rand_float(0, 1) < 2.0f / 3.0f);
+				l.at = world.tickcount + (test ? 100 : LONE_EARLIEST + (unsigned int)rand_int32(0, LONE_LATEST - LONE_EARLIEST));
+				if (watching())
+					fmt::print("* KINDS C1 grendel {} grown: {}\n", mon, l.lays ? fmt::format("will lay a lone egg at tick {}", l.at) : std::string("no lone egg"));
+			}
+			if (l.lays && !l.done && world.tickcount >= l.at) {
+				auto* ca = dynamic_cast<CreatureAgent*>(a.get());
+				if (ca && layLoneEgg(ca)) {
+					l.done = true;
+					if (watching())
+						fmt::print("* KINDS C1 grendel {} carries a lone egg\n", mon);
+				} else
+					l.at = world.tickcount + 600; // (not now: a minute later)
+			}
 		}
 		// an ettin finds its hoard spot: somewhere it has been at ease
 		if (a->genus == 3 && c->getStage() >= 2 && !s_hoards.count(mon) && !a->carriedby && !a->invehicle) {
@@ -192,6 +369,7 @@ void reset() {
 	s_nearGrendel.clear();
 	s_hoards.clear();
 	s_quietSince.clear();
+	s_lone.clear();
 	std::fill(&s_mate[0][0], &s_mate[0][0] + 8, false);
 	Pheromones::setPlaceEmissions({});
 }
@@ -202,6 +380,8 @@ void save(std::ostream& out) {
 			out << "kinds-wary " << mon << " " << w << "\n";
 	for (auto& [mon, s] : s_hoards)
 		out << "kinds-hoard " << mon << " " << s.x << " " << s.y << "\n";
+	for (auto& [mon, l] : s_lone)
+		out << "kinds-lone " << mon << " " << (int)l.lays << " " << (int)l.done << " " << l.at << "\n";
 }
 
 bool readLine(const std::string& key, std::istringstream& l) {
@@ -210,6 +390,16 @@ bool readLine(const std::string& key, std::istringstream& l) {
 		float w;
 		if (l >> mon >> w)
 			s_wary[mon] = std::clamp(w, 0.0f, 1.0f);
+		return true;
+	}
+	if (key == "kinds-lone") {
+		Lone lo;
+		int lays = 0, done = 0;
+		if (l >> mon >> lays >> done >> lo.at) {
+			lo.lays = lays != 0;
+			lo.done = done != 0;
+			s_lone[mon] = lo;
+		}
 		return true;
 	}
 	if (key == "kinds-hoard") {
@@ -225,7 +415,7 @@ std::string kindName(oldCreature* c) {
 	if (!c)
 		return {};
 	if (c->getGenus() == 1)
-		return isBoney(c) ? "Boney grendel" : "Bulbous grendel";
+		return isC1(c) ? C1_KIND_NAME : isBoney(c) ? "Boney grendel" : "Bulbous grendel";
 	if (c->getGenus() == 2)
 		return "Ettin";
 	return {};
@@ -238,6 +428,17 @@ std::vector<std::string> traits(oldCreature* c) {
 		return t;
 	Agent* a = c->getAgent();
 	int g = c->getGenus();
+	if (g == 1 && isC1(c)) {
+		t.push_back("A glutton: always hungry, and a thief that carries food off to the lair.");
+		t.push_back("Deaf to the hand: learns no words from it and takes no orders.");
+		t.push_back("A loner: other creatures' pats, slaps and chatter anger it; only ettins are company.");
+		t.push_back("Fearless, and never stressed.");
+		t.push_back("Clean: carries no germs, though it can fall ill.");
+		t.push_back("About by day, asleep at night.");
+		t.push_back("Born knowing little, and learns quickly.");
+		t.push_back("Mostly barren: now and then a grown female lays a lone egg of her own.");
+		return t;
+	}
 	if (g == 1 && !isBoney(c)) {
 		t.push_back("Carries germs without falling ill, and spreads them.");
 		t.push_back("Never tires; prowls at night, and lies up at the grendels' lair by day.");

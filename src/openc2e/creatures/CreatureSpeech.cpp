@@ -666,6 +666,8 @@ void hearWords(Agent* speaker, const std::vector<int>& heard, int amount, const 
 		oldCreature* c = creatureOf(a.get());
 		if (!c || !inEarshot(a.get(), sx, sy))
 			continue;
+		if (speaker == (Agent*)world.hand() && Kinds::deafToHand(c))
+			continue; // (C1 grendels: Kinds.h)
 		int got = amount;
 		// said to it (the hand: naming it, or close by; a creature: looking
 		// at it), for its brain: a conversation's turns (BrainOrgan.h)
@@ -1182,7 +1184,7 @@ void answerHand(const std::string& text) {
 		if (!a || a->isDying())
 			continue;
 		oldCreature* c = creatureOf(a.get());
-		if (!c || !c->isAlive() || c->isAsleep() || c->isUnconscious() || !inEarshot(a.get(), hx, hy))
+		if (!c || !c->isAlive() || c->isAsleep() || c->isUnconscious() || !inEarshot(a.get(), hx, hy) || Kinds::deafToHand(c))
 			continue;
 		Listener l{a.get(), c, std::hypot(centreX(a.get()) - hx, centreY(a.get()) - hy), false};
 		std::string mon = world.history->findMoniker(c->getGenome());

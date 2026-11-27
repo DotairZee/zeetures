@@ -19,7 +19,10 @@
 #include "Engine.h"
 #include "PathResolver.h"
 #include "World.h"
+#include "creatures/Kinds.h"
+#include "Breeds.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cstdlib>
 #include <fmt/format.h>
@@ -62,6 +65,7 @@ struct Pack {
 	const char* magic; // what the file starts with
 	const char* breedName;
 	bool inPlaceOfGame;
+	bool c1Genome = false; // pictures only: the genome is Zeetures' own (Kinds::writeC1Genome)
 };
 
 const Pack kPacks[] = {
@@ -69,6 +73,10 @@ const Pack kPacks[] = {
 		"https://eem.foo/archive/downloads/1fad?download=true", "Boney Grendels.exe", "bone.gen", "MZ", "Boney", false},
 	{"Frog Norns V3", "Alex (Norns of the Round Table), from Nornenmeister's V2", "https://eem.foo/archive/downloads/2538-frog-norns-v3",
 		"https://eem.foo/archive/downloads/2538?download=true", "2538-FrogNornV3_1.zip", "frog.gen", "PK", "Frog", true},
+	// (owner, 2026-11-27: C1 grendels; the pack's pictures and body data,
+	// mended on import, on a genome made here from the player's gren.gen)
+	{"C1-in-C2 Grendel", "RudeDog", "https://eem.foo/archive/downloads/68a3-c1-in-c2-grendel",
+		"https://eem.foo/archive/downloads/68a3?download=true", "68a3-C1inC2Grendel.zip", "c1gr.gen", "PK", Kinds::C1_KIND_NAME, false, true},
 };
 constexpr int kCount = sizeof(kPacks) / sizeof(kPacks[0]);
 
@@ -155,6 +163,48 @@ void download(int i) {
 	j.state = failed;
 }
 
+// the grendel slot a pack's pictures were installed in, from the breed
+// registry (by the name it was imported under), or -1
+int installedGrendelSlot(const Pack& p) {
+	for (auto& b : KnownBreeds())
+		if (b.imported && b.species == 1 && b.name == p.breedName)
+			return b.slot;
+	return -1;
+}
+
+// the C1 grendels' genome, made afresh from the player's gren.gen on their
+// pictures' slot (so a later recipe reaches every player)
+bool makeC1(const Pack& p, std::string& why) {
+	int slot = installedGrendelSlot(p);
+	if (slot < 0) {
+		why = "its pictures are not installed";
+		return false;
+	}
+	if (!Kinds::writeC1Genome(slot, why))
+		return false;
+	// the breed's own genome is ours: the pack's exported creatures carry a
+	// norn's (Canny Norns-like), so their genomes go, and the Hatchery's
+	// shelf and the kits use ours
+	for (auto& b : KnownBreeds())
+		if (b.imported && b.species == 1 && b.slot == slot) {
+			const std::string ours = std::string("Genetics/") + Kinds::C1_GENOME + ".gen";
+			std::vector<std::string> keep;
+			for (auto& f : b.files)
+				if (f.rfind("Genetics/", 0) == 0 && f != ours) {
+					std::error_code ec;
+					if (f.find("..") == std::string::npos)
+						fs::remove(getUserDataDir() / f, ec);
+				} else
+					keep.push_back(f);
+			if (std::find(keep.begin(), keep.end(), ours) == keep.end())
+				keep.push_back(ours);
+			b.files = keep;
+			b.genome = std::string(Kinds::C1_GENOME) + ".gen";
+			SaveBreedRegistry();
+		}
+	return true;
+}
+
 void say(const std::string& s) {
 	fmt::print("* Breed packs: {}\n", s);
 	s_status = s;
@@ -177,7 +227,14 @@ void BreedPacksTick() {
 		int st = j.state;
 		if (st == unchecked) {
 			std::error_code ec;
-			if (fs::exists(main / "Genetics" / p.genome, ec)) {
+			if (p.c1Genome && installedGrendelSlot(p) >= 0) {
+				std::string why;
+				if (!makeC1(p, why))
+					fmt::print("* Breed packs: couldn't make the {} genome: {}\n", p.breedName, why);
+				j.state = installed;
+				continue;
+			}
+			if (!p.c1Genome && fs::exists(main / "Genetics" / p.genome, ec)) {
 				j.state = installed;
 				continue;
 			}
@@ -199,6 +256,12 @@ void BreedPacksTick() {
 			std::string message;
 			bool ok = ImportBreedPackQuietly(j.path.string(), p.breedName, p.inPlaceOfGame, message);
 			std::error_code ec;
+			if (ok && p.c1Genome) {
+				KnownBreeds(true);
+				std::string why;
+				if (!makeC1(p, why))
+					message = why;
+			}
 			if (ok && fs::exists(main / "Genetics" / p.genome, ec)) {
 				j.state = installed;
 				say(fmt::format("{} ({}) added: {}", p.title, p.credit, message));

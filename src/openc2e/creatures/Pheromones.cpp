@@ -75,7 +75,7 @@ struct Who {
 	bool object = false; // an object by classifier (only for emit)
 	int family = 0, genus = 0, species = 0; // object classifier (0 = any)
 	int creatureGenus = 0; // 0 any, 1 norn, 2 grendel, 3 ettin
-	int breed = 0; // grendels: 0 either, 1 Boney ("grendel.boney"), 2 bulbous ("grendel.bulbous"; Kinds.h)
+	int breed = 0; // grendels: 0 any, 1 Boney ("grendel.boney"), 2 bulbous ("grendel.bulbous"), 3 C1 ("grendel.c1"; Kinds.h)
 	int sex = -1; // -1 either, 0 male, 1 female
 	int stageFrom = 0, stageTo = 6;
 };
@@ -183,6 +183,8 @@ bool parseWho(const std::string& tok, Who& w) {
 			w.breed = 1;
 		else if (breed == "bulbous")
 			w.breed = 2;
+		else if (breed == "c1")
+			w.breed = 3;
 		else
 			return false;
 	}
@@ -277,7 +279,7 @@ bool matches(const Who& w, Agent* a, oldCreature* c) {
 		return false;
 	if (w.creatureGenus && a->genus != w.creatureGenus)
 		return false;
-	if (w.breed && Kinds::isBoney(c) != (w.breed == 1))
+	if ((w.breed == 1 && !Kinds::isBoney(c)) || (w.breed == 2 && !Kinds::isBulbous(c)) || (w.breed == 3 && !Kinds::isC1(c)))
 		return false;
 	if (w.sex >= 0 && (c->isFemale() ? 1 : 0) != w.sex)
 		return false;
