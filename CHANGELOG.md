@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 746 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 751 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.44.2](#version-0442): 5 commits, 26 November 2026
 - [0.44.1](#version-0441): 3 commits, 26 November 2026
 - [0.44.0](#version-0440): 2 commits, 26 November 2026
 - [0.43.2](#version-0432): 3 commits, 26 November 2026
@@ -111,6 +112,70 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.44.2
+
+Fixes: a save that fails part way is reported instead of ending the game; creatures no longer get stuck past the world's west edge; speech too long for the widest bubble is shortened instead of not shown; in Vietnamese (and any language whose words share a first syllable), saying a longer word is no longer also heard as the shorter one, so "buồn ngủ" (sleepy) is not also "buồn" (sad).
+
+### 26 November 2026
+
+#### Version 0.44.2
+
+[`aef1bccc`](https://github.com/DotairZee/zeetures/commit/aef1bccc40529fe0b3f471dd95eaff58f579e87a)
+
+#### Words that begin longer words are not heard inside them
+
+[`6c463dc4`](https://github.com/DotairZee/zeetures/commit/6c463dc4dce14a606905c5150059381f8cfa02ce)
+
+Each word of the list was looked for on its own, so a word that is the
+start of a longer one was also found inside it: in Vietnamese, saying
+"buồn ngủ" (sleepy) was also heard as "buồn" (sad), and a creature learned
+and answered both. Now the longest word found wins; a word said again on
+its own still counts ("tôi buồn ngủ và buồn": me, sleepy, sad). The same
+holds for any language whose words share a first syllable, and for
+creatures answering the hand.
+
+Developer aids: OPENC2E_TEST_HAND_SAYS="N,text" has the hand say a line at
+tick N, UTF-8 intact (OPENC2E_TEST_TYPE types a byte at a time, which
+mangles letters beyond plain English); OPENC2E_WATCH_SPEECH logs the words
+heard in each line.
+
+#### Speech lines too wide for the widest bubble are shortened, not lost
+
+[`00242794`](https://github.com/DotairZee/zeetures/commit/002427943fe9bc7d7756f16f645c95c81415d631)
+
+A line wider than the widest speech bubble was not shown at all: the bubble
+kept its old text, or none. It is now shortened to fit, at a word where one
+ends late enough, and ends "...". (Typing into the hand's bubble still
+stops when it is full.) OPENC2E_WATCH_SPEECH logs each line shortened.
+
+#### Creatures no longer get stuck past the world's west edge
+
+[`810a5ab3`](https://github.com/DotairZee/zeetures/commit/810a5ab37abec845a583f3cdae50d546273b368e)
+
+When a walking creature's foot found no room, it was set back on its last
+good foothold by placing its body directly, without the wrap across the
+world's seam that every other move has. A foot a few pixels from the west
+edge put the body at x -35, outside the map, where physics found no
+metaroom and left the creature "out of room system" for good. The body is
+now wrapped across the seam there, as moveTo does, and C2 physics also
+takes any object found past the west or east edge across the seam instead
+of giving up. Tested by placing a norn at x -35 directly: before, "4 1 1
+out of room system at (-35, 1180)"; now it carries on.
+
+#### A save that fails part way no longer ends the game
+
+[`f2853013`](https://github.com/DotairZee/zeetures/commit/f285301347e8bdcb46d6acefb106cf71c38856d8)
+
+A file that could not be written while saving (the disk full, a folder
+taken away, another copy of the game saving the same world at the same
+moment) threw an error that ended the program. Now the save is reported as
+failed ("Couldn't save the world: ..."), the unfinished save folder is
+removed, and the game goes on; the previous save is untouched, as
+everything is written to save.new/ first and swapped in only at the end.
+Found when two test copies saved one world at once. Tested with a save made
+to fail on purpose: reported, the game quit normally, the previous save
+unchanged.
 
 ## Version 0.44.1
 

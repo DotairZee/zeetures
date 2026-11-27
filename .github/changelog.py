@@ -388,6 +388,8 @@ VERSIONS = [
      "Each creature's brain now grows, holds up, and ages: it grows most while young, from conversation (talk with it, and let it answer), care, and sleep; a well-raised brain learns faster all its life. With age the signs show unless the brain kept busy (new words, places, friends) and the creature kept moving: slower walking, less sure choices, forgotten places, then words. Stress that soon passes makes the young hardier; stress that goes on does harm. See Help, How the brain grows."),
     ("0.44.1", "5b3d2f81",
      "Lamp-lit places across Albia get the light their pictures show, and keep it at night: lamp caves, the lab, the garden domes, the glowing lava, and the cave over the walkway east of the incubator's lift, among 40 rooms."),
+    ("0.44.2", "aef1bccc",
+     "Fixes: a save that fails part way is reported instead of ending the game; creatures no longer get stuck past the world's west edge; speech too long for the widest bubble is shortened instead of not shown; in Vietnamese (and any language whose words share a first syllable), saying a longer word is no longer also heard as the shorter one, so \"buồn ngủ\" (sleepy) is not also \"buồn\" (sad)."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
