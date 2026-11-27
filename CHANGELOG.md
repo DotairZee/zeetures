@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 795 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 798 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.47.2](#version-0472): 3 commits, 27 November 2026
 - [0.47.1](#version-0471): 4 commits, 27 November 2026
 - [0.47.0](#version-0470): 7 commits, 27 November 2026
 - [0.46.1](#version-0461): 2 commits, 27 November 2026
@@ -119,6 +120,50 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.47.2
+
+Ants' nests stay on the ground: they no longer bounce in place or hop away into the sky, and a nest already stranded up there falls back down when the world opens. Every breed's babies and young are drawn with the proportions of Creatures 2's own norns against their grown-up pictures, so the Kai Norns' babies get their big heads.
+
+### 27 November 2026
+
+#### Version 0.47.2
+
+[`9981b60f`](https://github.com/DotairZee/zeetures/commit/9981b60f11da34cd3c08237fcb955aa0d9b69f87)
+
+Ants' nests stay on the ground; breeds' babies drawn with C2's young
+proportions (Kai babies' bigger heads).
+
+#### Breeds' young drawn with a baby's proportions, as C2's norn
+
+[`bffd4f76`](https://github.com/DotairZee/zeetures/commit/bffd4f7695a5a669d90716d9be213df8d5326d7e)
+
+A breed with pictures at several ages may draw its young as its adult
+shrunk evenly: the Kai Norns' babies are every part 0.57-0.70 of the
+adult, where C2's own norn keeps the head large (0.90) and shortens the
+rest (body 0.76, thighs 0.68). Each part of a young set (baby to
+adolescent) is now scaled so that, against the breed's own adult set, it
+shrinks as its species' reference breed does, held within 0.75-1.4 and
+left as drawn within 3%. Tails follow the body, since they differ by
+design. Kai babies: head 1.31 (female 1.18), body and limbs 1.12-1.16;
+their children already match. Midsummer, Goat, Scorpio, Frog and breeds i
+and j already match and are unchanged; C2's breed k baby's head
+1.09. Not the reference breed itself, nor breeds drawn at one age (the
+per-part growth grows those). OPENC2E_PROPORTION_FIT=0 turns it off.
+
+#### Ants' nests stay on the ground instead of hopping into the sky
+
+[`0bcf0072`](https://github.com/DotairZee/zeetures/commit/0bcf007240a549a02bff86582a9631a368638233)
+
+The nest's timer (2 16 1) kicked it upward every two ticks without setting
+it falling. Under the falling rules from 1178e0e0 (move first, then
+gravity) each kick became a 12-15 px hop, and on open ground the hops
+climbed: a nest set on the floor reached the top of the map within a
+minute, and one built under the dome's balcony bounced there in mid-air.
+A script patch leaves the kick out. ant-nest.cos (any world) lets a nest
+stranded above the ground rooms (y &lt; 340) fall at load; tested on a copy
+of a new world, both nests came to rest on the ground and stayed still
+for 3,000 ticks.
 
 ## Version 0.47.1
 
