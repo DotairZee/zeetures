@@ -1349,9 +1349,10 @@ static void runDirector() {
 		return world.history->getMoniker(mon).owner;
 	};
 	auto middleTo = [](float x, float y, panstyle style) {
-		float z = engine.zoom > 0 ? engine.zoom : 1.0f;
+		// (the camera's size is in world pixels already, zoom included: dividing
+		// by the zoom again put the middle a whole view off when zoomed out)
 		engine.camera->trackAgent(AgentRef(), 0, 0, brittle, none);
-		engine.camera->moveTo((int)(x - engine.camera->getWidth() / (2 * z)), (int)(y - engine.camera->getHeight() / (2 * z)), style);
+		engine.camera->moveTo((int)(x - engine.camera->getWidth() / 2.0f), (int)(y - engine.camera->getHeight() / 2.0f), style);
 	};
 	while (next < cues.size() && cues[next].at <= t) {
 		std::istringstream l(cues[next].what);
@@ -1408,6 +1409,13 @@ static void runDirector() {
 			std::string text;
 			std::getline(l, text);
 			world.executeInitScriptText("director", text);
+		} else if (cmd == "near") { // prints every object inside world X0 Y0 X1 Y1
+			float x0, y0, x1, y1;
+			if (l >> x0 >> y0 >> x1 >> y1)
+				for (auto& a : world.agents)
+					if (a && a->x + a->getWidth() >= x0 && a->x <= x1 && a->y + a->getHeight() >= y0 && a->y <= y1)
+						fmt::print("* Director near {} {} {} at {:.0f},{:.0f} {}x{} plane {} attr {} sprite {}\n", (int)a->family, (int)a->genus, (int)a->species, a->x, a->y,
+							a->getWidth(), a->getHeight(), a->getZOrder(), (int)a->attr, [&] { auto* sp = dynamic_cast<SpritePart*>(a->part(0)); return sp && sp->getSprite() ? sp->getSprite()->getName() : std::string("-"); }());
 		} else if (cmd == "find") { // prints where each object of a kind is
 			int f, g, sp;
 			if (l >> f >> g >> sp)
