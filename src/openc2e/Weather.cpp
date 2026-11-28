@@ -21,6 +21,7 @@
 #include "Weather.h"
 
 #include "Agent.h"
+#include "Bubble.h"
 #include "Camera.h"
 #include "Engine.h"
 #include "Map.h"
@@ -1354,6 +1355,17 @@ void shimmer(RenderTarget* window, RenderTarget* drawn, float zoom, int camx, in
 	const float t = ((float)world.worldtickcount + engine.tickFraction()) * 0.1f; // (seconds, at the world's pace)
 	const float mix = std::clamp(s_mix, 0.0f, 1.0f);
 	const int B = 32, ROW = 3, BAND = 110;
+	// speech bubbles stay steady (owner, 2026-11-27): the parts of rows they
+	// cover are left where they are
+	struct Box {
+		int x0, y0, x1, y1;
+	};
+	std::vector<Box> keep;
+	for (auto& a : world.agents)
+		if (a && !a->isDying() && dynamic_cast<Bubble*>(a.get())) {
+			int ax = (int)a->x - camx, ay = (int)a->y - camy;
+			keep.push_back({ax - 3, ay - 3, ax + (int)a->getWidth() + 3, ay + (int)a->getHeight() + 3});
+		}
 	for (int bx = 0; bx < zw; bx += B) {
 		int c = ((vx + bx + B / 2) % P->W + P->W) % P->W;
 		if (P->s0kind[c] != FLOOR)
@@ -1369,8 +1381,27 @@ void shimmer(RenderTarget* window, RenderTarget* drawn, float zoom, int camx, in
 			const int dx = (int)std::lround(wave * k);
 			if (dx == 0)
 				continue;
-			const int w = std::min(B, zw - bx);
-			window->blitRenderTargetPart(drawn, Rect2f((float)bx, (float)y, (float)w, (float)ROW), Rect2f((bx + dx) * zoom, y * zoom, w * zoom, ROW * zoom));
+			// the row's piece, less any part a bubble covers
+			std::vector<std::pair<int, int>> pieces = {{bx, std::min(bx + B, zw)}};
+			for (auto& k : keep) {
+				if (y + ROW <= k.y0 || y >= k.y1)
+					continue;
+				std::vector<std::pair<int, int>> next;
+				for (auto [a, b] : pieces) {
+					if (k.x1 <= a || k.x0 >= b) {
+						next.push_back({a, b});
+						continue;
+					}
+					if (k.x0 > a)
+						next.push_back({a, k.x0});
+					if (k.x1 < b)
+						next.push_back({k.x1, b});
+				}
+				pieces.swap(next);
+			}
+			for (auto [a, b] : pieces)
+				if (b > a)
+					window->blitRenderTargetPart(drawn, Rect2f((float)a, (float)y, (float)(b - a), (float)ROW), Rect2f((a + dx) * zoom, y * zoom, (b - a) * zoom, ROW * zoom));
 		}
 	}
 }
