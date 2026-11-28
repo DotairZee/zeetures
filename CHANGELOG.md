@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 817 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 819 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.49.2](#version-0492): 2 commits, 27 November 2026
 - [0.49.1](#version-0491): 8 commits, 27 November 2026
 - [0.49.0](#version-0490): 2 commits, 27 November 2026
 - [0.48.1](#version-0481): 2 commits, 27 November 2026
@@ -126,6 +127,26 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.49.2
+
+In snow, the cold white haze fills the valley under the long rope bridge down to its floor, from the big waterfall to the incubator's wall; beside the waterfall and around the rocks behind the small waterfall it used to stop high up.
+
+### 27 November 2026
+
+#### Version 0.49.2
+
+[`309bc439`](https://github.com/DotairZee/zeetures/commit/309bc4399a621f9ccfdb90f7ffab6c675893d26b)
+
+#### Weather: the snow haze fills the valley under the long rope bridge
+
+[`ddf54e4e`](https://github.com/DotairZee/zeetures/commit/ddf54e4e59273f4129227682be7193dc79c8e7c7)
+
+The snow's white haze now reaches down to the valley floor under Eden's
+long rope bridge all the way from the big waterfall to the incubator's
+wall: beside the waterfall and around the rocks behind the small waterfall
+it used to stop high up, where the room map marks the open valley as
+indoors or has thick floor lines across it.
 
 ## Version 0.49.1
 
