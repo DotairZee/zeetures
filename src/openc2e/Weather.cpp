@@ -117,8 +117,13 @@ void begin(int s, bool withHail, unsigned int length) {
 	fmt::print("* Weather: {}{} for {} ticks\n", NAMES[s], withHail ? " (with hail)" : "", length);
 }
 
-unsigned int spellLength() {
-	// half a day to a day and a half
+unsigned int spellLength(int s) {
+	// the fierce ones (a wind storm, a thunderstorm, torrential rain) blow
+	// over in a sixth of a day to half a day, about 5 to 15 minutes; the rest
+	// last half a day to a day and a half (owner, 2026-11-27: a wind storm
+	// lasting the whole 45-minute evening was "nothing but dust storms")
+	if (s == WINDSTORM || s == THUNDERSTORM || s == TORRENTIAL)
+		return (unsigned int)rand_uint32(TICKS_PER_DAY / 6, TICKS_PER_DAY / 2);
 	return (unsigned int)rand_uint32(TICKS_PER_DAY / 2, TICKS_PER_DAY * 3 / 2);
 }
 
@@ -665,6 +670,16 @@ float vnoise(float x, float y, uint32_t seed, int wrapX = 0) {
 	return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
 }
 
+// value noise that repeats exactly every `period` px along x, with lattice
+// cells of about `scale` px (stretched a little so a whole number of them
+// fit): the cloud deck wraps around the world, and noise whose cells did
+// not divide its length jumped where the ends met, a straight line drifting
+// across the sky (owner, 2026-11-27: "the edge of the clouds is a hard line")
+float pnoise(float px, float scale, float y, uint32_t seed, int period) {
+	int cells = std::max(1, (int)std::lround(period / scale));
+	return vnoise(px * cells / period, y, seed, cells);
+}
+
 // ---- clouds: flat, layered, torn decks (owner, 2026-11-27: not globular),
 // across the sky on top of everything, in ordered dither ----------------------
 
@@ -683,14 +698,14 @@ unsigned int s_frame = 0;
 // the deck's density at a point of the deck (its own x, wrapping), 0-1
 float deckField(float dx, float y, int period) {
 	// stretched along the horizontal, with a warp for torn edges and streaks
-	float warp = (vnoise(dx / 260.0f, y / 90.0f, 7, period / 260) - 0.5f) * 120.0f;
+	float warp = (pnoise(dx, 260.0f, y / 90.0f, 7, period) - 0.5f) * 120.0f;
 	float sx = dx + warp;
-	float n = 0.55f * vnoise(sx / 420.0f, y / 70.0f, 11, period / 420) + 0.28f * vnoise(sx / 170.0f, y / 30.0f, 12, period / 170) +
-			  0.17f * vnoise(sx / 60.0f, y / 13.0f, 13, period / 60);
+	float n = 0.55f * pnoise(sx, 420.0f, y / 70.0f, 11, period) + 0.28f * pnoise(sx, 170.0f, y / 30.0f, 12, period) +
+			  0.17f * pnoise(sx, 60.0f, y / 13.0f, 13, period);
 	// the deck from the top of the world down to a ragged underside about
 	// 330 px down: over the sky, above the tall things along the surface
 	// (lower, it hid the dead tree's trunk), thickest in its middle
-	float under = 330.0f + (vnoise(sx / 150.0f, 3.0f, 21, period / 150) - 0.5f) * 140.0f;
+	float under = 330.0f + (pnoise(sx, 150.0f, 3.0f, 21, period) - 0.5f) * 140.0f;
 	float v = std::clamp((y + 30.0f) / 80.0f, 0.0f, 1.0f) * std::clamp((under - y) / 100.0f, 0.0f, 1.0f);
 	return n * (0.45f + 0.55f * v) * std::clamp((under - y) / 40.0f, 0.0f, 1.0f);
 }
@@ -712,7 +727,7 @@ const TileField& fieldFor(int tile, int period) {
 		for (int x = 0; x < TILE; x++) {
 			float dx = (float)(tile * TILE + x);
 			tf.f[size_t(y) * TILE + x] = deckField(dx, (float)y, period);
-			tf.tex[size_t(y) * TILE + x] = (vnoise(dx / 9.0f, y / 4.0f, 31, period / 9) - 0.5f) * 14.0f;
+			tf.tex[size_t(y) * TILE + x] = (pnoise(dx, 9.0f, y / 4.0f, 31, period) - 0.5f) * 14.0f;
 		}
 	return s_fields[tile] = std::move(tf);
 }
@@ -942,7 +957,7 @@ unsigned int ticksLeft() {
 
 void setSpell(Spell s) {
 	bool h = s == THUNDERSTORM && world.season == 1 && rand_float(0, 1) < 0.35f;
-	begin(s, h, spellLength());
+	begin(s, h, spellLength(s));
 	s_next = -1;
 }
 
@@ -986,7 +1001,7 @@ void tick() {
 	if (s_until == 0) {
 		bool h;
 		int s = pickSpell(h);
-		begin(s, h, spellLength());
+		begin(s, h, spellLength(s));
 	}
 	const bool ending = world.worldtickcount >= s_until;
 	if (ending) {
@@ -994,7 +1009,7 @@ void tick() {
 		if (s_mix <= 0) {
 			bool h;
 			int s = pickSpell(h);
-			begin(s, h, spellLength());
+			begin(s, h, spellLength(s));
 		}
 	} else
 		s_mix = std::min(1.0f, s_mix + 1.0f / 400.0f);
