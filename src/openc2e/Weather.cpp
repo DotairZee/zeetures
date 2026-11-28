@@ -360,10 +360,20 @@ void build(Places& P, MetaRoom* m) {
 		}
 	}
 	std::vector<std::pair<int, int>> spire, mound, coneR, rimInner, openPoly, rockSpire, rockCone;
-	auto walkY = [](float x) {
-		// (its top edge as drawn: 12 px above the first trace, where the
-		// splashes showed under it; owner, 2026-11-27)
-		static const std::vector<std::pair<int, int>> w = {{7450, 690}, {7600, 678}, {7800, 650}, {7950, 616}, {8010, 603}};
+	// the curved walkway with the teeth: the floor line creatures and objects
+	// stand on (room 143's), where rain lands (owner, 2026-11-27: "make it
+	// so they hit where the plane on which creatures and objects exist is";
+	// a traced line stopped them short of it); the trace only if that room
+	// is missing
+	Room* walkRoom = nullptr;
+	if (P.eden)
+		for (auto& r : rooms)
+			if (r->id == 143 && r->x_left <= 7600 && r->x_right >= 8000)
+				walkRoom = r.get();
+	auto walkY = [&](float x) {
+		if (walkRoom)
+			return floorAt(*walkRoom, x + (float)P.mx) - (float)P.my;
+		static const std::vector<std::pair<int, int>> w = {{7450, 702}, {7600, 690}, {7800, 662}, {7950, 628}, {8010, 615}};
 		return through(w, x);
 	};
 	if (P.eden) {
