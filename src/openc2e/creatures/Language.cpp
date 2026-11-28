@@ -254,6 +254,7 @@ static float settling(oldCreature* c, const ::WordMemory& m) {
 				m.guess = (signed char)(word - 16);
 				m.sure = (unsigned char)std::min(255, v);
 				m.things = 3;
+				m.types = 3;
 			}
 		}
 	}
@@ -345,6 +346,19 @@ int heard(Agent* listener, oldCreature* c, int word, int amount, const Hearing& 
 						m.firstThing = unid, m.things = 1;
 					else if (unid != m.firstThing && m.things < 3)
 						m.things++;
+					// and the types: a baby keeps a kind's word as the name
+					// of the first type it heard it for; from childhood,
+					// heard for another type, it broadens to the kind
+					if (unsigned int type = typeOf(thing)) {
+						if (m.types == 0 || !m.firstType)
+							m.firstType = type, m.types = 1;
+						else if (type != m.firstType && m.types < 3 && broadensAt(stage)) {
+							m.types++;
+							if (watching() && m.types == 2)
+								fmt::print("* BROADENS \"{}\" to all {}: {}\n", listWord(word), listWord(16 + (m.guess >= 0 ? m.guess : word - 16)),
+									world.history->findMoniker(c->getGenome()));
+						}
+					}
 				}
 			}
 		}
@@ -475,13 +489,61 @@ bool tooNarrow(oldCreature* c, int word, Agent* thing) {
 		return false;
 	::WordMemory& m = memoryOf(c, word);
 	// (Rescorla 1980; underextension: a word heard for one thing is that thing's)
-	return m.things == 1 && m.firstThing != 0 && thing->getUNID() != m.firstThing;
+	if (m.things == 1 && m.firstThing != 0 && thing->getUNID() != m.firstThing)
+		return true;
+	// (and heard for one type of thing only, it is that type's name: "food"
+	// for the cheese, not for the carrot; Rosch et al. 1976)
+	const unsigned int type = typeOf(thing);
+	return m.types == 1 && m.firstType != 0 && type != 0 && type != m.firstType;
 }
 
 Naming nameFor(Agent* creature, oldCreature* c, int kind, bool mayCoin) {
 	Naming n;
 	if (!c || kind < 0 || kind > 39)
 		return n;
+	// a thing of this kind it is looking at: its type's own name, if it
+	// knows one ("mushroom" for the mushroom, still a fruit to it)
+	Agent* focus = c->getAttentionFocus().get();
+	if (focus && (focus == creature || kindOf(focus) != kind))
+		focus = nullptr;
+	// (or the thing the hand just asked it to look at, before its eyes are
+	// there: "look", with the hand at the tomato)
+	if (!focus)
+		if (Agent* asked = c->lookAt.get(); asked && !asked->isDying() && kindOf(asked) == kind)
+			focus = asked;
+	const unsigned int focusType = typeOf(focus);
+	if (focusType) {
+		if (std::string item = itemNameFor(c, focusType); !item.empty()) {
+			n.own = item;
+			n.type = focusType;
+			return n;
+		}
+		// one it speaks of a lot and has no name for: in time it makes one
+		// up (as for kinds, below)
+		int& talked = c->lang.talkedOf[focusType];
+		talked = std::min(talked + 1, 1000);
+		if (mayCoin && stageOf(c) >= 2 && talked >= 8 && c->itemNames.size() < 40 && rand_float(0, 1) < 0.15f) {
+			auto sound = [&]() {
+				int w = (int)rand_size_t(0, engine.wordlist.size() ? engine.wordlist.size() - 1 : 0);
+				std::string s = nativeWord(creature, listWord(w).empty() ? "ba" : listWord(w));
+				size_t dash = s.find('-');
+				return dash == std::string::npos ? s : s.substr(0, dash);
+			};
+			std::string word = sound() + sound();
+			bool taken = word.size() < 3 || ownNameMeans(c, word) >= 0 || itemNameMeans(c, word) != 0 || c->itemNames.count(word);
+			for (size_t w = 0; w < engine.wordlist.size() && !taken; w++)
+				taken = listWord((int)w) == word;
+			if (!taken) {
+				c->itemNames[word][focusType] = 150;
+				n.own = word;
+				n.type = focusType;
+				n.coined = true;
+				if (watching())
+					fmt::print("* COINS \"{}\" for one kind of {}: {}\n", word, listWord(16 + kind), world.history->findMoniker(c->getGenome()));
+				return n;
+			}
+		}
+	}
 	if (kind >= 1 && kind <= 35)
 		if (std::string own = ownNameFor(c, kind); !own.empty()) {
 			n.own = own;
@@ -491,7 +553,7 @@ Naming nameFor(Agent* creature, oldCreature* c, int kind, bool mayCoin) {
 	// words it is ready to say (CreatureSpeech.h, canSay)
 	int best = -1, sure = -1;
 	for (int w = 16; w < 56; w++) {
-		if (!canSay(c, w))
+		if (!canSay(c, w) || (focus && tooNarrow(c, w, focus)))
 			continue;
 		int means = meaningOf(c, w);
 		::WordMemory& m = memoryOf(c, w);
@@ -631,6 +693,128 @@ bool searchingForWord(oldCreature* c) {
 	// (Burke et al. 1991: the old keep their words but more often reach for one)
 	int stage = stageOf(c);
 	return (stage == 5 && rand_float(0, 1) < 0.04f) || (stage >= 6 && rand_float(0, 1) < 0.1f);
+}
+
+// ---- names for particular things ----
+
+unsigned int typeOf(Agent* a) {
+	if (!a || a->isDying() || (a->family != 2 && a->family != 3) || a->category < 2 || a->category > 35)
+		return 0;
+	return typeKey(a->family, a->genus, a->species);
+}
+
+int kindOfType(unsigned int type) {
+	if (!type)
+		return -1;
+	return world.findCategory((unsigned char)(type >> 24), (unsigned char)((type >> 16) & 0xff), (unsigned short)(type & 0xffff));
+}
+
+unsigned int typeKey(int family, int genus, int species) {
+	return ((unsigned int)(family & 0xff) << 24) | ((unsigned int)(genus & 0xff) << 16) | (unsigned int)(species & 0xffff);
+}
+
+float itemNamePace(int stage) {
+	// the young learn the names of things fastest (Rosch et al. 1976: the
+	// names of everyday things come first), on top of each stage's own pace
+	static const float pace[7] = {0.75f * 1.5f, 1.25f * 1.3f, 1.1f, 1.0f, 0.9f, 0.7f, 0.4f};
+	return pace[std::clamp(stage, 0, 6)];
+}
+
+bool broadensAt(int stage) {
+	return stage >= 1;
+}
+
+void strengthenItemName(ItemNames& names, const std::string& word, unsigned int type, int more, int fainter, size_t most) {
+	int& v = names[word][type];
+	v = std::min(255, v + more);
+	// one name for a thing, one thing for a name (Markman 1990)
+	for (auto& [w, for_] : names)
+		for (auto& [t, other] : for_)
+			if ((w == word) != (t == type))
+				other = std::max(0, other - fainter);
+	if (names.size() > most) {
+		auto least = names.end();
+		int fewest = 1 << 30;
+		for (auto it = names.begin(); it != names.end(); ++it) {
+			int best = 0;
+			for (auto& [t, n] : it->second)
+				best = std::max(best, n);
+			if (it->first != word && best < fewest)
+				fewest = best, least = it;
+		}
+		if (least != names.end())
+			names.erase(least);
+	}
+}
+
+unsigned int itemNameIn(const ItemNames& names, const std::string& word, int known) {
+	auto it = names.find(word);
+	if (it == names.end())
+		return 0;
+	unsigned int best = 0;
+	int most = known - 1;
+	for (auto& [type, v] : it->second)
+		if (v > most)
+			most = v, best = type;
+	return best;
+}
+
+unsigned int itemNameMeans(oldCreature* c, const std::string& word) {
+	return c ? itemNameIn(c->itemNames, word, WORD_KNOWN) : 0;
+}
+
+std::string itemNameFor(oldCreature* c, unsigned int type) {
+	std::string best;
+	int most = WORD_KNOWN - 1;
+	if (c && type)
+		for (auto& [word, for_] : c->itemNames)
+			if (auto it = for_.find(type); it != for_.end() && it->second > most && itemNameMeans(c, word) == type)
+				most = it->second, best = word;
+	return best;
+}
+
+int itemNamesKnown(oldCreature* c) {
+	int n = 0;
+	if (c)
+		for (auto& [word, for_] : c->itemNames)
+			n += itemNameMeans(c, word) != 0;
+	return n;
+}
+
+void hearItemName(oldCreature* c, const std::string& word, unsigned int type, int amount) {
+	const size_t mostNames = 40;
+	if (!c || word.empty() || !type || !c->isAlive() || c->isAsleep())
+		return;
+	const int stage = stageOf(c);
+	const bool knew = itemNameMeans(c, word) == type;
+	const int more = (int)std::lround(amount * itemNamePace(stage));
+	// what the word meant before, and the thing's other names, grow fainter
+	// (the young keep to one name, as with names of their own)
+	strengthenItemName(c->itemNames, word, type, more, stage <= 2 ? more : more / 2, mostNames);
+	if (!knew && itemNameMeans(c, word) == type && watching())
+		fmt::print("* LEARNS \"{}\" for one kind of {}: {}\n", word, listWord(16 + std::max(0, kindOfType(type))), world.history->findMoniker(c->getGenome()));
+}
+
+std::string callsThing(oldCreature* c, Agent* thing, bool* itemName) {
+	if (itemName)
+		*itemName = false;
+	if (!c || !thing)
+		return {};
+	if (std::string item = itemNameFor(c, typeOf(thing)); !item.empty()) {
+		if (itemName)
+			*itemName = true;
+		return item;
+	}
+	const int kind = kindOf(thing);
+	if (kind < 0)
+		return {};
+	if (kind >= 1 && kind <= 35)
+		if (std::string own = ownNameFor(c, kind); !own.empty())
+			return own;
+	for (int w = 16; w < 56; w++)
+		if (knowsWord(c, w) && meaningOf(c, w) == kind && !tooNarrow(c, w, thing))
+			return listWord(w);
+	return {};
 }
 
 } // namespace Language

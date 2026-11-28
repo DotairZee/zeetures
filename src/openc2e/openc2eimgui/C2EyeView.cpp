@@ -19,6 +19,7 @@
 #include "Room.h"
 #include "common/Image.h"
 #include "creatures/CreatureSpeech.h" // readPlayerSetting
+#include "creatures/Language.h"
 #include "fileformats/genomeFile.h"
 
 #include <algorithm>
@@ -196,6 +197,15 @@ std::string DescribeCreatureActivity(Agent* self) {
 		s = self->carrying ? fmt::format("putting down {}", describe(self->carrying.get())) : fmt::format("looking at {}", describe(focus));
 	else
 		s = fmt::format("{} {}", actionWords(cr->getDecisionId()), describe(focus));
+	// (experimental: its own name for this kind of thing, if it has one:
+	// Language.h, names for particular things)
+	if (Language::experimental())
+		if (auto* oc = dynamic_cast<oldCreature*>(cr)) {
+			bool item = false;
+			std::string calls = Language::callsThing(oc, focus, &item);
+			if (item)
+				s += fmt::format(" (it calls it \"{}\")", calls);
+		}
 	if (!s.empty())
 		s[0] = (char)toupper((unsigned char)s[0]);
 	return s;

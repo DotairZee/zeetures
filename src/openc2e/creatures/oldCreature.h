@@ -168,6 +168,12 @@ class oldCreature : public Creature {
 	// of each category (0-255, known at WORD_KNOWN); learned from the hand
 	// (answerHand) and from other creatures (hearOwnNames), saved with it
 	std::map<std::string, std::map<int, int>> ownNames;
+	// and, under the experimental language system, names for particular
+	// types of thing (Language.h, "names for particular things": "cheese",
+	// "mushroom"), by word: how familiar it is as the name of each type (the
+	// type as Language::typeOf gives it), 0-255, known at WORD_KNOWN
+	std::map<std::string, std::map<unsigned int, int>> itemNames;
+	unsigned int namingType = 0; // the type the hand was last teaching a name for, 0 none
 	std::string namingWord; // the last name the hand was teaching it
 	int namingCategory = -1; // and for what
 	unsigned int namingTick = 0, touchedTick = 0; // when, and when the hand last touched it
@@ -187,6 +193,7 @@ class oldCreature : public Creature {
 	// the very thing the hand's "look" turned it to (of calledCategory; the
 	// call's time is calledTick), or none
 	AgentRef lookAt;
+	AgentRef calledThing; // the thing the hand last asked it to look at ("look"), to name it in its reply
 	int replyWord = -1; // what it will say back (-1: something of its own)
 	// or the hand asked it a question it knows the word for: 1 "what" (it
 	// says what it is doing), 2 "why" (the need behind it); or 3, told to

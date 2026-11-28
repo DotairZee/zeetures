@@ -71,6 +71,22 @@ float weightFor(const Weighing& w);
 // returns the new guess and sureness
 void updateGuess(int& guess, int& sure, int kindInView);
 
+// names for particular things (below): a type's number from its classifier
+unsigned int typeKey(int family, int genus, int species);
+// how fast a name for a particular thing is learned at a life stage (the
+// stage's own pace, the young faster still)
+float itemNamePace(int stage);
+// whether a kind's word heard for another type of thing broadens to the
+// kind at this life stage (not a baby's)
+bool broadensAt(int stage);
+using ItemNames = std::map<std::string, std::map<unsigned int, int>>;
+// the word strengthened as the name of the type by `more`; the word's other
+// types and the type's other names fade by `fainter`; past `most` names the
+// least familiar other one is forgotten
+void strengthenItemName(ItemNames& names, const std::string& word, unsigned int type, int more, int fainter, size_t most);
+// the type a word names among them (at least `known` familiar), 0 none
+unsigned int itemNameIn(const ItemNames& names, const std::string& word, int known);
+
 // ---- the creature's side ----
 struct Hearing {
 	Agent* speaker = nullptr;
@@ -101,6 +117,7 @@ struct Naming {
 	int word = -1;
 	std::string own;
 	bool unsure = false, borrowed = false, coined = false;
+	unsigned int type = 0; // own is a name for this type of thing (0: for the kind)
 };
 Naming nameFor(Agent* creature, oldCreature* c, int kind, bool mayCoin);
 // two creatures agreed on a name: its other names for the kind fade
@@ -110,6 +127,36 @@ void heardInOrder(oldCreature* c, const std::vector<int>& words);
 // the word run together with its usual neighbour ("eatfood"), and which
 // word that is; empty when not
 std::string runTogether(oldCreature* c, int word, int& partner);
+// ---- names for particular things (owner, 2026-11-27: "model 2") ----
+// The game's names are for its 40 kinds of thing (food, fruit, toy); a
+// creature can also learn a name for one type of thing within a kind
+// ("cheese", "mushroom"): taught by the hand (a word not in the game's list,
+// said while it looks at the thing or the hand shows it), heard from other
+// creatures, or made up for a type it often speaks of. It still knows the
+// thing is of its kind. The young learn these first and fastest; the kind's
+// own word, heard for one type, names only that type until heard for
+// another, which a baby does not do (Rosch et al. 1976; Markman 1990).
+// It calls a thing it looks at by its type's name when it knows one, else
+// by the kind's word. Only under the experimental system.
+//
+// a type of thing: its classifier as one number (family << 24, genus << 16,
+// species); 0 for none (creatures, the hand, scenery)
+unsigned int typeOf(Agent* a);
+// the kind (the game's category) of a type of thing, -1 none
+int kindOfType(unsigned int type);
+// a name for a type of thing heard or said
+void hearItemName(oldCreature* c, const std::string& word, unsigned int type, int amount);
+// the type it knows a word to name, 0 none
+unsigned int itemNameMeans(oldCreature* c, const std::string& word);
+// its name for a type of thing (known), empty if none
+std::string itemNameFor(oldCreature* c, unsigned int type);
+// how many names for things it knows
+int itemNamesKnown(oldCreature* c);
+// what it calls a thing, as the Kits show it ("mushroom"), empty if nothing
+// of its own (it does not know the kind's word either); itemName: whether
+// that is a name for the thing's type
+std::string callsThing(oldCreature* c, Agent* thing, bool* itemName = nullptr);
+
 // a baby's babble, by how much it has been spoken to
 std::string babble(Agent* creature, oldCreature* c);
 // the old: a pause before a word, now and then

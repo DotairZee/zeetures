@@ -273,6 +273,7 @@ void riseAsFrankenstein(std::shared_ptr<Agent> a, c2Creature* c, const std::stri
 	// a mind and a tongue to learn afresh
 	std::fill(c->vocab.begin(), c->vocab.end(), 0);
 	c->ownNames.clear();
+	c->itemNames.clear();
 	c->lang = LanguageMemory{};
 	c->bonds.clear();
 	markFrankenstein(a, c, mon, was);

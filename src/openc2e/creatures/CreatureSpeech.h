@@ -103,6 +103,7 @@ struct Utterance {
 	std::string spoken; // what the voice speaks (the words themselves)
 	std::vector<int> learned; // the learned words in it, for listeners
 	std::vector<std::pair<std::string, int>> own; // and the creature's own names for things (ownNames)
+	std::vector<std::pair<std::string, unsigned int>> items; // and its names for particular things (itemNames), with their type
 };
 Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c);
 // One word of the game's word list (C2's SAY#): shown as the creature knows

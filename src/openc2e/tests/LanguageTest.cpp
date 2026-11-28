@@ -97,3 +97,55 @@ TEST(Language, GuessesAreKeptOrChanged) {
 		updateGuess(guess, sure, 4);
 	EXPECT_EQ(sure, 255);
 }
+
+// Names for particular things (owner, 2026-11-27: "model 2"; Rosch et al.
+// 1976, Markman 1990)
+
+TEST(Language, TypesAreTheirClassifier) {
+	EXPECT_EQ(typeKey(2, 25, 16), (2u << 24) | (25u << 16) | 16u); // the mushroom
+	EXPECT_NE(typeKey(2, 25, 16), typeKey(2, 25, 17));
+	EXPECT_NE(typeKey(2, 6, 16), typeKey(2, 25, 16));
+}
+
+TEST(Language, TheYoungLearnNamesOfThingsFastest) {
+	// a baby and a child learn a thing's name faster than an adult, and a
+	// baby faster than it learns anything else
+	EXPECT_GT(itemNamePace(0), itemNamePace(4));
+	EXPECT_GT(itemNamePace(1), itemNamePace(0));
+	EXPECT_GT(itemNamePace(1), itemNamePace(4));
+	EXPECT_GT(itemNamePace(4), itemNamePace(6));
+	EXPECT_FLOAT_EQ(itemNamePace(-3), itemNamePace(0));
+}
+
+TEST(Language, KindWordsBroadenFromChildhood) {
+	EXPECT_FALSE(broadensAt(0)); // a baby keeps "food" as the cheese's name
+	EXPECT_TRUE(broadensAt(1));
+	EXPECT_TRUE(broadensAt(5));
+}
+
+TEST(Language, OneNameForAThingOneThingForAName) {
+	ItemNames names;
+	const unsigned int cheese = typeKey(2, 6, 2), mushroom = typeKey(2, 25, 16);
+	strengthenItemName(names, "cheese", cheese, 100, 100, 40);
+	EXPECT_EQ(itemNameIn(names, "cheese", 128), 0u); // not known yet
+	strengthenItemName(names, "cheese", cheese, 100, 100, 40);
+	EXPECT_EQ(itemNameIn(names, "cheese", 128), cheese);
+	// the same word heard for the mushroom: its hold on the cheese weakens
+	strengthenItemName(names, "cheese", mushroom, 60, 60, 40);
+	EXPECT_EQ(names["cheese"][cheese], 140);
+	EXPECT_EQ(itemNameIn(names, "cheese", 128), cheese);
+	// another name for the cheese: "cheese" fades as its name
+	strengthenItemName(names, "fromage", cheese, 150, 150, 40);
+	EXPECT_EQ(itemNameIn(names, "cheese", 128), 0u);
+	EXPECT_EQ(itemNameIn(names, "fromage", 128), cheese);
+}
+
+TEST(Language, ItemNamesForgetTheLeastFamiliarPastTheMost) {
+	ItemNames names;
+	strengthenItemName(names, "a", typeKey(2, 6, 1), 200, 0, 2);
+	strengthenItemName(names, "b", typeKey(2, 6, 2), 50, 0, 2);
+	strengthenItemName(names, "c", typeKey(2, 6, 3), 150, 0, 2);
+	EXPECT_EQ(names.size(), 2u);
+	EXPECT_EQ(names.count("b"), 0u); // the least familiar went
+	EXPECT_EQ(names.count("c"), 1u); // never the one just heard
+}

@@ -967,8 +967,27 @@ void WordsPage(oldCreature* c) {
 		}
 	if (!any)
 		ImGui::TextDisabled("None yet. Tickle it and type a name for your hand, or point the hand at a thing (or hold it) and type a name for that.");
-	if (Language::experimental())
+	// (experimental: names for particular things, as "mushroom", a kind of
+	// fruit: Language.h; owner, 2026-11-27)
+	if (Language::experimental()) {
+		ImGui::Spacing();
+		ImGui::TextUnformatted("Names for particular things");
+		bool anyItem = false;
+		for (auto& [name, for_] : c->itemNames)
+			for (auto& [type, v] : for_) {
+				if (v < 24)
+					continue;
+				anyItem = true;
+				int kind = Language::kindOfType(type);
+				std::string thing = kind >= 0 && (size_t)(16 + kind) < engine.wordlist.size() ? word(16 + kind) : std::string();
+				bool knows = Language::itemNameMeans(c, name) == type;
+				ImGui::BulletText("%s", fmt::format("\"{}\", a kind of {}{}", name, thing.empty() ? "thing" : thing,
+											 knows ? "" : fmt::format(" (learning, {:.0f}%)", std::min(99.0f, 100.0f * v / WORD_KNOWN))).c_str());
+			}
+		if (!anyItem)
+			ImGui::TextDisabled("None yet. Point the hand at a thing (or hold it) while it looks, and type a name for it, such as \"cheese\": it learns that name for that kind of thing, and still knows what it is. The young learn these first.");
 		LanguagePart(c, word);
+	}
 	ImGui::PopTextWrapPos();
 }
 

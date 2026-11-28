@@ -743,15 +743,24 @@ static void writeCreatureRecord(std::ostream& out, Agent* a, oldCreature* c, con
 			for (auto& [category, v] : for_)
 				if (v > 0)
 					out << "ownname " << category << " " << v << " " << escapeLine(word) << "\n";
+		// names for particular things: type, familiarity, the word
+		for (auto& [word, for_] : c->itemNames)
+			for (auto& [type, v] : for_)
+				if (v > 0)
+					out << "itemname " << type << " " << v << " " << escapeLine(word) << "\n";
 		// the experimental language system's memory of each word
 		// (Language.h): word, stability, last heard, best, guess,
-		// sureness, first thing, things, uses, alone, heard since sleep
+		// sureness, first thing, things, uses, alone, heard since sleep, first
+		// type, types (the last two since 2026-11-27)
 		for (size_t i = 0; i < c->lang.words.size(); i++) {
 			const WordMemory& m = c->lang.words[i];
 			if (m.set && (m.lastHeard || m.best || m.uses || m.alone))
-				out << fmt::format("langword {} {:.2f} {} {} {} {} {} {} {} {} {}\n", i, m.stability, m.lastHeard, (int)m.best, (int)m.guess, (int)m.sure,
-					m.firstThing, (int)m.things, (int)m.uses, (int)m.alone, m.sinceSleep ? 1 : 0);
+				out << fmt::format("langword {} {:.2f} {} {} {} {} {} {} {} {} {} {} {}\n", i, m.stability, m.lastHeard, (int)m.best, (int)m.guess, (int)m.sure,
+					m.firstThing, (int)m.things, (int)m.uses, (int)m.alone, m.sinceSleep ? 1 : 0, m.firstType, (int)m.types);
 		}
+		for (auto& [type, n] : c->lang.talkedOf)
+			if (n > 0)
+				out << "langtalked " << type << " " << n << "\n";
 		for (auto& [p, n] : c->lang.pairs)
 			out << "langpair " << p.first << " " << p.second << " " << n << "\n";
 		if (c->lang.lastFade || c->lang.wasAsleep)
@@ -1225,6 +1234,23 @@ static Agent* buildCreature(std::shared_ptr<genomeFile> genome, const SavedCreat
 			m.uses = (unsigned char)std::clamp(uses, 0, 255);
 			m.alone = (unsigned char)std::clamp(alone, 0, 255);
 			m.sinceSleep = since != 0;
+			unsigned int firstType = 0;
+			int types = 0;
+			if (in >> firstType >> types) { // (saves before 2026-11-27 have neither)
+				m.firstType = firstType;
+				m.types = (unsigned char)std::clamp(types, 0, 3);
+			}
+		} else if (key == "itemname") {
+			unsigned int type = 0;
+			int v = 0;
+			std::string word;
+			if (in >> type >> v >> word && type && !word.empty())
+				c->itemNames[unescapeLine(word)][type] = std::clamp(v, 0, 255);
+		} else if (key == "langtalked") {
+			unsigned int type = 0;
+			int n = 0;
+			if (in >> type >> n && type && n > 0)
+				c->lang.talkedOf[type] = std::min(n, 1000);
 		} else if (key == "langpair") {
 			int a = -1, b = -1, n = 0;
 			if (in >> a >> b >> n && a >= 0 && b >= 0 && a < 1000 && b < 1000 && n > 0)
@@ -1484,7 +1510,7 @@ static void readCreatureLine(SavedCreature* c, const std::string& key, std::istr
 		std::string rest;
 		std::getline(l, rest);
 		c->bonds.push_back(rest);
-	} else if (key == "langword" || key == "langpair" || key == "langstate") {
+	} else if (key == "langword" || key == "langpair" || key == "langstate" || key == "itemname" || key == "langtalked") {
 		std::string rest;
 		std::getline(l, rest);
 		c->lang.push_back(key + rest);

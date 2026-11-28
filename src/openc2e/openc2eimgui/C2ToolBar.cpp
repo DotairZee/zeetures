@@ -35,6 +35,7 @@
 #include "C2ScrollBars.h"
 #include "creatures/CreatureAgent.h"
 #include "creatures/Creature.h"
+#include "creatures/oldCreature.h"
 #include "creatures/SkeletalCreature.h"
 #include "Camera.h"
 #include "Engine.h"
@@ -145,8 +146,21 @@ static void DrawObjectToolTip() {
 		text = given.empty() ? kind : fmt::format("{} ({})", given, kind);
 		if (!ca->getCreature()->isAlive())
 			text += ", dead";
-	} else if (a->category >= 0)
+	} else if (a->category >= 0) {
 		text = KitCategoryNoun(a->category);
+		// (experimental: what the selected creature calls this very kind of
+		// thing, if it has a name for it: "Fruit (Norn 0003 calls it
+		// "mushroom")"; Language.h, names for particular things)
+		Agent* selA = world.selectedcreature.get();
+		if (Language::experimental() && selA)
+			if (auto* sel = dynamic_cast<CreatureAgent*>(selA))
+				if (auto* oc = dynamic_cast<oldCreature*>(sel->getCreature())) {
+					bool item = false;
+					std::string calls = Language::callsThing(oc, a, &item);
+					if (item)
+						text += fmt::format(" ({} calls it \"{}\")", KitCreatureName(selA), calls);
+				}
+	}
 	if (!text.empty())
 		ImGui::SetTooltip("%s", text.c_str());
 }

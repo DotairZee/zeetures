@@ -851,7 +851,10 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 				std::string shown, spoken;
 				if (w > 16 && w < 56) {
 					Language::Naming n = Language::nameFor(creature, c, w - 16, true);
-					if (!n.own.empty()) {
+					if (!n.own.empty() && n.type) {
+						shown = spoken = n.own; // (a name for the very thing it is looking at)
+						u.items.push_back({n.own, n.type});
+					} else if (!n.own.empty()) {
 						shown = spoken = n.own;
 						if (n.unsure)
 							shown += "?";
@@ -1079,7 +1082,14 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 	if (firstWords) {
 		// (or its try at it, nearly known: "han-nah-do")
 		const int key = way.words[way.key];
-		if (!knowsWord(c, key) && !(wordAttempts() && key >= 0 && (size_t)key < c->vocab.size() && c->vocab[key] >= ATTEMPT_START))
+		// (experimental: a name it knows for the very thing it is looking at
+		// will do: babies learn the names of things first; Language.h)
+		bool itemName = false;
+		if (Language::experimental() && key > 16 && key < 56) {
+			Language::Naming n = Language::nameFor(creature, c, key - 16, false);
+			itemName = !n.own.empty() && n.type;
+		}
+		if (!itemName && !knowsWord(c, key) && !(wordAttempts() && key >= 0 && (size_t)key < c->vocab.size() && c->vocab[key] >= ATTEMPT_START))
 			return babySounds();
 		say({way.words[way.key]}, end);
 		return u;
@@ -1274,23 +1284,34 @@ void answerHand(const std::string& text) {
 		for (auto& w : tokens)
 			if (int own = ownNameMeans(l.c, w); own >= 0)
 				s.noun = own;
+			else if (unsigned int type = Language::experimental() ? Language::itemNameMeans(l.c, w) : 0; type && Language::kindOfType(type) >= 0)
+				s.noun = Language::kindOfType(type); // (a name for one type of thing: still a thing of its kind)
 		if (!naming.empty()) {
 			const unsigned int now = world.tickcount;
 			auto lately = [&](unsigned int then, unsigned int within) { return then != 0 && now >= then && now - then < within; };
-			if (ownNameMeans(l.c, naming) >= 0 && shownCategory < 0 && !lately(l.c->touchedTick, 100))
+			// (experimental: the thing meant, when it is one thing, so the
+			// name is that type of thing's: Language.h, "names for
+			// particular things")
+			unsigned int namedType = 0;
+			if ((ownNameMeans(l.c, naming) >= 0 || (Language::experimental() && Language::itemNameMeans(l.c, naming))) && shownCategory < 0 &&
+				!lately(l.c->touchedTick, 100))
 				named = -1; // (known, and nothing new shown: simply understood)
 			else if (l.c->namingWord == naming && lately(l.c->namingTick, 150))
-				named = l.c->namingCategory; // the same again
+				named = l.c->namingCategory, namedType = l.c->namingType; // the same again
 			else if (lately(l.c->touchedTick, 100))
 				named = 1; // just touched by the hand: the hand
 			else if (shownCategory >= 0)
-				named = shownCategory;
+				named = shownCategory, namedType = Language::typeOf(shown);
 			else if (Agent* it = l.c->getAttentionFocus().get(); it && it->category >= 2 && it->category <= 35 && std::hypot(centreX(it) - hx, centreY(it) - hy) < 90)
-				named = it->category; // what it is looking at, the hand beside it
+				named = it->category, namedType = Language::typeOf(it); // what it is looking at, the hand beside it
 			else
 				named = 1;
 			if (named >= 0) {
-				hearOwnName(l.c, naming, named, HEAR_HAND);
+				if (Language::experimental() && namedType)
+					Language::hearItemName(l.c, naming, namedType, HEAR_HAND);
+				else
+					hearOwnName(l.c, naming, named, HEAR_HAND);
+				l.c->namingType = Language::experimental() ? namedType : 0;
 				l.c->namingWord = naming;
 				l.c->namingCategory = named;
 				l.c->namingTick = std::max(1u, now);
@@ -1358,6 +1379,7 @@ void answerHand(const std::string& text) {
 		l.c->callTo(lookAt ? lookAt->category : s.noun >= 0 ? s.noun : 1); // the thing, or the hand
 		if (lookAt)
 			l.c->lookAt = AgentRef(lookAt);
+		l.c->calledThing = AgentRef(lookAt);
 		if (look && watching())
 			fmt::print("* LOOK unid {}: at {}\n", l.a->getUNID(), lookAt ? fmt::format("{} {} {} (category {})", (int)lookAt->family, (int)lookAt->genus, lookAt->species, lookAt->category) : s.noun >= 0 ? fmt::format("category {}, none near the hand", s.noun) : std::string("the hand"));
 		// the nearest two (or those named) say it back
@@ -1372,7 +1394,7 @@ void answerHand(const std::string& text) {
 			l.c->replyName = naming;
 			if (naming.empty())
 				for (auto& w : tokens)
-					if (ownNameMeans(l.c, w) >= 0)
+					if (ownNameMeans(l.c, w) >= 0 || (Language::experimental() && Language::itemNameMeans(l.c, w)))
 						l.c->replyName = w;
 			l.c->replyAt = world.tickcount + 8 + 9 * rank + rand_int32(0, 5);
 		}
@@ -1401,8 +1423,15 @@ void tickReply(Agent* creature, oldCreature* c) {
 			u.spoken = "";
 		} else if (q == 1)
 			u = phraseFor("doing", creature, c);
-		else if (q == 3)
-			u = phraseFor(fmt::format("name:{}", c->calledCategory), creature, c); // (its noun)
+		else if (q == 3) {
+			// (its noun; experimental: the very thing asked about, so it can
+			// give that thing's own name, before its eyes are on it)
+			AgentRef was = c->lookAt;
+			if (Language::experimental() && c->calledThing && !c->calledThing->isDying())
+				c->lookAt = c->calledThing;
+			u = phraseFor(fmt::format("name:{}", c->calledCategory), creature, c);
+			c->lookAt = was;
+		}
 		else {
 			// the need its last choice was most for (the mind's view of
 			// that choice: what it expected each need to ease); a choice
@@ -1438,9 +1467,13 @@ void tickReply(Agent* creature, oldCreature* c) {
 		Utterance u;
 		u.spoken = c->replyName;
 		int category = ownNameMeans(c, c->replyName);
-		bool knows = (stage > 0 || babyWords()) && category >= 0;
+		// (or a name for a particular thing: Language.h)
+		unsigned int type = category < 0 && Language::experimental() ? Language::itemNameMeans(c, c->replyName) : 0;
+		bool knows = (stage > 0 || babyWords()) && (category >= 0 || type);
 		u.shown = knows ? u.spoken : nativeWord(creature, u.spoken);
-		if (knows)
+		if (knows && type)
+			u.items.push_back({c->replyName, type});
+		else if (knows)
 			u.own.push_back({c->replyName, category});
 		c->replyName.clear();
 		creatureSays(creature, stage, u);
@@ -1503,6 +1536,8 @@ void creatureSays(Agent* creature, int stage, const Utterance& said) {
 		// a name it tries out, it comes to know by using it
 		for (auto& [word, category] : u.own)
 			hearOwnName(self, word, category, 12);
+		for (auto& [word, type] : u.items)
+			Language::hearItemName(self, word, type, 12);
 	}
 	// one bubble at a time for each speaker (none with View > Speech
 	// Bubbles off, or while it rides out of sight)
@@ -1535,6 +1570,22 @@ void creatureSays(Agent* creature, int stage, const Utterance& said) {
 					Language::agreed(self, word, category);
 				}
 			}
+		}
+	}
+	// and its names for particular things: a listener learns one when it is
+	// looking at a thing of that type too (the speaker names what it looks at)
+	if (!u.items.empty() && Language::experimental()) {
+		std::string from = world.history->findMoniker(creatureOf(creature)->getGenome());
+		float sx = centreX(creature), sy = centreY(creature);
+		for (auto& a : world.agents) {
+			oldCreature* c = a && a.get() != creature && !a->isDying() ? creatureOf(a.get()) : nullptr;
+			if (!c || !inEarshot(a.get(), sx, sy))
+				continue;
+			const unsigned int sees = Language::typeOf(c->getAttentionFocus().get());
+			int amount = HEAR_CREATURE * (!from.empty() && closeKin(from, world.history->findMoniker(c->getGenome())) ? 2 : 1);
+			for (auto& [word, type] : u.items)
+				if (sees == type || Language::itemNameMeans(c, word) == type)
+					Language::hearItemName(c, word, type, amount);
 		}
 	}
 	recordSpeech(creature, u.shown);

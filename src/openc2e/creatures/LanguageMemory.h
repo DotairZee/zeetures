@@ -22,6 +22,14 @@ struct WordMemory {
 	// different ones (up to 3): heard for one thing only, it means only that
 	unsigned int firstThing = 0;
 	unsigned char things = 0;
+	// and the types of thing (Language::typeOf): the first, and how many
+	// (up to 3). A name of the game's (a kind, "food") heard for one type
+	// only means that type ("food": the cheese) until heard for another, which
+	// a baby does not do: from childhood it broadens to the kind (Rosch et al.
+	// 1976: the young learn the names of things before the names of kinds).
+	// 0: not known (saves before 2026-11-27; the rule above then not used)
+	unsigned int firstType = 0;
+	unsigned char types = 0;
 	unsigned char uses = 0; // times it has said the word itself (up to 255)
 	unsigned char alone = 0; // times heard on its own (not run into a neighbour)
 	bool sinceSleep = false; // heard since it last slept
@@ -29,6 +37,9 @@ struct WordMemory {
 };
 
 struct LanguageMemory {
+	// how often it has spoken of each type of thing while looking at it
+	// (Language::typeOf; to make up a name for one it has no name for)
+	std::map<unsigned int, int> talkedOf;
 	std::vector<WordMemory> words; // by word-list number, as vocab
 	// pairs of words heard one after the other (the young run them together)
 	std::map<std::pair<int, int>, int> pairs;
