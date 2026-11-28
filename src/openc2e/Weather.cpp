@@ -162,6 +162,7 @@ struct Places {
 	Bits precip; // where rain, hail and snow can be
 	Bits wind; // where the wind blows
 	std::vector<int> hazeBottom; // per column: the snow haze down to here
+	std::vector<int> hazeFade; // per column: where it starts fading out (dithered) toward hazeBottom
 	std::vector<uint8_t> lum; // the background's brightness (for the planks test)
 };
 std::map<std::string, Places> s_places;
@@ -359,7 +360,9 @@ void build(Places& P, MetaRoom* m) {
 	}
 	std::vector<std::pair<int, int>> spire, mound, coneR, rimInner, openPoly, rockSpire, rockCone;
 	auto walkY = [](float x) {
-		static const std::vector<std::pair<int, int>> w = {{7450, 702}, {7600, 690}, {7800, 662}, {7950, 628}, {8010, 615}};
+		// (its top edge as drawn: 12 px above the first trace, where the
+		// splashes showed under it; owner, 2026-11-27)
+		static const std::vector<std::pair<int, int>> w = {{7450, 690}, {7600, 678}, {7800, 650}, {7950, 616}, {8010, 603}};
 		return through(w, x);
 	};
 	if (P.eden) {
@@ -469,7 +472,7 @@ void build(Places& P, MetaRoom* m) {
 				bool rock = !open && (pointIn(rockSpire, (float)x, (float)y) || pointIn(rockCone, (float)x, (float)y));
 				// (the walkway catches what falls in the crater)
 				bool belowWalk = x >= 7580 && x <= 8005 && (float)y >= walkY((float)x);
-				P.precip.set(x, y, (open && !belowWalk) || (!open && !rock && P.precip.get(x, y)));
+				P.precip.set(x, y, (open && !belowWalk) || (!open && !rock && !belowWalk && P.precip.get(x, y)));
 				if (rock)
 					P.precip.set(x, y, false);
 				P.wind.set(x, y, (open && !belowWalk) || (!rock && P.wind.get(x, y)));
@@ -479,6 +482,7 @@ void build(Places& P, MetaRoom* m) {
 	// platforms and bridges too (gaps of a plank's thickness passed), down
 	// to the true ground and 40 px into its face; not under a roof
 	P.hazeBottom.assign(W, 0);
+	P.hazeFade.assign(W, 0);
 	for (int x = 0; x < W; x++) {
 		int last = -1, gap = 0;
 		for (int y = 0; y < H; y++) {
@@ -490,7 +494,10 @@ void build(Places& P, MetaRoom* m) {
 			} else if (++gap > 24)
 				break;
 		}
-		P.hazeBottom[x] = last < 0 ? 0 : std::min(H, last + (P.s0kind[x] == ROOF ? 0 : 40));
+		// (fading out over 70 px from the last open air, into the ground's face:
+		// owner, 2026-11-27, "dither and fade" rather than cut off)
+		P.hazeFade[x] = last < 0 ? 0 : last - 10;
+		P.hazeBottom[x] = last < 0 ? 0 : std::min(H, last + 60);
 	}
 	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
 	fmt::print("* Weather: places worked out for {}x{} ({}) in {} ms\n", W, H, P.eden ? "Eden's map" : "another map", ms);
@@ -1035,8 +1042,8 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 			uint32_t h = hash2(bx / 200, 0, 51);
 			if ((h & 0xff) / 255.0f > mix * 0.9f)
 				continue;
-			float x = (float)bx - 150 + drift * (0.5f + (h >> 8 & 0xff) / 512.0f);
-			float y = P->s0[c] - 62 - (float)((h >> 16) & 31);
+			float x = std::floor(((float)bx - 150 + drift * (0.5f + (h >> 8 & 0xff) / 512.0f)) / 4.0f) * 4.0f; // (on the 4 px grid)
+			float y = std::floor((P->s0[c] - 62 - (float)((h >> 16) & 31)) / 4.0f) * 4.0f;
 			auto [sx, sy] = toScreen(x, y);
 			if (sx > vw || sx + 420 < 0 || sy > vh || sy + 90 < 0)
 				continue;
@@ -1113,8 +1120,13 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 				gone = true;
 		} else if (!P->precip.get((int)p.x, (int)std::max(0.0f, p.y))) {
 			// it lands: a splash, a bounce, a stone lying
+			// (where it met the surface: a fast drop moves tens of px a frame,
+			// and its splash showed under the volcano's walkway)
+			float ly = p.y;
+			while (ly > oy && !P->precip.get((int)p.x, (int)std::max(0.0f, ly - 1)))
+				ly -= 1;
 			if (p.kind == RAIN && rand_uint32(0, 2) == 0)
-				s_splashes.push_back({p.x, std::min(p.y, P->s0[((int)p.x % P->W + P->W) % P->W]), 0, 0});
+				s_splashes.push_back({p.x, ly, 0, 0});
 			if (p.kind == HAILSTONE && p.bounces == 0) {
 				p.bounces = 1;
 				p.y = oy;
@@ -1124,7 +1136,7 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 				continue;
 			}
 			if (p.kind == HAILSTONE && s_splashes.size() < 600)
-				s_splashes.push_back({p.x, oy, 0, 1});
+				s_splashes.push_back({p.x, ly, 0, 1});
 			gone = true;
 		} else if (p.y > vy + vh + 40 || p.x < vx - 200 || p.x > vx + vw + 200) {
 			gone = true;
@@ -1227,12 +1239,13 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 						int c = wtx * T + xx;
 						if (c >= P->W)
 							break;
-						int bottom = P->hazeBottom[c];
+						int bottom = P->hazeBottom[c], fade = P->hazeFade[c];
 						for (int yy = 0; yy < T; yy++) {
 							int y = ty * T + yy;
 							if (y >= bottom)
 								break;
-							if (dither(xx, yy, a)) {
+							float k = y <= fade ? 1.0f : 1.0f - (float)(y - fade) / std::max(1, bottom - fade);
+							if (dither(xx, yy, a * k)) {
 								put(im, xx, yy, 232, 238, 248);
 								any = true;
 							}
@@ -1253,7 +1266,10 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 		const int level = (int)std::lround(s_cloudShown * 20); // (remade in steps of 0.05)
 		const int period = ((P->W + TILE - 1) / TILE) * TILE;
 		const int tiles = period / TILE;
-		const float drift = std::fmod(s_cloudDrift, (float)period);
+		// (in steps of 4 px, so its checker stays in step with every other
+		// dithered layer's, all on the world's grid: drifting a pixel at a
+		// time it shimmered against them; owner, 2026-11-27)
+		const float drift = std::floor(std::fmod(s_cloudDrift, (float)period) / 4.0f) * 4.0f;
 		for (int sx0 = (int)std::floor((vx + drift) / (float)TILE) * TILE; sx0 < vx + drift + vw; sx0 += TILE) {
 			int t = ((sx0 / TILE) % tiles + tiles) % tiles;
 			CloudTile& ct = s_cloudTiles[t];
@@ -1292,13 +1308,15 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 				}
 			}
 		}
-		if (b.age < 90) // the flash
-			for (int y = 0; y < vh; y += 64)
-				for (int x = 0; x < vw; x += 64)
+		if (b.age < 90) { // the flash (its checker on the world's grid too)
+			const int ox = -(((vx % 64) + 64) % 64), oy = -(((vy % 64) + 64) % 64);
+			for (int y = oy; y < vh; y += 64)
+				for (int x = ox; x < vw; x += 64)
 					surface->renderCreaturesImage(*s_white, 0, x, y);
+		}
 		if (b.age < 2500 && (b.age < 1200 || ((int)b.age / 120) % 2 == 0)) {
 			auto [gx, gy] = toScreen(b.gx, b.gy);
-			surface->renderCreaturesImage(*s_glow, 0, gx - 45, gy - 18);
+			surface->renderCreaturesImage(*s_glow, 0, gx - 45 - (((gx - 45 + vx) % 4) + 4) % 4, gy - 18 - (((gy - 18 + vy) % 4) + 4) % 4);
 		}
 		i++;
 	}
