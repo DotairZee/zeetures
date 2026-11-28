@@ -4,11 +4,13 @@ long time"). Our own drawing, no game pixels: shaded at 4x and brought
 down, hard-edged like the game's sprites with a soft dark edge against the
 sky, light from the upper left like the temple.
 
-- The gallows: a twisted iron post on a bolted foot plate beside the
-  statue (x 4166.5, on the slab at y 396), a swan neck sweeping over the
-  shaft with an acanthus leaf off its west shoulder and a gold finial on
-  its crest, a short tail behind with a faceted bronze weight, collars
-  where the neck springs and at its tip, and a hook down to the pulley's eye.
+- The gallows: a twisted iron post on a bolted foot plate standing on the
+  slab east of the lift (x 4291, on the slab at y 396; owner, 2026-11-27:
+  mirrored to stand right of the lift, its leaf and counterweight tail
+  taken off), a swan neck sweeping west over the shaft with a gold finial
+  on its crest, collars where the neck springs and at its tip, and a hook
+  down to the pulley's eye. Shaded for its own side, the light still from
+  the upper left.
 - The pulley: a cast iron web with six small windows, twelve gold rays from
   a gold boss out to the rim, a gold-lipped rim, a cheek strap with bronze
   collars and a ring eye, and the lift's cable lying in its groove over the
@@ -33,12 +35,12 @@ import numpy as np
 from PIL import Image, PngImagePlugin
 
 # the area drawn (trimmed to what is painted when written)
-X0, Y0, X1, Y1 = 4130, 80, 4276, 400
+X0, Y0, X1, Y1 = 4190, 80, 4310, 400
 SS = 4
 W, H = (X1 - X0) * SS, (Y1 - Y0) * SS
 FLOOR = 396
 CX, CY, GROOVE, FLANGE = 4241.5, 196.0, 20.0, 23.0
-PX = 4166.5
+PX = 4291.0                      # the post: east of the cage (x 4172-4278)
 LIGHT = np.array([-0.55, -0.65, 0.53])
 LIGHT /= np.linalg.norm(LIGHT)
 HALF = LIGHT + np.array([0, 0, 1.0])
@@ -317,21 +319,6 @@ def pulley(cv):
 
 # ---- the gallows ----------------------------------------------------------------
 
-def leaf(cv, cx, cy, ang, size):
-    pts = []
-    for i in range(7):
-        t = i / 6
-        a = ang + t * 1.8
-        r = size * (0.2 + 0.8 * t)
-        pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r))
-    for i, (x, y) in enumerate(pts):
-        s = size * 0.30 * (1 - i / 9)
-        a = ang + i / 6 * 1.8 + math.pi / 2
-        for side in (-1, 1):
-            ellipsoid(cv, x + math.cos(a) * s * 0.45 * side, y + math.sin(a) * s * 0.45 * side, s * 0.75, s * 0.6, 'bronze')
-    sweep(cv, pts, 1.0, 0.5, 'gold')
-
-
 def gallows(cv):
     eye_y = pulley(cv)
     plate(cv, PX - 6, FLOOR - 4, PX + 6, FLOOR, 'iron_dull')
@@ -340,17 +327,10 @@ def gallows(cv):
     occlude(cv, PX, FLOOR - 4, 6, k=0.35)
     tube(cv, PX, FLOOR - 3.5, PX, 186, 4.6, 4.0, 'iron', twist=3.2)
     ellipsoid(cv, PX, FLOOR - 6.5, 3.8, 2.4, 'iron')
-    tail = bezier((PX - 0.5, 168), (PX - 6, 159), (PX - 15, 161), (PX - 17, 169), 30)
-    sweep(cv, tail, 2.4, 1.6, 'iron')
-    tube(cv, PX - 17, 169, PX - 17, 173, 1.0, 1.0, 'iron')
-    ellipsoid(cv, PX - 17, 179, 3.6, 5.2, 'bronze', facets=6)
-    band(cv, PX - 17, 179, 7.0, 1.6, 'gold')
-    ellipsoid(cv, PX - 17, 185, 1.1, 1.3, 'gold')
+    # the swan neck, from the post west over the shaft to the wheel
     path = bezier((PX, 185.0), (PX, 98.0), (CX, 98.0), (CX, 150.0), 90)
     sweep(cv, path, 4.0, 2.6, 'iron')
     top = min(path, key=lambda p: p[1])
-    sx, sy = path[16]
-    leaf(cv, sx - 1.5, sy + 2, math.pi * 0.9, 15.0)
     tube(cv, top[0], top[1] - 1.5, top[0], top[1] - 6.0, 1.6, 0.9, 'gold')
     ellipsoid(cv, top[0], top[1] - 7.6, 1.9, 2.3, 'gold')
     occlude(cv, PX, 186, 5, k=0.4)

@@ -38,14 +38,19 @@ setv door 0 224 8 0
 setv door 0 224 9 0
 setv door 0 225 9 0
 *
-* 2. A fourth stop with the cage's foot on the slab (396), and its caller on
-*    the slab east of the shaft, over the ground floor's caller (4324): the
-*    game's own caller picture (cbt2), like the others on this lift. NEW:
-*    CALL is openc2e's: it adds the stop to the lift and links the button.
+* 2. A fourth stop with the cage's foot on the slab (396). Its caller is the
+*    pale horned sculpture on the column cap west of the shaft: an amber gem
+*    set in its brow, glowing when the lift is called (ztcb, our own drawing,
+*    art/temple_caller.py; owner, 2026-11-27). The picture's box reaches on
+*    east, clear, to the floor's west wall (x 4188), so a creature there can
+*    press it. NEW: CALL is openc2e's: it adds the stop to the lift and links
+*    the button. (The game's caller picture first used here, at 4324,296,
+*    and any caller left from an earlier load are taken away first.)
 enum 2 2 2 doif posl eq 4324 doif post eq 296 kill targ endi endi next
+enum 2 2 2 doif posl eq 4103 doif post eq 311 kill targ endi endi next
 enum 3 2 2
   doif posl eq 4172
-    inst new: call targ 396 cbt2 2 0 5000 setv cls2 2 2 2 setv attr 196 bhvr 1 0 pose 0 mvto 4324 296 slow
+    inst new: call targ 396 ztcb 2 0 5000 setv cls2 2 2 2 setv attr 196 bhvr 1 0 pose 0 mvto 4103 311 slow
   endi
 next
 *
@@ -53,16 +58,17 @@ next
 *    cable, on the wall under the slab) is painted out with the stone around
 *    it (ztpc, plane -45: behind everything), and the lift's two cables run
 *    on up from there to a pulley of our own above the new stop: a sunburst
-*    wheel on an ornate swan-neck iron bracket standing beside the statue,
-*    long weathered by the desert (ztgp, art/temple_pulley.py; owner,
-*    2026-11-27: variant A, "like it's been in the desert for a long time";
+*    wheel on a swan-neck iron bracket standing on the slab east of the
+*    lift, its neck sweeping back over the shaft, long weathered by the
+*    desert (ztgp, art/temple_pulley.py; owner, 2026-11-27: variant A, "like
+*    it's been in the desert for a long time", mirrored, leaf and weight off;
 *    plane 1300: behind the cage and behind creatures walking past). The
 *    cables leave the wheel's middle (y 196); the cage's top at the new stop
 *    is at 229, the wheel's foot at 219.
 enum 2 3 270 kill targ next
 enum 2 3 271 kill targ next
 inst new: simp ztpc 1 0 -45 0 setv cls2 2 3 270 setv attr 0 mvto 4210 196 slow
-inst new: simp ztgp 1 0 1300 0 setv cls2 2 3 271 setv attr 0 mvto 4145 104 slow
+inst new: simp ztgp 1 0 1300 0 setv cls2 2 3 271 setv attr 0 mvto 4218 104 slow
 *
 * 4. The column at the slab's west end drawn again in front of creatures
 *    (plane 8999, as the game's own pieces in front of the shaft), so they
