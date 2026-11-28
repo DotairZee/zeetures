@@ -159,7 +159,9 @@ struct lifeLogEntry {
 		together = 7, // four or more that hatched together died of old age together (the memorial stone's
 					  // Easter egg): cause holds their names, stage how many, moniker the last of them
 		fellIll = 8, // caught an illness (Disease.h); cause names it
-		recovered = 9 }; // got over an illness; cause names it
+		recovered = 9, // got over an illness; cause names it
+		ancestor = 10 }; // the temple chimes' tune of ages (Weather.cpp): moniker the oldest ancestor
+						 // of a living creature, cause says whose line it is (owner, 2026-11-27)
 	int kind = birth;
 	unsigned int tick = 0; // world tick count
 	std::string moniker;

@@ -23,6 +23,9 @@
 #include "Agent.h"
 #include "Bubble.h"
 #include "Camera.h"
+#include "creatures/Creature.h"
+#include "creatures/CreatureAgent.h"
+#include "historyManager.h"
 #include "Engine.h"
 #include "Map.h"
 #include "MetaRoom.h"
@@ -46,6 +49,7 @@
 #include <cmath>
 #include <fmt/core.h>
 #include <map>
+#include <set>
 #include <ostream>
 #include <vector>
 
@@ -526,6 +530,20 @@ void build(Places& P, MetaRoom* m) {
 		// owner, 2026-11-27, "dither and fade" rather than cut off)
 		P.hazeFade[x] = last < 0 ? 0 : last - 10;
 		P.hazeBottom[x] = last < 0 ? 0 : std::min(H, last + 60);
+		// the wind (dust, leaves and fog) only in that same air: open from
+		// the sky down through bridges and platforms to the true ground,
+		// never below it in caves and rooms the map calls outdoors (owner,
+		// 2026-11-27: "I don't want it below the surface")
+		for (int y = std::max(0, last + 1); y < H; y++)
+			P.wind.set(x, y, false);
+		// (nor east of the valley under the long rope bridge, by the stone
+		// arches: the owner's line the snow haze stops at too, below)
+		if (P.eden && x + P.mx > 3700 && x + P.mx < 4300)
+			for (int y = std::max(0, 845 - P.my); y < std::min(H, 1770 - P.my); y++) {
+				float xc = 3901.0f + (3834.0f - 3901.0f) * (y + P.my - 860) / 670.0f;
+				if (x + P.mx > xc)
+					P.wind.set(x, y, false);
+			}
 	}
 	// Eden's volcano (owner, 2026-11-27, circling it): the haze covers the
 	// rims' rock from their tops down to the walks beside them (the bridge
@@ -1028,6 +1046,9 @@ void reset() {
 namespace {
 const float BELL_X = 4662.0f, BELL_Y = 200.0f, BELL_TOP = 62.0f; // the bell; where the arch holds it
 AgentRef s_bell, s_bellRope;
+AgentRef s_chimes[5];
+int s_chimeRings[5] = {-1, -1, -1, -1, -1};
+std::vector<std::pair<int, unsigned int>> s_tune; // (note, world tick)
 int s_bellRings = -1; // its OV10 last seen
 std::vector<unsigned int> s_ringTicks; // world ticks of the latest rings
 unsigned int s_stormBellUntil = 0, s_stormStrikeAt = 0, s_lastWeatherCall = 0;
@@ -1040,12 +1061,16 @@ bool rainy(int s) {
 
 void findBell() {
 	s_bell = s_bellRope = AgentRef();
+	for (auto& c : s_chimes)
+		c = AgentRef();
 	for (auto& a : world.agents)
 		if (a && !a->isDying() && a->family == 2 && a->genus == 3) {
 			if (a->species == 274)
 				s_bell = a;
 			else if (a->species == 275)
 				s_bellRope = a;
+			else if (a->species >= 276 && a->species <= 280)
+				s_chimes[a->species - 276] = a;
 		}
 }
 
@@ -1127,9 +1152,184 @@ void bellRung() {
 	}
 }
 
+// ---- the temple chimes' hidden tunes (owner, 2026-11-27) ----
+// Five hanging chimes on the temple top (2 3 276-280, low to high: notes 0-4,
+// D F A B D) each count their strikes in their OV10, as the bell does. The
+// last notes struck, each within 4 s of the one before, are matched against
+// the tunes below, played as on a five-holed ocarina; a tune played, the
+// great bell answers softly, and:
+// - the storm tune calls up a thunderstorm;
+// - the sun tune brings the day (night turns to dawn; rain or snow clears);
+// - the tune of ages finds the oldest ancestor of a living creature (the one
+//   selected, else the one nearest the chimes), as a status-bar notice;
+// - the lullaby calms creatures near the temple and makes them drowsy;
+// - the critters' tune calls bugs and critters up to the temple top;
+// - the playful tune perks creatures nearby up;
+// - the healing tune eases pain and injury nearby;
+// - and three travelling tunes fly the view to the treehouse forest, the
+//   volcano and the east sea.
+// The tunes are named only here, by what they do: none is named in the game.
+
+struct Tune {
+	const char* what;
+	std::vector<int> notes;
+};
+const Tune TUNES[] = {
+	{"storm", {0, 1, 4, 0, 1, 4}},
+	{"sun", {2, 1, 4, 2, 1, 4}},
+	{"ages", {2, 0, 1, 2, 0, 1}},
+	{"lullaby", {3, 4, 2, 3, 4, 2}},
+	{"critters", {4, 3, 2, 4, 3, 2}},
+	{"play", {1, 2, 3, 1, 2, 3}},
+	{"healing", {3, 2, 1, 3, 2, 1}},
+	{"forest", {0, 4, 3, 2, 3, 2}},
+	{"volcano", {1, 0, 1, 0, 2, 1, 2, 1}},
+	{"sea", {0, 1, 2, 2, 3}},
+};
+
+// creatures within reach of the temple (x 3200-6200, above the caves)
+void stimNearTemple(const std::array<int, 4>& chems, const std::array<int, 4>& amounts) {
+	engine.executeNetwork(fmt::format("enum 4 0 0 doif posx gt 3200 and posx lt 6200 and posy lt 1300 stim writ targ 0 255 0 0 {} {} {} {} {} {} {} {} endi next\n",
+		chems[0], amounts[0], chems[1], amounts[1], chems[2], amounts[2], chems[3], amounts[3]));
+}
+
+void tuneOfAges() {
+	// whose: the selected creature, else the one nearest the chimes
+	Agent* who = world.selectedcreature.get();
+	if (!who || !dynamic_cast<CreatureAgent*>(who)) {
+		float best = 1e30f;
+		for (auto& a : world.agents)
+			if (a && !a->isDying() && dynamic_cast<CreatureAgent*>(a.get())) {
+				float d = std::hypot(a->x - 4500, a->y - 350);
+				if (d < best)
+					best = d, who = a.get();
+			}
+	}
+	auto* ca = who ? dynamic_cast<CreatureAgent*>(who) : nullptr;
+	if (!ca || !world.history)
+		return;
+	std::string mon = world.history->findMoniker(ca->getCreature()->getGenome());
+	if (mon.empty())
+		return;
+	// back through the parents, generation by generation: the furthest, and
+	// of those the first hatched
+	std::string oldest = mon;
+	int depth = 0, best = 0;
+	std::vector<std::pair<std::string, int>> todo{{mon, 0}};
+	std::set<std::string> seen;
+	while (!todo.empty()) {
+		auto [m, d] = todo.back();
+		todo.pop_back();
+		if (!seen.insert(m).second || !world.history->hasMoniker(m))
+			continue;
+		monikerData& md = world.history->getMoniker(m);
+		if (d > best || (d == best && d > 0 && md.borntick < world.history->getMoniker(oldest).borntick))
+			best = d, oldest = m;
+		for (const std::string& p : {md.mother, md.father})
+			if (!p.empty())
+				todo.push_back({p, d + 1});
+	}
+	depth = best;
+	auto nameOf = [](const std::string& m) {
+		monikerData& md = world.history->getMoniker(m);
+		return md.name.empty() ? m : md.name;
+	};
+	lifeLogEntry e;
+	e.kind = lifeLogEntry::ancestor;
+	e.tick = world.worldtickcount;
+	e.moniker = oldest;
+	monikerData& od = world.history->getMoniker(oldest);
+	e.name = od.name;
+	e.genus = std::max(1, (int)od.genus);
+	e.female = od.gender == 2;
+	e.cause = depth == 0 ? fmt::format("the chimes' tune of ages: {} is the first of its line", nameOf(mon))
+						 : fmt::format("the chimes' tune of ages: {}'s line goes back {} generation{} to {}", nameOf(mon), depth, depth == 1 ? "" : "s", nameOf(oldest));
+	world.history->lifelog.push_back(e);
+	world.history->notices.push_back(e);
+}
+
+void playTune(const Tune& tune) {
+	const std::string what = tune.what;
+	fmt::print("* Weather: the temple chimes played the {} tune\n", what);
+	if (s_bell)
+		s_bell->queueScript(200); // (the great bell answers)
+	const unsigned int now = std::max(1u, world.worldtickcount);
+	auto callUp = [&](int to) {
+		if (!on() || s_spell == to)
+			return;
+		s_next = to;
+		s_until = now;
+	};
+	if (what == "storm")
+		callUp(THUNDERSTORM);
+	else if (what == "sun") {
+		if (world.timeofday == 4) { // night: it dawns
+			world.timeofday = 0;
+			if (++world.dayofseason == 4) {
+				world.dayofseason = 0;
+				if (++world.season == 4)
+					world.season = 0, world.year++;
+			}
+		}
+		if (rainy(s_spell) || s_spell == SNOW || s_spell == FOG)
+			callUp(CLEAR);
+	} else if (what == "ages")
+		tuneOfAges();
+	else if (what == "lullaby")
+		stimNearTemple({44, 24, 0, 0}, {40, 30, 0, 0}); // Fear Decrease, Sleepiness Increase
+	else if (what == "play")
+		stimNearTemple({36, 42, 45, 0}, {40, 30, 30, 0}); // Pleasure-need, Loneliness and Boredom Decrease
+	else if (what == "healing")
+		stimNearTemple({35, 48, 0, 0}, {60, 40, 0, 0}); // Pain and Injury Decrease
+	else if (what == "critters") {
+		int n = 0;
+		for (auto& a : world.agents)
+			if (n < 5 && a && !a->isDying() && a->family == 2 && (a->genus == 18 || a->genus == 20) && !a->carriedby) {
+				a->moveTo(4420 + n * 70.0f, 300.0f - a->getHeight());
+				n++;
+			}
+	} else if (engine.camera) {
+		const float to[3][2] = {{3460, 1450}, {7790, 480}, {6900, 860}};
+		const int i = what == "forest" ? 0 : what == "volcano" ? 1 : 2;
+		engine.camera->moveTo((int)(to[i][0] - engine.camera->getWidth() / 2.0f), (int)(to[i][1] - engine.camera->getHeight() / 2.0f), smoothscroll);
+	}
+}
+
+void chimeStruck(int note) {
+	const unsigned int now = std::max(1u, world.worldtickcount);
+	if (!s_tune.empty() && now - s_tune.back().second > 40)
+		s_tune.clear();
+	s_tune.push_back({note, now});
+	for (const Tune& t : TUNES) {
+		const size_t n = t.notes.size();
+		if (s_tune.size() < n)
+			continue;
+		bool match = true;
+		for (size_t i = 0; i < n && match; i++)
+			match = s_tune[s_tune.size() - n + i].first == t.notes[i];
+		if (match) {
+			s_tune.clear();
+			playTune(t);
+			return;
+		}
+	}
+	if (s_tune.size() > 16)
+		s_tune.erase(s_tune.begin());
+}
+
 void bellEggs(bool weatherOn) {
-	if (world.tickcount % 50 == 7 && (!s_bell || !s_bellRope))
+	if (world.tickcount % 50 == 7 && (!s_bell || !s_bellRope || !s_chimes[0]))
 		findBell();
+	for (int i = 0; i < 5; i++)
+		if (s_chimes[i]) {
+			const int c = s_chimes[i]->var[10].hasInt() ? s_chimes[i]->var[10].getInt() : 0;
+			if (s_chimeRings[i] < 0 || c < s_chimeRings[i])
+				s_chimeRings[i] = c;
+			while (s_chimeRings[i] < c) {
+				s_chimeRings[i]++;
+				chimeStruck(i);
+			}
+		}
 	if (!s_bell)
 		return;
 	const unsigned int now = std::max(1u, world.worldtickcount);

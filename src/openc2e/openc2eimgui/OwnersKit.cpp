@@ -405,6 +405,7 @@ static const char* kindWord(int kind) {
 		case lifeLogEntry::together: return "Together";
 		case lifeLogEntry::fellIll: return "Ill";
 		case lifeLogEntry::recovered: return "Recovered";
+		case lifeLogEntry::ancestor: return "Ancestor";
 		default: return "Pregnant";
 	}
 }
@@ -444,6 +445,7 @@ static std::string entryDetail(const lifeLogEntry& e) {
 		case lifeLogEntry::cameRound: return fmt::format("a {}, {}: {}", who, stageWord(e.stage), e.cause == "revived" ? "brought back to life" : "came round");
 		case lifeLogEntry::changed: return fmt::format("a {}, {}: {}", who, stageWord(e.stage), e.cause.empty() ? "changed into something else" : e.cause);
 		case lifeLogEntry::together: return fmt::format("{} hatched together, grew old together and reached the end together", e.cause);
+		case lifeLogEntry::ancestor: return e.cause;
 		case lifeLogEntry::fellIll: return fmt::format("a {}, {}: caught {}. Keep it warm and fed; the Health Kit shows how it is", who, stageWord(e.stage), e.cause.empty() ? "an illness" : e.cause);
 		case lifeLogEntry::recovered: return fmt::format("a {}, {}: got over {}", who, stageWord(e.stage), e.cause.empty() ? "an illness" : e.cause);
 		case lifeLogEntry::eggLaid: {
@@ -487,6 +489,14 @@ static void followEntry(const lifeLogEntry& e) {
 			stone->queueScript(1, world.hand());
 		} else
 			OpenC2KitAt("chronicles", "History");
+		return;
+	}
+	// the chimes' tune of ages: the ancestor, or its gravestone
+	if (e.kind == lifeLogEntry::ancestor) {
+		if (auto body = entryBody(e))
+			KitLookAt(body);
+		else
+			OpenGraveyardAt(e.moniker);
 		return;
 	}
 	// a death: its gravestone (the Graveyard Kit)
