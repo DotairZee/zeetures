@@ -1560,7 +1560,10 @@ void TraitBar(int trait, int percent, const char* label, float width) {
 
 // Temperament (openc2e addition, owner 2026-11-11): the creature's inborn
 // traits (creatures/Temperament.h), each where it stands among creatures
-// (50% is average), and a few words for the strongest.
+// (50% is average), and a few words for the strongest. Laid out compactly
+// (owner, 2026-11-27: "it's too tall"): the traits in two columns with the
+// seasonal rhythm as the eighth bar, the mind's settings in four, and the
+// general explanations in the bars' and notes' tooltips.
 static void TemperamentPage() {
 	if (!KitNeedsCreature())
 		return;
@@ -1574,107 +1577,116 @@ static void TemperamentPage() {
 	std::string words = Temperaments::describe(t);
 	KitNoteColored(ImGui::GetStyle().Colors[ImGuiCol_Text], "%s is %s.", name.c_str(), words.c_str());
 	ImGui::Spacing();
-	KitNote("Every creature has some of every trait. 50%% (the middle mark) is average: the share of creatures with less.");
-	ImGui::Spacing();
-	for (int i = 0; i < NUM_TRAITS; i++) {
-		int pc = t.percent(i);
-		std::string trait = Temperaments::traitName(i);
-		trait[0] = (char)std::toupper((unsigned char)trait[0]);
-		const char* lean = pc >= 70 ? Temperaments::highWord(i) : pc <= 30 ? Temperaments::lowWord(i) : "";
-		std::string label = fmt::format("{} {}%{}", trait, pc, *lean ? fmt::format(" ({})", lean) : "");
-		TraitBar(i, pc, label.c_str(), 280);
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("%s ... %s", Temperaments::lowWord(i), Temperaments::highWord(i));
-	}
-	// how life has shifted it since it hatched (Temperament.h, drift while
-	// young; owner, 2026-11-17)
-	{
-		std::string shifts;
-		int n = 0;
-		Temperament drifted = c->inheritableTemperament();
-		for (int i = 0; i < NUM_TRAITS; i++) {
-			float moved = drifted.z[i] - c->temperamentBorn.z[i];
-			if (std::fabs(moved) < 0.05f)
-				continue;
-			shifts += fmt::format("{}{} ({:+.2f})", n++ ? ", " : "", moved > 0 ? Temperaments::highWord(i) : Temperaments::lowWord(i), moved);
-		}
-		ImGui::Spacing();
-		if (n)
-			KitNote("Since it hatched, life has made %s more: %s. Young creatures are shaped by being hurt or frightened, comforted and played with, fights, and how trying new things turns out; from youth on their temperament is settled.",
-				name.c_str(), shifts.c_str());
-		else
-			KitNote("Its temperament is still the one it hatched with. Young creatures are shaped by being hurt or frightened, comforted and played with, fights, and how trying new things turns out; from youth on it is settled.");
-	}
-	// what its own C2 genes give (GenomeTraits.h; owner, 2026-11-20)
-	{
-		std::string parts;
-		int n = 0;
-		for (int i = 0; i < NUM_TRAITS; i++) {
-			float g = c->geneShift[i];
-			if (std::fabs(g) < 0.05f)
-				continue;
-			parts += fmt::format("{}{} ({:+.2f})", n++ ? ", " : "", g > 0 ? Temperaments::highWord(i) : Temperaments::lowWord(i), g);
-		}
-		ImGui::Spacing();
-		if (n)
-			KitNote("Its genes' chemistry (how strongly its body raises fear, boredom, tiredness, loneliness, anger and stress, against its species' usual genome) makes it more %s.", parts.c_str());
-		else
-			KitNote("Its genes' chemistry is its species' usual, so they leave its temperament as it is; bred, mutated and custom genomes can make a creature bolder, calmer, lonelier and so on.");
-	}
-	// the seasonal rhythm (Temperament.h, SeasonalRhythm): inherited, unlike
-	// the traits above (owner, 2026-11-16)
-	ImGui::Spacing();
-	ImGui::Spacing();
-	{
-		int pc = SeasonalRhythm::percent(c->seasonalZ);
-		std::string label = fmt::format("Seasonal rhythm {}%", pc);
-		const float h = ImGui::GetTextLineHeight() + 6, width = 280;
-		ImVec2 p = ImGui::GetCursorScreenPos();
-		ImDrawList* dl = ImGui::GetWindowDrawList();
+
+	static const char* AVERAGE = "50% (the middle mark) is average: the share of creatures with less.";
+	const float h = ImGui::GetTextLineHeight() + 6, gap = 10, rowGap = 4;
+	const float avail = std::max(300.0f, ImGui::GetContentRegionAvail().x);
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	// one bar at p: its color filling to where the creature stands, a mark
+	// at the middle (average), its label; the tooltip when hovered
+	auto bar = [&](ImVec2 p, float width, int pc, ImU32 fill, const std::string& label, const std::string& tip) {
 		dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), IM_COL32(45, 45, 50, 255), 3);
-		dl->AddRectFilled(p, ImVec2(p.x + width * std::clamp(pc, 0, 100) / 100.0f, p.y + h), IM_COL32(190, 120, 50, 255), 3); // autumn
+		dl->AddRectFilled(p, ImVec2(p.x + width * std::clamp(pc, 0, 100) / 100.0f, p.y + h), fill, 3);
 		dl->AddLine(ImVec2(p.x + width / 2, p.y), ImVec2(p.x + width / 2, p.y + h), IM_COL32(255, 255, 255, 140), 1.0f);
 		dl->AddRect(p, ImVec2(p.x + width, p.y + h), IM_COL32(110, 110, 120, 255), 3);
 		ImVec2 ts = ImGui::CalcTextSize(label.c_str());
 		ImVec2 tp(p.x + 6, p.y + (h - ts.y) / 2);
+		dl->PushClipRect(p, ImVec2(p.x + width, p.y + h), true);
 		dl->AddText(ImVec2(tp.x + 1, tp.y + 1), IM_COL32(0, 0, 0, 200), label.c_str());
 		dl->AddText(tp, IM_COL32(255, 255, 255, 255), label.c_str());
-		ImGui::Dummy(ImVec2(width, h));
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("lives the same all year ... fattens up in autumn, saves itself in winter");
-		KitNote("%s has %s. Passed on from its parents (a mix of theirs, with some chance); a creature from the game's own eggs has its own by chance.",
-			name.c_str(), SeasonalRhythm::describe(c->seasonalZ));
+		dl->PopClipRect();
+		if (ImGui::IsWindowHovered() && ImGui::IsMouseHoveringRect(p, ImVec2(p.x + width, p.y + h)))
+			ImGui::SetTooltip("%s", tip.c_str());
+	};
+
+	// the seven traits and the seasonal rhythm, two columns of four
+	{
+		static const ImU32 colors[NUM_TRAITS] = {
+			IM_COL32(235, 140, 40, 255), // boldness
+			IM_COL32(40, 175, 170, 255), // curiosity
+			IM_COL32(230, 200, 40, 255), // energy
+			IM_COL32(230, 110, 170, 255), // sociability
+			IM_COL32(215, 55, 50, 255), // temper
+			IM_COL32(150, 90, 210, 255), // reactivity
+			IM_COL32(70, 120, 220, 255), // steadiness
+		};
+		const float width = std::min(300.0f, (avail - gap) / 2);
+		ImVec2 origin = ImGui::GetCursorScreenPos();
+		for (int i = 0; i <= NUM_TRAITS; i++) {
+			ImVec2 p(origin.x + (i / 4) * (width + gap), origin.y + (i % 4) * (h + rowGap));
+			if (i < NUM_TRAITS) {
+				int pc = t.percent(i);
+				std::string trait = Temperaments::traitName(i);
+				trait[0] = (char)std::toupper((unsigned char)trait[0]);
+				const char* lean = pc >= 70 ? Temperaments::highWord(i) : pc <= 30 ? Temperaments::lowWord(i) : "";
+				bar(p, width, pc, colors[i], fmt::format("{} {}%{}", trait, pc, *lean ? fmt::format(" ({})", lean) : ""),
+					fmt::format("{} ... {}\nEvery creature has some of every trait. {}", Temperaments::lowWord(i), Temperaments::highWord(i), AVERAGE));
+			} else {
+				// the seasonal rhythm (Temperament.h, SeasonalRhythm): inherited,
+				// unlike the traits (owner, 2026-11-16)
+				int pc = SeasonalRhythm::percent(c->seasonalZ);
+				bar(p, width, pc, IM_COL32(190, 120, 50, 255), fmt::format("Seasonal rhythm {}%", pc),
+					std::string("lives the same all year ... fattens up in autumn, saves itself in winter\n"
+								"Passed on from its parents (a mix of theirs, with some chance); a creature from the game's own eggs has its own by chance.\n") +
+						AVERAGE);
+			}
+		}
+		ImGui::Dummy(ImVec2(2 * width + gap, 4 * (h + rowGap)));
 	}
+
+	// what has made it so: life since it hatched (Temperament.h, drift while
+	// young; owner, 2026-11-17), its own C2 genes (GenomeTraits.h; owner,
+	// 2026-11-20), and its seasonal rhythm, in one note
+	{
+		auto shifts = [&](auto get) {
+			std::string s;
+			int n = 0;
+			for (int i = 0; i < NUM_TRAITS; i++) {
+				float moved = get(i);
+				if (std::fabs(moved) < 0.05f)
+					continue;
+				s += fmt::format("{}{} ({:+.2f})", n++ ? ", " : "", moved > 0 ? Temperaments::highWord(i) : Temperaments::lowWord(i), moved);
+			}
+			return s;
+		};
+		Temperament drifted = c->inheritableTemperament();
+		std::string life = shifts([&](int i) { return drifted.z[i] - c->temperamentBorn.z[i]; });
+		std::string genes = shifts([&](int i) { return c->geneShift[i]; });
+		std::string note = life.empty() ? "Its temperament is still the one it hatched with" : fmt::format("Since it hatched, life has made it more {}", life);
+		note += genes.empty() ? "; its genes leave it as its species' usual" : fmt::format("; its genes make it more {}", genes);
+		note += fmt::format(". It has {}.", SeasonalRhythm::describe(c->seasonalZ));
+		ImGui::Spacing();
+		KitNote("%s", note.c_str());
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Young creatures are shaped by being hurt or frightened, comforted and played with, fights,\n"
+							  "and how trying new things turns out; from youth on their temperament is settled.\n"
+							  "Its genes' chemistry (how strongly its body raises fear, boredom, tiredness, loneliness,\n"
+							  "anger and stress, against its species' usual genome) can make it bolder, calmer, lonelier and so on.");
+	}
+
 	// the mind's own heritable settings (MindGenes.h; owner, 2026-11-20):
-	// two columns of four, each where it stands among creatures
+	// four columns of two (two of four in a narrow window)
 	ImGui::Spacing();
 	ImGui::Spacing();
 	{
-		const float h = ImGui::GetTextLineHeight() + 6, width = 180, gap = 10;
-		ImDrawList* dl = ImGui::GetWindowDrawList();
+		const int cols = avail >= 4 * 150 + 3 * gap ? 4 : 2;
+		const float width = std::min(cols == 4 ? 180.0f : 300.0f, (avail - (cols - 1) * gap) / cols);
+		const int rows = (NUM_MIND_GENES + cols - 1) / cols;
 		ImVec2 origin = ImGui::GetCursorScreenPos();
 		for (int i = 0; i < NUM_MIND_GENES; i++) {
 			float z = c->mindGenes.z[i];
 			int pc = (int)std::lround(50.0 * (1.0 + std::erf(z / std::sqrt(2.0))));
 			std::string gname = MindGeneSet::name(i);
 			gname[0] = (char)std::toupper((unsigned char)gname[0]);
-			std::string label = fmt::format("{} {}%", gname, pc);
-			int col = i % 2, row = i / 2;
-			ImVec2 p(origin.x + col * (width + gap), origin.y + row * (h + 4));
+			int col = i % cols, row = i / cols;
+			ImVec2 p(origin.x + col * (width + gap), origin.y + row * (h + rowGap));
 			ImU32 fill = i < 4 ? IM_COL32(60, 140, 150, 255) : IM_COL32(120, 100, 170, 255); // settings teal, readinesses violet
-			dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), IM_COL32(45, 45, 50, 255), 3);
-			dl->AddRectFilled(p, ImVec2(p.x + width * std::clamp(pc, 0, 100) / 100.0f, p.y + h), fill, 3);
-			dl->AddLine(ImVec2(p.x + width / 2, p.y), ImVec2(p.x + width / 2, p.y + h), IM_COL32(255, 255, 255, 140), 1.0f);
-			dl->AddRect(p, ImVec2(p.x + width, p.y + h), IM_COL32(110, 110, 120, 255), 3);
-			ImVec2 ts = ImGui::CalcTextSize(label.c_str());
-			ImVec2 tp(p.x + 6, p.y + (h - ts.y) / 2);
-			dl->AddText(ImVec2(tp.x + 1, tp.y + 1), IM_COL32(0, 0, 0, 200), label.c_str());
-			dl->AddText(tp, IM_COL32(255, 255, 255, 255), label.c_str());
-			if (ImGui::IsMouseHoveringRect(p, ImVec2(p.x + width, p.y + h)))
-				ImGui::SetTooltip("%s ... %s", MindGeneSet::lowWord(i), MindGeneSet::highWord(i));
+			bar(p, width, pc, fill, fmt::format("{} {}%", gname, pc), fmt::format("{} ... {}\n{}", MindGeneSet::lowWord(i), MindGeneSet::highWord(i), AVERAGE));
 		}
-		ImGui::Dummy(ImVec2(2 * width + gap, 4 * (h + 4)));
-		KitNote("Its mind's own settings (teal) and how readily it learns about danger, food, water and company (violet). Passed on like its seasonal rhythm; what it learns is not passed on, but a line quick to learn what keeps it alive tends to last.");
+		ImGui::Dummy(ImVec2(cols * width + (cols - 1) * gap, rows * (h + rowGap)));
+		KitNote("Its mind's own settings (teal) and how readily it learns about danger, food, water and company (violet), passed on from its parents.");
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Passed on like its seasonal rhythm; what it learns is not passed on,\nbut a line quick to learn what keeps it alive tends to last.");
 	}
 }
 
