@@ -836,20 +836,26 @@ void makePictures() {
 			}
 		s_glow = picture("zeetures weather strike glow", {im});
 	}
-	// fog banks: flat, soft-edged, dithered
-	for (int v = 0; v < 6; v++) {
-		const int w = 420, h = 90;
-		Image im = newImage(w, h);
-		for (int y = 0; y < h; y++)
-			for (int x = 0; x < w; x++) {
-				float ex = std::min(x, w - 1 - x) / 90.0f, ey = std::min(y, h - 1 - y) / 30.0f;
-				float n = vnoise(x / 70.0f + v * 13, y / 18.0f, 41 + v);
-				float a = std::clamp(std::min(ex, 1.0f) * std::min(ey, 1.0f) * (0.35f + 0.65f * n), 0.0f, 1.0f) * 0.75f;
-				if (dither(x, y, a))
-					put(im, x, y, 214 + (int)(n * 20), 218 + (int)(n * 18), 226 + (int)(n * 14));
-			}
-		s_fogBanks.push_back(picture("zeetures weather fog", {im}));
-	}
+	// fog: soft flat puffs, dithered, at three strengths (full, and two
+	// thinner for the edges of the open air they drift through)
+	for (int v = 0; v < 4; v++)
+		for (int k = 0; k < 3; k++) {
+			const int w = 140, h = 44;
+			const float strength = k == 0 ? 1.0f : k == 1 ? 0.6f : 0.3f;
+			Image im = newImage(w, h);
+			for (int y = 0; y < h; y++)
+				for (int x = 0; x < w; x++) {
+					// (round, soft all the way out: square-edged puffs in rows
+					// read as stripes)
+					float dx = (x - w / 2.0f) / (w / 2.0f), dy = (y - h / 2.0f) / (h / 2.0f);
+					float d2 = dx * dx + dy * dy;
+					float n = vnoise(x / 40.0f + v * 13, y / 26.0f, 41 + v);
+					float a = std::clamp((1.0f - d2) * (1.0f - d2) * (0.45f + 0.55f * n), 0.0f, 1.0f) * 0.6f * strength;
+					if (dither(x, y, a))
+						put(im, x, y, 214 + (int)(n * 20), 218 + (int)(n * 18), 226 + (int)(n * 14));
+				}
+			s_fogBanks.push_back(picture("zeetures weather fog", {im}));
+		}
 }
 
 // ---- lightning --------------------------------------------------------------
@@ -1306,22 +1312,40 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 		surface->renderCreaturesImage(*s_warm, 0, 0, 0, o);
 	}
 
-	// fog banks along the open ground, drifting
+	// fog: rows of soft puffs drifting east through the open air, where the
+	// wind storm's dust blows (owner, 2026-11-27: fog moves sideways, "should
+	// go in the same areas as the dust storm"): under bridges and platforms
+	// and over the open ground, not into rock, rooms or water. A puff thins
+	// where part of it would be outside that air, and is gone where most is.
 	if (fog > 0 && mix > 0.02f) {
-		const float drift = std::fmod((float)world.worldtickcount * 0.6f, 400.0f);
-		for (int bx = (vx / 200 - 3) * 200; bx < vx + vw + 400; bx += 200) {
-			int c = ((bx % P->W) + P->W) % P->W;
-			if (P->s0kind[c] != FLOOR || P->s0[c] > P->H - 20)
-				continue;
-			uint32_t h = hash2(bx / 200, 0, 51);
-			if ((h & 0xff) / 255.0f > mix * 0.9f)
-				continue;
-			float x = std::floor(((float)bx - 150 + drift * (0.5f + (h >> 8 & 0xff) / 512.0f)) / 4.0f) * 4.0f; // (on the 4 px grid)
-			float y = std::floor((P->s0[c] - 62 - (float)((h >> 16) & 31)) / 4.0f) * 4.0f;
-			auto [sx, sy] = toScreen(x, y);
-			if (sx > vw || sx + 420 < 0 || sy > vh || sy + 90 < 0)
-				continue;
-			surface->renderCreaturesImage(*s_fogBanks[h % s_fogBanks.size()], 0, sx, sy);
+		const int SP = 90, RH = 30, PW = 140, PH = 44;
+		const double tsec = world.worldtickcount / 10.0;
+		for (int row = std::max(0, (vy - PH) / RH); row * RH < std::min(P->H, vy + vh); row++) {
+			uint32_t rh = hash2(row, 7, 53);
+			const double speed = 10.0 + (rh & 15), phase = (double)((rh >> 4) & 127);
+			const double moved = phase + tsec * speed;
+			const int y0 = row * RH + (int)((rh >> 12) & 15) - 8;
+			for (long k = (long)std::floor((vx - PW - moved) / SP); k * SP + moved < vx + vw; k++) {
+				uint32_t h = hash2((int)k, row, 51);
+				if ((h & 0xff) / 255.0f > mix * 0.8f)
+					continue;
+				const int x = (int)std::floor((k * SP + moved) / 4.0) * 4; // (on the 4 px grid)
+				const int y = y0 + (int)((h >> 16) & 7) * 4 - 14; // (staggered)
+				int in = 0;
+				const int pts[7][2] = {{15, 22}, {40, 22}, {70, 22}, {100, 22}, {125, 22}, {70, 8}, {70, 36}};
+				for (auto& q : pts) {
+					int c = ((x + q[0]) % P->W + P->W) % P->W, yy = y + q[1];
+					if (yy >= 0 && yy < P->H && P->wind.get(c, yy))
+						in++;
+				}
+				const int level = in == 7 ? 0 : in >= 5 ? 1 : in >= 3 ? 2 : -1;
+				if (level < 0)
+					continue;
+				auto [sx, sy] = toScreen((float)x, (float)y);
+				if (sx > vw || sx + PW < 0 || sy > vh || sy + PH < 0)
+					continue;
+				surface->renderCreaturesImage(*s_fogBanks[(h >> 8) % 4 * 3 + level], 0, sx, sy);
+			}
 		}
 	}
 
