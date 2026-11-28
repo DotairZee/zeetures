@@ -413,6 +413,8 @@ VERSIONS = [
      "The Metamorph Device now lays an egg at the gene lab's chute, where the gene splicer's eggs come out, and it hatches as the other sex. In the Owner's Kit family tree, a creature changed by the device shows its former self as its one parent, and a creature from the gene splicer shows the two it was spliced from; both are kept with the world, even if you save before the egg hatches. Anything held, by the hand or a creature, stays at its grip when it turns: the toy gun no longer jumps about in the hand."),
     ("0.48.1", "067b0e8d",
      "The Creatures menu describes each creature in lower case: \"Norn 0003 (female norn)\"."),
+    ("0.49.0", "57711f5c",
+     "New weather, Zeetures' own: about once a day the season chooses clear skies, light showers, showers, a thunderstorm (in summer sometimes with hail), torrential rain, fog, snow in winter, a heatwave in summer, or a wind storm. It has its own clouds over the whole sky, thinner and paler the milder the weather; rain, hail and snow that fall through open air and stay off whatever has a roof, bridge or platform above it; snow that lies and a cold white haze; drifting fog; blowing dust and leaves; and lightning that strikes from the clouds with a flash, and touches creatures as before. It is on unless you untick Zeetures weather (File, Preferences, World), which brings back Creatures 2's own weather; Weather now, there, chooses the weather at once."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

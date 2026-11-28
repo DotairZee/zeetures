@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 807 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 809 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.49.0](#version-0490): 2 commits, 27 November 2026
 - [0.48.1](#version-0481): 2 commits, 27 November 2026
 - [0.48.0](#version-0480): 3 commits, 27 November 2026
 - [0.47.4](#version-0474): 2 commits, 27 November 2026
@@ -124,6 +125,64 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.49.0
+
+New weather, Zeetures' own: about once a day the season chooses clear skies, light showers, showers, a thunderstorm (in summer sometimes with hail), torrential rain, fog, snow in winter, a heatwave in summer, or a wind storm. It has its own clouds over the whole sky, thinner and paler the milder the weather; rain, hail and snow that fall through open air and stay off whatever has a roof, bridge or platform above it; snow that lies and a cold white haze; drifting fog; blowing dust and leaves; and lightning that strikes from the clouds with a flash, and touches creatures as before. It is on unless you untick Zeetures weather (File, Preferences, World), which brings back Creatures 2's own weather; Weather now, there, chooses the weather at once.
+
+### 27 November 2026
+
+#### Version 0.49.0
+
+[`57711f5c`](https://github.com/DotairZee/zeetures/commit/57711f5c5f9695c0b7cb43d0801eb3c96b5f3d9f)
+
+Zeetures' own weather: spells by season, its own clouds, rain, hail,
+snow, fog, wind and lightning, on unless turned off.
+
+#### Zeetures weather: spells by season, own clouds, rain, snow and lightning
+
+[`2e5bb81a`](https://github.com/DotairZee/zeetures/commit/2e5bb81a9eaaeee145cb7e7fa569357fe72808a2)
+
+A weather spell is chosen for the whole world about once a day by the
+season's odds: clear skies, light showers, showers, thunderstorms (in
+summer sometimes with hail), torrential rain, fog, snow (winter), a
+heatwave (summer) or a wind storm. It lasts half a day to a day and a
+half, fades in and out, and is kept with the world (weather-spell).
+
+Everything is drawn by the engine (Weather.cpp), none of the game's
+weather pictures: a cloud deck over the whole sky, on top of everything,
+flat and torn, in ordered dither, thinner and paler the milder the
+weather (light showers 0.4 to thunderstorms 0.95); rain streaks, slanting
+in storms, with splashes; hailstones that bounce and lie a while; snow
+falling, lying on the ground the longer it snows, and a cold white haze
+over the outdoors; drifting fog banks; blowing dust and leaves; a warm
+light in a heatwave; and lightning in thunderstorms, a forked bolt from
+the clouds with a second stroke, a flash over the view and a glow where
+it lands. A strike affects what it touches as C2's bolts do: the jolt,
+and Zeetures' strike effects (Lightning::strikeArea). The rain's own
+sound plays while it rains in view, thunder with each strike.
+
+Where weather can be is worked out once per background from the rooms
+(floors, roofs, doors, water) and the picture (a bridge's planks along
+its floor line): rain, hail and snow fall through open air to the first
+ground, roof, bridge or platform, and the wind blows under platforms and
+bridges too. On Eden's map a few outlines traced from its background
+apply (the volcano's crater, the seas' surfaces, walkways the picture
+test misses).
+
+On by default; File &gt; Preferences &gt; World &gt; "Zeetures weather" turns it
+off (saved with the world), which brings back C2's own clouds, rain and
+storms: while it is on, their evaporators are paused and their clouds,
+storm clouds, raindrops and bolts removed. "Weather now" there picks a
+spell at once. Help &gt; Time, seasons, and weather describes it.
+
+Developer aids: OPENC2E_WEATHER=0 (off) or a spell's name (start with
+it), OPENC2E_WEATHER_STRIKE=N (a strike every N ticks), and
+OPENC2E_WEATHER_PROFILE (draw time; about 0.2-0.3 ms a frame). Tested in
+a copy of a world: every spell drawn at the bridge, desert, dead tree
+and volcano; C2's weather objects none with it on, back (9 clouds in
+20 s) with it off; the spell kept through a save and reload; old worlds
+load; AddressSanitizer clean.
 
 ## Version 0.48.1
 
