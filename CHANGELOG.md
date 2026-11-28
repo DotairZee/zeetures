@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 819 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 834 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.50.0](#version-0500): 15 commits, 27 November 2026
 - [0.49.2](#version-0492): 2 commits, 27 November 2026
 - [0.49.1](#version-0491): 8 commits, 27 November 2026
 - [0.49.0](#version-0490): 2 commits, 27 November 2026
@@ -127,6 +128,266 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.50.0
+
+The stone temple has a top floor: the lift goes up onto the long slab across its front, under a desert-worn pulley on a swan-neck bracket, and the horned statue beside it calls the lift with the amber gem in its brow; creatures walk behind the temple's west column. The great bell swings and rings: pull its rope, or tap it, higher up for higher notes, and it has its secrets for the curious (and the weather). Temperament now shapes how a creature learns: the curious pick up new words and places faster, the reactive learn danger fast and let a fear go slowly, the sociable learn from others, and so on, each with its own strengths; the Temperament tab says how, and is half as tall. The status bar shows the weather, named on hover. Weather: the snow haze is even at the world's edge, covers the volcano's rims and stops at the crater's walkway; rain, snow and dust are already falling when you get somewhere; fog drifts sideways through the open air; and dust and fog stay above the ground. With the experimental language system, creatures learn names for particular things ("cheese", "tomato"), the young first, and still know what kind of thing each is.
+
+### 27 November 2026
+
+#### Version 0.50.0
+
+[`107d7f7f`](https://github.com/DotairZee/zeetures/commit/107d7f7f9ca0dca8d52b78be89ee35237a48bd0d)
+
+#### Temple: the statue's gem lights without a glow around it
+
+[`0661b047`](https://github.com/DotairZee/zeetures/commit/0661b047b45c59ab9a831fe725206c2828ebda80)
+
+When the lift is called, the amber gem in the statue's brow now simply
+lights up, without the checkered glow around it.
+
+#### Temple: the statue calls the lift; the pulley's bracket stands east of it
+
+[`4d1797ad`](https://github.com/DotairZee/zeetures/commit/4d1797adbc8d7490acdcb2e8645da6aa7d0d39ec)
+
+- The temple lift's top-floor caller is now the pale horned statue on the
+  column west of the shaft: an amber gem set in its brow glows when the
+  lift is called. Creatures at the floor's west end can press it too. The
+  game's own caller post on the slab is gone.
+- The pulley's swan-neck bracket now stands on the slab east of the lift,
+  its neck sweeping back over the shaft, without the leaf and the
+  counterweight.
+
+#### Temple: a desert-worn pulley on a swan-neck bracket over the lift
+
+[`68670387`](https://github.com/DotairZee/zeetures/commit/68670387dfd2b5bd9d27c68c71fdac7dd095752a)
+
+The temple lift's new top stop now has a pulley of our own instead of a
+block of the temple wall hung under a stone arm: a wheel with a gold
+sunburst grown out to its rim, on an ornate swan-neck iron bracket (a
+twisted post, an acanthus leaf and finial on the crest, a faceted
+counterweight) standing beside the statue. It looks long weathered by the
+desert: sun-bleached, rusted and pitted iron, sand on every upward face and
+in the post's twists, gold worn thin, and verdigris in the bronze's hollows.
+The lift's cables run up to the wheel.
+
+#### Language (experimental): names for particular things, the young first
+
+[`a6096d31`](https://github.com/DotairZee/zeetures/commit/a6096d31d02168d17016d3ba3cb22bd40f045e5b)
+
+Under the experimental language system, creatures can now learn names for
+particular types of thing inside the game's kinds, such as "cheese" (a kind
+of food) or "tomato" (a kind of fruit), and still know what kind of thing
+each is.
+
+- Teaching: type a word that is not one of the game's while the hand holds
+  or points at a thing, or while the creature looks at it beside the hand.
+  It becomes that type of thing's name (before, it became a name for the
+  whole kind). Creatures also pass such names on to others looking at the
+  same kind of thing, and an older creature that often speaks of a thing it
+  has no name for may make one up.
+- Learning order, as children learn: babies and children learn these names
+  fastest. A kind's own word heard for one type of thing ("food" said for
+  the cheese) names only that type until it is heard for another type, and
+  a baby keeps it that narrow; from childhood it broadens to the whole kind.
+- Saying: a creature calls the thing it is looking at, or was asked to
+  look at, by that type's name when it knows one, and otherwise by the
+  kind's word. With babies' first words on, a baby says a thing's name it
+  knows even before it knows the kind's word.
+- Seeing: the Mind Kit's Words page lists "Names for particular things"
+  ("tomato", a kind of fruit); hovering over a thing adds what the selected
+  creature calls it; and the Creature's View says what it calls the thing
+  it is looking at.
+- Saved with the world; older saves load as before. With the experimental
+  system off, nothing changes.
+
+#### Temple bell: five tones by where it is tapped, for its hidden tunes
+
+[`4fdffdec`](https://github.com/DotairZee/zeetures/commit/4fdffdece173aac6082c5580fca825187d7d1b7f)
+
+The hidden tunes are now played on the great bell itself instead of on a
+rack of chimes. Tapping the bell with the hand sounds one of five notes,
+higher the higher up the bell it is tapped (lip, skirt, waist, shoulder,
+crown), from our own five pitched versions of the bell's sound; pulling its
+rope still rings the whole bell. Playing a tune no longer also calls up new
+weather: that takes three rings of one note (three pulls of the rope, or
+three taps in one place).
+
+#### Weather: dust and fog stay above the ground; the temple chimes' tunes
+
+[`ecc6e651`](https://github.com/DotairZee/zeetures/commit/ecc6e651f019bce8583db9af24b2cf4f869a8c84)
+
+- The wind storm's dust and leaves, and the fog, now stay in the open air
+  from the sky down through bridges and platforms to the ground: never in
+  caves and rooms below the surface, nor east of the valley under the long
+  rope bridge by the stone arches.
+- Groundwork for the temple's chime rack: five chime notes of our own
+  (art/bell_sound.py), and hidden tunes played on them, each answered by
+  the great bell: one calls a storm, one brings the day, one finds a
+  creature's oldest ancestor (a status-bar notice that leads to it or its
+  gravestone), one calms creatures nearby toward sleep, one calls bugs and
+  critters to the temple, one perks creatures up, one eases pain and
+  injury, and three fly the view to the treehouse forest, the volcano, and
+  the east sea. The chimes themselves come with the rack.
+
+#### Weather: fog drifts through the same open air as the wind storm
+
+[`e0ada1df`](https://github.com/DotairZee/zeetures/commit/e0ada1df3af5c2652c111bcedf83bd65204dc9d4)
+
+Fog is now soft puffs drifting east through the open air the wind storm's
+dust blows through (over the open ground and under bridges and platforms,
+not into rock, rooms, or water), instead of banks only along the topmost
+ground. Puffs thin out at the edges of that air instead of ending in a line.
+
+#### Status bar: a picture of the weather, named on hover
+
+[`c413225e`](https://github.com/DotairZee/zeetures/commit/c413225e01f34fedc80223d523eb01dfc51373fb)
+
+With Zeetures weather on, the status bar shows the weather between the time
+of day and the temperature: a small painted strip in the manner of the
+season's picture (sky, clouds, rain, snow, lightning, fog, sun, or blowing
+dust over a strip of ground), one for each kind of weather and one for a
+thunderstorm with hail. Hovering over it names the weather. Like the other
+parts, it can be hidden in Preferences (Status Bar). The pictures are our
+own (art/statusbar_weather.py), built into the program.
+
+#### Temple bell: it swings when rung, and its Easter eggs; valley haze edge
+
+[`46461a44`](https://github.com/DotairZee/zeetures/commit/46461a443d8740cead148a6c773b215396c938f6)
+
+- The temple bell now swings when clicked or when its rope is pulled (it
+  had no click action, so a click did nothing).
+- The bell's Easter eggs:
+  - Calling the colony: a ring gives off a "bell" scent from its rope for
+    two minutes, and creatures awake follow it up to the temple, as they
+    would to a toy; rung over and over, they get used to it.
+  - Storm bell: rung in a thunderstorm, it draws the lightning: a strike on
+    the bell tower within a few seconds rings it, and the storm's strikes
+    go there for half a minute.
+  - Weather call: three rings within six seconds call up other weather (a
+    heatwave turns to showers, rain or snow clears), once a day.
+  - Rainbow chime: rung as a shower ends, or soon after, it brings a
+    rainbow over the temple for a few minutes.
+  - Hour bell: at dawn and dusk it rings itself, softly, and creatures
+    asleep near the temple wake a little sooner.
+  - Echo: in fog, its ring comes back faintly from the west.
+  The soft ring and the echo are our own sounds too (art/bell_sound.py).
+- The lift's cables above the temple slab now meet the painted ones exactly,
+  instead of the right one stepping sideways and widening where they join.
+- In snow, the valley haze under the long rope bridge ends on the east
+  short of the stone arches by the incubator.
+
+#### Weather: even snow haze at the world's edge and on the volcano; weather everywhere at once
+
+[`e5399879`](https://github.com/DotairZee/zeetures/commit/e53998798d69b1ce6779dec81bad45f6c1cb3383)
+
+- The snow's white haze no longer leaves a bare strip, or a shifted
+  stretch, where the view crosses Eden's east edge and wraps round to its
+  west end (by the palms east of the volcano).
+- On the volcano, the haze now covers both rims' rock down to the walks
+  beside them, and inside the crater it ends at the walkway creatures walk
+  on instead of going deep into the rock below it.
+- Rain, snow, hail, dust, and leaves are already falling or blowing across
+  a part of the world when the view gets there, instead of starting at the
+  top of the view and filling in.
+
+#### Temperament shapes how a creature learns
+
+[`8f47db8b`](https://github.com/DotairZee/zeetures/commit/8f47db8b1884d7343948936f255274f62ab1e45e)
+
+Each temperament trait now speeds up some kinds of learning and slows
+others, smoothly from the least of it to the most (a factor exp(k z) per
+trait, 1 for an average creature, each kind of learning held to half to
+double speed). Every trait pays off at both ends:
+
+- Boldness: bold creatures learn faster from their first tries at a thing,
+  let a fear of something harmless go sooner, and take words from
+  strangers more readily; shy ones relearn more readily when things change,
+  learn words best from family, and wait for a firmer hold on a word
+  before saying it.
+- Curiosity: curious creatures learn new words, food places, and new
+  things faster, build more brain Reserve from them, and tire of the
+  familiar sooner; incurious ones settle the words they know more deeply.
+- Energy: energetic creatures learn verbs, food places, and their first
+  tries faster; placid ones settle more in their sleep and take a little
+  more from a word repeated at once.
+- Sociability: sociable creatures learn more by watching others, learn
+  more words from other creatures, grow more from back-and-forth talk, and
+  drop their own made-up names sooner when understood; aloof ones learn
+  more from their own doing and from machines.
+- Temper: a slap teaches hot-tempered creatures less, harm sours their
+  bonds more, and they learn faster what hitting gets them; easygoing ones
+  take correction and make up after a fight more readily.
+- Reactivity: reactive creatures learn danger faster and let a fear go
+  more slowly, including fear of another creature, and while young they
+  are shaped more by both hurt and comfort.
+- Steadiness: steady creatures' words settle more, so they last, but they
+  relearn what they knew well more slowly; flighty ones update faster from
+  their own doing.
+
+Stress now affects learning as an inverted U: a little stress sharpens it,
+a lot dulls it (by at most a fifth), and the peak comes at lower stress
+for reactive creatures. This applies to what creatures learn from doing,
+from watching, and from words.
+
+The Owner's Kit Temperament tab says how each creature learns, from its
+two strongest effects ("Norn 0008 rarely holds a grudge and learns from a
+slap."). Harm souring a bond now scales with temper at exp(0.3 z), up from
+exp(0.2 z). A learning step from experience no longer overshoots what the
+creature felt, however fast it learns. Nothing new is saved; old worlds
+pick it up at once.
+
+Developer aids: OPENC2E_TEMPERAMENT_LEARNING=0 turns it all off for
+comparison runs; the director's "hearall N" has the hand say word N to
+every creature, and "wordsall" prints each creature's words known and
+temperament; OPENC2E_WATCH_BRAIN's lines now end with the temperament.
+Unit tests in TemperamentLearningTest.cpp. Sources added to CITATIONS.md.
+
+#### World: the temple's top floor, its lift, column, and ringing bell
+
+[`b1643164`](https://github.com/DotairZee/zeetures/commit/b1643164d00496a8d552ae3e481fa5ba04f3eec7)
+
+The stone temple east of the long rope bridge gets a top floor (owner's
+marked screenshot):
+- The long slab across the temple's front (y 396, x 4183-4894) is a floor.
+  The cage lift beside the temple goes up one more stop, onto the slab,
+  with its own caller there over the ground floor's.
+- The lift's painted mechanism (cog, wheel, belts, and coiled cable) moves
+  up above the new stop with the block of wall it is fixed to, hung under
+  a stone arm on a slim twisted post; its old place under the slab is
+  painted out with the stone around it, and the lift's cables run up to it.
+- The twisted column at the slab's west end is drawn in front of
+  creatures, so they walk behind it.
+- The great bell in the tower swings and rings: click it, or pull its rope
+  where the rope passes the new floor. Creatures can pull the rope too and
+  find it fun (a little less bored). The bell's sound is Zeetures's own,
+  synthesized from a bronze bell's partials (art/bell_sound.py).
+
+The pictures are made on the player's machine from their own copy of the
+game (madeart/temple_top.cpp, from art/temple_top.py). Zeetures's own
+sounds now ship beside its art and are found after the player's and the
+game's, and a built-in addition that uses one counts it as installed.
+
+#### Director (developer aid): camera centering when zoomed, and a "near" cue
+
+[`f88040f7`](https://github.com/DotairZee/zeetures/commit/f88040f708aa9aeabd5fcd253d96f84c6a7ecf65)
+
+- The director's "cam" and "pan" cues put the view's middle on the point
+  asked for at any zoom; zoomed out, they had divided by the zoom twice and
+  landed a whole view away.
+- A new "near X0 Y0 X1 Y1" cue prints every object inside that part of the
+  world, with its classifier, place, size, plane, attributes and picture.
+
+#### Owner's Kit: a more compact Temperament tab
+
+[`dc1efac1`](https://github.com/DotairZee/zeetures/commit/dc1efac1ce08d0b4a850a922340db25960710bf8)
+
+The Temperament tab is about half as tall. The seven traits sit in two
+columns, with the seasonal rhythm as the eighth bar; what life, genes, and
+the seasons have made of the creature is one short note; and the mind's own
+settings fill four columns (two in a narrow window). The general
+explanations (what 50% means, how youth shapes temperament, what the genes
+do) moved into the bars' and notes' tooltips.
 
 ## Version 0.49.2
 
