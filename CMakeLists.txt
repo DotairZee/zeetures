@@ -533,6 +533,7 @@ set(EMBEDDED_FILES
 	${SRC}/data/hatchery/nests.png
 	${SRC}/data/hatchery/nests.txt
 	${SRC}/data/thoughts/icons.png
+	${SRC}/data/statusbar/weather.png
 	${SRC}/data/help/help-topics.md
 	${SRC}/data/fonts/fusion-12.zpf
 	${SRC}/data/fonts/fusion-10.zpf

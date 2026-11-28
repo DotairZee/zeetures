@@ -12,6 +12,11 @@
 #include "World.h"
 #include "creatures/CreatureAgent.h"
 #include "creatures/oldCreature.h"
+#include "EmbeddedFiles.h"
+#include "Weather.h"
+#include "common/backend/Backend.h"
+#include "common/io/SpanReader.h"
+#include "fileformats/pngImage.h"
 
 #include <algorithm>
 #include <array>
@@ -58,8 +63,8 @@ void SetC2StatusBarShown(bool shown) {
 // "status-bar-hide" in settings.txt lists the hidden ones' keys, joined by
 // commas. Minimised kits can be hidden too (owner, 2026-11-23): the
 // toolbar's kit buttons still bring each back where it was, on its page.
-static const char* const s_part_keys[STATUSBAR_PARTS] = {"season", "time", "temperature", "date", "kits", "notices", "health"};
-static const char* const s_part_names[STATUSBAR_PARTS] = {"Season", "Time of day", "Temperature", "Day and year", "Minimised kits", "Notices", "Selected creature's health"};
+static const char* const s_part_keys[STATUSBAR_PARTS] = {"season", "time", "temperature", "date", "kits", "notices", "health", "weather"};
+static const char* const s_part_names[STATUSBAR_PARTS] = {"Season", "Time of day", "Temperature", "Day and year", "Minimised kits", "Notices", "Selected creature's health", "Weather"};
 static int s_parts_hidden = -1; // bits
 
 static int partsHidden() {
@@ -139,6 +144,36 @@ void DrawC2StatusBar() {
 			static const char* const s_timeofday_names[5] = {"Dawn", "Morning", "Midday", "Dusk", "Night"};
 			if (ImGui::IsItemHovered())
 				ImGui::SetTooltip("%s", s_timeofday_names[world.timeofday]);
+		}
+
+		// the weather (Zeetures' own, Weather.h; owner, 2026-11-27): a painted
+		// strip like the season's, between the time of day and the
+		// temperature, naming the weather on hover; not shown while the game's
+		// own weather is on. Our own pictures (art/statusbar_weather.py),
+		// built into the program.
+		static std::vector<Texture> s_weather_texs;
+		static bool s_weather_loaded = false;
+		if (!s_weather_loaded) {
+			s_weather_loaded = true;
+			auto bytes = EmbeddedFile("weather.png");
+			try {
+				if (!bytes.empty()) {
+					SpanReader r(bytes);
+					for (auto& im : ReadPngFile(r))
+						s_weather_texs.push_back(get_backend()->createTextureFromImage(im));
+				}
+			} catch (std::exception& e) {
+				fmt::print("* Status bar: weather pictures: {}\n", e.what());
+			}
+		}
+		if (StatusBarPartShown(SB_WEATHER) && Weather::on() && s_weather_texs.size() >= 10) {
+			const int s = (int)Weather::spell();
+			const size_t pic = s == Weather::THUNDERSTORM && Weather::hail() ? 9 : (size_t)std::clamp(s, 0, 8);
+			ImGuiUtils::Image(s_weather_texs[pic]);
+			if (ImGui::IsItemHovered()) {
+				std::string name = s == Weather::THUNDERSTORM && Weather::hail() ? "Thunderstorm with hail" : Weather::spellName(s);
+				ImGui::SetTooltip("%s", name.c_str());
+			}
 		}
 
 		static std::array<Texture, 5> s_temperature_icons_texs;
