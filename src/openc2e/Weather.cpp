@@ -525,6 +525,24 @@ void build(Places& P, MetaRoom* m) {
 		P.hazeFade[x] = last < 0 ? 0 : last - 10;
 		P.hazeBottom[x] = last < 0 ? 0 : std::min(H, last + 60);
 	}
+	// Eden's volcano (owner, 2026-11-27, circling it): the haze covers the
+	// rims' rock from their tops down to the walks beside them (the bridge
+	// level west, y 712; the beach east, y 600), and in the crater it ends
+	// at the walkway creatures walk on, not deep in the rock below it
+	if (P.eden) {
+		for (int x = std::max(0, 7380 - P.mx); x <= std::min(W - 1, 8230 - P.mx); x++) {
+			const int wx = x + P.mx;
+			int& hb = P.hazeBottom[x];
+			int& hf = P.hazeFade[x];
+			if (wx >= 7580 && wx <= 8005) {
+				hb = (int)walkY((float)wx) - P.my + 4;
+				hf = hb - 50;
+			} else {
+				hb = std::max(hb, (wx < 7580 ? 712 : 600) - P.my);
+				hf = std::max(hf, hb - 60);
+			}
+		}
+	}
 	// the reach smoothed along the map, so the haze shows no seams: a median
 	// over 25 columns takes out narrow notches (where room shapes leave a
 	// gap under a bridge, the haze stopped just under its deck for a few
@@ -1178,8 +1196,11 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 	for (auto [k, want] : {std::pair<uint8_t, size_t>{RAIN, wantRain}, {SNOWFLAKE, wantSnow}, {HAILSTONE, wantHail}, {DUST, wantDust}, {LEAF, wantDust / 6}}) {
 		size_t have = count(k);
 		size_t add = want > have ? std::min(want - have, (size_t)(fresh ? want : 40)) : 0;
+		// (filled out anywhere in view, not only from above: the weather is
+		// already everywhere when the view gets there; owner, 2026-11-27,
+		// "it should be there and running, regardless of the camera")
 		for (size_t i = 0; i < add; i++)
-			spawn(k, fresh || k == DUST || k == LEAF ? true : rand_float(0, 1) < 0.15f);
+			spawn(k, true);
 		if (have > want) { // (fewer as the weather eases)
 			size_t drop = std::min(have - want, (size_t)20);
 			for (size_t i = 0; i < s_parts.size() && drop; i++)
@@ -1200,9 +1221,11 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 		float ox = p.x, oy = p.y;
 		p.x += (p.vx + (p.kind == SNOWFLAKE ? std::sin(p.phase) * 18.0f : 0.0f)) * sec;
 		p.y += (p.vy + (p.kind == DUST || p.kind == LEAF ? std::sin(p.phase * 1.7f) * 30.0f : 0.0f)) * sec;
-		bool gone = false;
+		bool gone = false, left = false; // (left: the view moved away from it)
 		if (p.kind == DUST || p.kind == LEAF) {
-			if (!P->wind.get((int)p.x, (int)p.y) || p.x > vx + vw + 150)
+			if (p.x > vx + vw + 150 || p.x < vx - 300 || p.y < vy - 100 || p.y > vy + vh + 100)
+				gone = left = true;
+			else if (!P->wind.get((int)p.x, (int)p.y))
 				gone = true;
 		} else if (!P->precip.get((int)p.x, (int)std::max(0.0f, p.y))) {
 			// it lands: a splash, a bounce, a stone lying
@@ -1224,8 +1247,9 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 			if (p.kind == HAILSTONE && s_splashes.size() < 600)
 				s_splashes.push_back({p.x, ly, 0, 1});
 			gone = true;
-		} else if (p.y > vy + vh + 40 || p.x < vx - 200 || p.x > vx + vw + 200) {
+		} else if (p.y > vy + vh + 40 || p.y < vy - 200 || p.x < vx - 200 || p.x > vx + vw + 200) {
 			gone = true;
+			left = p.y < vy + vh || p.x < vx - 200 || p.x > vx + vw + 200; // (not just fallen past the view's foot)
 		}
 		if (p.kind == HAILSTONE && p.bounces == 1)
 			p.vy += 1800.0f * sec;
@@ -1233,7 +1257,9 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 			uint8_t k = p.kind;
 			s_parts[i] = s_parts.back();
 			s_parts.pop_back();
-			spawn(k, false);
+			// one the view moved away from comes back anywhere in the new
+			// view, already falling or blowing; one that landed, from above
+			spawn(k, left);
 			continue;
 		}
 		auto [sx, sy] = toScreen(p.x, p.y);
@@ -1310,12 +1336,23 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 		// ground's face just below its surface, none under rock or roofs;
 		// made per tile, from the weather's own map, so it is even
 		// everywhere: owner, 2026-11-27, "watch for patchiness")
+		// (tiles keyed by where they are drawn, not wrapped: the world is
+		// not a whole number of tiles wide, so a view across Eden's east
+		// edge, which wraps round to its west end, showed a tile's worth of
+		// the west end shifted 96 px, and a 96 px strip with no haze at all,
+		// owner, 2026-11-27; each column is the world's own, wrapped)
 		static std::map<std::pair<int, int>, std::pair<int, std::shared_ptr<creaturesImage>>> tiles;
+		static std::map<std::pair<int, int>, std::vector<float>> shares;
+		static const Places* tilesFor = nullptr;
+		if (tilesFor != P) {
+			tiles.clear();
+			shares.clear();
+			tilesFor = P;
+		}
 		const int T = 256, level = (int)std::lround(mix * 10);
-		const int ntx = (P->W + T - 1) / T;
 		for (int ty = std::max(0, vy / T); ty <= (vy + vh) / T && ty * T < P->H; ty++)
 			for (int tx = (int)std::floor(vx / (float)T); tx <= (int)std::floor((vx + vw) / (float)T); tx++) {
-				const int wtx = ((tx % ntx) + ntx) % ntx;
+				const int wtx = tx;
 				auto& slot = tiles[{wtx, ty}];
 				if (slot.first != level || (!slot.second && level > 0 && slot.first == 0)) {
 					// how much haze each pixel takes (0-1), worked out once per
@@ -1324,7 +1361,6 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 					// further, fading over 64 px, so a step between columns (a
 					// cliff beside open air) thins out instead of ending in a
 					// line (owner, 2026-11-27: "watch for patchiness")
-					static std::map<std::pair<int, int>, std::vector<float>> shares;
 					auto sh = shares.find({wtx, ty});
 					if (sh == shares.end()) {
 						const int R = 64;
@@ -1337,9 +1373,7 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 						};
 						std::vector<float> share(size_t(T) * T, 0.0f);
 						for (int xx = 0; xx < T; xx++) {
-							int c = wtx * T + xx;
-							if (c >= P->W)
-								break;
+							int c = col(wtx * T + xx);
 							int reach = 0; // the deepest reach within R columns
 							for (int k = -R; k <= R; k++)
 								reach = std::max(reach, P->hazeBottom[col(c + k)]);
