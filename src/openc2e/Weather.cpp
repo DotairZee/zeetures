@@ -501,15 +501,23 @@ void build(Places& P, MetaRoom* m) {
 	// to the true ground and 40 px into its face; not under a roof
 	P.hazeBottom.assign(W, 0);
 	P.hazeFade.assign(W, 0);
+	// (Eden: the valley under the long rope bridge, from the big waterfall to
+	// the incubator's wall, is open air down to its floor, though the map
+	// marks some of it indoor and has thick floor lines across it; owner,
+	// 2026-11-27, circling where the haze stopped short)
+	const int valleyX0 = 2650, valleyX1 = 3900, valleyFloor = 1747;
 	for (int x = 0; x < W; x++) {
 		int last = -1, gap = 0;
+		const bool valley = P.eden && x + P.mx >= valleyX0 && x + P.mx <= valleyX1;
 		for (int y = 0; y < H; y++) {
 			if (P.s0kind[x] == ROOF && y >= (int)P.s0[x])
 				break;
 			if (P.wind.get(x, y) || P.precip.get(x, y)) {
 				last = y;
 				gap = 0;
-			} else if (++gap > 24)
+			} else if (valley && y + P.my < valleyFloor)
+				gap = 0;
+			else if (++gap > 24)
 				break;
 		}
 		// (fading out over 70 px from the last open air, into the ground's face:
@@ -1069,6 +1077,7 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 	const float mix = s_mix;
 	const int sp = s_spell;
 	auto toScreen = [&](float x, float y) { return std::pair<int, int>((int)std::lround(x - vx), (int)std::lround(y - vy)); };
+
 
 	// how much of each kind of weather, now
 	float rain = 0, snow = 0, hailN = 0, dust = 0, fog = 0;
