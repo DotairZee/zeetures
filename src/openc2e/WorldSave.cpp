@@ -29,6 +29,7 @@
 #include "creatures/BrainOrgan.h"
 #include "creatures/Exposure.h"
 #include "creatures/Lightning.h"
+#include "Weather.h"
 #include "creatures/Kinds.h"
 #include "creatures/Relationships.h"
 #include "creatures/Breeding.h"
@@ -886,6 +887,7 @@ static bool SaveWorldStateUnguarded(const fs::path& worlddir, std::string& error
 	// radiation doses (Exposure.h): creatures', and babies' before birth
 	Exposure::save(out);
 	Lightning::save(out); // (extra mutations owed to children)
+	Weather::save(out); // (the weather spell now: Weather.h)
 	BrainOrgan::save(out); // (how dazed each creature is)
 	Kinds::save(out); // (wariness of grendels, ettins' hoards)
 	// genomes made for eggs not yet hatched: spliced, or by the Metamorph
@@ -1690,6 +1692,8 @@ bool LoadWorldState(const fs::path& worlddir) {
 			Exposure::readLine(key, l);
 		} else if (key.rfind("lightning-", 0) == 0) {
 			Lightning::readLine(key, l);
+		} else if (key.rfind("weather-", 0) == 0) {
+			Weather::readLine(key, l);
 		} else if (key.rfind("brain-", 0) == 0) {
 			BrainOrgan::readLine(key, l);
 		} else if (key.rfind("kinds-", 0) == 0) {

@@ -567,9 +567,7 @@ void strikeThing(Agent* a) {
 			a->queueScript(9);
 }
 
-void strikeAround(Agent* bolt) {
-	const float pad = 4.0f;
-	float x0 = bolt->x - pad, x1 = bolt->x + bolt->getWidth() + pad, y0 = bolt->y - pad, y1 = bolt->y + bolt->getHeight() + pad;
+void strikeRect(Agent* bolt, float x0, float y0, float x1, float y1) {
 	for (auto& a : world.agents) {
 		if (!a || a->isDying() || a.get() == bolt || !overlaps(a.get(), x0, y0, x1, y1))
 			continue;
@@ -586,6 +584,11 @@ void strikeAround(Agent* bolt) {
 	}
 }
 
+void strikeAround(Agent* bolt) {
+	const float pad = 4.0f;
+	strikeRect(bolt, bolt->x - pad, bolt->y - pad, bolt->x + bolt->getWidth() + pad, bolt->y + bolt->getHeight() + pad);
+}
+
 // a short jig: arms up and a kick each way, turning about
 void danceStep(Agent* a, unsigned int step) {
 	auto* sc = dynamic_cast<SkeletalCreature*>(a);
@@ -596,6 +599,10 @@ void danceStep(Agent* a, unsigned int step) {
 }
 
 } // namespace
+
+void strikeArea(float x0, float y0, float x1, float y1) {
+	strikeRect(nullptr, x0, y0, x1, y1);
+}
 
 bool strange() {
 	if (s_strange < 0) {

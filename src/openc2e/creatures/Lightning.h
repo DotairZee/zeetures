@@ -28,6 +28,10 @@ namespace Lightning {
 bool strange();
 void setStrange(bool on);
 
+// a bolt of Zeetures' own weather (Weather.h) struck this rectangle of
+// the world: what it touches is struck, as by C2's storm bolts
+void strikeArea(float x0, float y0, float x1, float y1);
+
 void reset(); // at each world load, before the save is read
 void tick(); // each world tick
 

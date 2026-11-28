@@ -26,6 +26,7 @@
 #include "creatures/Lightning.h"
 #include "creatures/Kinds.h"
 #include "SkyTint.h"
+#include "Weather.h"
 
 #include "Bubble.h"
 #include "creatures/Thoughts.h"
@@ -481,6 +482,7 @@ void World::tick() {
 		}
 		Exposure::tick();
 		Lightning::tick();
+		Weather::tick(); // (Zeetures' own weather: Weather.h)
 		BrainOrgan::tick();
 		Kinds::tick(); // (grendels' and ettins' roles)
 		tickBreathBubbles();
@@ -1092,6 +1094,8 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 			auto* p = dynamic_cast<CompoundPart*>(render);
 			Agent* owner = p ? p->getParent() : nullptr;
 			if (owner && (owner == (Agent*)world.hand() || typeid(*owner) == typeid(Bubble))) {
+				if (!only_creature && cam == engine.camera.get())
+					Weather::draw(surface, m, adjustx, adjusty);
 				SkyTint::draw(surface, m, destx, desty);
 				Thoughts::draw(surface, adjustx, adjusty, m->wraparound() ? (int)m->width() : 0, skip_bubbles_of);
 				lit = true;
@@ -1134,6 +1138,8 @@ void World::drawWorld(Camera* cam, RenderTarget* surface, bool skip_hand, Agent*
 		}
 	}
 	if (!lit) {
+		if (!only_creature && cam == engine.camera.get())
+			Weather::draw(surface, m, adjustx, adjusty);
 		SkyTint::draw(surface, m, destx, desty);
 		if (!only_creature) // (not in a photo)
 			Thoughts::draw(surface, adjustx, adjusty, m->wraparound() ? (int)m->width() : 0, skip_bubbles_of);

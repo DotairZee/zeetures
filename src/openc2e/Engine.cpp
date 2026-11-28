@@ -88,6 +88,7 @@
 #include "WorldSave.h"
 #include "creatures/CreatureSpeech.h"
 #include "creatures/Lightning.h"
+#include "Weather.h"
 #include "creatures/Kinds.h"
 #include "openc2eimgui/WorldChooser.h"
 #include "creatures/CreatureMind.h"
@@ -2784,6 +2785,7 @@ bool Engine::initialSetup() {
 		Disease::reset(); // (the save, if any, then fills it)
 		Exposure::reset();
 		Lightning::reset();
+		Weather::reset();
 		BrainOrgan::reset();
 		Kinds::reset();
 		// (a save that breaks the loader part way is kept aside, not

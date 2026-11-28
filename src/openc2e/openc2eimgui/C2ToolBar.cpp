@@ -28,6 +28,7 @@
 #include "WorldChooser.h"
 #include "common/backend/Backend.h"
 #include "WorldSave.h"
+#include "Weather.h"
 #include "MusicManager.h"
 #include "SoundManager.h"
 #include "C2StatusBar.h"
@@ -1840,6 +1841,30 @@ static void DrawPreferences() {
 			}
 			// lightning (creatures/Lightning.h; owner, 2026-11-26)
 			ImGui::SeparatorText("Weather");
+			// Zeetures' own weather (Weather.h; owner, 2026-11-27: on by
+			// default, a tick box to have it off)
+			{
+				bool newWeather = Weather::on();
+				if (ImGui::Checkbox("Zeetures weather", &newWeather))
+					Weather::setOn(newWeather);
+				if (ImGui::IsItemHovered())
+					ImGui::SetTooltip("Weather that changes with the seasons: clear skies, showers, thunderstorms, torrential rain, fog, snow,\na heatwave or a wind storm, with its own clouds, rain and lightning. Unticked, Creatures 2's own clouds,\nrain and storms come back. See Help > Time, seasons, and weather.");
+				if (newWeather) {
+					ImGui::SetNextItemWidth(190);
+					const int now = (int)Weather::spell();
+					std::string shown = Weather::spellName(now);
+					if (now == Weather::THUNDERSTORM && Weather::hail())
+						shown += " (with hail)";
+					if (ImGui::BeginCombo("Weather now", shown.c_str())) {
+						for (int s = 0; s < Weather::SPELL_COUNT; s++)
+							if (ImGui::Selectable(Weather::spellName(s), s == now))
+								Weather::setSpell((Weather::Spell)s);
+						ImGui::EndCombo();
+					}
+					if (ImGui::IsItemHovered())
+						ImGui::SetTooltip("The weather now; choose another to have it at once. Each lasts about a day,\nthen the season chooses the next.");
+				}
+			}
 			{
 				bool strange = Lightning::strange();
 				if (ImGui::Checkbox("Lightning has strange effects", &strange))

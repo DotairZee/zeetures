@@ -724,11 +724,26 @@ Each effect is stronger or weaker with the creature's own inherited rhythm and i
 
 ### Weather
 
-Water rises, clouds form and drift with the wind, rain falls, and storms come and go with lightning. Storms raise the air pressure, and wind blows from high pressure toward low. Bees and butterflies feel it too.
+Every so often, about once a day, the season chooses the weather for the whole world:
+
+- **Clear skies**, most of all in summer.
+- **Light showers** and **showers**, in spring and autumn above all.
+- **Thunderstorms:** heavy cloud, slanting rain and lightning. A summer storm may bring hail, which bounces and lies a while.
+- **Torrential rain:** very heavy rain under dark cloud, most in autumn.
+- **Fog:** banks drifting low over the ground, in the cooler seasons.
+- **Snow,** only in winter: flakes falling, a cold white haze over the outdoors, and snow lying on the ground the longer it falls.
+- **A heatwave,** only in summer: warm, bleached light and clear skies.
+- **A wind storm:** dust and leaves blowing past.
+
+The milder the weather, the thinner and paler the clouds. They drift over the whole sky, in front of everything, and rain, hail and snow fall through open air to the first ground, roof, bridge or platform they meet: under a bridge or a roof it stays dry. To see a kind of weather now, choose it under **Weather now** (File > Preferences > World).
+
+This weather is on unless you untick **Zeetures weather** (File > Preferences > World, under Weather; saved with the world). Unticked, Creatures 2's own weather comes back: water rises, clouds form and drift with the wind, rain falls, and storms come and go with lightning.
+
+Storms raise the air pressure, and wind blows from high pressure toward low. Bees and butterflies feel it too.
 
 ### Lightning
 
-A creature a bolt touches feels it: a jolt of pain that does no lasting harm. (The original game meant this, but a mistake in its storm script meant no bolt ever touched anyone.) Creatures remember where it hurt, as they do other painful places.
+Lightning strikes in thunderstorms, from the clouds to the ground: a forked bolt, a flash, and a glow where it lands. A creature a bolt touches feels it: a jolt of pain that does no lasting harm. (The original game meant this, but a mistake in its storm script meant no bolt ever touched anyone.) Creatures remember where it hurt, as they do other painful places.
 
 With **Lightning has strange effects** ticked (File > Preferences > World, under Weather; it is, unless you untick it), a strike may, now and then, leave a creature changed: in its body, its mind, its voice, or the way the world around it behaves, for a few minutes or for days. More rarely it comes away with a gift. And a body struck just after death may not stay dead. What has happened shows on the [[Health Kit]] by name (rest the pointer on a name to see what it does), and in the creature's life story ([[Chronicles Kit]]).
 
