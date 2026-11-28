@@ -905,6 +905,19 @@ void setPlaceEmissions(const std::vector<PlaceEmission>& e) {
 	placeEmissions = e;
 }
 
+void markFor(Agent* a, const std::string& scent, float strength, unsigned int ticks) {
+	int ch = channelIndex(scent);
+	if (!a || ch < 0 || !ticks)
+		return;
+	MarkOn m;
+	m.agent = AgentRef(a);
+	m.channel = ch;
+	m.strength = strength;
+	m.from = world.tickcount;
+	m.until = world.tickcount + ticks;
+	marks.push_back(m);
+}
+
 float levelAt(const std::string& scent, Agent* a) {
 	if (!loaded)
 		load();

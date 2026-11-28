@@ -44,7 +44,8 @@ CL_X0, CL_Y0, CL_X1, CL_Y1 = 4074, 407, 4148, 607
 # the painted mechanism under the slab
 MX0, MY0, MX1, MY1 = 4210, 474, 4282, 562
 WHEEL = (4257.5, 505.5, 9.5)     # the pale wheel: centre and radius
-CABLES = (4221, 4263)            # the lift's two cables (left edge, 2 px each)
+CABLES = (4221, 4263)            # the painted cables under the mechanism (for its mask)
+CABLE_COLS = (4221, 4261)        # the cables drawn: their first black column, as at y 562
 GRAIN_X0 = 4306                  # plain stones east of the mechanism, for grain
 # the post and arm it hangs from, and the block of wall carrying it
 POST_X0, POST_W = 4282, 30       # east of the cage (4275), west of the caller (4324)
@@ -192,16 +193,19 @@ def mechanism_mask(a):
 
 
 def cable_layer(h, w, x0, y0, y_from):
-    """The two cables, 2 px dark with a soft edge, from y_from down."""
+    """The two cables, as the painted ones are where they meet them (y 562):
+    two black columns with a soft one on their west side (left cable x
+    4220-4222, right cable x 4260-4262; the painted right one drifts west
+    as it goes down), from y_from down."""
     col = np.zeros((h, w, 3), np.float32)
     al = np.zeros((h, w), np.float32)
-    for cx in CABLES:
-        for dx, k in ((-1, 0.35), (0, 1.0), (1, 1.0), (2, 0.35)):
+    for cx in CABLE_COLS:
+        for dx, k in ((-1, 0.65), (0, 1.0), (1, 1.0)):
             x = cx + dx - x0
             if 0 <= x < w:
                 y = max(0, y_from - y0)
                 al[y:, x] = np.maximum(al[y:, x], k)
-                col[y:, x] = (22, 20, 18)
+                col[y:, x] = (14, 12, 10)
     return col, al
 
 

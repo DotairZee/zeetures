@@ -73,20 +73,38 @@ inst new: simp ztcl 1 0 8999 0 setv cls2 2 3 272 setv attr 0 mvto 4074 407 slow
 *    plane 700) is drawn over it: picture 0 hanging still, 1-3 swung east,
 *    4-6 west. Clicking it, or pulling its rope, rings it: our own bell
 *    sound (zbel) and a swing that dies away over about 3 s. The hand can
-*    click it (ATTR 4); creatures do not see it (16): they ring it with the
-*    rope.
+*    click it (ATTR 4, and BHVR 1 0: a click is activate 1; without BHVR a
+*    C2 object's click does nothing, and in the first build it did not
+*    swing); creatures do not see it (16): they ring it with the rope.
 *    The rope (2 3 275) is the bell's own painted pull-rod, where it passes
 *    the new floor at x 4660: an unseen handle there (the game's blank
 *    picture, blnk) that creatures and the hand can pull. A creature that
 *    rings it is given 30 of Boredom Decrease (chemical 45), as a toy would.
+*    Each ring adds one to the bell's OV10, which the engine watches for the
+*    bell's Easter eggs (Weather.cpp, "the temple bell"); it also rings the
+*    bell itself, by event 200 (softly, at dawn and dusk, sound zbes) and
+*    201 (struck by lightning), which do not count.
 enum 2 3 273 kill targ next
 enum 2 3 274 kill targ next
 enum 2 3 275 kill targ next
 inst new: simp ztbc 1 0 -44 0 setv cls2 2 3 273 setv attr 0 mvto 4548 106 slow
-inst new: simp ztbl 7 0 700 0 setv cls2 2 3 274 setv attr 20 pose 0 mvto 4548 106 slow
-inst new: simp blnk 1 0 1200 0 setv cls2 2 3 275 setv attr 4 mvto 4652 378 slow
+inst new: simp ztbl 7 0 700 0 setv cls2 2 3 274 setv attr 20 bhvr 1 0 pose 0 mvto 4548 106 slow
+inst new: simp blnk 1 0 1200 0 setv cls2 2 3 275 setv attr 4 bhvr 1 0 mvto 4652 378 slow
 
 scrp 2 3 274 1
+  inst
+  snde zbel
+  anim [0123321045665401221045540110440]
+  addv ov10 1
+endm
+
+scrp 2 3 274 200
+  inst
+  snde zbes
+  anim [01210454010440]
+endm
+
+scrp 2 3 274 201
   inst
   snde zbel
   anim [0123321045665401221045540110440]
@@ -98,5 +116,9 @@ scrp 2 3 275 1
   doif fmly eq 4
     stim writ targ 30 255 0 0 45 30 0 0 0 0 0 0
   endi
-  enum 2 3 274 mesg writ targ 1 next
+  enum 2 3 274
+    snde zbel
+    anim [0123321045665401221045540110440]
+    addv ov10 1
+  next
 endm

@@ -30,12 +30,14 @@
 #include "SkyTint.h"
 #include "SoundManager.h"
 #include "World.h"
+#include "caosValue.h"
 #include "common/Random.h"
 #include "common/backend/Backend.h"
 #include "common/creaturesImage.h"
 #include "common/devenv.h"
 #include "creatures/CreatureSpeech.h"
 #include "creatures/Lightning.h"
+#include "creatures/Pheromones.h"
 #include "fileformats/ImageUtils.h"
 
 #include <algorithm>
@@ -1000,12 +1002,169 @@ void reset() {
 	s_cloudShown = 0;
 }
 
+// ---- the temple bell's Easter eggs (owner, 2026-11-27) -------------------------
+// The great bell on the temple top (additions/temple-top.cos, 2 3 274) counts
+// each ring by hand or rope in its OV10; this watches it. A ring:
+// - calls the colony: its rope gives off the "bell" scent for two minutes,
+//   which creatures awake follow up to the temple (pheromones.txt);
+// - in a thunderstorm, draws the lightning: a strike on the bell tower within
+//   a few seconds, which rings the bell, and the storm's strikes go there for
+//   30 s (a lightning rod you play like an instrument);
+// - three within 6 s call up other weather (a heatwave turns to showers, rain
+//   or snow clears, anything else gives way to the season's chance), once an
+//   in-game day;
+// - as a shower ends, or within 90 s after, brings a rainbow over the temple
+//   for two and a half minutes;
+// - in fog, comes back as a faint echo (zbee) 1.4 s later.
+// And at dawn and at dusk the bell rings itself, softly (event 200, zbes),
+// and creatures asleep near the temple wake a little sooner (41, Sleepiness
+// Decrease, 40).
+namespace {
+const float BELL_X = 4662.0f, BELL_Y = 200.0f, BELL_TOP = 62.0f; // the bell; where the arch holds it
+AgentRef s_bell, s_bellRope;
+int s_bellRings = -1; // its OV10 last seen
+std::vector<unsigned int> s_ringTicks; // world ticks of the latest rings
+unsigned int s_stormBellUntil = 0, s_stormStrikeAt = 0, s_lastWeatherCall = 0;
+unsigned int s_rainEndedAt = 0, s_rainbowFrom = 0, s_rainbowUntil = 0, s_echoAt = 0;
+int s_lastTimeOfDay = -1;
+
+bool rainy(int s) {
+	return s == LIGHT_SHOWERS || s == SHOWERS || s == THUNDERSTORM || s == TORRENTIAL;
+}
+
+void findBell() {
+	s_bell = s_bellRope = AgentRef();
+	for (auto& a : world.agents)
+		if (a && !a->isDying() && a->family == 2 && a->genus == 3) {
+			if (a->species == 274)
+				s_bell = a;
+			else if (a->species == 275)
+				s_bellRope = a;
+		}
+}
+
+// a strike on the bell tower: the bolt to the arch over the bell, its
+// thunder, and the bell rung by it
+void strikeBell() {
+	MetaRoom* m = world.map->metaRoomAt((unsigned int)BELL_X, (unsigned int)BELL_Y);
+	Places* P = m ? placesFor(m) : nullptr;
+	if (!P)
+		return;
+	Bolt b;
+	b.gx = BELL_X - P->mx;
+	b.gy = BELL_TOP - P->my;
+	std::vector<std::pair<float, float>> main;
+	boltPath(main, b.gx + rand_float(-90, 90), b.gy - 240, b.gx, b.gy, 0.18f);
+	b.strokes.push_back(main);
+	for (int f = 0; f < 2; f++) {
+		auto [fx, fy] = main[rand_uint32(main.size() / 6, main.size() / 2)];
+		std::vector<std::pair<float, float>> fork;
+		float ang = rand_float(0.4f, 1.0f) * (f ? 1 : -1);
+		boltPath(fork, fx, fy, fx + std::sin(ang) * 70, fy + std::cos(ang) * 60, 0.25f);
+		b.strokes.push_back(fork);
+	}
+	s_bolts.push_back(b);
+	Sound s = soundmanager.playSound("thun");
+	if (s)
+		s.setPosition(BELL_X, BELL_TOP - 100, 1, 1);
+	if (s_bell)
+		s_bell->queueScript(201);
+	fmt::print("* Weather: lightning struck the temple bell\n");
+}
+
+void bellRung() {
+	const unsigned int now = std::max(1u, world.worldtickcount);
+	s_ringTicks.push_back(now);
+	s_ringTicks.erase(std::remove_if(s_ringTicks.begin(), s_ringTicks.end(), [&](unsigned int t) { return now - t > 60; }), s_ringTicks.end());
+	// calling the colony
+	if (s_bellRope)
+		Pheromones::markFor(s_bellRope.get(), "bell", 1.0f, 1200);
+	if (!on())
+		return;
+	// the storm bell
+	if (s_spell == THUNDERSTORM && s_mix > 0.3f) {
+		s_stormBellUntil = now + 300;
+		if (!s_stormStrikeAt)
+			s_stormStrikeAt = now + rand_uint32(20, 60);
+	}
+	// the rainbow chime
+	const bool showerEnding = rainy(s_spell) && world.worldtickcount >= s_until;
+	const bool showerEnded = !rainy(s_spell) && s_rainEndedAt && now - s_rainEndedAt < 900;
+	if ((showerEnding || showerEnded) && world.timeofday != 4 && now >= s_rainbowUntil) {
+		s_rainbowFrom = now;
+		s_rainbowUntil = now + 1500;
+		fmt::print("* Weather: the temple bell brought a rainbow\n");
+	}
+	// the echo in the fog
+	if (s_spell == FOG && s_mix > 0.3f)
+		s_echoAt = now + 14;
+	// the weather call: three rings in 6 s, once a day
+	if (s_ringTicks.size() >= 3 && (!s_lastWeatherCall || now - s_lastWeatherCall >= TICKS_PER_DAY)) {
+		int to;
+		if (s_spell == HEATWAVE)
+			to = SHOWERS;
+		else if (rainy(s_spell) || s_spell == SNOW)
+			to = CLEAR;
+		else {
+			bool h;
+			to = pickSpell(h);
+			for (int tries = 0; tries < 20 && to == s_spell; tries++)
+				to = pickSpell(h);
+			if (to == s_spell)
+				to = s_spell == CLEAR ? SHOWERS : CLEAR;
+		}
+		s_next = to;
+		s_until = world.worldtickcount; // (this one fades out first)
+		s_lastWeatherCall = now;
+		s_ringTicks.clear();
+		fmt::print("* Weather: the temple bell called up {}\n", NAMES[to]);
+	}
+}
+
+void bellEggs(bool weatherOn) {
+	if (world.tickcount % 50 == 7 && (!s_bell || !s_bellRope))
+		findBell();
+	if (!s_bell)
+		return;
+	const unsigned int now = std::max(1u, world.worldtickcount);
+	const int rings = s_bell->var[10].hasInt() ? s_bell->var[10].getInt() : 0;
+	if (s_bellRings < 0 || rings < s_bellRings)
+		s_bellRings = rings;
+	while (s_bellRings < rings) {
+		s_bellRings++;
+		bellRung();
+	}
+	if (weatherOn && s_stormStrikeAt && now >= s_stormStrikeAt) {
+		s_stormStrikeAt = 0;
+		if (s_spell == THUNDERSTORM)
+			strikeBell();
+	}
+	if (s_echoAt && now >= s_echoAt) {
+		s_echoAt = 0;
+		Sound s = soundmanager.playSound("zbee");
+		if (s)
+			s.setPosition(BELL_X - 600, BELL_Y, 1, 1); // (from the fog off to the west)
+	}
+	// the hour bell
+	const int tod = (int)world.timeofday;
+	if (tod != s_lastTimeOfDay) {
+		if (s_lastTimeOfDay >= 0 && (tod == 0 || tod == 3)) {
+			s_bell->queueScript(200);
+			engine.executeNetwork(fmt::format("enum 4 0 0 doif posx gt {} and posx lt {} and posy lt {} and aslp eq 1 stim writ targ 0 255 0 0 41 40 0 0 0 0 0 0 endi next\n",
+				(int)BELL_X - 1500, (int)BELL_X + 1500, 1300));
+		}
+		s_lastTimeOfDay = tod;
+	}
+}
+} // namespace
+
 void tick() {
 	if (engine.version != 2 || !world.map)
 		return;
 	if (!on()) {
 		if (s_suppressed)
 			holdOffStockWeather(false);
+		bellEggs(false); // (its hour and its call need no weather)
 		return;
 	}
 	if (world.tickcount % 20 == 1 || !s_suppressed)
@@ -1033,8 +1192,15 @@ void tick() {
 	if (ending) {
 		s_mix = std::max(0.0f, s_mix - 1.0f / 300.0f);
 		if (s_mix <= 0) {
+			if (rainy(s_spell))
+				s_rainEndedAt = std::max(1u, world.worldtickcount);
 			bool h;
 			int s = pickSpell(h);
+			if (s_next >= 0) { // (the temple bell's call)
+				s = s_next;
+				h = s == THUNDERSTORM && world.season == 1 && rand_float(0, 1) < 0.35f;
+				s_next = -1;
+			}
 			begin(s, h, spellLength(s));
 		}
 	} else
@@ -1046,11 +1212,15 @@ void tick() {
 		if (MetaRoom* m = engine.camera ? engine.camera->getMetaRoom() : nullptr)
 			if (Places* P = placesFor(m))
 				strike(*P, true);
-	} else if (s_spell == THUNDERSTORM && s_mix > 0.75f && rand_uint32(0, 149) == 0)
-		if (world.map->getMetaRoom(0) || engine.camera)
+	} else if (s_spell == THUNDERSTORM && s_mix > 0.75f && rand_uint32(0, 149) == 0) {
+		if (world.worldtickcount < s_stormBellUntil)
+			strikeBell();
+		else if (world.map->getMetaRoom(0) || engine.camera)
 			if (MetaRoom* m = engine.camera ? engine.camera->getMetaRoom() : nullptr)
 				if (Places* P = placesFor(m))
 					strike(*P, rand_float(0, 1) < 0.6f);
+	}
+	bellEggs(true);
 }
 
 void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
@@ -1389,6 +1559,17 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 											break;
 										v = std::max(v, std::max(vert(col(c - k), y), vert(col(c + k), y)) * w);
 									}
+								// (Eden: the valley under the long rope bridge ends
+								// on the east along the owner's line, from x 3901
+								// under the bridge to 3834 at the valley floor,
+								// short of the stone arches: owner, 2026-11-27)
+								if (P->eden) {
+									const int wx = c + P->mx, wy = y + P->my;
+									if (wy > 845 && wy < 1770 && wx > 3700 && wx < 4300) {
+										float xc = 3901.0f + (3834.0f - 3901.0f) * (wy - 860) / 670.0f;
+										v *= std::clamp((xc - wx) / 12.0f, 0.0f, 1.0f);
+									}
+								}
 								share[size_t(yy) * T + xx] = v;
 							}
 						}
@@ -1406,6 +1587,65 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 							}
 						}
 					slot = {level, any ? picture("zeetures weather snow haze", {im}) : nullptr};
+				}
+				if (slot.second)
+					surface->renderCreaturesImage(*slot.second, 0, tx * T - vx, ty * T - vy);
+			}
+	}
+
+	// the rainbow the temple bell brings after a shower (its Easter eggs,
+	// above): seven dithered bands in an arc over the temple, only where the
+	// painted sky shows, fading in over 10 s and out over 15 s
+	if (s_rainbowUntil && world.worldtickcount < s_rainbowUntil) {
+		const unsigned int now = world.worldtickcount;
+		const float ramp = std::min({1.0f, (now - s_rainbowFrom) / 100.0f, (s_rainbowUntil - now) / 150.0f});
+		const int level = (int)std::lround(ramp * 10);
+		static std::map<std::pair<int, int>, std::pair<int, std::shared_ptr<creaturesImage>>> rbTiles;
+		static const Places* rbFor = nullptr;
+		if (rbFor != P) {
+			rbTiles.clear();
+			rbFor = P;
+		}
+		const int T = 256;
+		const float CX = BELL_X - P->mx, CY = 1150.0f - P->my, RO = 1000.0f, BAND = 9.0f;
+		const float RI = RO - 7 * BAND;
+		static const int bands[7][3] = {{232, 64, 60}, {242, 150, 52}, {244, 228, 84}, {92, 200, 92}, {72, 132, 232}, {92, 80, 200}, {150, 84, 204}};
+		for (int ty = std::max(0, vy / T); ty <= (vy + vh) / T && ty * T < P->H; ty++)
+			for (int tx = (int)std::floor(vx / (float)T); tx <= (int)std::floor((vx + vw) / (float)T); tx++) {
+				// (a tile the arc misses: nothing)
+				float nx = std::clamp(CX, (float)tx * T, (float)tx * T + T), ny = std::clamp(CY, (float)ty * T, (float)ty * T + T);
+				float near = std::hypot(nx - CX, ny - CY);
+				float far = 0;
+				for (int cx : {tx * T, tx * T + T})
+					for (int cy : {ty * T, ty * T + T})
+						far = std::max(far, std::hypot(cx - CX, cy - CY));
+				if (near > RO || far < RI || ty * T > CY)
+					continue;
+				auto& slot = rbTiles[{tx, ty}];
+				if (slot.first != level) {
+					Image im = newImage(T, T);
+					bool any = false;
+					for (int yy = 0; yy < T; yy++)
+						for (int xx = 0; xx < T; xx++) {
+							int x = tx * T + xx, y = ty * T + yy;
+							float d = std::hypot(x - CX, y - CY);
+							if (d >= RO || d <= RI || y >= CY)
+								continue;
+							float tt = (RO - d) / (RO - RI);
+							float w = std::sqrt(std::sin(3.14159f * tt)) * std::clamp((CY - 250 - y) / 350.0f, 0.0f, 1.0f);
+							int c = ((x % P->W) + P->W) % P->W;
+							if (w <= 0 || y < 0 || y >= P->H || !P->precip.get(c, y))
+								continue;
+							float out = SkyTint::outdoors(m, x + P->mx, y + P->my, x + P->mx + 1, y + P->my + 1);
+							if (out >= 0 && out < 0.6f)
+								continue;
+							if (!dither(xx, yy, 0.5f * w * level / 10.0f))
+								continue;
+							const int* col = bands[std::clamp((int)(tt * 7), 0, 6)];
+							put(im, xx, yy, col[0], col[1], col[2]);
+							any = true;
+						}
+					slot = {level, any ? picture("zeetures weather rainbow", {im}) : nullptr};
 				}
 				if (slot.second)
 					surface->renderCreaturesImage(*slot.second, 0, tx * T - vx, ty * T - vy);

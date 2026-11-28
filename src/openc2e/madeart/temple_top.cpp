@@ -217,17 +217,20 @@ void mechanismMask(const Pic& a, Mask& keep, Mask& cable) {
 					cable[size_t(y) * w + x] = 1;
 }
 
-// the two cables, 2 px dark with a soft edge, over p from row `from` down
+// the two cables, as the painted ones are where they meet them (y 562):
+// two black columns with a soft one on their west side, over p from row
+// `from` down
+const int CABLE_COLS[2] = {4221, 4261};
 void cables(Pic& p, int x0, int from) {
-	const std::pair<int, float> cols[4] = {{-1, 0.35f}, {0, 1.0f}, {1, 1.0f}, {2, 0.35f}};
-	for (int cx : CABLES)
+	const std::pair<int, float> cols[3] = {{-1, 0.65f}, {0, 1.0f}, {1, 1.0f}};
+	for (int cx : CABLE_COLS)
 		for (auto [dx, k] : cols) {
 			int x = cx + dx - x0;
 			if (x < 0 || x >= p.w)
 				continue;
 			for (int y = std::max(0, from); y < p.h; y++) {
 				auto& c = p.at(x, y);
-				const float ink[3] = {22, 20, 18};
+				const float ink[3] = {14, 12, 10};
 				for (int i = 0; i < 3; i++)
 					c[i] = c[i] * (1 - k) + ink[i] * k;
 				p.al(x, y) = std::max(p.al(x, y), k);

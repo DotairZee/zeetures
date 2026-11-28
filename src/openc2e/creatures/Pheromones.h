@@ -62,6 +62,11 @@ struct PlaceEmission {
 };
 void setPlaceEmissions(const std::vector<PlaceEmission>& e);
 
+// an agent gives off a named scent from now, fading over `ticks` (as a
+// "mark" rule's mark does): the temple bell, rung, calls creatures to it
+// (Weather.cpp). Nothing happens if pheromones.txt has no such scent.
+void markFor(Agent* a, const std::string& scent, float strength, unsigned int ticks);
+
 // a named scent where the creature or object is (0-1; 0 if no such scent)
 float levelAt(const std::string& scent, Agent* a);
 

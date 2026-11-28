@@ -8,9 +8,13 @@ than the hum, each split into a pair a fraction of a hertz apart so it
 beats slowly as real bells do, with a short clank of the clapper at the
 start. The hum is 98 Hz (G2): a great bell.
 
-    python3 bell_sound.py OUT.wav
+    python3 bell_sound.py OUT.wav [ring|soft|echo]
 
-writes a 22050 Hz, 16-bit mono WAV, 5.5 s long.
+writes a 22050 Hz, 16-bit mono WAV, 5.5 s long: the bell rung (zbel.wav);
+"soft", rung gently by itself at dawn and dusk (zbes.wav: the clapper's
+clank and the bright upper partials much quieter, the whole at under half
+the level); "echo", its sound coming back off the fog (zbee.wav: the upper
+partials muffled, a slow swell instead of a strike, faint).
 """
 import sys
 import wave
@@ -32,7 +36,11 @@ PARTIALS = [
 ]
 
 
-def make():
+def make(kind='ring'):
+    upper = {'ring': 1.0, 'soft': 0.45, 'echo': 0.2}[kind]
+    clank_level = {'ring': 0.35, 'soft': 0.08, 'echo': 0.0}[kind]
+    peak = {'ring': 0.7, 'soft': 0.3, 'echo': 0.16}[kind]
+    attack_s = {'ring': 0.004, 'soft': 0.01, 'echo': 0.12}[kind]
     t = np.arange(int(RATE * LENGTH)) / RATE
     rng = np.random.default_rng(1998)
     out = np.zeros_like(t)
@@ -40,23 +48,24 @@ def make():
         f = HUM * ratio
         ph = rng.uniform(0, 2 * np.pi, 2)
         env = np.exp(-t / decay)
-        out += level * env * 0.5 * (np.sin(2 * np.pi * f * t + ph[0]) + np.sin(2 * np.pi * (f + beat) * t + ph[1]))
+        lv = level * (upper if ratio > 3.0 else 1.0)
+        out += lv * env * 0.5 * (np.sin(2 * np.pi * f * t + ph[0]) + np.sin(2 * np.pi * (f + beat) * t + ph[1]))
     # the clapper's clank: a few ms of bright noise, softened
     n = int(0.012 * RATE)
     clank = rng.standard_normal(n) * np.exp(-np.arange(n) / (0.003 * RATE))
     clank = np.convolve(clank, np.ones(3) / 3, mode='same')
-    out[:n] += 0.35 * clank
+    out[:n] += clank_level * clank
     # a 4 ms attack (no click) and a fade over the last half second
-    a = int(0.004 * RATE)
+    a = int(attack_s * RATE)
     out[:a] *= np.linspace(0, 1, a)
     f = int(0.5 * RATE)
     out[-f:] *= np.linspace(1, 0, f) ** 2
-    out *= 0.7 / np.max(np.abs(out))   # about -3 dB
+    out *= peak / np.max(np.abs(out))   # the ring about -3 dB
     return (out * 32767).astype('<i2')
 
 
 def main():
-    data = make()
+    data = make(sys.argv[2] if len(sys.argv) > 2 else 'ring')
     with wave.open(sys.argv[1], 'wb') as w:
         w.setnchannels(1)
         w.setsampwidth(2)

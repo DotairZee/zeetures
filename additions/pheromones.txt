@@ -268,3 +268,10 @@ end personalities
 # scent death fade 0.01
 # any emit death 2 when dead
 # any smell death avoid 1.2
+#
+# The temple bell (additions/temple-top.cos; owner, 2026-11-27): when it is
+# rung, its rope gives off this for two minutes (Weather.cpp), and creatures
+# awake and old enough to roam go up to the temple to see, as a bored
+# creature goes to a toy. A bell rung over and over, they get used to.
+scent bell spread 0.24 fade 0.03 habituate 3000
+any@child-old smell bell follow for bored 1 when awake
