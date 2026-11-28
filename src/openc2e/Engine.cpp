@@ -476,7 +476,7 @@ void Engine::drawWorld() {
 		// hand is not drawn: it went on moving behind the kit (owner,
 		// 2026-11-11)
 		const bool overWindow = ImGui::GetCurrentContext() && ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
-		if (zoom == 1.0f) {
+		if (zoom == 1.0f && !Weather::shimmering()) {
 			world.drawWorld(camera.get(), main, overWindow);
 		} else {
 			// draw the world at 1:1 into a texture the size of the view in
@@ -487,7 +487,11 @@ void Engine::drawWorld() {
 				zoomtarget = get_backend()->newRenderTarget(zw, zh);
 			world.drawWorld(camera.get(), zoomtarget.get(), true);
 			main->renderClear();
-			main->blitRenderTarget(zoomtarget.get(), Rect2f(0, 0, zw * zoom, zh * zoom));
+			// (a heatwave's shimmer copies it on in wavering rows: Weather.h)
+			if (Weather::shimmering())
+				Weather::shimmer(main, zoomtarget.get(), zoom, (int)camera->getX(), (int)camera->getY());
+			else
+				main->blitRenderTarget(zoomtarget.get(), Rect2f(0, 0, zw * zoom, zh * zoom));
 			PointerAgent* hand = world.hand();
 			if (hand && hand->visible && !overWindow) {
 				int mx = (int)std::lround(handViewX(camera.get(), hand) * zoom);

@@ -821,6 +821,15 @@ void SDLRenderTarget::blitRenderTarget(RenderTarget* s, Rect2f dest) {
 	SDL_RenderTexture(parent->renderer, src->texture, nullptr, &r);
 }
 
+void SDLRenderTarget::blitRenderTargetPart(RenderTarget* s, Rect2f from, Rect2f dest) {
+	SDLRenderTarget* src = dynamic_cast<SDLRenderTarget*>(s);
+	assert(src);
+	SDL_FRect f{from.x, from.y, from.width, from.height};
+	SDL_FRect r{dest.x, dest.y + viewport_offset_top, dest.width, dest.height};
+	SDL_SetRenderTarget(parent->renderer, texture);
+	SDL_RenderTexture(parent->renderer, src->texture, &f, &r);
+}
+
 RenderTarget* SDLBackend::getMainRenderTarget() {
 	return mainrendertarget.get();
 }

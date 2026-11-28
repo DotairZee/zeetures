@@ -48,6 +48,7 @@ class SDLRenderTarget : public RenderTarget {
 	void renderCreaturesImage(creaturesImage& tex, unsigned int frame, int x, int y, RenderOptions options) override;
 	void renderLine(float x1, float y1, float x2, float y2, Color color) override;
 	void blitRenderTarget(RenderTarget* src, Rect2f dest) override;
+	void blitRenderTargetPart(RenderTarget* src, Rect2f from, Rect2f dest) override;
 
 	// the size without the panels round the world, kept for a frame (the
 	// window's) or for good (a texture's): it is asked for at every sprite

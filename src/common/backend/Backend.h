@@ -58,6 +58,14 @@ class RenderTarget {
 	}
 	virtual void renderLine(float x1, float y1, float x2, float y2, Color color) = 0;
 	virtual void blitRenderTarget(RenderTarget* src, Rect2f dest) = 0;
+	// part of another target (from, in its pixels) onto dest (the heatwave's
+	// shimmer: Weather.h); by default the whole of it, clipped to dest
+	virtual void blitRenderTargetPart(RenderTarget* src, Rect2f from, Rect2f dest) {
+		const float sx = from.width > 0 ? dest.width / from.width : 1.0f, sy = from.height > 0 ? dest.height / from.height : 1.0f;
+		setClip(dest);
+		blitRenderTarget(src, Rect2f(dest.x - from.x * sx, dest.y - from.y * sy, src->getWidth() * sx, src->getHeight() * sy));
+		setClip(Rect2f{});
+	}
 	virtual int32_t getWidth() const = 0;
 	virtual int32_t getHeight() const = 0;
 	virtual void setClip(Rect2f dest) = 0;

@@ -1334,6 +1334,47 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 	}
 }
 
+bool shimmering() {
+	return engine.version == 2 && on() && s_spell == HEATWAVE && s_mix > 0.05f;
+}
+
+// The heatwave's shimmer (owner, 2026-11-27: "I'm not seeing the heatwave
+// distortions"): the world, drawn off-screen, is copied onto the window, then
+// the air just above the open ground copied again in rows 3 px tall, each
+// moved a pixel or two sideways, the most near the ground, waving with time.
+// The same row moves the same way the length of the view, so the bands meet.
+void shimmer(RenderTarget* window, RenderTarget* drawn, float zoom, int camx, int camy) {
+	const int zw = drawn->getWidth(), zh = drawn->getHeight();
+	window->blitRenderTarget(drawn, Rect2f(0, 0, zw * zoom, zh * zoom));
+	MetaRoom* m = engine.camera ? engine.camera->getMetaRoom() : nullptr;
+	Places* P = placesFor(m);
+	if (!P)
+		return;
+	const int vx = camx - P->mx, vy = camy - P->my;
+	const float t = ((float)world.worldtickcount + engine.tickFraction()) * 0.1f; // (seconds, at the world's pace)
+	const float mix = std::clamp(s_mix, 0.0f, 1.0f);
+	const int B = 32, ROW = 3, BAND = 110;
+	for (int bx = 0; bx < zw; bx += B) {
+		int c = ((vx + bx + B / 2) % P->W + P->W) % P->W;
+		if (P->s0kind[c] != FLOOR)
+			continue;
+		const int ground = (int)P->s0[c] - vy;
+		const int top = std::max(0, ground - BAND), bottom = std::min(zh, ground + 2);
+		for (int y = top - (((top + vy) % ROW) + ROW) % ROW; y < bottom; y += ROW) {
+			if (y < 0)
+				continue;
+			const float k = std::clamp((float)(y - (ground - BAND)) / BAND, 0.0f, 1.0f) * mix;
+			const float wy = (float)(y + vy);
+			const float wave = std::sin(t * 2.6f + wy * 0.33f) * 1.3f + std::sin(t * 4.1f - wy * 0.71f) * 0.7f;
+			const int dx = (int)std::lround(wave * k);
+			if (dx == 0)
+				continue;
+			const int w = std::min(B, zw - bx);
+			window->blitRenderTargetPart(drawn, Rect2f((float)bx, (float)y, (float)w, (float)ROW), Rect2f((bx + dx) * zoom, y * zoom, w * zoom, ROW * zoom));
+		}
+	}
+}
+
 void save(std::ostream& out) {
 	if (s_until == 0)
 		return;

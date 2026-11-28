@@ -64,6 +64,13 @@ void tick(); // each world tick
 // corner at world (adjustx, adjusty)
 void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty);
 
+// the heatwave's shimmer: whether the world should be drawn off-screen so
+// it can be (Engine::drawWorld), and the copy onto the window with the air
+// over the open ground wavering (the world drawn 1:1 into `world`, the view's
+// top left corner at world camx, camy, scaled by zoom)
+bool shimmering();
+void shimmer(RenderTarget* window, RenderTarget* world, float zoom, int camx, int camy);
+
 void save(std::ostream& out);
 bool readLine(const std::string& key, std::istringstream& line);
 
