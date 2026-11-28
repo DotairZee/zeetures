@@ -461,6 +461,8 @@ void build(Places& P, MetaRoom* m) {
 	for (int x = 0; x < W; x++)
 		for (int y = 0; y < std::min(H, (int)P.s0[x]); y++)
 			P.wind.set(x, y, true);
+	// (room 63, under the long rope bridge, is open air for the snow haze;
+	// the wind is kept above the bridge's walking line further down)
 	const std::vector<unsigned int> underWalkways = P.eden ? std::vector<unsigned int>{12, 63} : std::vector<unsigned int>{};
 	const std::vector<unsigned int> bridges = P.eden ? std::vector<unsigned int>{4, 5, 6, 138, 193, 218} : std::vector<unsigned int>{};
 	for (auto& rr : rooms) {
@@ -510,6 +512,55 @@ void build(Places& P, MetaRoom* m) {
 		P.hazeFade[x] = last < 0 ? 0 : last - 10;
 		P.hazeBottom[x] = last < 0 ? 0 : std::min(H, last + 60);
 	}
+	// the reach smoothed along the map, so the haze shows no seams: a median
+	// over 25 columns takes out narrow notches (where room shapes leave a
+	// gap under a bridge, the haze stopped just under its deck for a few
+	// columns: a dark line down the valley), then an average over 41 turns
+	// real steps (a cliff beside open air) into short slopes rather than
+	// vertical edges (owner, 2026-11-27: "watch for patchiness")
+	{
+		auto smooth = [&](std::vector<int>& v) {
+			std::vector<int> med(W), out(W);
+			std::vector<int> win;
+			for (int x = 0; x < W; x++) {
+				win.clear();
+				for (int k = -12; k <= 12; k++)
+					win.push_back(v[std::clamp(x + k, 0, W - 1)]);
+				std::nth_element(win.begin(), win.begin() + win.size() / 2, win.end());
+				med[x] = win[win.size() / 2];
+			}
+			for (int x = 0; x < W; x++) {
+				long sum = 0;
+				for (int k = -20; k <= 20; k++)
+					sum += med[std::clamp(x + k, 0, W - 1)];
+				out[x] = (int)(sum / 41);
+			}
+			v.swap(out);
+		};
+		smooth(P.hazeBottom);
+		smooth(P.hazeFade);
+	}
+	// developer aid: OPENC2E_WEATHER_HAZE=x0,x1 prints each column's snow
+	// haze reach there, with its first surface
+	if (const char* e = devenv("OPENC2E_WEATHER_HAZE")) {
+		int x0 = 0, x1 = 0;
+		if (sscanf(e, "%d,%d", &x0, &x1) == 2)
+			for (int x = std::max(0, x0); x <= std::min(W - 1, x1); x++)
+				fmt::print("* Weather haze x {} reaches {} (fade from {}), first surface {} kind {}\n", x, P.hazeBottom[x], P.hazeFade[x], (int)P.s0[x], (int)P.s0kind[x]);
+	}
+	// the long rope bridge over the waterfall valley (rooms 4, 5 and 6): the
+	// wind blows only above its walking line, not through the valley under
+	// it (owner, 2026-11-27, "limited to above the walking area of the bridge");
+	// after the snow haze is worked out, which still reaches the valley floor
+	if (P.eden)
+		for (auto& rr : rooms) {
+			Room* r = rr.get();
+			if (r->id != 4 && r->id != 5 && r->id != 6)
+				continue;
+			for (int x = std::max(0, (int)r->x_left - P.mx); x <= std::min(W - 1, (int)r->x_right - P.mx); x++)
+				for (int y = std::max(0, (int)floorAt(*r, (float)(x + P.mx)) - P.my + 1); y < H; y++)
+					P.wind.set(x, y, false);
+		}
 	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
 	fmt::print("* Weather: places worked out for {}x{} ({}) in {} ms\n", W, H, P.eden ? "Eden's map" : "another map", ms);
 }
@@ -1243,25 +1294,59 @@ void draw(RenderTarget* surface, MetaRoom* m, int adjustx, int adjusty) {
 				const int wtx = ((tx % ntx) + ntx) % ntx;
 				auto& slot = tiles[{wtx, ty}];
 				if (slot.first != level || (!slot.second && level > 0 && slot.first == 0)) {
+					// how much haze each pixel takes (0-1), worked out once per
+					// tile and kept: down each column to its reach, fading over
+					// the last 70 px; and sideways from a column that reaches
+					// further, fading over 64 px, so a step between columns (a
+					// cliff beside open air) thins out instead of ending in a
+					// line (owner, 2026-11-27: "watch for patchiness")
+					static std::map<std::pair<int, int>, std::vector<float>> shares;
+					auto sh = shares.find({wtx, ty});
+					if (sh == shares.end()) {
+						const int R = 64;
+						auto col = [&](int c) { return ((c % P->W) + P->W) % P->W; };
+						auto vert = [&](int c, int y) {
+							int bottom = P->hazeBottom[c], fade = P->hazeFade[c];
+							if (y >= bottom)
+								return 0.0f;
+							return y <= fade ? 1.0f : 1.0f - (float)(y - fade) / std::max(1, bottom - fade);
+						};
+						std::vector<float> share(size_t(T) * T, 0.0f);
+						for (int xx = 0; xx < T; xx++) {
+							int c = wtx * T + xx;
+							if (c >= P->W)
+								break;
+							int reach = 0; // the deepest reach within R columns
+							for (int k = -R; k <= R; k++)
+								reach = std::max(reach, P->hazeBottom[col(c + k)]);
+							for (int yy = 0; yy < T; yy++) {
+								int y = ty * T + yy;
+								if (y >= reach)
+									break;
+								float v = vert(c, y);
+								if (v < 1.0f)
+									for (int k = 1; k <= R && v < 1.0f; k++) {
+										float w = 1.0f - (float)k / R;
+										if (w <= v)
+											break;
+										v = std::max(v, std::max(vert(col(c - k), y), vert(col(c + k), y)) * w);
+									}
+								share[size_t(yy) * T + xx] = v;
+							}
+						}
+						sh = shares.emplace(std::make_pair(wtx, ty), std::move(share)).first;
+					}
 					Image im = newImage(T, T);
 					bool any = false;
 					const float a = 0.34f * (level / 10.0f);
-					for (int xx = 0; xx < T; xx++) {
-						int c = wtx * T + xx;
-						if (c >= P->W)
-							break;
-						int bottom = P->hazeBottom[c], fade = P->hazeFade[c];
-						for (int yy = 0; yy < T; yy++) {
-							int y = ty * T + yy;
-							if (y >= bottom)
-								break;
-							float k = y <= fade ? 1.0f : 1.0f - (float)(y - fade) / std::max(1, bottom - fade);
-							if (dither(xx, yy, a * k)) {
+					for (int yy = 0; yy < T; yy++)
+						for (int xx = 0; xx < T; xx++) {
+							float k = sh->second[size_t(yy) * T + xx];
+							if (k > 0 && dither(xx, yy, a * k)) {
 								put(im, xx, yy, 232, 238, 248);
 								any = true;
 							}
 						}
-					}
 					slot = {level, any ? picture("zeetures weather snow haze", {im}) : nullptr};
 				}
 				if (slot.second)
