@@ -229,7 +229,10 @@ void live(oldCreature* c) {
 	L.recentCare *= fade(recentHalfLife, (float)lifeTicks);
 	float gain = baseGrowth * P * hoursPerStep;
 	if (L.turns > 0 || L.oneWay > 0) {
-		gain += (L.turns * perTurn + L.oneWay * perOneWay) * P / (1.0f + L.recentTurns / saturation);
+		// (back-and-forth talk builds the sociable more: Temperament.h,
+		// LEARN_GROWTH_TURNS)
+		gain += (L.turns * perTurn * Temperaments::learningFactor(c->temperament, Temperaments::LEARN_GROWTH_TURNS) + L.oneWay * perOneWay) * P /
+				(1.0f + L.recentTurns / saturation);
 		L.recentTurns += L.turns + L.oneWay / 3.0f;
 	}
 	if (L.care > 0 && careWeight[stage] > 0) {
@@ -247,7 +250,9 @@ void live(oldCreature* c) {
 		L.pending *= fade(stage <= 1 ? pendingHalfLifeYoung : pendingHalfLifeOlder, (float)lifeTicks);
 
 	// ---- reserve ----
-	float nov = noveltyWeight[stage];
+	// (new words and places build the curious more: Temperament.h,
+	// LEARN_RESERVE_NOVELTY)
+	float nov = noveltyWeight[stage] * Temperaments::learningFactor(c->temperament, Temperaments::LEARN_RESERVE_NOVELTY);
 	L.reserve += L.newWords * perWord * nov;
 	if (CreatureMind* m = c->getMind()) {
 		int places = m->placesKnown();
@@ -292,8 +297,9 @@ void live(oldCreature* c) {
 	}
 
 	if (watching() && world.tickcount % 6000 == 0)
-		fmt::print("* BRAIN LIFE {} t{} stage {} growth {:.0f} (pending {:.1f}) reserve {:.0f} damage {:.1f} resilience {:.0f} stress {:.2f} trophin {:.0f} turns {:.1f} care {:.1f} capacity x{:.2f} symptoms {:.2f} places {} words {}\n",
-			monikerOf(c), world.tickcount, stage, L.growth, L.pending, L.reserve, L.damage, L.resilience, L.stress, L.trophin, L.recentTurns, L.recentCare, learning(c), s, L.places, wordsKnown(c));
+		fmt::print("* BRAIN LIFE {} t{} stage {} growth {:.0f} (pending {:.1f}) reserve {:.0f} damage {:.1f} resilience {:.0f} stress {:.2f} trophin {:.0f} turns {:.1f} care {:.1f} capacity x{:.2f} symptoms {:.2f} places {} words {} temperament {}\n",
+			monikerOf(c), world.tickcount, stage, L.growth, L.pending, L.reserve, L.damage, L.resilience, L.stress, L.trophin, L.recentTurns, L.recentCare, learning(c), s, L.places, wordsKnown(c),
+			Temperaments::toLine(c->temperament));
 
 	L.turns = L.oneWay = L.care = L.slaps = L.harm = L.newWords = 0;
 	L.steps = 0;
@@ -389,6 +395,14 @@ float learning(Creature* c) {
 	if (!L || !L->set)
 		return 1.0f;
 	return std::clamp(1.0f + (L->growth - L->damage - 100.0f) / 450.0f, 0.6f, 1.35f);
+}
+
+float stressLearning(Creature* c) {
+	oldCreature* oc = oldOf(c);
+	Life* L = lifeOf(oc);
+	if (!L || !L->set)
+		return 1.0f;
+	return Temperaments::stressLearning(oc->temperament.z[REACTIVITY], L->stress);
 }
 
 float symptoms(Creature* c) {

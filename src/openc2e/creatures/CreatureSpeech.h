@@ -48,6 +48,10 @@ const int HEAR_HAND = 48; // a word the hand typed
 const int HEAR_CREATURE = 24; // a word another creature said
 
 bool knowsWord(oldCreature* c, int word);
+// whether it says a word as the word, rather than trying it out: about when
+// it knows it, a little later for the shy and sooner for the bold
+// (Temperament.h, SAY_READINESS; understanding is not changed)
+bool canSay(oldCreature* c, int word);
 void hearWord(oldCreature* c, int word, int amount);
 // and under the experimental language system (Language.h): who said it,
 // about what, and to whom, which change what it teaches

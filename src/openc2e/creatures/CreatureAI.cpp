@@ -1038,6 +1038,7 @@ MindPerception oldCreature::buildPerception() {
 	p.plantEater = Lightning::plantEater(parentagent);
 	p.brainDaze = BrainOrgan::daze(this);
 	p.brainLearning = BrainOrgan::learning(this);
+	p.stressLearning = BrainOrgan::stressLearning(this);
 	p.brainSymptoms = BrainOrgan::symptoms(this);
 	p.brainFearScale = BrainOrgan::fearScale(this);
 	p.female = female;
@@ -1613,6 +1614,13 @@ void oldCreature::temperamentExperience(int kind, float size) {
 	static const bool off = devenv("OPENC2E_NO_TEMPERAMENT_DRIFT") != nullptr; // (A/B testing)
 	if (off || engine.version != 2 || size == 0.0f)
 		return;
+	// the reactive young are shaped more by hurt and by comfort alike
+	// (differential susceptibility: Temperament.h, LEARN_SHAPED_BY_HURT and
+	// LEARN_SHAPED_BY_COMFORT)
+	if (kind == EXPERIENCE_HURT)
+		size *= Temperaments::learningFactor(temperament, Temperaments::LEARN_SHAPED_BY_HURT);
+	else if (kind == EXPERIENCE_COMFORT)
+		size *= Temperaments::learningFactor(temperament, Temperaments::LEARN_SHAPED_BY_COMFORT);
 	if (!Temperaments::experience(temperamentDrift, kind, size, (int)stage))
 		return;
 	refreshTemperament();

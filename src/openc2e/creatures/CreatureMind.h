@@ -129,6 +129,7 @@ struct MindPerception {
 	bool plantEater = false; // Frankenstein's creature: eats only plants (Lightning.h)
 	float brainDaze = 0; // 0 clear .. 1 dazed: the brain short of energy (BrainOrgan.h)
 	float brainLearning = 1; // how fast its brain learns (BrainOrgan.h: Capacity)
+	float stressLearning = 1; // its stress's effect on learning, an inverted U (BrainOrgan.h)
 	float brainSymptoms = 0; // 0 .. 1: its brain's age showing (BrainOrgan.h)
 	float brainFearScale = 1; // how hard fear and pain strike it (BrainOrgan.h: Resilience)
 	bool female = false;

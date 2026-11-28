@@ -207,7 +207,7 @@ std::string showWord(Agent* creature, oldCreature* c, int w) {
 	if (w >= 16 && w < 56)
 		if (std::string own = ownNameFor(c, w - 16); !own.empty())
 			return own;
-	if (knowsWord(c, w))
+	if (canSay(c, w))
 		return word;
 	return attemptWord(creature, c, w);
 }
@@ -557,6 +557,14 @@ bool knowsWord(oldCreature* c, int word) {
 	return c && word >= 0 && (size_t)word < c->vocab.size() && c->vocab[word] >= WORD_KNOWN;
 }
 
+bool canSay(oldCreature* c, int word) {
+	if (!c || word < 0 || (size_t)word >= c->vocab.size())
+		return false;
+	float ready = Temperaments::learningFactor(c->temperament, Temperaments::SAY_READINESS);
+	int needed = std::clamp((int)std::lround(WORD_KNOWN / ready), 96, 255);
+	return c->vocab[word] >= needed;
+}
+
 int wordsKnown(oldCreature* c) {
 	int n = 0;
 	for (size_t i = 0; c && i < c->vocab.size(); i++)
@@ -580,7 +588,8 @@ void hearWord(oldCreature* c, int word, int amount, const Language::Hearing& h) 
 	if (Agent* self = c->getAgent(); self && h.speaker != self && Lightning::parrotNow(self))
 		creatureSays(self, (int)c->getStage(), wordUtterance(self, c, word));
 	bool knew = c->vocab[word] >= WORD_KNOWN;
-	int v = c->vocab[word] + (int)std::lround(amount * stageLearning((int)c->getStage()) * Lightning::learnFactor(c) * (Kinds::isBoney(c) ? 1.3f : 1.0f) * (1.0f - 0.9f * BrainOrgan::daze(c)) * BrainOrgan::learning(c));
+	int v = c->vocab[word] + (int)std::lround(amount * stageLearning((int)c->getStage()) * Lightning::learnFactor(c) * (Kinds::isBoney(c) ? 1.3f : 1.0f) * (1.0f - 0.9f * BrainOrgan::daze(c)) * BrainOrgan::learning(c) *
+												BrainOrgan::stressLearning(c));
 	c->vocab[word] = (unsigned char)std::min(v, 255);
 	if (!knew && c->vocab[word] >= WORD_KNOWN)
 		BrainOrgan::learnedWord(c); // (a new word: its brain's Reserve)
@@ -791,11 +800,11 @@ void hearMachineWord(Agent* machine, int word, bool aloud) {
 			// has learned it, then the word itself (as C2's creatures repeat
 			// what the machine shows)
 			int stage = (int)c->getStage();
-			if (stage >= 1 || (babyWords() && knowsWord(c, word))) {
+			if (stage >= 1 || (babyWords() && canSay(c, word))) {
 				Utterance u;
 				u.spoken = trim(engine.wordlist[word]);
-				u.shown = knowsWord(c, word) ? u.spoken : attemptWord(a.get(), c, word);
-				if (knowsWord(c, word))
+				u.shown = canSay(c, word) ? u.spoken : attemptWord(a.get(), c, word);
+				if (canSay(c, word))
 					u.learned.push_back(word);
 				creatureSays(a.get(), stage, u);
 			}
@@ -860,7 +869,7 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 					u.learned.push_back(w);
 					u.learned.push_back(partner);
 					i++;
-				} else if (knowsWord(c, w)) {
+				} else if (canSay(c, w)) {
 					shown = spoken = trim(engine.wordlist[w]);
 					u.learned.push_back(w);
 				} else {
@@ -888,7 +897,7 @@ Utterance phraseFor(const std::string& meaning, Agent* creature, oldCreature* c)
 			u.spoken += (u.spoken.empty() ? "" : " ") + (own.empty() ? trim(engine.wordlist[w]) : own);
 			if (!own.empty())
 				u.own.push_back({own, w - 16});
-			else if (knowsWord(c, w))
+			else if (canSay(c, w))
 				u.learned.push_back(w);
 		}
 		if (!u.shown.empty())
@@ -1445,7 +1454,7 @@ void tickReply(Agent* creature, oldCreature* c) {
 	// it says its first words: babyWords)
 	Utterance u;
 	u.spoken = trim(engine.wordlist[c->replyWord]);
-	bool knows = (stage > 0 || babyWords()) && knowsWord(c, c->replyWord);
+	bool knows = (stage > 0 || babyWords()) && canSay(c, c->replyWord);
 	u.shown = knows ? u.spoken : stage > 0 || babyWords() ? attemptWord(creature, c, c->replyWord) : nativeWord(creature, u.spoken);
 	if (knows)
 		u.learned.push_back(c->replyWord);

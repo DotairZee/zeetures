@@ -120,6 +120,9 @@ float daze(Creature* c);
 float dazeOf(Agent* creatureAgent);
 // how fast it learns for its brain: Capacity (about 0.6 to 1.35; 1 at birth)
 float learning(Creature* c);
+// how its stress now sharpens or dulls its learning, by its reactivity
+// (Temperament.h, stressLearning: about 0.8 to 1.08)
+float stressLearning(Creature* c);
 // Symptoms, 0 (none) to 1
 float symptoms(Creature* c);
 float symptomsOf(Agent* creatureAgent);

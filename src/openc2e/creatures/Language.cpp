@@ -220,6 +220,21 @@ void updateGuess(int& guess, int& sure, int kindInView) {
 
 // ---- the creature's side ----
 
+// its temperament's effect on a kind of learning (Temperament.h,
+// LearningChannel; 1 for an average creature)
+static float byTemperament(oldCreature* c, int channel) {
+	return c ? Temperaments::learningFactor(c->temperament, channel) : 1.0f;
+}
+
+// how much a hearing (or saying) after a while settles a word: the steady
+// more, and a word it already knows more for the incurious
+static float settling(oldCreature* c, const ::WordMemory& m) {
+	float f = byTemperament(c, Temperaments::LEARN_SETTLING);
+	if (m.best >= WORD_STRENGTH_KNOWN)
+		f *= byTemperament(c, Temperaments::LEARN_SETTLING_FAMILIAR);
+	return f;
+}
+
 ::WordMemory& memoryOf(oldCreature* c, int word) {
 	auto& words = c->lang.words;
 	if (words.size() <= (size_t)word)
@@ -258,6 +273,16 @@ int heard(Agent* listener, oldCreature* c, int word, int amount, const Hearing& 
 	wt.directed = h.directed;
 	wt.kin = h.kin;
 	float k = weightFor(wt);
+	// its temperament: whom it learns from best (the sociable from other
+	// creatures, the aloof from machines; the bold from strangers, the shy
+	// from family), and a word still new to it (the curious)
+	if (h.source == FROM_CREATURE)
+		k *= byTemperament(c, Temperaments::LEARN_WORDS_CREATURES) *
+			 byTemperament(c, h.kin ? Temperaments::LEARN_FROM_FAMILY : Temperaments::LEARN_FROM_STRANGERS);
+	else if (h.source == FROM_MACHINE || h.source == FROM_MACHINE_FAR)
+		k *= byTemperament(c, Temperaments::LEARN_WORDS_MACHINES);
+	if ((int)m.best < WORD_STRENGTH_KNOWN)
+		k *= byTemperament(c, Temperaments::LEARN_WORDS_NEW);
 
 	// grounding: what this word is heard about
 	const char* how = "";
@@ -324,8 +349,8 @@ int heard(Agent* listener, oldCreature* c, int word, int amount, const Hearing& 
 			}
 		}
 	} else if (word >= 0 && word <= 13 && word != 8) {
-		// a verb: heard while doing it
-		k *= c->getDecisionId() == word ? 2.0f : 0.7f;
+		// a verb: heard while doing it (the energetic learn by doing)
+		k *= (c->getDecisionId() == word ? 2.0f : 0.7f) * byTemperament(c, Temperaments::LEARN_WORDS_VERBS);
 	} else if (word >= 56 && word <= 72) {
 		// a feeling: heard while feeling it
 		k *= c->getDrive((unsigned int)(word - 56)) > 140 ? 2.0f : 0.6f;
@@ -337,9 +362,9 @@ int heard(Agent* listener, oldCreature* c, int word, int amount, const Hearing& 
 	if (m.lastHeard == 0 || (int)m.best == 0)
 		m.stability = std::max(m.stability, 1.0f);
 	else if (since < MASSED)
-		k *= 0.35f; // again at once: hardly more
+		k *= std::min(1.0f, 0.35f * byTemperament(c, Temperaments::LEARN_WORDS_BURSTS)); // again at once: hardly more (a little more for the placid)
 	else
-		m.stability = std::min(10.0f, m.stability + (since >= SPACED_LONG ? 1.0f : 0.5f));
+		m.stability = std::min(10.0f, m.stability + (since >= SPACED_LONG ? 1.0f : 0.5f) * settling(c, m));
 	// once known, quickly known again (savings: Bowers et al. 2009)
 	int v = (size_t)word < c->vocab.size() ? c->vocab[word] : 0;
 	if (m.best >= WORD_STRENGTH_KNOWN && v < WORD_STRENGTH_KNOWN)
@@ -365,7 +390,7 @@ void said(oldCreature* c, int word) {
 	const unsigned int since = m.lastHeard && t >= m.lastHeard ? t - m.lastHeard : 0;
 	// saying it is the best practice (retrieval: Karpicke & Roediger 2008)
 	if (since >= MASSED)
-		m.stability = std::min(10.0f, m.stability + 0.3f);
+		m.stability = std::min(10.0f, m.stability + 0.3f * settling(c, m));
 	if (c->vocab.size() > (size_t)word)
 		c->vocab[word] = (unsigned char)std::min(255, c->vocab[word] + 6);
 	m.lastHeard = std::max(1u, t);
@@ -385,9 +410,12 @@ void tick(Agent* creature, oldCreature* c) {
 		L.sleptAt = t0;
 	if (L.wasAsleep && !asleep && L.sleptAt && t0 >= L.sleptAt && t0 - L.sleptAt >= 600) {
 		int n = 0;
+		// (the placid settle more in their sleep: Temperament.h,
+		// LEARN_SLEEP_SETTLING)
+		const float slept = byTemperament(c, Temperaments::LEARN_SLEEP_SETTLING);
 		for (auto& m : L.words)
 			if (m.set && m.sinceSleep) {
-				m.stability = std::min(10.0f, m.stability + 1.0f);
+				m.stability = std::min(10.0f, m.stability + slept);
 				m.sinceSleep = false;
 				n++;
 			}
@@ -459,10 +487,11 @@ Naming nameFor(Agent* creature, oldCreature* c, int kind, bool mayCoin) {
 			n.own = own;
 			return n;
 		}
-	// the game's word it takes to mean this kind (the surest)
+	// the game's word it takes to mean this kind (the surest), among the
+	// words it is ready to say (CreatureSpeech.h, canSay)
 	int best = -1, sure = -1;
 	for (int w = 16; w < 56; w++) {
-		if (!knowsWord(c, w))
+		if (!canSay(c, w))
 			continue;
 		int means = meaningOf(c, w);
 		::WordMemory& m = memoryOf(c, w);
@@ -535,7 +564,7 @@ void agreed(oldCreature* c, const std::string& word, int kind) {
 	for (auto& [w, for_] : c->ownNames)
 		if (w != word)
 			if (auto it = for_.find(kind); it != for_.end())
-				it->second = std::max(0, it->second - 80);
+				it->second = std::max(0, it->second - (int)std::lround(80 * byTemperament(c, Temperaments::LEARN_COLONY_WORDS))); // (the sociable let go sooner)
 }
 
 void heardInOrder(oldCreature* c, const std::vector<int>& words) {

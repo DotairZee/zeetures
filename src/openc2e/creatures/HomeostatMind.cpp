@@ -189,6 +189,15 @@ struct Params {
 	// temperament (reactivity): outcomes worse than expected are learned at
 	// this share of the rate, better ones at this share
 	float worseLearning = 1.0f, betterLearning = 1.0f;
+	// temperament and learning (Temperament.h, LearningChannel; owner,
+	// 2026-11-27), each 1 for an average creature: its first tries at a kind
+	// of thing (fading to 1 over about newThingsTries tries), all its own
+	// doing, a fear proved wrong, relearning what it knew well (after
+	// reversalAfter tries), what a slap teaches, and what hitting gets it
+	float newThingsLearning = 1.0f, ownLearning = 1.0f, fearFadeLearning = 1.0f, reversalLearning = 1.0f;
+	float slapLearning = 1.0f, fightLearning = 1.0f, placeLearning = 1.0f;
+	float newThingsTries = 3.0f;
+	int reversalAfter = 6;
 	// readiness to learn about each need (MindGenes.h: danger, food, water,
 	// company), times the learning rate for changes in that drive
 	std::array<float, 17> driveLearning{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
@@ -974,6 +983,23 @@ class HomeostatMind : public CreatureMind {
 		prm.betterLearning = f(5, -0.1f);
 		// steadiness (6): sticks with what it is doing
 		prm.commitment *= f(6, 0.5f);
+		// how it learns (Temperament.h, LearningChannel; owner, 2026-11-27)
+		{
+			auto L = [&](int channel) { return Temperaments::learningFactor(z, channel); };
+			prm.newThingsLearning = L(Temperaments::LEARN_NEW_THINGS);
+			prm.ownLearning = L(Temperaments::LEARN_OWN_DOING);
+			for (int d : {PAIN, INJURY, FEAR})
+				prm.driveLearning[d] *= L(Temperaments::LEARN_DANGER);
+			prm.placeLearning = L(Temperaments::LEARN_PLACES);
+			prm.watchShare *= L(Temperaments::LEARN_WATCHING);
+			prm.watchStranger = std::min(1.0f, prm.watchStranger * L(Temperaments::LEARN_FROM_STRANGERS));
+			// (stronger habituation: each uneventful time dulls it more)
+			prm.habituationRate = std::pow(prm.habituationRate, L(Temperaments::LEARN_HABITUATION));
+			prm.fearFadeLearning = L(Temperaments::LEARN_FEAR_FADES);
+			prm.reversalLearning = L(Temperaments::LEARN_REVERSAL);
+			prm.slapLearning = L(Temperaments::LEARN_FROM_SLAPS);
+			prm.fightLearning = L(Temperaments::LEARN_FIGHTS);
+		}
 		// brain add-ons of a custom genome (BrainProfiles.h): their roles'
 		// settings, as multipliers
 		for (auto& [name, factor] : brainSettings) {
@@ -1012,7 +1038,8 @@ class HomeostatMind : public CreatureMind {
 
 	float daze = 0.0f; // 0 clear .. 1 dazed (this tick's perception)
 	float brainLearn = 1.0f, brainSymptoms = 0.0f; // its brain's Capacity and Symptoms (BrainOrgan.h)
-	float dazedLearning() const { return (1.0f - 0.9f * daze) * brainLearn; }
+	float stressLearn = 1.0f; // its stress now, sharpening or dulling its learning (BrainOrgan.h)
+	float dazedLearning() const { return (1.0f - 0.9f * daze) * brainLearn * stressLearn; }
 	int placesKnown() const override { return (int)rooms.size(); }
 	// its brain's age showing (BrainOrgan.h): now and then a place is
 	// forgotten, a room it has known or a place it ate (places go before
@@ -1043,6 +1070,7 @@ class HomeostatMind : public CreatureMind {
 		// chooses less surely
 		daze = std::clamp(p.brainDaze, 0.0f, 1.0f);
 		brainLearn = p.brainLearning;
+		stressLearn = p.stressLearning;
 		brainSymptoms = std::clamp(p.brainSymptoms, 0.0f, 1.0f);
 		forgetWithAge();
 		if (p.brainSettings && *p.brainSettings != brainSettings) {
@@ -1472,11 +1500,13 @@ class HomeostatMind : public CreatureMind {
 		static const bool noReachCheck = devenv("OPENC2E_NO_FOOD_REACH_CHECK") != nullptr; // (to compare)
 		for (auto& s : p.visible)
 			if (s.edible >= prm.foodSeeEdible) {
+				// (how sure a sighting makes it: its temperament, Temperament.h,
+				// LEARN_PLACES)
 				if (s.reachable || noReachCheck) {
-					rememberFood(s.x, s.y, p.tick, 0.6f, false, s.category);
+					rememberFood(s.x, s.y, p.tick, std::min(1.0f, 0.6f * prm.placeLearning), false, s.category);
 					foodInSight = true;
 				} else if (!knowsFoodNear(s.x, s.y))
-					rememberFood(s.x, s.y, p.tick, prm.unreachableFoodConfidence, false, s.category);
+					rememberFood(s.x, s.y, p.tick, std::min(1.0f, prm.unreachableFoodConfidence * prm.placeLearning), false, s.category);
 			}
 		for (auto& fp : foodPlaces) {
 			if (std::fabs(dxTo(p, fp.x)) < prm.foodArrived && std::fabs(fp.y - p.y) < prm.sameLevel && !foodInSight &&
@@ -5571,6 +5601,10 @@ class HomeostatMind : public CreatureMind {
 		episodes++;
 		if (!episodeNudges.empty()) {
 			float approval = std::clamp((approvalNow(p) - episodeApprovalStart) / prm.approvalScale, -1.0f, 1.0f);
+			// a slap teaches the easygoing more, the hot-tempered less
+			// (Temperament.h, LEARN_FROM_SLAPS)
+			if (approval < 0.0f)
+				approval = std::max(-1.0f, approval * prm.slapLearning);
 			static const bool watch = devenv("OPENC2E_WATCH_CREATURES") != nullptr;
 			for (size_t i : episodeNudges)
 				if (i < nudges.size()) {
@@ -5724,6 +5758,21 @@ class HomeostatMind : public CreatureMind {
 			// an innate prior counts as remembered experience: learning is slow
 			// while it outweighs real experience and speeds up as that grows
 			float rate = prm.learningRate * dazedLearning() * (e.count + 1.0f) / (e.count + 1.0f + e.prior);
+			// its temperament (Temperament.h, LearningChannel): what it learns
+			// from its own doing, its first tries at this kind of thing (the
+			// boost fading over the first few), relearning what it knows well,
+			// and what hitting gets it
+			const bool fight = current.decision == prm.hitDecision && !current.who.empty();
+			// (together held to the range one channel has, 0.5-2)
+			const float byTemperament = std::clamp(prm.ownLearning * std::pow(prm.newThingsLearning, prm.newThingsTries / (prm.newThingsTries + (float)e.count)) *
+													   (e.count >= prm.reversalAfter ? prm.reversalLearning : 1.0f) * (fight ? prm.fightLearning : 1.0f),
+				0.5f, 2.0f);
+			rate *= byTemperament;
+			// a danger it expected and did not meet: the fear proved wrong fades
+			// at its own rate (Temperament.h, LEARN_FEAR_FADES)
+			auto fearFade = [&](int i, float target, float now) {
+				return (i == PAIN || i == INJURY || i == FEAR) && now > 0.0f && target < now ? prm.fearFadeLearning : 1.0f;
+			};
 			// how wrong it was this time, before learning from it
 			auto errorOf = [&](const Expectation& x) {
 				float err = 0.0f;
@@ -5738,10 +5787,12 @@ class HomeostatMind : public CreatureMind {
 				if (feltAny[i]) {
 					// a drive cannot go below empty or above full
 					float target = std::clamp(startDrives[i] + felt[i], 0.0f, 1.0f) - startDrives[i];
-					e.delta[i] += rate * prm.driveLearning[i] * (target > e.delta[i] ? prm.worseLearning : prm.betterLearning) * (target - e.delta[i]);
+					// (a step never past the target, however fast it learns)
+					e.delta[i] += std::min(1.0f, rate * prm.driveLearning[i] * (target > e.delta[i] ? prm.worseLearning : prm.betterLearning) * fearFade(i, target, e.delta[i])) *
+								  (target - e.delta[i]);
 				} else {
-					e.delta[i] += rate * prm.driveLearning[i] * (effect[i] > e.delta[i] ? prm.worseLearning : prm.betterLearning) * prm.unfeltLearningShare *
-								  (effect[i] - e.delta[i]);
+					e.delta[i] += rate * prm.driveLearning[i] * (effect[i] > e.delta[i] ? prm.worseLearning : prm.betterLearning) * fearFade(i, effect[i], e.delta[i]) *
+								  prm.unfeltLearningShare * (effect[i] - e.delta[i]);
 				}
 			}
 			e.count++;
@@ -5765,11 +5816,12 @@ class HomeostatMind : public CreatureMind {
 			if (!current.who.empty() && current.target) {
 				Expectation& own = individuals[current.who][current.decision];
 				own.noteError(errorOf(own));
-				float r = prm.learningRate * dazedLearning() * 1.5f; // a single individual: learned a little faster than a kind
+				float r = prm.learningRate * dazedLearning() * 1.5f * prm.ownLearning * (fight ? prm.fightLearning : 1.0f); // a single individual: learned a little faster than a kind
 				for (int i = 0; i < NUM_DRIVES; i++) {
 					float target = feltAny[i] ? std::clamp(startDrives[i] + felt[i], 0.0f, 1.0f) - startDrives[i] : effect[i];
 					float share = feltAny[i] ? 1.0f : prm.unfeltLearningShare;
-					own.delta[i] += r * share * prm.driveLearning[i] * (target > own.delta[i] ? prm.worseLearning : prm.betterLearning) * (target - own.delta[i]);
+					own.delta[i] += r * share * prm.driveLearning[i] * (target > own.delta[i] ? prm.worseLearning : prm.betterLearning) * fearFade(i, target, own.delta[i]) *
+									(target - own.delta[i]);
 				}
 				own.count++;
 			}

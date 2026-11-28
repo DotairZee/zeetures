@@ -126,6 +126,64 @@ bool driftFromLine(const std::string& line, TemperamentDrift& d);
 std::string toLine(const Temperament& t);
 bool fromLine(const std::string& line, Temperament& t);
 
+// Temperament and learning (owner, 2026-11-27; the project's reports/
+// "Temperament and learning proposal.md"): each trait speeds up or slows
+// down some kinds of learning, smoothly from the lowest creature to the
+// highest, by a factor exp(k z) for each trait that touches a channel (1 for
+// an average creature), the product clamped to 0.5-2. Every trait pays off
+// at both ends: quick learners relearn slowly, the curious learn the new
+// and the incurious the familiar, the sociable learn from others and the
+// aloof from their own trying (Sih & Del Giudice 2012: animal personality
+// trades speed against accuracy). OPENC2E_TEMPERAMENT_LEARNING=0 turns it
+// off (every factor 1), for comparison runs. Nothing is saved: it all
+// follows from the traits.
+enum LearningChannel {
+	LEARN_NEW_THINGS, // its first tries at a kind of thing: bold +.20, curious +.20, energetic +.15
+	LEARN_OWN_DOING, // all it learns from its own doing: aloof (sociability -.20), flighty (steadiness -.15)
+	LEARN_DANGER, // the danger line (pain, injury, fear): reactive +.30
+	LEARN_PLACES, // food places it sees for itself: curious +.20, energetic +.15
+	LEARN_WATCHING, // what it sees others do: sociable +.25
+	LEARN_FROM_STRANGERS, // watching, and words from, creatures not its kin: bold +.20
+	LEARN_FROM_FAMILY, // words from its close kin: bold -.15 (the shy learn most at home)
+	LEARN_WORDS_NEW, // a word still new to it: curious +.30
+	LEARN_WORDS_CREATURES, // words from other creatures: sociable +.25
+	LEARN_WORDS_MACHINES, // words from machines: sociable -.20
+	LEARN_WORDS_VERBS, // verbs, heard while doing: energetic +.15
+	LEARN_WORDS_BURSTS, // a word heard again at once: the placid (energy -.15) take more from it
+	SAY_READINESS, // how soon it says a word it is learning: bold +.10 (the shy need a firmer hold)
+	LEARN_COLONY_WORDS, // letting its other names go when understood: sociable +.25
+	LEARN_HABITUATION, // the familiar growing dull: curious +.20
+	LEARN_FEAR_FADES, // a fear proved wrong fading: bold +.25, reactive -.30
+	LEARN_REVERSAL, // relearning what it knew well: bold -.20, steady -.20
+	LEARN_FORGIVING, // making up after harm: temper -.25
+	LEARN_GRUDGES, // harm souring a bond: temper +.30
+	LEARN_FROM_SLAPS, // what a slap teaches: temper -.30
+	LEARN_FIGHTS, // what hitting gets it: temper +.20
+	LEARN_RESERVE_NOVELTY, // its brain's reserve from new words and places: curious +.25
+	LEARN_GROWTH_TURNS, // its brain's growth from back-and-forth talk: sociable +.20
+	LEARN_SETTLING, // a word heard again after a while settling: steady +.20, energetic -.10
+	LEARN_SETTLING_FAMILIAR, // the same for a word it already knows: curious -.15
+	LEARN_SLEEP_SETTLING, // sleep settling the day's words: energetic -.20
+	LEARN_SHAPED_BY_HURT, // while young, hurt shaping its temperament: reactive +.20
+	LEARN_SHAPED_BY_COMFORT, // while young, comfort shaping it: reactive +.20 (differential susceptibility)
+	NUM_LEARNING_CHANNELS
+};
+// whether temperament shapes learning (OPENC2E_TEMPERAMENT_LEARNING=0 off)
+bool learningOn();
+// the channel's k for each trait (the table above)
+float learningK(int channel, int trait);
+// the factor for a channel (1 average; 0.5-2), from a temperament or its z
+float learningFactor(const std::array<float, NUM_TRAITS>& z, int channel);
+inline float learningFactor(const Temperament& t, int channel) { return learningFactor(t.z, channel); }
+// Stress and learning, an inverted U (Lupien et al. 2007): a little stress
+// sharpens learning, a lot dulls it, and the peak sits at lower stress the
+// more reactive the creature. Stress 0-1; a mild 0.8-1.08.
+float stressLearning(float reactivityZ, float stress);
+// One line for the Owner's Kit: how it learns, from its two strongest
+// learning effects ("learns danger quickly and lets go of a fear slowly"),
+// or "" when none stands out.
+std::string learningLine(const Temperament& t);
+
 } // namespace Temperaments
 
 // Seasonal rhythm (owner, 2026-11-16: should creatures "eat more in autumn

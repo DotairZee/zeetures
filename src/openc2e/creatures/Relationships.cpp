@@ -199,13 +199,15 @@ void felt(Agent* creature, oldCreature* c, Agent* source, const std::array<int, 
 	Bond& b = c->bonds[them];
 	unsigned int now = world.worldtickcount;
 	// temperament: sociable creatures warm faster, hot-tempered ones sour
-	// harder, shy ones take more fright
+	// harder (a grudge: Temperament.h, LEARN_GRUDGES), shy ones take more
+	// fright
 	const Temperament& t = c->temperament;
-	float x = help * HELP_GAIN * t.factor(SOCIABILITY, 0.3f) - harm * HELP_GAIN * HARM_WEIGHT * t.factor(TEMPER, 0.2f);
+	float x = help * HELP_GAIN * t.factor(SOCIABILITY, 0.3f) - harm * HELP_GAIN * HARM_WEIGHT * Temperaments::learningFactor(t, Temperaments::LEARN_GRUDGES);
 	fear *= t.factor(BOLDNESS, -0.3f);
-	// making up after a fight counts double for a while
+	// making up after a fight counts double for a while (more for the
+	// easygoing, who forgive sooner: LEARN_FORGIVING)
 	if (x > 0 && b.lastHarm && now - b.lastHarm < 600)
-		x *= 2.0f;
+		x *= 2.0f * Temperaments::learningFactor(t, Temperaments::LEARN_FORGIVING);
 	// a Boney grendel is won over more easily (Kinds.h)
 	if (x > 0 && Kinds::isBoney(c))
 		x *= 1.5f;
@@ -292,7 +294,9 @@ void tick() {
 				mateAway = true;
 			// recent feeling and fear fade in minutes; the meter only after long apart
 			b.recent *= 0.97f;
-			b.fear *= 0.985f;
+			// (a fear of another fades faster for the bold, slower for the
+			// reactive: Temperament.h, LEARN_FEAR_FADES)
+			b.fear *= 1.0f - 0.015f * Temperaments::learningFactor(me.c->temperament, Temperaments::LEARN_FEAR_FADES);
 			if (now - b.lastContact > APART) {
 				b.affinity *= b.mate ? 0.9999f : 0.9995f;
 				b.familiarity *= 0.9998f;

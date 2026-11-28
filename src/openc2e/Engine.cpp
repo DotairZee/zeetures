@@ -87,6 +87,7 @@
 #include "Scriptorium.h"
 #include "WorldSave.h"
 #include "creatures/CreatureSpeech.h"
+#include "creatures/Language.h"
 #include "creatures/Lightning.h"
 #include "Weather.h"
 #include "creatures/Kinds.h"
@@ -1310,6 +1311,9 @@ void Engine::update() {
 //   type TEXT         the letters typed on the keyboard, then Return
 //   savewords NAME    the words in use saved as a custom list
 //   teachwords        every creature learns every word (to test speech)
+//   hearall N         every creature hears the hand say word N to it (to
+//                     compare how creatures learn)
+//   wordsall          prints each creature's words known and temperament
 // For recording scripted shots with OPENC2E_RECORD.
 static void runDirector() {
 	static const char* file = devenv("OPENC2E_DIRECTOR");
@@ -1378,6 +1382,23 @@ static void runDirector() {
 			for (auto& a : world.agents)
 				if (auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr)
 					learnAllWords(dynamic_cast<oldCreature*>(ca->getCreature()));
+		} else if (cmd == "hearall") { // every creature hears the hand say word N to it
+			int w = -1;
+			if (l >> w)
+				for (auto& a : world.agents)
+					if (auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr) {
+						Language::Hearing h;
+						h.speaker = world.hand();
+						h.source = Language::FROM_HAND;
+						h.directed = true;
+						hearWord(dynamic_cast<oldCreature*>(ca->getCreature()), w, HEAR_HAND, h);
+					}
+		} else if (cmd == "wordsall") { // prints each creature's words known and temperament
+			for (auto& a : world.agents)
+				if (auto* ca = a ? dynamic_cast<CreatureAgent*>(a.get()) : nullptr)
+					if (auto* oc = dynamic_cast<oldCreature*>(ca->getCreature()))
+						fmt::print("* WORDSALL {} stage {} words {} temperament {}\n", world.history->findMoniker(oc->getGenome()), (int)oc->getStage(), wordsKnown(oc),
+							Temperaments::toLine(oc->temperament));
 		} else if (cmd == "select") {
 			std::string who;
 			l >> who;

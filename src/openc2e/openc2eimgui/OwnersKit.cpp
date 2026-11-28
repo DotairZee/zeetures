@@ -1662,6 +1662,16 @@ static void TemperamentPage() {
 							  "and how trying new things turns out; from youth on their temperament is settled.\n"
 							  "Its genes' chemistry (how strongly its body raises fear, boredom, tiredness, loneliness,\n"
 							  "anger and stress, against its species' usual genome) can make it bolder, calmer, lonelier and so on.");
+		// how its temperament shapes its learning (Temperament.h,
+		// learningLine; owner, 2026-11-27)
+		std::string learns = Temperaments::learningLine(t);
+		learns = learns.empty() ? fmt::format("{} learns about as readily as most creatures in every way.", name) : fmt::format("{} {}.", name, learns);
+		KitNoteColored(ImGui::GetStyle().Colors[ImGuiCol_Text], "%s", learns.c_str());
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Temperament shapes how a creature learns, from the least to the most of each trait:\n"
+							  "the bold and the curious pick up new things quickly, the shy and the steady relearn\n"
+							  "carefully, the sociable learn from others and the aloof from their own trying,\n"
+							  "the reactive learn danger quickly and let go of a fear slowly.");
 	}
 
 	// the mind's own heritable settings (MindGenes.h; owner, 2026-11-20):
