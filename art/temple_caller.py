@@ -5,9 +5,9 @@ drawing, no game pixels: it is laid over the background's sculpture.
 
 - Frame 0, idle: a deep, dim amber, a faint glow within; a gold bezel with
   depth (a lit rim, a shadowed lip over the stone).
-- Frame 1, called: lit from within, white-gold at its heart, a soft
-  checkered glow round it (as the game's other glows are dithered), and
-  the bezel and the stone close by catching its light.
+- Frame 1, called: lit from within, white-gold at its heart, and the bezel
+  catching its light; no glow around it (owner, 2026-11-27: "I like it just
+  with the lit up version of the stone").
 
 Both have a crisp highlight upper left and a soft second reflection lower
 right; the gold is worn as the temple's other metal is (art/temple_pulley.py).
@@ -31,7 +31,6 @@ import temple_pulley as tp
 OX, OY, R = 4112.0, 320.0, 4.6         # the gem: centre, radius (the cone's foot)
 BEZEL_IN, BEZEL_OUT = 4.7, 6.6
 BOX = (4103, 311, 4188, 392)           # the picture's box (x0, y0, x1, y1)
-HALO = (6.9, 12.5)                     # the called glow: from, to (px)
 
 
 def area():
@@ -97,37 +96,11 @@ def bezel(cv, on):
         cv.c = cv.c * (1 - k[..., None]) + warm * k[..., None]
 
 
-def halo(out, on):
-    """The called glow, checkered: amber pixels thinning out from the bezel,
-    the inner ring warmer; a few pale-gold on the stone closest (its light on
-    the brow)."""
-    if not on:
-        return out
-    bayer = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]) / 16.0
-    x0, y0 = BOX[0], BOX[1]
-    h, w = out.shape[:2]
-    r0, r1 = HALO
-    for y in range(h):
-        for x in range(w):
-            if out[y, x, 3]:
-                continue
-            d = math.hypot(x0 + x + 0.5 - OX, y0 + y + 0.5 - OY)
-            if d < r0 - 0.6 or d > r1:
-                continue
-            a = (1 - (d - r0) / (r1 - r0)) ** 1.8 * 0.62
-            if bayer[(y0 + y) % 4, (x0 + x) % 4] < a:
-                t = np.clip((d - r0) / (r1 - r0), 0, 1)
-                c = np.array([255, 232, 150]) * (1 - t) + np.array([255, 168, 60]) * t
-                out[y, x] = (int(c[0]), int(c[1]), int(c[2]), 255)
-    return out
-
-
 def frame(on):
     cv = area()
     bezel(cv, on)
     gem(cv, on)
-    out = tp.finish(cv)
-    return halo(out, on)
+    return tp.finish(cv)
 
 
 def make():
