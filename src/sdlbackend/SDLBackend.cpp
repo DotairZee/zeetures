@@ -1006,6 +1006,14 @@ void SDLBackend::run(std::function<bool()> update_callback) {
 		// to speak until the world was opened again (reported 2026-11-22)
 		if (!SDL_TextInputActive(window))
 			SDL_StartTextInput(window);
+		// and for a kit in its own window, when it has the keyboard: a box
+		// such as Preferences' "Save as..." name can open in another window
+		// of its own that does not take the keyboard, so typed letters still
+		// come from the kit's window, which had text input off and sent
+		// none (a Windows player, 2026-11-27: typing worked only with the
+		// kit back on the game window)
+		if (SDL_Window* focus = SDL_GetKeyboardFocus(); focus && focus != window && !SDL_TextInputActive(focus))
+			SDL_StartTextInput(focus);
 
 		applyUiWindows(*this);
 		bringLostWindowsHome();
