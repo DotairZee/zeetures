@@ -322,6 +322,7 @@ add_library(openc2e_core OBJECT
 	src/openc2e/madeart/cavepath.cpp
 	src/openc2e/madeart/cave_ramp.cpp
 	src/openc2e/madeart/stream_bed.cpp
+	src/openc2e/madeart/temple_top.cpp
 	src/openc2e/madeart/volcano_trunk.cpp
 	src/openc2e/madeart/westlock_rock.cpp
 	src/openc2e/madeart/treelift_top.cpp

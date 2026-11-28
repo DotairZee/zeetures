@@ -1,0 +1,102 @@
+* The temple's top floor (openc2e Creatures 2 project, our own script; the
+* pictures are made on the player's own machine from their installed
+* Creatures 2 by art/temple_top.py, ported as madeart/temple_top.cpp, and
+* the bell's sound is our own, art/bell_sound.py). Owner, 2026-11-27, with a
+* marked screenshot: the lift up one more floor, its pulley above that
+* floor, the column in front of creatures, and the bell rung. Run by
+* openc2e after the world loads (Additions folder); safe to repeat. ROOM
+* takes all of a room's data, so each room's own values are passed back.
+*
+* The stone temple east of the long rope bridge has a long slab across its
+* front, its top at y 396, from the column at its west end (x 4078-4143) to
+* its east end (x 4894). Below it, the ground floor (rooms 7, 8 and 9, up to
+* y 340 of open air); the cage lift (3 2 2, cage x 4172-4275) rises in its
+* shaft (x 4183-4300) to the ground floor (its cage's foot at 595).
+*
+* 1. The slab is a floor. Room 8 (the shaft over the ground stop) and room
+*    9 (the ground floor east of it) end at the slab's underside instead of
+*    at y 340; above the slab, room 310 (over the shaft, x 4183-4300) and
+*    room 311 (x 4300-4894) take room 9's values, open to each other and to
+*    the sky above (223-225), walled from the column's statue to the west
+*    (room 7), from the desert to the east (room 10) and from below (the
+*    slab: rooms 8 and 9, and the sky rooms' old links down to them closed).
+room 8 4183 396 4300 595 room 8 4 room 8 5 room 8 6 room 8 7 room 8 8 room 8 9 room 8 12 room 8 13 room 8 14 room 8 15 room 8 16 room 8 17 room 8 19
+room 9 4300 396 4894 632 room 9 4 room 9 5 room 9 6 room 9 7 room 9 8 room 9 9 room 9 12 room 9 13 room 9 14 room 9 15 room 9 16 room 9 17 room 9 19
+room 310 4183 340 4300 396 room 9 4 room 9 5 room 9 6 room 9 7 room 9 8 room 9 9 room 9 12 room 9 13 room 9 14 room 9 15 room 9 16 room 9 17 room 9 19
+room 311 4300 340 4894 396 room 9 4 room 9 5 room 9 6 room 9 7 room 9 8 room 9 9 room 9 12 room 9 13 room 9 14 room 9 15 room 9 16 room 9 17 room 9 19
+setv door 0 310 311 255
+setv door 0 310 223 255
+setv door 0 310 224 255
+setv door 0 311 224 255
+setv door 0 311 225 255
+setv door 0 310 7 0
+setv door 0 311 10 0
+setv door 0 310 8 0
+setv door 0 311 9 0
+setv door 0 223 8 0
+setv door 0 224 8 0
+setv door 0 224 9 0
+setv door 0 225 9 0
+*
+* 2. A fourth stop with the cage's foot on the slab (396), and its caller on
+*    the slab east of the shaft, over the ground floor's caller (4324): the
+*    game's own caller picture (cbt2), like the others on this lift. NEW:
+*    CALL is openc2e's: it adds the stop to the lift and links the button.
+enum 2 2 2 doif posl eq 4324 doif post eq 296 kill targ endi endi next
+enum 3 2 2
+  doif posl eq 4172
+    inst new: call targ 396 cbt2 2 0 5000 setv cls2 2 2 2 setv attr 196 bhvr 1 0 pose 0 mvto 4324 296 slow
+  endi
+next
+*
+* 3. The lift's mechanism (a cog, a pale wheel, belts and a coiled cable,
+*    painted on the wall under the slab) moves up above the new stop with
+*    the block of wall it is fixed to, hung under a stone arm on a slim
+*    twisted post standing on the slab (ztpu, plane 1300: behind the cage
+*    and behind creatures walking past); its old place painted out with the
+*    stone around it, and the lift's two cables carried up to it (ztpc,
+*    plane -45: behind everything). The cage's top at the new stop is at
+*    229, the block's foot at 213.
+enum 2 3 270 kill targ next
+enum 2 3 271 kill targ next
+inst new: simp ztpc 1 0 -45 0 setv cls2 2 3 270 setv attr 0 mvto 4210 213 slow
+inst new: simp ztpu 1 0 1300 0 setv cls2 2 3 271 setv attr 0 mvto 4200 106 slow
+*
+* 4. The column at the slab's west end drawn again in front of creatures
+*    (plane 8999, as the game's own pieces in front of the shaft), so they
+*    walk behind it on the ground floor.
+enum 2 3 272 kill targ next
+inst new: simp ztcl 1 0 8999 0 setv cls2 2 3 272 setv attr 0 mvto 4074 407 slow
+*
+* 5. The great bell (x 4577-4747, y 113-278) swings and rings. ztbc paints
+*    it out of the background (plane -44); the bell itself (2 3 274, ztbl,
+*    plane 700) is drawn over it: picture 0 hanging still, 1-3 swung east,
+*    4-6 west. Clicking it, or pulling its rope, rings it: our own bell
+*    sound (zbel) and a swing that dies away over about 3 s. The hand can
+*    click it (ATTR 4); creatures do not see it (16): they ring it with the
+*    rope.
+*    The rope (2 3 275) is the bell's own painted pull-rod, where it passes
+*    the new floor at x 4660: an unseen handle there (the game's blank
+*    picture, blnk) that creatures and the hand can pull. A creature that
+*    rings it is given 30 of Boredom Decrease (chemical 45), as a toy would.
+enum 2 3 273 kill targ next
+enum 2 3 274 kill targ next
+enum 2 3 275 kill targ next
+inst new: simp ztbc 1 0 -44 0 setv cls2 2 3 273 setv attr 0 mvto 4548 106 slow
+inst new: simp ztbl 7 0 700 0 setv cls2 2 3 274 setv attr 20 pose 0 mvto 4548 106 slow
+inst new: simp blnk 1 0 1200 0 setv cls2 2 3 275 setv attr 4 mvto 4652 378 slow
+
+scrp 2 3 274 1
+  inst
+  snde zbel
+  anim [0123321045665401221045540110440]
+endm
+
+scrp 2 3 275 1
+  inst
+  targ from
+  doif fmly eq 4
+    stim writ targ 30 255 0 0 45 30 0 0 0 0 0 0
+  endi
+  enum 2 3 274 mesg writ targ 1 next
+endm

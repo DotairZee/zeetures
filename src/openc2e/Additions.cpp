@@ -38,8 +38,9 @@ static bool readFile(const fs::path& p, std::string& out) {
 	return true;
 }
 
-// the first of our sprites (four letters starting with z, outside comment
-// lines) that a script uses and no image file is installed for, or empty
+// the first of our sprites or sounds (four letters starting with z, outside
+// comment lines) that a script uses and no image or sound file is installed
+// for, or empty
 static std::string missingArtIn(const std::string& script) {
 	std::istringstream in(script);
 	std::string line;
@@ -54,7 +55,8 @@ static std::string missingArtIn(const std::string& script) {
 				continue;
 			if (!std::all_of(w.begin(), w.end(), [](char c) { return std::islower((unsigned char)c) || std::isdigit((unsigned char)c); }))
 				continue;
-			if (findImageFile(w + ".s16").empty() && findImageFile(w + ".c16").empty() && findImageFile(w + ".png").empty() && !MadeArt::canMake(w))
+			if (findImageFile(w + ".s16").empty() && findImageFile(w + ".c16").empty() && findImageFile(w + ".png").empty() && !MadeArt::canMake(w) &&
+				findSoundFile(w + ".wav").empty()) // (or our sound: the temple bell's zbel)
 				return w;
 		}
 	}

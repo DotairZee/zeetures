@@ -252,7 +252,16 @@ fs::path findOverlayDataFile(fs::path path) {
 }
 
 fs::path findSoundFile(fs::path path) {
-	return findFile(DIRECTORY_SOUNDS, path);
+	// Zeetures's own sounds (the temple bell, zbel.wav) ship beside its art,
+	// looked for after the player's and the game's own, as images are
+	fs::path found = findFile(DIRECTORY_SOUNDS, path);
+	if (found.empty() && engine.version == 2 && !zeeturesArtDirectory().empty()) {
+		std::error_code ec;
+		fs::path ours = case_insensitive_filesystem::canonical(zeeturesArtDirectory() / path.filename(), ec);
+		if (!ec && fs::exists(ours, ec))
+			return ours;
+	}
+	return found;
 }
 
 fs::path getCurrentWorldJournalPath(fs::path filename) {
