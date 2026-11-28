@@ -13,12 +13,9 @@ floor, onto the slab, and:
 - ztpc: behind everything, the lift's painted mechanism (a cog, a pale
   wheel, its belts and a coiled green cable, on the wall under the slab at
   x 4212-4280, y 476-560) painted out with the stone around it, and the
-  lift's two cables (x 4221 and 4263) carried on up to where the mechanism
-  hangs now.
-- ztpu: behind creatures, the same mechanism moved up 330 px, hung under a
-  stone arm on a slim twisted post standing on the slab east of the shaft:
-  the post from the column itself (its helix scaled down and repeated, its
-  capital and base), the arm from the slab's own edge.
+  lift's two cables carried on up to the new pulley's wheel (its middle at
+  y 196; the pulley on its swan-neck bracket is our own drawing,
+  art/temple_pulley.py, owner 2026-11-27, variant A weathered by the desert).
 - ztbc and ztbl: the great bell (x 4577-4747, y 113-278), which swings. ztbc
   paints the bell out of the background (the sky either side carried
   across, the stones either side of its skirt carried inward); ztbl is the
@@ -27,8 +24,7 @@ floor, onto the slab, and:
 
     python3 temple_top.py C2_DIR USER_DATA_DIR [MOCKUP.png]
 
-writes USER_DATA_DIR/Images/ztcl.png, ztpc.png, ztpu.png, ztbc.png and
-ztbl.png (top-left corners in TOPLEFT below), and with a third argument a
+writes USER_DATA_DIR/Images/ztcl.png, ztpc.png, ztbc.png and ztbl.png (top-left corners in TOPLEFT below), and with a third argument a
 mock-up of the temple with every piece in place (the bell at frame 3).
 """
 import sys
@@ -47,12 +43,7 @@ WHEEL = (4257.5, 505.5, 9.5)     # the pale wheel: centre and radius
 CABLES = (4221, 4263)            # the painted cables under the mechanism (for its mask)
 CABLE_COLS = (4221, 4261)        # the cables drawn: their first black column, as at y 562
 GRAIN_X0 = 4306                  # plain stones east of the mechanism, for grain
-# the post and arm it hangs from, and the block of wall carrying it
-POST_X0, POST_W = 4282, 30       # east of the cage (4275), west of the caller (4324)
-ARM_X0, ARM_X1, ARM_Y0, ARM_H = 4204, 4318, 110, 15
-LIFT = MY0 - (ARM_Y0 + ARM_H)    # how far up the block moves (its top under the arm)
-PU_X0, PU_Y0, PU_X1, PU_Y1 = 4200, 106, 4320, FLOOR + 2
-PC_Y0 = MY1 - LIFT               # the cables from the block's foot down
+PC_Y0 = 196                      # the cables from the new wheel's middle down (art/temple_pulley.py)
 # the bell
 BX0, BY0, BX1, BY1 = 4548, 106, 4776, 288
 PIVOT = (4662.0, 118.0)          # where the hanger rods meet the dome
@@ -63,7 +54,6 @@ ANGLES = [0.0, 0.9, 1.8, 2.6, -0.9, -1.8, -2.6]   # gentle: a great bell, and it
 TOPLEFT = {
     'ztcl': (CL_X0, CL_Y0),
     'ztpc': (MX0, PC_Y0),
-    'ztpu': (PU_X0, PU_Y0),
     'ztbc': (BX0, BY0),
     'ztbl': (BX0, BY0),
 }
@@ -233,100 +223,6 @@ def old_place(c2):
     return rgba_of(col, al)
 
 
-def helix_period(shaft):
-    """The column's twist repeats down its length: the period (px) from the
-    luminance's autocorrelation."""
-    lum = shaft.mean(axis=(1, 2))
-    lum = lum - lum.mean()
-    best, bp = -1e9, 20
-    for p in range(12, 40):
-        c = float((lum[:-p] * lum[p:]).mean())
-        if c > best:
-            best, bp = c, p
-    return bp
-
-
-def scaled(img, alpha, w, h):
-    im = Image.fromarray(rgba_of(img, alpha), 'RGBA').resize((w, h), Image.LANCZOS)
-    a = np.asarray(im).astype(np.float32)
-    return a[..., :3], a[..., 3] / 255.0
-
-
-def post_and_arm(c2):
-    """ztpu: the post, the arm, and the mechanism hung under the arm."""
-    W, H = PU_X1 - PU_X0, PU_Y1 - PU_Y0
-    col = np.zeros((H, W, 3), np.float32)
-    al = np.zeros((H, W), np.float32)
-
-    def put(img, a, x, y):
-        h, w = a.shape
-        x -= PU_X0
-        y -= PU_Y0
-        sx0, sy0 = max(0, -x), max(0, -y)
-        x0, y0 = max(0, x), max(0, y)
-        x1, y1 = min(W, x + w), min(H, y + h)
-        if x1 <= x0 or y1 <= y0:
-            return
-        s = (slice(sy0, sy0 + y1 - y0), slice(sx0, sx0 + x1 - x0))
-        k = a[s][..., None]
-        col[y0:y1, x0:x1] = col[y0:y1, x0:x1] * (1 - k) + img[s] * k
-        al[y0:y1, x0:x1] = np.maximum(al[y0:y1, x0:x1], a[s])
-
-    # the column, cut (its alpha from column()), scaled to the post's width
-    c = column(c2).astype(np.float32)
-    crgb, ca = c[..., :3], c[..., 3] / 255.0
-    scale = POST_W / 64.0
-    cap = slice(0, 26)                         # capital, y 407-433
-    shaft = slice(30, 168)                     # the twist, y 437-575
-    base = slice(168, 200)                     # base, y 575-607
-    per = helix_period(crgb[shaft])
-    one = slice(shaft.start, shaft.start + per)
-    def sc(sl):
-        im, a = crgb[sl], ca[sl]
-        im, a = scaled(im, a, POST_W, max(1, int(round((sl.stop - sl.start) * scale))))
-        a = (a > 0.6)
-        # one pixel off each side: the cut column's edge pixels are its
-        # outline against the sky, a dotted line when scaled down
-        a[:, 1:] &= a[:, :-1]
-        a[:, :-1] &= a[:, 1:]
-        return im, a.astype(np.float32)   # hard edged, as the game's sprites
-    capi, capa = sc(cap)
-    basi, basa = sc(base)
-    twi, twa = sc(one)
-    top = ARM_Y0 + ARM_H - 2
-    y = top + capa.shape[0]
-    bottom = FLOOR + 1 - basa.shape[0]
-    while y < bottom:
-        put(twi, twa, POST_X0, y)
-        y += twa.shape[0]
-    put(basi, basa, POST_X0, bottom)
-    put(capi, capa, POST_X0, top)
-
-    # the arm: a length of the slab's own edge (x 4330-4436, y 392-409),
-    # its east end resting on the post's capital, its west end cut square
-    s = rgb(c2, 4330, 392, 4330 + (ARM_X1 - ARM_X0), 409)
-    s = np.asarray(Image.fromarray(np.clip(s, 0, 255).astype(np.uint8)).resize((ARM_X1 - ARM_X0, ARM_H), Image.LANCZOS)).astype(np.float32)
-    sa = np.ones(s.shape[:2], np.float32)
-    # a little shade under its west end (it is thinner there, carved)
-    for x in range(12):
-        sa[ARM_H - 1 - x // 4:, x] = 0
-    put(s, sa, ARM_X0, ARM_Y0)
-
-    # the block of wall carrying the mechanism, moved up under the arm: the
-    # same picture, stones and all, its cut sides finished with a shadowed
-    # edge and a lit top edge, and a shadow under the arm
-    a = rgb(c2, MX0, MY0, MX1, MY1)
-    blk = a.copy()
-    bh, bw = blk.shape[:2]
-    for i, k in enumerate((0.45, 0.7)):
-        blk[:, i] *= k
-        blk[:, bw - 1 - i] *= k
-        blk[bh - 1 - i, :] *= k
-    blk[0:3] *= np.array([0.55, 0.7, 0.85])[:, None, None]
-    put(blk, np.ones((bh, bw), np.float32), MX0, MY0 - LIFT)
-    return rgba_of(col, al)
-
-
 # ---- the bell -------------------------------------------------------------
 
 def bell_mask(a):
@@ -445,7 +341,6 @@ def main():
     made = {
         'ztcl': column(c2),
         'ztpc': old_place(c2),
-        'ztpu': post_and_arm(c2),
         'ztbc': bell_cover(c2),
         'ztbl': bell_frames(c2),
     }
@@ -456,7 +351,7 @@ def main():
     if len(sys.argv) > 3:
         X0, Y0, X1, Y1 = 3980, 60, 4950, 700
         bg = Image.fromarray(np.asarray(region(c2, X0, Y0, X1, Y1))[..., :3].astype(np.uint8)).convert('RGBA')
-        for name, frame in (('ztpc', made['ztpc']), ('ztbc', made['ztbc']), ('ztpu', made['ztpu']),
+        for name, frame in (('ztpc', made['ztpc']), ('ztbc', made['ztbc']),
                             ('ztbl', made['ztbl'][3]), ('ztcl', made['ztcl'])):
             x, y = TOPLEFT[name]
             layer = Image.new('RGBA', bg.size)

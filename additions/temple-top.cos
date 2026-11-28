@@ -49,18 +49,20 @@ enum 3 2 2
   endi
 next
 *
-* 3. The lift's mechanism (a cog, a pale wheel, belts and a coiled cable,
-*    painted on the wall under the slab) moves up above the new stop with
-*    the block of wall it is fixed to, hung under a stone arm on a slim
-*    twisted post standing on the slab (ztpu, plane 1300: behind the cage
-*    and behind creatures walking past); its old place painted out with the
-*    stone around it, and the lift's two cables carried up to it (ztpc,
-*    plane -45: behind everything). The cage's top at the new stop is at
-*    229, the block's foot at 213.
+* 3. The lift's painted mechanism (a cog, a pale wheel, belts and a coiled
+*    cable, on the wall under the slab) is painted out with the stone around
+*    it (ztpc, plane -45: behind everything), and the lift's two cables run
+*    on up from there to a pulley of our own above the new stop: a sunburst
+*    wheel on an ornate swan-neck iron bracket standing beside the statue,
+*    long weathered by the desert (ztgp, art/temple_pulley.py; owner,
+*    2026-11-27: variant A, "like it's been in the desert for a long time";
+*    plane 1300: behind the cage and behind creatures walking past). The
+*    cables leave the wheel's middle (y 196); the cage's top at the new stop
+*    is at 229, the wheel's foot at 219.
 enum 2 3 270 kill targ next
 enum 2 3 271 kill targ next
-inst new: simp ztpc 1 0 -45 0 setv cls2 2 3 270 setv attr 0 mvto 4210 213 slow
-inst new: simp ztpu 1 0 1300 0 setv cls2 2 3 271 setv attr 0 mvto 4200 106 slow
+inst new: simp ztpc 1 0 -45 0 setv cls2 2 3 270 setv attr 0 mvto 4210 196 slow
+inst new: simp ztgp 1 0 1300 0 setv cls2 2 3 271 setv attr 0 mvto 4145 104 slow
 *
 * 4. The column at the slab's west end drawn again in front of creatures
 *    (plane 8999, as the game's own pieces in front of the shaft), so they

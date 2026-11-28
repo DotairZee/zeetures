@@ -1,10 +1,10 @@
-// ztcl, ztpc, ztpu, ztbc and ztbl: art/temple_top.py. The stone temple's top
+// ztcl, ztpc, ztbc and ztbl: art/temple_top.py. The stone temple's top
 // floor (owner, 2026-11-27): the cage lift goes up onto the slab across the
-// temple's front, its painted mechanism moves up with it, the column at the
-// slab's west end is drawn in front of creatures, and the great bell swings.
-// additions/temple-top.cos places them; the Python recipe's docstring says
-// what each picture is. Its numbers are kept; its LANCZOS resizes are area
-// averages here (the post and the arm only, a pixel's shade apart).
+// temple's front, its painted mechanism under the slab is painted out (a
+// new pulley of our own hangs above the new stop: art/temple_pulley.py), the
+// column at the slab's west end is drawn in front of creatures, and the
+// great bell swings. additions/temple-top.cos places them; the Python
+// recipe's docstring says what each picture is. Its numbers are kept.
 
 #include "MadeArt.h"
 
@@ -23,11 +23,9 @@ const int MX0 = 4210, MY0 = 474, MX1 = 4282, MY1 = 562;
 const float WHEEL_X = 4257.5f, WHEEL_Y = 505.5f, WHEEL_R = 9.5f;
 const int CABLES[2] = {4221, 4263};
 const int GRAIN_X0 = 4306;
-const int POST_X0 = 4282, POST_W = 30;
-const int ARM_X0 = 4204, ARM_X1 = 4318, ARM_Y0 = 110, ARM_H = 15;
-const int LIFT = MY0 - (ARM_Y0 + ARM_H);
-const int PU_X0 = 4200, PU_Y0 = 106, PU_X1 = 4320, PU_Y1 = FLOOR + 2;
-const int PC_Y0 = MY1 - LIFT;
+// the cables from the wheel's middle down (the pulley on its swan-neck
+// bracket, art/temple_pulley.py, ztgp, draws the wheel over their tops)
+const int PC_Y0 = 196;
 const int BX0 = 4548, BY0 = 106, BX1 = 4776, BY1 = 288;
 const float PIVOT_X = 4662.0f, PIVOT_Y = 118.0f;
 const int BELL_TOP = 113, BELL_BOTTOM = 278, COVER_TOP = 113;
@@ -272,137 +270,6 @@ std::vector<Rgba> oldPlace() {
 	return {rgbaOf(out)};
 }
 
-int helixPeriod(const Pic& c, int y0, int y1) {
-	std::vector<float> lum;
-	for (int y = y0; y < y1; y++) {
-		float s = 0;
-		for (int x = 0; x < c.w; x++)
-			s += c.at(x, y)[0] * c.al(x, y) + c.at(x, y)[1] * c.al(x, y) + c.at(x, y)[2] * c.al(x, y);
-		lum.push_back(s / (3.0f * c.w));
-	}
-	float mean = 0;
-	for (float v : lum)
-		mean += v;
-	mean /= lum.size();
-	for (float& v : lum)
-		v -= mean;
-	float best = -1e30f;
-	int bp = 20;
-	for (int p = 12; p < 40; p++) {
-		float s = 0;
-		for (size_t i = 0; i + p < lum.size(); i++)
-			s += lum[i] * lum[i + p];
-		s /= float(lum.size() - p);
-		if (s > best)
-			best = s, bp = p;
-	}
-	return bp;
-}
-
-// rows y0..y1 of src scaled to w x h by area averaging (premultiplied)
-Pic scaled(const Pic& src, int y0, int y1, int w, int h) {
-	Pic out(w, h);
-	const float sx = float(src.w) / w, sy = float(y1 - y0) / h;
-	for (int y = 0; y < h; y++)
-		for (int x = 0; x < w; x++) {
-			float fx0 = x * sx, fx1 = (x + 1) * sx, fy0 = y0 + y * sy, fy1 = y0 + (y + 1) * sy;
-			std::array<float, 3> c{0, 0, 0};
-			float a = 0, area = 0;
-			for (int yy = int(fy0); yy < int(std::ceil(fy1)); yy++)
-				for (int xx = int(fx0); xx < int(std::ceil(fx1)); xx++) {
-					if (xx >= src.w || yy >= y1)
-						continue;
-					float wgt = (std::min(fx1, xx + 1.0f) - std::max(fx0, float(xx))) * (std::min(fy1, yy + 1.0f) - std::max(fy0, float(yy)));
-					if (wgt <= 0)
-						continue;
-					float al = src.al(xx, yy);
-					for (int k = 0; k < 3; k++)
-						c[k] += src.at(xx, yy)[k] * al * wgt;
-					a += al * wgt;
-					area += wgt;
-				}
-			if (a > 0)
-				out.at(x, y) = {c[0] / a, c[1] / a, c[2] / a};
-			out.al(x, y) = area > 0 ? a / area : 0;
-		}
-	return out;
-}
-
-std::vector<Rgba> postAndArm() {
-	Pic c = column();
-	Pic arm0 = rgb(4330, 392, 4330 + (ARM_X1 - ARM_X0), 409);
-	Pic blk = rgb(MX0, MY0, MX1, MY1);
-	if (!c.w || !arm0.w || !blk.w)
-		return {};
-	Pic out(PU_X1 - PU_X0, PU_Y1 - PU_Y0);
-	auto put = [&](const Pic& img, int x, int y) {
-		for (int yy = 0; yy < img.h; yy++)
-			for (int xx = 0; xx < img.w; xx++) {
-				int ox = x + xx - PU_X0, oy = y + yy - PU_Y0;
-				if (ox < 0 || oy < 0 || ox >= out.w || oy >= out.h)
-					continue;
-				float k = img.al(xx, yy);
-				auto& d = out.at(ox, oy);
-				for (int i = 0; i < 3; i++)
-					d[i] = d[i] * (1 - k) + img.at(xx, yy)[i] * k;
-				out.al(ox, oy) = std::max(out.al(ox, oy), k);
-			}
-	};
-	// the post: the column scaled to its width, its twist repeated
-	const float scale = POST_W / 64.0f;
-	auto sc = [&](int y0, int y1) {
-		Pic p = scaled(c, y0, y1, POST_W, std::max(1, int(std::lround((y1 - y0) * scale))));
-		Mask hard(size_t(p.w) * p.h);
-		for (size_t i = 0; i < hard.size(); i++)
-			hard[i] = p.a[i] > 0.6f;
-		Mask t = hard;
-		for (int y = 0; y < p.h; y++)
-			for (int x = 0; x < p.w; x++) {
-				size_t i = size_t(y) * p.w + x;
-				bool l = x > 0 ? hard[i - 1] : true, r = x < p.w - 1 ? hard[i + 1] : true;
-				t[i] = hard[i] && l && r;
-			}
-		for (size_t i = 0; i < t.size(); i++)
-			p.a[i] = t[i] ? 1.0f : 0.0f;
-		return p;
-	};
-	const int per = helixPeriod(c, 30, 168);
-	Pic cap = sc(0, 26), base = sc(168, 200), twist = sc(30, 30 + per);
-	const int top = ARM_Y0 + ARM_H - 2;
-	const int bottom = FLOOR + 1 - base.h;
-	for (int y = top + cap.h; y < bottom; y += twist.h)
-		put(twist, POST_X0, y);
-	put(base, POST_X0, bottom);
-	put(cap, POST_X0, top);
-	// the arm: a length of the slab's own edge, its west end cut under
-	Pic arm = scaled(arm0, 0, arm0.h, ARM_X1 - ARM_X0, ARM_H);
-	for (int x = 0; x < 12; x++)
-		for (int y = ARM_H - 1 - x / 4; y < ARM_H; y++)
-			arm.al(x, y) = 0;
-	put(arm, ARM_X0, ARM_Y0);
-	// the block of wall carrying the mechanism, its cut sides finished
-	const int bw = blk.w, bh = blk.h;
-	auto shade = [&](int x, int y, float k) {
-		for (int i = 0; i < 3; i++)
-			blk.at(x, y)[i] *= k;
-	};
-	const float edge[2] = {0.45f, 0.7f};
-	for (int i = 0; i < 2; i++) {
-		for (int y = 0; y < bh; y++) {
-			shade(i, y, edge[i]);
-			shade(bw - 1 - i, y, edge[i]);
-		}
-		for (int x = 0; x < bw; x++)
-			shade(x, bh - 1 - i, edge[i]);
-	}
-	const float under[3] = {0.55f, 0.7f, 0.85f};
-	for (int y = 0; y < 3; y++)
-		for (int x = 0; x < bw; x++)
-			shade(x, y, under[y]);
-	put(blk, MX0, MY0 - LIFT);
-	return {rgbaOf(out)};
-}
-
 // ---- the bell ----
 
 Mask bellMask(const Pic& a) {
@@ -539,7 +406,6 @@ static Register ztcl("ztcl", [] {
 	return c.w ? std::vector<Rgba>{rgbaOf(c)} : std::vector<Rgba>();
 });
 static Register ztpc("ztpc", oldPlace);
-static Register ztpu("ztpu", postAndArm);
 static Register ztbc("ztbc", bellCover);
 static Register ztbl("ztbl", bellFrames);
 
