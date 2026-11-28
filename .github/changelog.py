@@ -415,6 +415,8 @@ VERSIONS = [
      "The Creatures menu describes each creature in lower case: \"Norn 0003 (female norn)\"."),
     ("0.49.0", "57711f5c",
      "New weather, Zeetures' own: about once a day the season chooses clear skies, light showers, showers, a thunderstorm (in summer sometimes with hail), torrential rain, fog, snow in winter, a heatwave in summer, or a wind storm. It has its own clouds over the whole sky, thinner and paler the milder the weather; rain, hail and snow that fall through open air and stay off whatever has a roof, bridge or platform above it; snow that lies and a cold white haze; drifting fog; blowing dust and leaves; and lightning that strikes from the clouds with a flash, and touches creatures as before. It is on unless you untick Zeetures weather (File, Preferences, World), which brings back Creatures 2's own weather; Weather now, there, chooses the weather at once."),
+    ("0.49.1", "a00b0f2e",
+     "Weather: no more straight line drifting across the clouds; wind storms, thunderstorms, and torrential rain blow over in about 5 to 15 minutes, so one dust storm no longer lasts the whole evening; a wind storm under the long rope bridge blows only above the bridge, not through the valley below; the snow's white haze there is even, with no seams; rain lands on the volcano walkway's floor and stays off its underside; a heatwave makes the air shimmer over open ground, with speech bubbles held steady; and the falling and drifting dots stay in step with one another instead of flickering. Typing works in Kits moved to their own windows, such as the name box of Save As in Preferences."),
 ]
 
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",

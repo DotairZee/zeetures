@@ -1,11 +1,12 @@
 # Zeetures changelog
 
-Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 809 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
+Every change Zeetures has made to [openc2e](https://github.com/openc2e/openc2e) since it was forked from openc2e's commit [dfcd46f2](https://github.com/openc2e/openc2e/commit/dfcd46f2) (7 October 2026): 817 commits, newest first, each with its full description. It is generated from the commit history by `.github/changelog.py`, so it lists everything, down to test aids and build fixes.
 
 Not listed here: the world additions (the scripts and art recipes run from the player's Additions folder, such as the walkways, airlocks, lifts and seasonal bushes), which are kept outside this repository for now. Commits that changed the engine for them are listed.
 
 ## Versions
 
+- [0.49.1](#version-0491): 8 commits, 27 November 2026
 - [0.49.0](#version-0490): 2 commits, 27 November 2026
 - [0.48.1](#version-0481): 2 commits, 27 November 2026
 - [0.48.0](#version-0480): 3 commits, 27 November 2026
@@ -125,6 +126,105 @@ Not listed here: the world additions (the scripts and art recipes run from the p
 - [0.4.0](#version-040): 66 commits, 12 November 2026 to 14 November 2026
 - [0.3.0](#version-030): 38 commits, 12 November 2026
 - [0.1.0](#version-010): 206 commits, 7 November 2026 to 12 November 2026
+
+## Version 0.49.1
+
+Weather: no more straight line drifting across the clouds; wind storms, thunderstorms, and torrential rain blow over in about 5 to 15 minutes, so one dust storm no longer lasts the whole evening; a wind storm under the long rope bridge blows only above the bridge, not through the valley below; the snow's white haze there is even, with no seams; rain lands on the volcano walkway's floor and stays off its underside; a heatwave makes the air shimmer over open ground, with speech bubbles held steady; and the falling and drifting dots stay in step with one another instead of flickering. Typing works in Kits moved to their own windows, such as the name box of Save As in Preferences.
+
+### 27 November 2026
+
+#### Version 0.49.1
+
+[`a00b0f2e`](https://github.com/DotairZee/zeetures/commit/a00b0f2ee0bb2fd4885d54e9f636e851edf6c75f)
+
+#### Weather: no hard line in the clouds; fierce weather blows over sooner
+
+[`0f00cbe7`](https://github.com/DotairZee/zeetures/commit/0f00cbe7fcc4b151665fc34b6f361abbb28b406a)
+
+- The cloud deck no longer shows a straight vertical line drifting across
+  the sky. The deck repeats around the world, and its pattern now meets
+  itself seamlessly where the two ends join.
+- Wind storms, thunderstorms, and torrential rain now last about 5 to 15
+  minutes instead of 15 to 45, so one dust storm no longer fills a whole
+  evening's play. Milder weather lasts as long as before.
+
+#### Weather: wind storm stays above the long rope bridge; even snow haze
+
+[`ce18747b`](https://github.com/DotairZee/zeetures/commit/ce18747bb661e96ffcb5dbc8ebcb352a3d9d6836)
+
+- In a wind storm, the dust and leaves under Eden's long rope bridge now
+  blow only above the bridge's walking line, not through the valley below.
+- The snow's white haze in the valley under the bridge no longer shows
+  seams or a dark line: where it reaches is smoothed across neighboring
+  ground, and where it stops beside a cliff (by the waterfall rock) it
+  thins out sideways with the same dither instead of ending in a straight
+  edge.
+
+#### Kits in their own windows: typing works there too
+
+[`39a75a8f`](https://github.com/DotairZee/zeetures/commit/39a75a8fff022a6baf4043902be9d0f1b322ce7b)
+
+A player on Windows 10 found that with Preferences dragged off the game
+window, its "Save as..." name box took no typing; moved back fully onto
+the game window it did. SDL 3 sends typed text only to a window with text
+input on. The game kept it on for its own window, and ImGui turns it on
+for the window holding the text box; but a box like the name box can open
+in a window of its own that does not take the keyboard, so the keys still
+came from the kit's window, with text input off. Now text input is also
+kept on for whichever of the game's windows has the keyboard. (Not
+reproduced here: Linux tests run without a screen.)
+
+#### Weather: rain lands on the volcano walkway's floor line
+
+[`36323d64`](https://github.com/DotairZee/zeetures/commit/36323d6480af3bd414ba533ffedf68cbf8ad6d6e)
+
+In the volcano's crater, rain and hail now land on the floor line
+creatures and objects stand on (room 143's, from the room map) instead of
+a line traced from the picture, which sat 15-17 px above it and stopped
+them short (owner: "make it so they hit where the plane on which
+creatures and objects exist is"). Tested with a norn on the walkway:
+the splashes land level with its feet.
+
+#### Weather: speech bubbles stay steady in the heatwave's shimmer
+
+[`9739442c`](https://github.com/DotairZee/zeetures/commit/9739442cdac2c1e6f7e63fd1f70fdbbd4a07060d)
+
+The shimmer moved everything drawn in the hot air above the ground,
+speech bubbles too (owner: keep them steady). The parts of each wavering
+row that a speech bubble covers (with 3 px to spare) are now left where
+they are; the creature and the scene around the bubble still waver.
+Tested: the hand's speech bubble in the middle of the hot band, no pixel
+of it changed in 39 frame pairs, while 364 beside it did.
+
+#### Weather: the heatwave's shimmer over the open ground
+
+[`1da12782`](https://github.com/DotairZee/zeetures/commit/1da12782d90557c906d0d6924caf773db4fa3e4b)
+
+In a heatwave the air just above the open ground wavers: the world is
+drawn off-screen (as at other zooms), copied onto the window, then the
+110 px above each stretch of open ground copied again in rows 3 px tall,
+each moved a pixel or two sideways, most near the ground, waving with
+time; the same row moves the same way along the view so the stretches
+meet (owner: "I'm not seeing the heatwave distortions"). The renderer
+can now copy part of an off-screen picture (blitRenderTargetPart; SDL
+directly, others by clipping). Tested: rows 280-360 of a desert view
+change frame to frame, the sky and caves do not.
+
+#### Weather: dithers in step, rain stays off the volcano's walkway underside
+
+[`5f805449`](https://github.com/DotairZee/zeetures/commit/5f805449488b091d16eb1cf7d331caf817454c6c)
+
+Every dithered layer (clouds, snow haze, fog banks, the lightning's flash
+and glow) is now on the world's 4 px grid, and the drifting clouds and
+fog move in 4 px steps: drifting a pixel at a time, their checker slid
+against the haze's and shimmered where they overlapped (owner's
+screencast). The lightning's flash was anchored to the screen; now to
+the world. The snow haze fades out in dither over 70 px below the last
+open air, rather than stopping in a line under the ground's surface.
+Rain and hail land where they meet a surface, not a frame's fall past
+it, and in the volcano everything under the walkway stays dry (the open
+air beneath it let rain through, splashing under the walkway); the
+walkway's line is 12 px higher, at its drawn top.
 
 ## Version 0.49.0
 
