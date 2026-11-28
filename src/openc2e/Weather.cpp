@@ -23,6 +23,7 @@
 #include "Agent.h"
 #include "Bubble.h"
 #include "Camera.h"
+#include "PointerAgent.h"
 #include "creatures/Creature.h"
 #include "creatures/CreatureAgent.h"
 #include "historyManager.h"
@@ -1046,11 +1047,10 @@ void reset() {
 namespace {
 const float BELL_X = 4662.0f, BELL_Y = 200.0f, BELL_TOP = 62.0f; // the bell; where the arch holds it
 AgentRef s_bell, s_bellRope;
-AgentRef s_chimes[5];
-int s_chimeRings[5] = {-1, -1, -1, -1, -1};
+int s_bellTaps = -1; // its OV11 (taps by the hand) last seen
 std::vector<std::pair<int, unsigned int>> s_tune; // (note, world tick)
 int s_bellRings = -1; // its OV10 last seen
-std::vector<unsigned int> s_ringTicks; // world ticks of the latest rings
+std::vector<std::pair<unsigned int, int>> s_ringTicks; // the latest rings: world tick, and the note tapped (-1 the rope)
 unsigned int s_stormBellUntil = 0, s_stormStrikeAt = 0, s_lastWeatherCall = 0;
 unsigned int s_rainEndedAt = 0, s_rainbowFrom = 0, s_rainbowUntil = 0, s_echoAt = 0;
 int s_lastTimeOfDay = -1;
@@ -1061,16 +1061,13 @@ bool rainy(int s) {
 
 void findBell() {
 	s_bell = s_bellRope = AgentRef();
-	for (auto& c : s_chimes)
-		c = AgentRef();
 	for (auto& a : world.agents)
 		if (a && !a->isDying() && a->family == 2 && a->genus == 3) {
 			if (a->species == 274)
 				s_bell = a;
 			else if (a->species == 275)
 				s_bellRope = a;
-			else if (a->species >= 276 && a->species <= 280)
-				s_chimes[a->species - 276] = a;
+
 		}
 }
 
@@ -1103,10 +1100,10 @@ void strikeBell() {
 	fmt::print("* Weather: lightning struck the temple bell\n");
 }
 
-void bellRung() {
+void bellRung(int note) {
 	const unsigned int now = std::max(1u, world.worldtickcount);
-	s_ringTicks.push_back(now);
-	s_ringTicks.erase(std::remove_if(s_ringTicks.begin(), s_ringTicks.end(), [&](unsigned int t) { return now - t > 60; }), s_ringTicks.end());
+	s_ringTicks.push_back({now, note});
+	s_ringTicks.erase(std::remove_if(s_ringTicks.begin(), s_ringTicks.end(), [&](const std::pair<unsigned int, int>& r) { return now - r.first > 60; }), s_ringTicks.end());
 	// calling the colony
 	if (s_bellRope)
 		Pheromones::markFor(s_bellRope.get(), "bell", 1.0f, 1200);
@@ -1129,8 +1126,12 @@ void bellRung() {
 	// the echo in the fog
 	if (s_spell == FOG && s_mix > 0.3f)
 		s_echoAt = now + 14;
-	// the weather call: three rings in 6 s, once a day
-	if (s_ringTicks.size() >= 3 && (!s_lastWeatherCall || now - s_lastWeatherCall >= TICKS_PER_DAY)) {
+	// the weather call: three rings in 6 s of one note (the rope's, or
+	// three taps in one place: no tune has three of a note running, so
+	// playing one does not call the weather), once a day
+	const size_t nr = s_ringTicks.size();
+	const bool sameThree = nr >= 3 && s_ringTicks[nr - 1].second == s_ringTicks[nr - 2].second && s_ringTicks[nr - 2].second == s_ringTicks[nr - 3].second;
+	if (sameThree && (!s_lastWeatherCall || now - s_lastWeatherCall >= TICKS_PER_DAY)) {
 		int to;
 		if (s_spell == HEATWAVE)
 			to = SHOWERS;
@@ -1152,16 +1153,18 @@ void bellRung() {
 	}
 }
 
-// ---- the temple chimes' hidden tunes (owner, 2026-11-27) ----
-// Five hanging chimes on the temple top (2 3 276-280, low to high: notes 0-4,
-// D F A B D) each count their strikes in their OV10, as the bell does. The
-// last notes struck, each within 4 s of the one before, are matched against
-// the tunes below, played as on a five-holed ocarina; a tune played, the
-// great bell answers softly, and:
+// ---- the great bell's hidden tunes (owner, 2026-11-27) ----
+// The hand taps the great bell (temple-top.cos counts its taps in OV11): where
+// on it says the note, higher the higher up the bell, as a real bell sounds
+// higher toward its crown: lip D, skirt F, waist A, shoulder B, crown high D
+// (notes 0-4; our own tones zbl0-zbl4). (A rack of chimes was tried and
+// found too busy for the temple top.) The last notes tapped, each within 4 s
+// of the one before, are matched against the tunes below, played as on a
+// five-holed ocarina; a tune played, the great bell answers softly, and:
 // - the storm tune calls up a thunderstorm;
 // - the sun tune brings the day (night turns to dawn; rain or snow clears);
 // - the tune of ages finds the oldest ancestor of a living creature (the one
-//   selected, else the one nearest the chimes), as a status-bar notice;
+//   selected, else the one nearest the bell), as a status-bar notice;
 // - the lullaby calms creatures near the temple and makes them drowsy;
 // - the critters' tune calls bugs and critters up to the temple top;
 // - the playful tune perks creatures nearby up;
@@ -1194,7 +1197,7 @@ void stimNearTemple(const std::array<int, 4>& chems, const std::array<int, 4>& a
 }
 
 void tuneOfAges() {
-	// whose: the selected creature, else the one nearest the chimes
+	// whose: the selected creature, else the one nearest the bell
 	Agent* who = world.selectedcreature.get();
 	if (!who || !dynamic_cast<CreatureAgent*>(who)) {
 		float best = 1e30f;
@@ -1242,15 +1245,15 @@ void tuneOfAges() {
 	e.name = od.name;
 	e.genus = std::max(1, (int)od.genus);
 	e.female = od.gender == 2;
-	e.cause = depth == 0 ? fmt::format("the chimes' tune of ages: {} is the first of its line", nameOf(mon))
-						 : fmt::format("the chimes' tune of ages: {}'s line goes back {} generation{} to {}", nameOf(mon), depth, depth == 1 ? "" : "s", nameOf(oldest));
+	e.cause = depth == 0 ? fmt::format("the bell's tune of ages: {} is the first of its line", nameOf(mon))
+						 : fmt::format("the bell's tune of ages: {}'s line goes back {} generation{} to {}", nameOf(mon), depth, depth == 1 ? "" : "s", nameOf(oldest));
 	world.history->lifelog.push_back(e);
 	world.history->notices.push_back(e);
 }
 
 void playTune(const Tune& tune) {
 	const std::string what = tune.what;
-	fmt::print("* Weather: the temple chimes played the {} tune\n", what);
+	fmt::print("* Weather: the temple bell played the {} tune\n", what);
 	if (s_bell)
 		s_bell->queueScript(200); // (the great bell answers)
 	const unsigned int now = std::max(1u, world.worldtickcount);
@@ -1295,7 +1298,7 @@ void playTune(const Tune& tune) {
 	}
 }
 
-void chimeStruck(int note) {
+void noteStruck(int note) {
 	const unsigned int now = std::max(1u, world.worldtickcount);
 	if (!s_tune.empty() && now - s_tune.back().second > 40)
 		s_tune.clear();
@@ -1318,27 +1321,36 @@ void chimeStruck(int note) {
 }
 
 void bellEggs(bool weatherOn) {
-	if (world.tickcount % 50 == 7 && (!s_bell || !s_bellRope || !s_chimes[0]))
+	if (world.tickcount % 50 == 7 && (!s_bell || !s_bellRope))
 		findBell();
-	for (int i = 0; i < 5; i++)
-		if (s_chimes[i]) {
-			const int c = s_chimes[i]->var[10].hasInt() ? s_chimes[i]->var[10].getInt() : 0;
-			if (s_chimeRings[i] < 0 || c < s_chimeRings[i])
-				s_chimeRings[i] = c;
-			while (s_chimeRings[i] < c) {
-				s_chimeRings[i]++;
-				chimeStruck(i);
-			}
-		}
+
 	if (!s_bell)
 		return;
 	const unsigned int now = std::max(1u, world.worldtickcount);
+	// taps by the hand first (each also a ring, OV10): the note from where
+	// the hand is on the bell, higher the higher up
+	const int taps = s_bell->var[11].hasInt() ? s_bell->var[11].getInt() : 0;
 	const int rings = s_bell->var[10].hasInt() ? s_bell->var[10].getInt() : 0;
+	if (s_bellTaps < 0 || taps < s_bellTaps)
+		s_bellTaps = taps;
 	if (s_bellRings < 0 || rings < s_bellRings)
 		s_bellRings = rings;
+	while (s_bellTaps < taps) {
+		s_bellTaps++;
+		const float hy = world.hand() ? (float)world.hand()->pointerY() : 200.0f;
+		const int note = hy < 150 ? 4 : hy < 185 ? 3 : hy < 215 ? 2 : hy < 250 ? 1 : 0;
+		Sound s = soundmanager.playSound(fmt::format("zbl{}", note));
+		if (s)
+			s.setPosition(BELL_X - 85, 113, 170, 165);
+		if (s_bellRings < rings)
+			s_bellRings++;
+		bellRung(note);
+		noteStruck(note);
+	}
+	// the rest: the rope
 	while (s_bellRings < rings) {
 		s_bellRings++;
-		bellRung();
+		bellRung(-1);
 	}
 	if (weatherOn && s_stormStrikeAt && now >= s_stormStrikeAt) {
 		s_stormStrikeAt = 0;

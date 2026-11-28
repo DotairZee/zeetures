@@ -80,6 +80,10 @@ inst new: simp ztcl 1 0 8999 0 setv cls2 2 3 272 setv attr 0 mvto 4074 407 slow
 *    the new floor at x 4660: an unseen handle there (the game's blank
 *    picture, blnk) that creatures and the hand can pull. A creature that
 *    rings it is given 30 of Boredom Decrease (chemical 45), as a toy would.
+*    A tap by the hand sounds one of five notes by where on the bell it
+*    lands, higher the higher up (the engine plays it, zbl0-zbl4; a tap adds
+*    one to OV11 for that), for the bell's hidden tunes; the rope rings the
+*    whole bell (zbel).
 *    Each ring adds one to the bell's OV10, which the engine watches for the
 *    bell's Easter eggs (Weather.cpp, "the temple bell"); it also rings the
 *    bell itself, by event 200 (softly, at dawn and dusk, sound zbes) and
@@ -93,9 +97,9 @@ inst new: simp blnk 1 0 1200 0 setv cls2 2 3 275 setv attr 4 bhvr 1 0 mvto 4652 
 
 scrp 2 3 274 1
   inst
-  snde zbel
   anim [0123321045665401221045540110440]
   addv ov10 1
+  addv ov11 1
 endm
 
 scrp 2 3 274 200

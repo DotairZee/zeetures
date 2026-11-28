@@ -8,16 +8,16 @@ than the hum, each split into a pair a fraction of a hertz apart so it
 beats slowly as real bells do, with a short clank of the clapper at the
 start. The hum is 98 Hz (G2): a great bell.
 
-    python3 bell_sound.py OUT.wav [ring|soft|echo|chime0 ... chime4]
+    python3 bell_sound.py OUT.wav [ring|soft|echo|tone0 ... tone4]
 
 writes a 22050 Hz, 16-bit mono WAV, 5.5 s long: the bell rung (zbel.wav);
 "soft", rung gently by itself at dawn and dusk (zbes.wav: the clapper's
 clank and the bright upper partials much quieter, the whole at under half
 the level); "echo", its sound coming back off the fog (zbee.wav: the upper
-partials muffled, a slow swell instead of a strike, faint); "chime0" to
-"chime4", the temple's five hanging chimes (zch0-zch4.wav: small bells,
-brighter and shorter, 2.5 s, their strike notes D5, F5, A5, B5 and D6, the
-five notes its hidden tunes are played on).
+partials muffled, a slow swell instead of a strike, faint); "tone0" to
+"tone4", the great bell tapped at its lip, skirt, waist, shoulder and crown
+(zbl0-zbl4.wav: the same bell, its strike note D4, F4, A4, B4 and D5, the
+five notes its hidden tunes are played on; owner, 2026-11-27).
 """
 import sys
 import wave
@@ -39,12 +39,12 @@ PARTIALS = [
 ]
 
 
-CHIME_NOTES = [587.33, 698.46, 880.0, 987.77, 1174.66]  # D5 F5 A5 B5 D6
+TONE_NOTES = [293.66, 349.23, 440.0, 493.88, 587.33]  # D4 F4 A4 B4 D5: the strike notes (the nominal, 4 x the hum)
 
 
-def make(kind='ring'):
-    if kind.startswith('chime'):
-        return make_chime(CHIME_NOTES[int(kind[5:])])
+def make(kind='ring', hum=HUM):
+    if kind.startswith('tone'):
+        return make('ring', TONE_NOTES[int(kind[4:])] / 4.0)
     upper = {'ring': 1.0, 'soft': 0.45, 'echo': 0.2}[kind]
     clank_level = {'ring': 0.35, 'soft': 0.08, 'echo': 0.0}[kind]
     peak = {'ring': 0.7, 'soft': 0.3, 'echo': 0.16}[kind]
@@ -53,7 +53,7 @@ def make(kind='ring'):
     rng = np.random.default_rng(1998)
     out = np.zeros_like(t)
     for ratio, level, decay, beat in PARTIALS:
-        f = HUM * ratio
+        f = hum * ratio
         ph = rng.uniform(0, 2 * np.pi, 2)
         env = np.exp(-t / decay)
         lv = level * (upper if ratio > 3.0 else 1.0)
@@ -69,31 +69,6 @@ def make(kind='ring'):
     f = int(0.5 * RATE)
     out[-f:] *= np.linspace(1, 0, f) ** 2
     out *= peak / np.max(np.abs(out))   # the ring about -3 dB
-    return (out * 32767).astype('<i2')
-
-
-def make_chime(strike):
-    """A small bell: its strike note is the nominal (4 x the hum), and it
-    dies away fast; the smaller, the brighter."""
-    length = 2.5
-    t = np.arange(int(RATE * length)) / RATE
-    rng = np.random.default_rng(int(strike))
-    hum = strike / 4.0
-    out = np.zeros_like(t)
-    for ratio, level, decay, beat in PARTIALS:
-        f = hum * ratio
-        if f > RATE / 2.2:
-            continue
-        ph = rng.uniform(0, 2 * np.pi, 2)
-        env = np.exp(-t / (decay * 0.45))
-        out += level * env * 0.5 * (np.sin(2 * np.pi * f * t + ph[0]) + np.sin(2 * np.pi * (f + beat * 2) * t + ph[1]))
-    n = int(0.006 * RATE)
-    out[:n] += 0.2 * rng.standard_normal(n) * np.exp(-np.arange(n) / (0.0015 * RATE))
-    a = int(0.002 * RATE)
-    out[:a] *= np.linspace(0, 1, a)
-    f = int(0.3 * RATE)
-    out[-f:] *= np.linspace(1, 0, f) ** 2
-    out *= 0.5 / np.max(np.abs(out))
     return (out * 32767).astype('<i2')
 
 
